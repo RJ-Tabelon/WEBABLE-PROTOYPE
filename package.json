@@ -1,0 +1,31 @@
+{
+  "name": "webable",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.31.0",
+  "scripts": {
+    "build": "pnpm --filter @webable/extension build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm extension:check",
+    "dev": "pnpm --filter @webable/extension dev",
+    "dev:chrome": "pnpm dev",
+    "extension:check": "node scripts/check-extension-package.mjs",
+    "extension:enable": "pnpm build && node scripts/enable-extension.mjs --open",
+    "extension:path": "node scripts/enable-extension.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "test": "pnpm --filter @webable/extension test",
+    "test:e2e": "pnpm --filter @webable/extension test:e2e",
+    "typecheck": "pnpm -r typecheck",
+    "verify": "pnpm check && pnpm test:e2e"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.35.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.44.0"
+  }
+}

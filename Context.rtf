@@ -1,0 +1,571 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2870
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\froman\fcharset0 Times-Roman;\f1\froman\fcharset0 Times-Bold;\f2\fmodern\fcharset0 Courier;
+\f3\fnil\fcharset0 HelveticaNeue;}
+{\colortbl;\red255\green255\blue255;\red0\green0\blue0;\red109\green109\blue109;\red0\green0\blue0;
+\red179\green179\blue179;\red255\green255\blue255;}
+{\*\expandedcolortbl;;\cssrgb\c0\c0\c0;\cssrgb\c50196\c50196\c50196;\cssrgb\c0\c0\c0\c84706;
+\cssrgb\c75294\c75294\c75294;\cssrgb\c100000\c100000\c100000;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\deftab720
+\pard\pardeftab720\partightenfactor0
+
+\f0\fs24 \cf0 \expnd0\expndtw0\kerning0
+\outl0\strokewidth0 \strokec2 \
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Yes. This is technically feasible, and I actually think this version is substantially stronger than the \'93adaptive website framework\'94 version.
+\f0\b0  You would be building something the user owns that sits between them and the existing web.\
+The important architectural correction is that the 
+\f1\b Mac app would not directly manipulate Chrome
+\f0\b0 . The product would consist of a Mac app plus a Chrome extension:\
+
+\f1\b Website \uc0\u8594  Chrome extension \u8594  local adaptation engine \u8594  modified website
+\f0\b0 \
+Chrome explicitly allows extensions to inject JavaScript and CSS into webpages, read their DOM, and change it. Chrome also officially supports 
+\f1\b Native Messaging
+\f0\b0 , which lets a Chrome extension communicate with a native macOS application.\
+So your concept could genuinely work like this:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Install one accessibility app on your Mac. Tell it what makes the web difficult for you. From then on, websites adapt themselves as you browse.
+\f0\b0 \
+That's a real product concept.\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 What would actually happen when I visit a website\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 Say I visit 
+\f2\fs26 cvs.com
+\f0\fs24 .\
+The Chrome extension loads alongside the page. A content script can inspect the DOM\'97the headings, text, buttons, forms, navigation, links, etc.\'97and can alter those elements. Chrome's official documentation specifically describes content scripts as being able to read and modify webpages.\
+Your extension extracts a simplified representation:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 \
+PAGE: CVS Pharmacy\
+\
+Navigation:\
+- Prescriptions\
+- Health Services\
+- Shop\
+- Photo\
+- Account\
+...\
+\
+Primary content:\
+- Refill prescriptions\
+- Transfer prescriptions\
+- Vaccinations\
+- Find a store\
+...\
+\
+Buttons:\
+...\
+Forms:\
+...\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 It sends that representation to your Mac app.\
+The Mac app knows that this user, for example:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 \
+Vision:\
+Needs larger text\
+\
+Motor:\
+Difficulty with precise clicking\
+\
+Cognitive:\
+Prefers low information density\
+\
+Experience:\
+Low confidence with complex websites\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 The adaptation engine responds:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 \
+Increase minimum text size\
+Increase button targets\
+Reduce secondary navigation\
+Emphasize prescription actions\
+Convert dense form into guided steps\
+Add descriptions to ambiguous icons\
+Increase spacing\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 The Chrome extension then applies those transformations to the 
+\f1\b actual CVS webpage
+\f0\b0 .\
+You have not built another CVS.\
+You have changed the CVS interface locally for that particular person.\
+That distinction is what makes the idea exciting.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1\b\fs48 \cf0 \strokec2 But there's one huge scope distinction\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\fs28 \cf0 This is feasible:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\fs24 \cf0 \'93Make arbitrary websites substantially more usable and accessible through a constrained set of intelligent transformations.\'94
+\f0\b0 \
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 This is probably not feasible for a semester:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\fs24 \cf0 \'93Completely understand and redesign every website on the internet perfectly.\'94
+\f0\b0 \
+That's where you have to be disciplined.\
+Changing things such as typography, contrast, spacing, target size, visibility, prominence, content grouping and simpler navigation is quite achievable through injected CSS/JS. More invasive structural transformations are possible too, but they become increasingly fragile because every site's DOM and application behavior is different. Chrome gives you the ability to manipulate the page; it doesn't give you a universal semantic representation of what every site's UI means.\
+So I'd build a 
+\f1\b progressive adaptation engine
+\f0\b0 .\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Level 1 \'97 Extremely reliable\
+\pard\pardeftab720\partightenfactor0
+
+\f2\b0\fs26 \cf0 \
+Font scaling\
+Line height\
+Contrast\
+Button sizing\
+Spacing\
+Animation reduction\
+Focus indicators\
+Click-target enlargement\
+Content width\
+Visual hierarchy\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 Works on a huge percentage of conventional websites.\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Level 2 \'97 Intelligent but constrained\
+\pard\pardeftab720\partightenfactor0
+
+\f2\b0\fs26 \cf0 \
+Hide distracting secondary content\
+Surface primary actions\
+Collapse complicated navigation\
+Identify forms\
+Increase form guidance\
+Highlight relevant information\
+Add explanations\
+Simplify dense sections\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 This is where AI/semantic understanding starts becoming useful.\
+\pard\pardeftab720\sa280\partightenfactor0
+
+\f1\b\fs28 \cf0 Level 3 \'97 Experimental\
+\pard\pardeftab720\partightenfactor0
+
+\f2\b0\fs26 \cf0 \
+Reconstruct navigation\
+Turn a large form into a wizard\
+Combine scattered information\
+Create a simplified alternative layout\
+Reorder entire sections\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 That becomes the research frontier rather than something you're promising will work universally.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1\b\fs48 \cf0 \strokec2 The Mac app actually becomes useful\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 And this is why I wouldn't make it 
+\f1\b only
+\f0\b0  a Chrome extension.\
+The Mac app becomes the permanent 
+\f1\b accessibility brain
+\f0\b0 .\
+Imagine opening:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Adaptive
+\f0\b0 \
+And onboarding asks questions visually rather than medically:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 What makes websites difficult for you?
+\f0\b0 \
+Maybe the person chooses:\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Text is sometimes difficult to read.\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 There is usually too much on the screen.\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 I sometimes lose track of what I'm supposed to click.\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Small buttons are difficult for me.\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Long forms overwhelm me.\
+Then it asks them to adjust examples until they feel comfortable.\
+Now the app builds something like:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 \
+Visual clarity        \uc0\u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9617 \
+Target size           \uc0\u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9617 \u9617 \
+Information density   \uc0\u9608 \u9608 \u9608 \u9617 \u9617 \u9617 \u9617 \u9617 \u9617 \u9617 \
+Guidance              \uc0\u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9608 \u9617 \
+Motion                 \uc0\u9608 \u9608 \u9617 \u9617 \u9617 \u9617 \u9617 \u9617 \u9617 \u9617 \
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 And 
+\f1\b that profile follows them across the web.
+\f0\b0 \
+That's much more compelling than websites individually offering an \'93Accessibility\'94 menu.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1\b\fs48 \cf0 \strokec2 And you can make it adaptive instead of merely configurable\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 This is where your original Adaptive Web idea comes back.\
+The user initially says:\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \'93I struggle with complicated interfaces.\'94\
+But Adaptive also observes 
+\f1\b local behavioral signals
+\f0\b0 .\
+Suppose someone is completing a Medicare form.\
+They:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 \
+Submit \uc0\u8594  error\
+Submit \uc0\u8594  error\
+Scroll upward\
+Scroll downward\
+Open help\
+Close help\
+Return to previous section\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 Your extension detects unusually high friction.\
+Instead of leaving them there, Adaptive can offer:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Having trouble with this section?
+\f0\b0 \uc0\u8232 Simplify it\
+Then the page locally transforms.\
+That gives you two kinds of adaptation:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Declared needs
+\f0\b0 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \'93I have trouble seeing small elements.\'94\
+and\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Observed needs
+\f0\b0 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \'93This particular interface appears to be causing difficulty right now.\'94\
+The second one is what makes the project much more interesting technically.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1\b\fs48 \cf0 \strokec2 There is an important Chrome permission issue\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 An extension that needs broad access to websites will require meaningful host permissions. Chrome warns users when extensions can broadly access webpages; broad permissions can result in warnings such as the ability to \'93read and change\'94 data on websites.\
+That's actually very relevant to your project.\
+You could make 
+\f1\b local-first privacy part of the thesis
+\f0\b0 :\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Adaptive can see the webpage because it needs to change the webpage. But the page never needs to leave the user's computer.\
+Chrome Web Store policies specifically restrict collection and transmission of browsing activity and require such usage to be necessary for a prominently disclosed user-facing feature.\
+So local processing isn't just aesthetically nice. It makes the product story significantly easier to defend.\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa321\partightenfactor0
+
+\f1\b\fs48 \cf0 \strokec2 What I would build\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 I would target 
+\f1\b Chrome + macOS only
+\f0\b0  for the senior project.\
+Your stack could roughly be:\
+\pard\pardeftab720\partightenfactor0
+
+\f2\fs26 \cf0 \
+\uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+\uc0\u9474               Mac App                 \u9474 \
+\uc0\u9474                                       \u9474 \
+\uc0\u9474  Accessibility profile                \u9474 \
+\uc0\u9474  Local model / inference              \u9474 \
+\uc0\u9474  Adaptation decision engine           \u9474 \
+\uc0\u9474  History + preferences                \u9474 \
+\uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                 \uc0\u9474 \
+          Native Messaging\
+                 \uc0\u9474 \
+\uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9660 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+\uc0\u9474           Chrome Extension            \u9474 \
+\uc0\u9474                                       \u9474 \
+\uc0\u9474  Page semantic extractor              \u9474 \
+\uc0\u9474  Interaction observer                 \u9474 \
+\uc0\u9474  Adaptation renderer                  \u9474 \
+\uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9516 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+                 \uc0\u9474 \
+            DOM / CSS\
+                 \uc0\u9474 \
+\uc0\u9484 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9660 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9488 \
+\uc0\u9474           Existing Website            \u9474 \
+\uc0\u9474                                       \u9474 \
+\uc0\u9474  Amazon / CVS / CNN / etc.            \u9474 \
+\uc0\u9492 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9472 \u9496 \
+\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\fs24 \cf0 Native Messaging is specifically intended for communication between Chrome extensions and cooperating native applications, so this architecture is supported rather than some hack involving controlling Chrome through screen automation.\
+\pard\pardeftab720\sa298\partightenfactor0
+
+\f1\b\fs36 \cf0 And your final presentation could be excellent\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f0\b0\fs24 \cf0 Don't show websites you've built.\
+Open 
+\f1\b real websites
+\f0\b0 .\
+Start with your professor's normal Chrome.\
+Visit three drastically different sites.\
+Say:\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \'93This profile represents an older adult with reduced visual acuity, difficulty with precise targets, and a preference for guided interfaces.\'94\
+Turn Adaptive on.\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Amazon transforms.
+\f0\b0 \
+Go to a hospital website.\
+
+\f1\b It transforms differently.
+\f0\b0 \
+Go to a government website.\
+
+\f1\b It transforms differently.
+\f0\b0 \
+Then change the profile:\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Low vision, but technically proficient.\
+Refresh.\
+The same sites now adapt differently.\
+That demonstration makes the thesis immediately obvious:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Accessibility shouldn't have to be implemented correctly by every website a person visits. What if accessibility belonged to the user instead?
+\f0\b0 \
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 That is the version of Finalist 2 I would pursue.
+\f0\b0  It gives you a Mac product, a Chrome extension, computer vision/LLM or semantic reasoning if you want it, DOM engineering, accessibility/HCI research, behavioral inference, privacy architecture, and a legitimate evaluation problem\'97all organized around one understandable idea rather than AI for AI's sake.\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\
+what purospe would the mac app serve?\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 The Mac app should only exist if it does something the Chrome extension cannot do cleanly. Otherwise, it is unnecessary complexity.\
+Its strongest purpose would be to act as the user's 
+\f1\b persistent accessibility profile and local intelligence layer
+\f0\b0 . The user opens the Mac app once to define things like text size, visual density, motor limitations, preferred guidance level, contrast, motion sensitivity, and whether the system can adapt automatically. That profile then follows them across every website Chrome visits.\
+The second purpose is 
+\f1\b local AI processing
+\f0\b0 . If you want the system to use a local model to understand page structure, infer what is important, or decide how aggressively to simplify something, the Mac app is a much better place to run that model than inside a Chrome extension. The extension can send a structured page representation to the Mac app, get back adaptation instructions, and then modify the page.\
+It could also serve as the user's 
+\f1\b control center
+\f0\b0 : pause adaptation, see which sites were modified, whitelist/blacklist sites, adjust preferences, reset a site's layout, inspect why something changed, and control privacy/retention.\
+But for your senior project, I would make one important distinction:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 You probably do not need the Mac app for version 1.
+\f0\b0 \
+A Chrome extension alone can store preferences, inspect pages, monitor behavior, and modify the DOM. You could build the entire core idea as:\
+
+\f1\b Chrome extension \uc0\u8594  user profile \u8594  adaptation engine \u8594  modified website
+\f0\b0 \
+Then add the Mac app only if you need local-model inference or want the finished product to feel like a persistent system-level accessibility product.\
+So I would think of it this way:\
+
+\f1\b Chrome extension = hands and eyes.
+\f0\b0 \uc0\u8232 It sees the webpage and changes it.\
+
+\f1\b Mac app = memory and brain.
+\f0\b0 \uc0\u8232 It knows the user and decides how the web should adapt.\
+If the \'93brain\'94 is simple enough to live inside the extension, don't force a Mac app into the architecture. The product idea is stronger if every component has a clear reason to exist.\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\
+ok now give me the summary of the positioning and implementation for the project form a high levl for me to send to my gorup\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Finalist 2 \'97 Adaptive Web
+\f0\b0 \
+The idea is to make accessibility belong to the user rather than each individual website. Today, every website gives everyone essentially the same interface, even though an older user, someone with low vision, someone with reduced dexterity, or someone who gets overwhelmed by dense interfaces may need a completely different experience. Our system would automatically change how existing websites are presented to that person while keeping the underlying content and functionality the same. The broader thesis is: responsive design adapts to the screen; we want interfaces that adapt to the person.\
+The product would most likely be a Chrome extension, potentially paired with a Mac app. The extension would inspect the structure of whatever website the user visits and then locally modify things like text size, spacing, button size, information density, navigation complexity, forms, explanations, and visual hierarchy. The user would initially create a functional accessibility profile based on what they struggle with, rather than being labeled by age or disability.\
+The more interesting part is that it could also adapt based on behavior. If the system detects repeated errors, backtracking, hesitation, misclicks, or other signs that a page is causing difficulty, it could offer or automatically apply a more guided or simplified version of that interface. So adaptation comes from both what the user has told us about their needs and what is happening during the current interaction.\
+Technically, we would build a constrained adaptation engine rather than letting AI freely regenerate websites. The extension would identify semantic elements like navigation, forms, primary actions, headings, and content sections, then choose from controlled transformations such as enlarge, simplify, reorder, collapse, explain, or guide step-by-step. AI could help understand the page and decide which transformations make sense, but the actual UI changes would come from a predefined component/rule system so the output stays reliable.\
+For the final demo, we could open several real websites in Chrome using the same accessibility profile and show each one adapting differently based on its structure. Then we could change the profile or intentionally struggle with part of a site and show the interface responding in real time. The main research question would be whether these adaptations actually reduce errors, completion time, and difficulty compared with the normal static websites.\
+\pard\pardeftab720\partightenfactor0
+\cf0 So my thinking so far on the framing is that it would be something that sits between teh user and any website that they visit in whatever browser that they use. Was going through different positionings with AI, this one I liked best. The idea is to make accessibility belong to the user rather than each individual website. Today, every website gives everyone essentially the same interface, even though an older user, someone with low vision, someone with reduced dexterity, or someone who gets overwhelmed by dense interfaces may need a completely different experience. Our system would automatically change how existing websites are presented to that person while keeping the underlying content and functionality the same. The broader thesis is: responsive design adapts to the screen; we want interfaces that adapt to the person. Would definitely want to start with chrome and if we have time / want to move to others we can. So basically would build a mac app + chrome extension. Would need the mac app to access local llm, define preferences, and to be their home base for all of the settings and confirguations that they need for the extension. The extension would be the important part since actualyl doing the rendering, so would work on this first likely.\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 This is a 
+\f1\b much cleaner framing
+\f0\b0 . The only thing I would tighten is the distinction between the 
+\f1\b long-term product vision
+\f0\b0  and what you are actually building this semester.\
+The vision can absolutely be: 
+\f1\b a personal accessibility layer that sits between the user and the web, regardless of the site or browser.
+\f0\b0  But for the project, I would explicitly say you are proving that concept with Chrome first. Otherwise someone can immediately poke at \'93any browser\'94 and turn the conversation into implementation scope.\
+I\'92d also position the Mac app slightly more broadly than just \'93access to a local LLM.\'94 Its real purpose is to be the 
+\f1\b persistent brain/home base
+\f0\b0 : it owns the user\'92s accessibility profile, preferences, local inference, privacy controls, and eventually cross-browser consistency. The Chrome extension is the 
+\f1\b renderer/observer
+\f0\b0  that actually sees and modifies webpages.\
+So conceptually:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Long-term product:
+\f0\b0 \uc0\u8232 User \u8594  Adaptive layer \u8594  Any browser \u8594  Any website\
+
+\f1\b Semester implementation:
+\f0\b0 \uc0\u8232 User \u8594  Mac app/profile \u8594  Chrome extension \u8594  Website\
+And I agree with your implementation priority: 
+\f1\b build the extension first.
+\f0\b0  You can prove almost the entire thesis without the Mac app. Get to the point where the extension can inspect a real website, understand enough of its structure, apply controlled transformations, and preserve functionality. Once that works, the Mac app becomes a valuable second layer rather than something that slows down the core proof.\
+One other positioning tweak I really like for explaining it to the group:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Instead of every website having to correctly accommodate every user's accessibility needs, the user carries their own accessibility layer with them across the web.
+\f0\b0 \
+That is probably the clearest expression of why this needs to exist.\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\
+enhance my fmessage\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 So my thinking so far is that this would eventually be something that sits between the user and any website they visit, regardless of browser.\
+I was going through different ways to position it with AI, and this is the one I liked best:\
+The idea is to make accessibility belong to the user rather than each individual website. Today, every website gives everyone essentially the same interface, even though an older user, someone with low vision, someone with reduced dexterity, or someone who gets overwhelmed by dense interfaces may need a completely different experience. Our system would automatically change how existing websites are presented to that person while keeping the underlying content and functionality the same. The broader thesis is: responsive design adapts to the screen; we want interfaces that adapt to the person.\
+For the project, I\'92d definitely start with Chrome and only expand to other browsers if we have the time. The implementation would basically be a Chrome extension paired with a Mac app.\
+The Chrome extension would be the core of the project because it would actually inspect and modify the websites the user visits. It could adjust things like information density, text and button sizing, navigation complexity, forms, hierarchy, explanations, etc. based on that user\'92s needs.\
+The Mac app would act more like the user\'92s home base and the \'93brain\'94 behind it \'97 where they define their accessibility preferences, manage settings, control privacy, and potentially run a local LLM that helps the extension understand pages and decide which adaptations to make.\
+I\'92d probably focus on getting the extension working first, since that proves the main idea, and then build the Mac app around it once the actual adaptive rendering works.\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 You could describe it as:\
+\'93We\'92re working on a browser-based accessibility tool that helps make websites easier to use for different users. It would sit on top of existing sites and adjust parts of the experience based on a user\'92s needs and preferences.\'94\
+Even more vague:\
+\'93We\'92re exploring a web accessibility project focused on making existing websites more adaptable to different users, rather than relying on every site to handle accessibility perfectly on its own.\'94\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\
+Tue, Aug 18 at 11:29 AM\
+are we trying to train a model for this?\
+\
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 Probably 
+\f1\b not at first
+\f0\b0 .\
+For this project, I\'92d avoid training a model from scratch. You likely don\'92t need it, and it would add a lot of work without improving the core idea much.\
+The better setup is:\
+\pard\pardeftab720\sa240\partightenfactor0
+
+\f1\b \cf0 Use an existing model
+\f0\b0  to interpret a page and choose from a constrained set of adaptations, while your own system handles the actual rendering and rules.\
+So your contribution is more like:\
+
+\f1\b page structure + user profile + behavior \uc0\u8594  adaptation decision \u8594  safe UI transformation
+\f0\b0 \
+You could fine-tune or train a smaller classifier later if you discover a narrow task where it helps, like predicting user friction or classifying page elements. But I would treat that as an optional research extension, not the foundation.\
+If someone asks whether there\'92s \'93AI research\'94 in it, the answer is still yes: the interesting problem is 
+\f1\b how to represent the page, model the user\'92s needs, detect friction, and make reliable adaptation decisions in real time
+\f0\b0 . You don\'92t need to train a foundation model for that.\
+\pard\pardeftab720\partightenfactor0
+\cf0 \
+\
+give reply to this email Dear Caden,\'a0 Thank you very much for reaching out. Your project is interesting. Could you please send me a short scope overview of your project so I can think more about it before making decision?\'a0 Best,\'a0 Tran\
+\
+\
+\
+\
+\
+\
+\
+\
+\
+\pard\pardeftab720\partightenfactor0
+
+\f3\fs22 \cf4 \cb5 \strokec4 Send
+\f0\fs24 \cf0 \cb1 \strokec2 \
+From\
+
+\f3\fs22 \cf4 \cb5 \strokec4 swimkat60@gmail.com
+\f0\fs24 \cf0 \cb1 \strokec2 \
+
+\f3\fs22 \cf4 \cb5 \strokec4 Recipients
+\f0\fs24 \cf0 \cb1 \strokec2 \
+\pard\pardeftab720\partightenfactor0
+
+\f3\fs22 \cf0 \cb6 \strokec2 Project Scope Overview
+\f0\fs24 \cb1 \strokec2 Project Scope Overview\
+\pard\pardeftab720\partightenfactor0
+\cf3 \strokec3 \
+\pard\pardeftab720\sa240\partightenfactor0
+\cf0 \strokec2 Dear Tran,\
+Thank you for getting back to me. At a high level, our project is focused on building a user-controlled accessibility layer for the web.\
+The idea is that instead of relying on every individual website to accommodate different accessibility needs perfectly, a user would have their own system that can adapt existing websites to them. For example, the system could adjust information density, text and control sizing, navigation complexity, visual hierarchy, or guidance based on a user\'92s accessibility preferences and interaction needs, while preserving the underlying content and functionality of the website.\
+For the semester, we are currently envisioning a Chrome extension as the core implementation. The extension would inspect the structure of a webpage and apply controlled interface adaptations in real time. We are also considering a companion desktop application that would manage the user\'92s accessibility profile and potentially run a local AI model to help interpret webpage structure and determine appropriate adaptations.\
+A major technical focus would be making these adaptations reliable across different websites without allowing the system to alter or invent underlying information. We would also like to evaluate whether the adaptive interface improves measures such as task completion time, errors, and usability compared with the original website.\
+We are still early in the ideation and scoping stage, so the exact implementation is flexible, and we would really value your feedback on what would make this a strong and appropriately scoped senior project.\
+Best,\uc0\u8232 Caden\
+}
