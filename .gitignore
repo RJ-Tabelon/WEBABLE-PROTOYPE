@@ -7,3 +7,17 @@ playwright-report/
 test-results/
 .DS_Store
 *.log
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Next.js
+.next*/
+next-env.d.ts
+*.tsbuildinfo
+
+# Supabase
+supabase/.temp/
+supabase/.branches/

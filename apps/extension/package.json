@@ -14,19 +14,26 @@
     "zip": "wxt zip"
   },
   "dependencies": {
-    "@webable/shared": "workspace:*",
-    "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "@supabase/supabase-js": "2.117.2",
+    "@webable/core": "workspace:*",
+    "@webable/tokens": "workspace:*",
+    "@webable/ui": "workspace:*",
+    "lucide-react": "1.48.0",
+    "react": "19.3.0",
+    "react-aria-components": "1.21.1",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.55.0",
+    "@axe-core/playwright": "^4.10.2",
+    "@playwright/test": "^1.63.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@wxt-dev/module-react": "^1.2.2",
+    "axe-core": "^4.10.3",
     "jsdom": "^27.0.0",
     "typescript": "^5.9.2",
-    "vitest": "^5.0.1",
     "vite": "^8.3.0",
+    "vitest": "^5.0.1",
     "web-ext": "^10.7.0",
     "wxt": "^0.21.4"
   }

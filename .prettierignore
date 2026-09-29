@@ -11,3 +11,7 @@ docx-qa.*
 *.pptx
 *.docx
 *.rtf
+.next*
+supabase/.temp
+packages/core/src/db/types.ts
+pnpm-lock.yaml

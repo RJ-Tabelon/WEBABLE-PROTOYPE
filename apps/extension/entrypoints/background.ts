@@ -1,5 +1,3 @@
 export default defineBackground(() => {
-  browser.runtime.onInstalled.addListener(() => {
-    console.info('WebAble is ready.');
-  });
+  // Replaced by the service-worker implementation.
 });

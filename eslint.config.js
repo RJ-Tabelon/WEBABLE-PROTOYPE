@@ -13,6 +13,12 @@ export default tseslint.config(
       '**/coverage/**',
       '**/playwright-report/**',
       '**/test-results/**',
+      '**/.next*/**',
+      '**/next-env.d.ts',
+      'supabase/functions/**',
+      'supabase/.temp/**',
+      'packages/core/src/db/types.ts',
+      'docs/**',
     ],
   },
   js.configs.recommended,
@@ -30,6 +36,14 @@ export default tseslint.config(
     files: ['**/*.{js,mjs}'],
     languageOptions: {
       globals: globals.node,
+    },
+  },
+  {
+    rules: {
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+      ],
     },
   },
   prettier,
