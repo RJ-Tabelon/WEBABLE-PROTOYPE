@@ -8,6 +8,8 @@ const config: NextConfig = {
   poweredByHeader: false,
   // Do not generate AGENTS.md / CLAUDE.md on `next dev`.
   agentRules: false,
+  // Allow the dev server to be reached on 127.0.0.1 as well as localhost.
+  allowedDevOrigins: ['127.0.0.1'],
 };
 
 export default config;

@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 import type { DimId, OpId } from '../ops/catalog';
 import type { PageCategory } from '../page/types';
-import type { AnalysisLabel, DecisionSource, VerifyCode } from '../policy/types';
+import type {
+  AnalysisLabel,
+  DecisionSource,
+  VerifyCode,
+} from '../policy/types';
 
 /**
  * Personal learning state (personalization.md 11-13).
@@ -121,7 +125,8 @@ export interface AdaptEvent {
   settledValue?: number;
   keptMs?: number;
   rating?: 'helped' | 'not_helped';
-  reason?: 'dont_want' | 'too_much' | 'too_little' | 'broke_page' | 'needed_that';
+  reason?:
+    'dont_want' | 'too_much' | 'too_little' | 'broke_page' | 'needed_that';
   pass?: boolean;
   vcode?: VerifyCode;
   aiLabel?: AnalysisLabel;
@@ -150,9 +155,20 @@ export const learnDeltaSchema = z.object({
   blocked: z.boolean().optional(),
   dim: z.string().optional(),
   obs: z
-    .object({ kind: z.enum(['point', 'gt', 'lt']), value: z.number(), r: z.number().positive() })
+    .object({
+      kind: z.enum(['point', 'gt', 'lt']),
+      value: z.number(),
+      r: z.number().positive(),
+    })
     .optional(),
-  label: z.object({ op: z.string(), label: z.enum(['clear', 'likely', 'unsure']), s: z.number(), f: z.number() }).optional(),
+  label: z
+    .object({
+      op: z.string(),
+      label: z.enum(['clear', 'likely', 'unsure']),
+      s: z.number(),
+      f: z.number(),
+    })
+    .optional(),
 });
 export type LearnDelta = z.infer<typeof learnDeltaSchema>;
 

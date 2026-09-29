@@ -4,10 +4,12 @@
  * Jev returns typed probabilities over options WebAble wrote; it never generates text.
  */
 
-export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+export type JsonValue =
+  string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
 
 /** Used by `instructions`, Choice option descriptions, and Noul true/false criteria. */
-export type JevEntry = string | { [key: string]: JsonValue } | JsonValue[] | null;
+export type JevEntry =
+  string | { [key: string]: JsonValue } | JsonValue[] | null;
 export type JevLevel = string | { [key: string]: JsonValue } | JsonValue[];
 /** A bare number or boolean is rejected with 422. */
 export type JevState = string | { [key: string]: JsonValue } | JsonValue[];
@@ -32,11 +34,14 @@ export interface JevScoreQuestion {
   criteria: [JevLevel, JevLevel, ...JevLevel[]];
 }
 
-export type JevQuestion = JevNoulQuestion | JevChoiceQuestion | JevScoreQuestion;
+export type JevQuestion =
+  JevNoulQuestion | JevChoiceQuestion | JevScoreQuestion;
 
 export type JevModelId = 'jev-1.13.0' | 'jev-latest' | 'jev-preview';
 
-export interface JevRequest<Q extends Record<string, JevQuestion> = Record<string, JevQuestion>> {
+export interface JevRequest<
+  Q extends Record<string, JevQuestion> = Record<string, JevQuestion>,
+> {
   state: JevState;
   model: JevModelId;
   /** Keys are ours and are not sent to the model. */

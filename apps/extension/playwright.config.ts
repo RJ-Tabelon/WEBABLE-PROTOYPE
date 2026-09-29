@@ -2,13 +2,16 @@ import { defineConfig } from '@playwright/test';
 
 /**
  * Projects:
- *   engine    - the in-page engine in real Chromium on fixture pages, without the
- *               service worker (tests/engine, window.__webableEngine test bundle).
- *   extension - reserved for the service-worker engineer (tests/e2e): add a project
- *               here that launches a persistent context with the built extension.
+ *   engine          - the in-page engine in real Chromium on fixture pages, without the
+ *                     service worker (tests/engine, window.__webableEngine test bundle).
+ *   extension-build - builds the e2e flavour (wxt build --mode e2e) once per run.
+ *   extension       - the whole extension (service worker, engine, popup, welcome page)
+ *                     loaded unpacked into a persistent Chrome profile (tests/e2e).
  *
- * The engine project uses the installed Google Chrome by default (no browser
- * download); set PW_CHANNEL=chromium to use Playwright's bundled Chromium.
+ * Both use the installed Google Chrome by default (no browser download); set
+ * PW_CHANNEL=chromium to use Playwright's bundled Chromium. Both share the fixture
+ * server on 127.0.0.1:4173, which is the only host the e2e build may run on.
+ * Set WEBABLE_E2E_SKIP_BUILD=1 to reuse an existing e2e build.
  */
 const channel = process.env.PW_CHANNEL ?? 'chrome';
 
@@ -38,6 +41,19 @@ export default defineConfig({
         colorScheme: 'light',
         reducedMotion: 'no-preference',
       },
+    },
+    {
+      name: 'extension-build',
+      testDir: './tests/e2e',
+      testMatch: /build\.setup\.ts$/,
+      timeout: 180_000,
+    },
+    {
+      name: 'extension',
+      testDir: './tests/e2e',
+      testMatch: /.*\.spec\.ts$/,
+      dependencies: ['extension-build'],
+      timeout: 60_000,
     },
   ],
 });

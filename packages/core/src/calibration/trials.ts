@@ -104,7 +104,11 @@ export interface ReadingSession {
   contrast: ContrastTrial[];
   polarity: PolarityTrial[];
   statedPolarity: 'light' | 'dark' | 'same' | null;
-  overrides: { textPx?: number; polarity?: 'light' | 'dark' | 'none'; moreSpacing?: boolean };
+  overrides: {
+    textPx?: number;
+    polarity?: 'light' | 'dark' | 'none';
+    moreSpacing?: boolean;
+  };
   referenceXHeightRatio: number;
   displayLimited: boolean;
   durationSec: number;

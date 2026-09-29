@@ -36,4 +36,11 @@ export * from './explain/templates';
 
 export * from './bridge/protocol';
 
-export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from './db/types';
+export type {
+  Database,
+  Json,
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+  Enums,
+} from './db/types';

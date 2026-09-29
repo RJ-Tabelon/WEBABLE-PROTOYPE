@@ -54,7 +54,8 @@ const enums = (
 ).rows;
 const enumNames = new Set(enums.map((e) => e.name));
 const tsType = (udt) =>
-  scalar(udt) ?? (enumNames.has(udt) ? `Database['public']['Enums']['${udt}']` : 'unknown');
+  scalar(udt) ??
+  (enumNames.has(udt) ? `Database['public']['Enums']['${udt}']` : 'unknown');
 
 const columns = (
   await client.query(`
@@ -105,7 +106,10 @@ const formatToUdt = {
 
 const rowType = (cols, indent) =>
   cols
-    .map((c) => `${indent}${c.column_name}: ${tsType(c.udt_name)}${c.nullable ? ' | null' : ''}`)
+    .map(
+      (c) =>
+        `${indent}${c.column_name}: ${tsType(c.udt_name)}${c.nullable ? ' | null' : ''}`,
+    )
     .join('\n');
 const insertType = (cols, indent, allOptional) =>
   cols
@@ -186,4 +190,6 @@ export type Enums<T extends keyof PublicSchema['Enums']> = PublicSchema['Enums']
 await client.end();
 const target = resolve('packages/core/src/db/types.ts');
 await writeFile(target, out);
-console.log(`Wrote ${target} (${tables.size} tables, ${functions.length} functions).`);
+console.log(
+  `Wrote ${target} (${tables.size} tables, ${functions.length} functions).`,
+);

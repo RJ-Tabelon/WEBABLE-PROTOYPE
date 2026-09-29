@@ -462,6 +462,20 @@ function rowSpecs(browserPx: number): RowSpec[] {
   ];
 }
 
+/** Which Tune module measures each row (for dating values carried over on recalibration). */
+const ROW_MODULE: Record<FitRowId, keyof FitProfile['modules']> = {
+  textSize: 'reading',
+  contrast: 'reading',
+  polarity: 'reading',
+  lineSpacing: 'reading',
+  lineLength: 'reading',
+  targets: 'pointing',
+  steadyClicks: 'pointing',
+  hoverGrace: 'pointing',
+  motion: 'focus',
+  busyPages: 'focus',
+};
+
 /**
  * Rows for the "Your fit" screen, in display order. Without `previous`, the
  * "before" value is what the browser or site does on its own; with it, the
@@ -481,6 +495,11 @@ export function fitRows(
     const before = previous ? spec.shown(previous) : spec.browser(browserPx);
     const { srText, changed } = fitMark(before, after, spec.unit);
     const kind = spec.source(profile);
+    // A module skipped during recalibration keeps the earlier measurement and its date.
+    const measuredIn =
+      previous && profile.modules[ROW_MODULE[spec.id]] !== 'measured'
+        ? previous
+        : profile;
     return {
       id: spec.id,
       label: spec.label,
@@ -489,7 +508,7 @@ export function fitRows(
       srText,
       changed,
       sentence: spec.sentence(profile),
-      source: sourceLabel(kind, profile, options.now),
+      source: sourceLabel(kind, measuredIn, options.now),
       sourceKind: kind,
       confidence: spec.confidence(profile),
       changesPages: spec.changes(profile),

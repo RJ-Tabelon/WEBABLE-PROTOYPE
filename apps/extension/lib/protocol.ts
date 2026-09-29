@@ -40,14 +40,24 @@ export type ContentToWorker =
   | { type: 'cs:hello' }
   | { type: 'cs:signals'; signals: PageSignals; evidence: PageEvidence }
   | { type: 'cs:applied'; planId: string; changes: AppliedChange[] }
-  | { type: 'cs:event'; event: Omit<AdaptEvent, 'v' | 'id' | 't' | 'domain' | 'tabSession' | 'opVer'> }
+  | {
+      type: 'cs:event';
+      event: Omit<
+        AdaptEvent,
+        'v' | 'id' | 't' | 'domain' | 'tabSession' | 'opVer'
+      >;
+    }
   | {
       type: 'cs:friction';
       signal: 'misclick_burst' | 'rage_click' | 'zoom_in' | 'scroll_reversal';
       /** Ops the signal is evidence for. */
       ops: OpId[];
     }
-  | { type: 'cs:offer-answer'; op: OpId; answer: 'accept' | 'dismiss' | 'never_here' | 'timeout' };
+  | {
+      type: 'cs:offer-answer';
+      op: OpId;
+      answer: 'accept' | 'dismiss' | 'never_here' | 'timeout';
+    };
 
 export interface ContentReplies {
   'cs:hello': HelloReply;
@@ -65,8 +75,17 @@ export interface ContentReplies {
 
 export type WorkerToContent =
   /** Late page-analysis refinement or a changed decision (e.g. accepted offer). */
-  | { type: 'sw:plan'; plan: AdaptationPlan; reason: 'refine' | 'offer_accepted' | 'settings' }
-  | { type: 'sw:undo'; op: OpId | 'all'; reason?: 'dont_want' | 'too_much' | 'too_little' | 'broke_page' | 'needed_that' }
+  | {
+      type: 'sw:plan';
+      plan: AdaptationPlan;
+      reason: 'refine' | 'offer_accepted' | 'settings';
+    }
+  | {
+      type: 'sw:undo';
+      op: OpId | 'all';
+      reason?:
+        'dont_want' | 'too_much' | 'too_little' | 'broke_page' | 'needed_that';
+    }
   | { type: 'sw:set-level'; op: OpId; level: number }
   | { type: 'sw:pause' }
   | { type: 'sw:resume' }
@@ -134,12 +153,34 @@ export interface TabView {
 export type UiToWorker =
   | { type: 'ui:view'; tabId: number }
   | { type: 'ui:undo'; tabId: number; op: OpId | 'all' }
-  | { type: 'ui:set-level'; tabId: number; op: OpId; level: number; scope: 'site' | 'everywhere' }
-  | { type: 'ui:toggle-op'; tabId: number; op: OpId; on: boolean; scope: 'site' | 'everywhere' }
+  | {
+      type: 'ui:set-level';
+      tabId: number;
+      op: OpId;
+      level: number;
+      scope: 'site' | 'everywhere';
+    }
+  | {
+      type: 'ui:toggle-op';
+      tabId: number;
+      op: OpId;
+      on: boolean;
+      scope: 'site' | 'everywhere';
+    }
   | { type: 'ui:pause-site'; tabId: number; paused: boolean }
   | { type: 'ui:enabled'; enabled: boolean }
-  | { type: 'ui:offer-answer'; tabId: number; op: OpId; answer: 'accept' | 'dismiss' | 'never_here' }
-  | { type: 'ui:rate'; tabId: number; op: OpId; rating: 'helped' | 'not_helped' }
+  | {
+      type: 'ui:offer-answer';
+      tabId: number;
+      op: OpId;
+      answer: 'accept' | 'dismiss' | 'never_here';
+    }
+  | {
+      type: 'ui:rate';
+      tabId: number;
+      op: OpId;
+      rating: 'helped' | 'not_helped';
+    }
   | { type: 'ui:show-on-page'; tabId: number; op: OpId | null; on: boolean }
   | { type: 'ui:reading-guide'; tabId: number; on: boolean }
   | { type: 'ui:grant-all-sites' }

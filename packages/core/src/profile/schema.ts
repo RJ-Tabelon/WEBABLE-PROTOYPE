@@ -38,7 +38,16 @@ export const latentDimSchema = z.object({
   sd: z.number().min(0).max(2),
   confidence,
   sources: z
-    .array(z.enum(['behavior', 'preference', 'system', 'chips', 'learned', 'override']))
+    .array(
+      z.enum([
+        'behavior',
+        'preference',
+        'system',
+        'chips',
+        'learned',
+        'override',
+      ]),
+    )
     .max(6),
 });
 export type LatentDim = z.infer<typeof latentDimSchema>;
@@ -46,17 +55,32 @@ export type LatentDim = z.infer<typeof latentDimSchema>;
 export const TARGET_LADDER = [24, 32, 44, 56, 72, 96] as const;
 export type TargetPx = (typeof TARGET_LADDER)[number];
 
-export const inputClassSchema = z.enum(['mouse', 'trackpad', 'touch', 'keyboard', 'other']);
+export const inputClassSchema = z.enum([
+  'mouse',
+  'trackpad',
+  'touch',
+  'keyboard',
+  'other',
+]);
 export type InputClass = z.infer<typeof inputClassSchema>;
 
-export const deviceClassSchema = z.enum(['phone', 'tablet', 'laptop', 'desktop']);
+export const deviceClassSchema = z.enum([
+  'phone',
+  'tablet',
+  'laptop',
+  'desktop',
+]);
 export type DeviceClass = z.infer<typeof deviceClassSchema>;
 
 export const polaritySchema = z.enum(['light', 'dark', 'none']);
 export type Polarity = z.infer<typeof polaritySchema>;
 
 /** 4.5 = standard floor, 7 = enhanced, 21 = maximum (snap text to the polarity pair). */
-export const contrastFloorSchema = z.union([z.literal(4.5), z.literal(7), z.literal(21)]);
+export const contrastFloorSchema = z.union([
+  z.literal(4.5),
+  z.literal(7),
+  z.literal(21),
+]);
 export type ContrastFloor = z.infer<typeof contrastFloorSchema>;
 
 export const visionSchema = z.object({
@@ -66,7 +90,9 @@ export const visionSchema = z.object({
   xHeightMinPx: z.number().min(4).max(60).optional(),
   contrastFloor: param(contrastFloorSchema),
   polarity: param(polaritySchema),
-  fontWeightFloor: param(z.union([z.literal(400), z.literal(500), z.literal(600)])),
+  fontWeightFloor: param(
+    z.union([z.literal(400), z.literal(500), z.literal(600)]),
+  ),
   lineHeight: param(z.number().min(1.2).max(2.2)),
   wordSpacingEm: param(z.number().min(0).max(0.3)),
   letterSpacingEm: param(z.number().min(0).max(0.12)),
@@ -77,14 +103,18 @@ export type VisionFit = z.infer<typeof visionSchema>;
 export const motorSchema = z.object({
   input: inputClassSchema,
   /** Minimum effective (hit-area) target size in CSS px. */
-  minTargetPx: param(z.union(TARGET_LADDER.map((n) => z.literal(n)) as [
-    z.ZodLiteral<24>,
-    z.ZodLiteral<32>,
-    z.ZodLiteral<44>,
-    z.ZodLiteral<56>,
-    z.ZodLiteral<72>,
-    z.ZodLiteral<96>,
-  ])),
+  minTargetPx: param(
+    z.union(
+      TARGET_LADDER.map((n) => z.literal(n)) as [
+        z.ZodLiteral<24>,
+        z.ZodLiteral<32>,
+        z.ZodLiteral<44>,
+        z.ZodLiteral<56>,
+        z.ZodLiteral<72>,
+        z.ZodLiteral<96>,
+      ],
+    ),
+  ),
   /** Desired centre-to-centre clearance between adjacent actionable targets. */
   targetSpacingPx: param(z.number().min(0).max(160)),
   steadyClicks: param(

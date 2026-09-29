@@ -45,7 +45,13 @@ export const vocabWordSchema = z.string().regex(/^[a-z]{2,20}$/);
 export const regionEvidenceSchema = z.strictObject({
   zone: zoneSchema,
   width: widthBucket,
-  height: z.enum(['<0.1 screens', '0.1-0.3 screens', '0.3-1 screens', '1-3 screens', '>3 screens']),
+  height: z.enum([
+    '<0.1 screens',
+    '0.1-0.3 screens',
+    '0.3-1 screens',
+    '1-3 screens',
+    '>3 screens',
+  ]),
   pinned: z.enum(['fixed', 'sticky', 'no']),
   landmark: z.enum([
     'banner',
@@ -76,19 +82,43 @@ export const regionEvidenceSchema = z.strictObject({
   dom_position: z.enum(['before_main', 'inside_main', 'after_main', 'unknown']),
   links: countBucket,
   link_density: z.enum(['none', 'low', 'mid', 'high']),
-  text_amount: z.enum(['0', '<100 chars', '100-500 chars', '500-2k chars', '>2k chars']),
+  text_amount: z.enum([
+    '0',
+    '<100 chars',
+    '100-500 chars',
+    '500-2k chars',
+    '>2k chars',
+  ]),
   buttons: countBucket,
   inputs: countBucket,
   required_fields: z.boolean(),
   repeated_cards: z.enum(['0', '2-3', '4-8', '>8']),
   images: countBucket,
   video: z.boolean(),
-  iframe_kind: z.enum(['none', 'ad_network', 'chat_vendor', 'video_host', 'social_embed', 'map', 'other']),
+  iframe_kind: z.enum([
+    'none',
+    'ad_network',
+    'chat_vendor',
+    'video_host',
+    'social_embed',
+    'map',
+    'other',
+  ]),
   motion: z.enum(['none', 'transition', 'loop', 'autoplay_video', 'carousel']),
   class_words: z.array(vocabWordSchema).max(6),
   /** Up to 6 vocabulary words joined by spaces; runs of dropped words are shown as '·'. */
-  heading_words: z.string().max(140).regex(/^[a-z· ]*$/),
-  control_words: z.array(z.string().max(100).regex(/^[a-z· ]*$/)).max(4),
+  heading_words: z
+    .string()
+    .max(140)
+    .regex(/^[a-z· ]*$/),
+  control_words: z
+    .array(
+      z
+        .string()
+        .max(100)
+        .regex(/^[a-z· ]*$/),
+    )
+    .max(4),
 });
 export type RegionEvidence = z.infer<typeof regionEvidenceSchema>;
 
@@ -98,7 +128,12 @@ export const pageSignalSchema = z.enum(PAGE_SIGNALS);
 export const pageContextSchema = z.strictObject({
   signals: z.array(pageSignalSchema).max(PAGE_SIGNALS.length),
   main: z.strictObject({
-    found_by: z.enum(['landmark', 'single_article', 'readability', 'ambiguous']),
+    found_by: z.enum([
+      'landmark',
+      'single_article',
+      'readability',
+      'ambiguous',
+    ]),
     zone: z.union([zoneSchema, z.literal('unknown')]),
     width: z.union([widthBucket, z.literal('unknown')]),
   }),
@@ -112,11 +147,21 @@ export const pageContextSchema = z.strictObject({
     headings: countBucket,
     images: countBucket,
     videos: countBucket,
-    text_amount: z.enum(['<1k chars', '1k-10k chars', '10k-50k chars', '>50k chars']),
+    text_amount: z.enum([
+      '<1k chars',
+      '1k-10k chars',
+      '10k-50k chars',
+      '>50k chars',
+    ]),
   }),
   layout: z.strictObject({
     viewport: z.enum(['phone', 'tablet', 'desktop']),
-    page_height: z.enum(['<1 screen', '1-3 screens', '3-10 screens', '>10 screens']),
+    page_height: z.enum([
+      '<1 screen',
+      '1-3 screens',
+      '3-10 screens',
+      '>10 screens',
+    ]),
     pinned_bars: z.enum(['0', '1', '2', '3+']),
   }),
 });
@@ -142,7 +187,12 @@ export interface PageSignals {
     /** Lightest rendered weight among sampled body text. */
     minWeight: number;
   };
-  contrast: { sampled: number; below45: number; below7: number; unknownBackground: number };
+  contrast: {
+    sampled: number;
+    below45: number;
+    below7: number;
+    unknownBackground: number;
+  };
   targets: {
     count: number;
     /** Count of actionable targets whose hit area is below each ladder size. */
@@ -150,11 +200,22 @@ export interface PageSignals {
     /** Targets whose neighbours are closer than the 24 px spacing circle. */
     crowded: number;
   };
-  motion: { running: number; infinite: number; autoplayMedia: number; carousels: number; animatedImages: number };
+  motion: {
+    running: number;
+    infinite: number;
+    autoplayMedia: number;
+    carousels: number;
+    animatedImages: number;
+  };
   sticky: { bars: number; topBandPx: number };
   hoverMenus: number;
   dragOnly: number;
-  forms: { count: number; requiredFields: number; hasPassword: boolean; hasPayment: boolean };
+  forms: {
+    count: number;
+    requiredFields: number;
+    hasPassword: boolean;
+    hasPayment: boolean;
+  };
   main: { key: string | null; ambiguous: boolean };
   regions: Array<{
     key: string;
@@ -169,5 +230,9 @@ export interface PageSignals {
     containsFocus: boolean;
     motion: RegionEvidence['motion'];
   }>;
-  env: { reducedMotion: boolean; forcedColors: boolean; colorScheme: 'light' | 'dark' };
+  env: {
+    reducedMotion: boolean;
+    forcedColors: boolean;
+    colorScheme: 'light' | 'dark';
+  };
 }

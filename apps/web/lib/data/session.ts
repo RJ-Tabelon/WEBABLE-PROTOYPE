@@ -1,3 +1,5 @@
+import { unstable_rethrow } from 'next/navigation';
+
 import { createClient, type ServerSupabase } from '../supabase/server';
 import { type DataResult, fail, ok } from './result';
 
@@ -28,7 +30,8 @@ async function verifiedClaims(
     const { data, error } = await supabase.auth.getClaims();
     if (error || !data?.claims) return null;
     return data.claims as Claims;
-  } catch {
+  } catch (error) {
+    unstable_rethrow(error);
     return null;
   }
 }
@@ -64,6 +67,7 @@ export async function getDataContext(): Promise<DataResult<DataContext>> {
   try {
     supabase = await createClient();
   } catch (error) {
+    unstable_rethrow(error);
     console.error(
       '[data] could not create a Supabase client',
       error instanceof Error ? error.message : error,

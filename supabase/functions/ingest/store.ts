@@ -42,7 +42,11 @@ export interface RpcClient {
   ): PromiseLike<{ data: unknown; error: { message: string } | null }>;
 }
 
-const OUTCOMES: readonly IngestOutcome[] = ['stored', 'no_consent', 'already_reported'];
+const OUTCOMES: readonly IngestOutcome[] = [
+  'stored',
+  'no_consent',
+  'already_reported',
+];
 
 export function createRpcIngestStore(client: RpcClient): IngestStore {
   return {
@@ -68,7 +72,10 @@ export function createRpcIngestStore(client: RpcClient): IngestStore {
         p_retention_cutoff: s.retentionCutoff,
       });
       if (error) throw new Error('ingest_rpc_failed');
-      if (typeof data !== 'string' || !OUTCOMES.includes(data as IngestOutcome)) {
+      if (
+        typeof data !== 'string' ||
+        !OUTCOMES.includes(data as IngestOutcome)
+      ) {
         throw new Error('ingest_rpc_unexpected');
       }
       return data as IngestOutcome;

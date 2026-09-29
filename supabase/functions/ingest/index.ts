@@ -17,7 +17,11 @@ import {
   type SupabaseClient,
 } from '../_shared/supabase.ts';
 import { createIngestHandler } from './handler.ts';
-import { createRpcIngestStore, type IngestStore, type RpcClient } from './store.ts';
+import {
+  createRpcIngestStore,
+  type IngestStore,
+  type RpcClient,
+} from './store.ts';
 
 let authClient: SupabaseClient | null = null;
 let store: IngestStore | null = null;
@@ -32,7 +36,9 @@ const handler = createIngestHandler({
     });
   },
   store: () => {
-    store ??= createRpcIngestStore(createServiceClient(denoEnv) as unknown as RpcClient);
+    store ??= createRpcIngestStore(
+      createServiceClient(denoEnv) as unknown as RpcClient,
+    );
     return store;
   },
   tagSecret: denoEnv.get('INGEST_TAG_SECRET'),

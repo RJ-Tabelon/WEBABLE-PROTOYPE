@@ -5,25 +5,42 @@ import type { PageCategory, RegionRole } from '../page/types';
 export type AnalysisLabel = 'clear' | 'likely' | 'unsure';
 
 /** Why an op is being considered: which authority put it on the table. */
-export type DecisionSource = 'profile' | 'pinned' | 'system' | 'friction' | 'manual' | 'none';
+export type DecisionSource =
+  'profile' | 'pinned' | 'system' | 'friction' | 'manual' | 'none';
 
 export type DecisionMode = 'auto' | 'offer' | 'skip';
 
 /** Structured, faithful record of a decision. Explanations are rendered from this, never generated. */
 export type TraceEvidence =
-  | { kind: 'small_text'; share: number; floorPx: number; beforePx: number | null }
+  | {
+      kind: 'small_text';
+      share: number;
+      floorPx: number;
+      beforePx: number | null;
+    }
   | { kind: 'contrast_failures'; count: number; targetRatio: number }
   | { kind: 'target_failures'; count: number; targetPx: number }
   | { kind: 'crowded_targets'; count: number }
   | { kind: 'long_lines'; lineCh: number; maxCh: number }
   | { kind: 'tight_lines'; lineHeight: number; target: number }
-  | { kind: 'region_role'; role: RegionRole; by: 'rule' | 'page_analysis'; label?: AnalysisLabel }
+  | {
+      kind: 'region_role';
+      role: RegionRole;
+      by: 'rule' | 'page_analysis';
+      label?: AnalysisLabel;
+    }
   | { kind: 'motion_sources'; count: number }
   | { kind: 'autoplay_media'; count: number }
   | { kind: 'sticky_bars'; count: number; heightPx: number }
   | { kind: 'hover_menus'; count: number }
-  | { kind: 'friction'; signal: 'misclick_burst' | 'zoom_in' | 'scroll_reversal' | 'rage_click' }
-  | { kind: 'learned'; note: 'kept_before' | 'site_pin' | 'system_setting' | 'undone_before' };
+  | {
+      kind: 'friction';
+      signal: 'misclick_burst' | 'zoom_in' | 'scroll_reversal' | 'rage_click';
+    }
+  | {
+      kind: 'learned';
+      note: 'kept_before' | 'site_pin' | 'system_setting' | 'undone_before';
+    };
 
 export interface DecisionTrace {
   op: OpId;

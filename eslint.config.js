@@ -40,9 +40,23 @@ export default tseslint.config(
   },
   {
     rules: {
+      // Copy uses no-break spaces on purpose ("18 px" must not wrap).
+      'no-irregular-whitespace': [
+        'error',
+        {
+          skipStrings: true,
+          skipTemplates: true,
+          skipJSXText: true,
+          skipComments: true,
+        },
+      ],
       '@typescript-eslint/no-unused-vars': [
         'error',
-        { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+        },
       ],
     },
   },

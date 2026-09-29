@@ -563,7 +563,7 @@ describe('deriveFitProfile: attention (cal-attention.md 5-6)', () => {
 describe('deriveFitProfile: modules, recalibration and invariants', () => {
   it('keeps defaults for skipped modules and reports zero confidence', () => {
     const p = derive({
-      reading: { ...exampleA, status: 'skipped' },
+      reading: { ...exampleA, status: 'skipped', comfortPx: null },
       pointing: motor({ status: 'skipped', recommendedPx: null }),
       focus: focus({ status: 'skipped' }),
     });
@@ -582,6 +582,18 @@ describe('deriveFitProfile: modules, recalibration and invariants', () => {
     });
     expect(p.createdAt).toBe('2026-09-29T10:06:00.000Z');
     expect(p.calibrationVersion).toBe(CALIBRATION_VERSION);
+  });
+
+  it('keeps a comfortable size chosen before skipping the reading tasks as stated', () => {
+    const p = derive({
+      reading: { ...exampleA, status: 'skipped', comfortPx: 24 },
+      pointing: motor({ status: 'skipped', recommendedPx: null }),
+      focus: focus({ status: 'skipped' }),
+    });
+    expect(p.vision.textMinPx.source).toBe('stated');
+    expect(p.vision.textMinPx.value).toBe(24);
+    expect(p.vision.textMinPx.stated).toBe(24);
+    expect(p.modules.reading).toBe('skipped');
   });
 
   it('preserves every override on recalibration while updating the evidence', () => {

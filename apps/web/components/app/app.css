@@ -1,0 +1,708 @@
+/*
+ * The signed-in app (Working density, design-final §7.9, §14): documents, not
+ * dashboards. An h1 at the h2 step, sections separated by index rules, hairline
+ * rows. Tokens only; no --accent here (fit values reuse the fit-mark classes).
+ * Breakpoints are container queries on the app frame (wa-app), in em, so they
+ * follow the person's text scale.
+ */
+
+/* ---------- Page ---------- */
+
+.wa-page {
+  display: grid;
+  gap: var(--space-16);
+  max-inline-size: 60rem;
+}
+
+.wa-page-head {
+  display: grid;
+  justify-items: start;
+}
+
+.wa-page-head__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-page-head__deck {
+  max-inline-size: var(--w-prose);
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+}
+
+.wa-page-head__actions {
+  margin-block-start: var(--space-8);
+}
+
+.wa-page-head__status {
+  margin-block-start: var(--space-6);
+}
+
+/* Sections carry an index rule; their titles sit a step below the page title. */
+.wa-app-section-head .wa-section-head__title {
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
+  letter-spacing: var(--track-h3);
+}
+
+.wa-app-section > .wa-section-head {
+  margin-block-end: var(--space-6);
+}
+
+.wa-app-section__body {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.wa-app-prose {
+  max-inline-size: var(--w-prose);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.wa-app-prose > * + * {
+  margin-block-start: var(--space-3);
+}
+
+.wa-app-meta {
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+/* ---------- Hairline rows ---------- */
+
+.wa-rows {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.wa-rows > li,
+.wa-rows > form,
+.wa-rows > .wa-row {
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.wa-row__tag {
+  font-weight: var(--weight-regular);
+  color: var(--ink-2);
+}
+
+/* A setting: its name and one line on the left, the control on the right. */
+.wa-setting {
+  display: grid;
+  gap: var(--space-4) var(--space-8);
+  align-items: center;
+}
+
+.wa-setting__control {
+  display: grid;
+  justify-items: start;
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-setting {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .wa-setting__control {
+    justify-items: end;
+  }
+}
+
+.wa-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  min-block-size: max(var(--row-min), var(--target-min));
+  padding-block: var(--space-4);
+}
+
+.wa-row__label {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.wa-row__detail {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+@container wa-app (min-width: 40em) {
+  .wa-row--split {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .wa-row--split > .wa-row__actions {
+    justify-content: flex-end;
+  }
+}
+
+/* ---------- Fit rows (§9.4) ---------- */
+
+.wa-fit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'text text'
+    'value adjust';
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  min-block-size: 4.5rem;
+  padding-block: var(--space-6);
+}
+
+.wa-fit-row__text {
+  grid-area: text;
+  min-inline-size: 0;
+}
+
+.wa-fit-row__label {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.35;
+  letter-spacing: var(--track-text);
+}
+
+.wa-fit-row__sentence {
+  max-inline-size: var(--w-prose);
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
+
+.wa-fit-row__source {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-3);
+}
+
+.wa-fit-row__value {
+  grid-area: value;
+  min-inline-size: 0;
+}
+
+.wa-fit-row__adjust {
+  grid-area: adjust;
+  justify-self: end;
+}
+
+.wa-fit-row__editor {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: var(--space-5);
+  margin-block-start: var(--space-2);
+  padding: var(--space-5);
+  border-radius: var(--radius-3);
+  background: var(--surface-tonal);
+}
+
+.wa-fit-row__editor:focus {
+  outline: none;
+}
+
+@container wa-app (max-width: 30em) {
+  .wa-fit-row__editor {
+    padding: var(--space-4);
+  }
+}
+
+.wa-fit-row__editor .wa-segmented {
+  background: var(--canvas);
+}
+
+/*
+ * Choices in words: a segmented control where it fits, a stack of radio rows in
+ * a narrow editor. The container is measured in em, so a larger text scale
+ * switches to the stack sooner.
+ */
+.wa-fit-row__editor {
+  container: wa-editor / inline-size;
+}
+
+.wa-choice__segmented {
+  display: none;
+}
+
+.wa-choice__stack {
+  display: grid;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+@container wa-editor (min-width: 25em) {
+  .wa-choice__segmented {
+    display: block;
+  }
+  .wa-choice__stack {
+    display: none;
+  }
+}
+
+.wa-choice__option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: max(var(--control-lg), var(--target-min));
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.wa-choice__option input {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin: 0;
+  accent-color: var(--action);
+  cursor: inherit;
+}
+
+.wa-choice__option input:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.wa-choice__option[data-disabled] {
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+.wa-fit-row__editor-label {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-fit-row {
+    grid-template-columns: minmax(0, 1fr) minmax(9rem, auto) auto;
+    grid-template-areas: 'text value adjust';
+  }
+  .wa-fit-row__value {
+    justify-self: end;
+    text-align: end;
+  }
+}
+
+/*
+ * A value WebAble does not change reads in secondary ink, not in the change
+ * colour, so the values that do change pages carry the eye.
+ */
+.wa-fit-value--same .wa-fit-mark__to,
+.wa-fit-value--same .wa-fit-mark__unit {
+  color: var(--ink-2);
+  font-weight: var(--weight-mono);
+}
+
+.wa-fit-value .wa-fit-mark__value {
+  white-space: normal;
+}
+
+.wa-fit-value .wa-fit-mark__visual {
+  flex-wrap: wrap;
+  row-gap: 0;
+}
+
+/* ---------- History ---------- */
+
+.wa-history {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.wa-history__item {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-5);
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.wa-history__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+}
+
+.wa-history__title {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+
+.wa-history__source {
+  font-weight: var(--weight-regular);
+  color: var(--ink-2);
+}
+
+.wa-history__date {
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-history__changes {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+}
+
+.wa-history__change {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-ui);
+}
+
+.wa-history__change-label {
+  min-inline-size: 8rem;
+  color: var(--ink);
+}
+
+/* ---------- Notes (neutral, never an alarm) ---------- */
+
+.wa-app-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  max-inline-size: 44rem;
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
+  background: var(--surface-tonal);
+  color: var(--ink);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+.wa-app-note > .wa-icon {
+  margin-block-start: 0.125rem;
+  color: var(--ink-2);
+}
+
+.wa-app-note__body > * + * {
+  margin-block-start: var(--space-2);
+}
+
+.wa-app-note__title {
+  margin: 0;
+  font-weight: var(--weight-medium);
+}
+
+/* ---------- This-browser status line ---------- */
+
+.wa-browser-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-block-size: var(--target-min);
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-browser-status__text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+}
+
+/* ---------- Changes ---------- */
+
+.wa-sentences {
+  max-inline-size: var(--w-prose);
+  margin: 0;
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  color: var(--ink);
+}
+
+.wa-activity-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1) var(--space-6);
+  min-block-size: max(var(--row-min), var(--target-min));
+  padding-block: var(--space-4);
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-activity-row {
+    grid-template-columns: 14rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+  .wa-activity-row .wa-row__detail {
+    margin: 0;
+  }
+}
+
+.wa-learned {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.wa-learned > p {
+  margin: 0;
+}
+
+/* ---------- Sites ---------- */
+
+.wa-site-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3) var(--space-6);
+  padding-block: var(--space-5);
+}
+
+.wa-site-row__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.wa-site-row__domain {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.wa-site-row__ops {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+}
+
+.wa-site-row__op {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  min-block-size: var(--target-min);
+  padding-inline-start: var(--space-4);
+  border-inline-start: var(--bw-strong) solid var(--line);
+  font-size: var(--text-ui);
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-site-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+  .wa-site-row__ops {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------- Receipts ("What was sent") ---------- */
+
+.wa-receipt {
+  padding-block: var(--space-4) var(--space-2);
+}
+
+.wa-receipt__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+}
+
+.wa-payload {
+  max-block-size: 24rem;
+  margin: 0;
+  padding: var(--space-4);
+  overflow: auto;
+  border: var(--bw-hair) solid var(--line);
+  border-radius: var(--radius-2);
+  background: var(--surface-tonal);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-mono);
+  letter-spacing: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  tab-size: 2;
+}
+
+.wa-payload:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+/* ---------- Facts (exactly what is sent, what is not) ---------- */
+
+.wa-consents {
+  display: grid;
+  gap: var(--space-12);
+}
+
+.wa-consent {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.wa-facts {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: 44rem;
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+.wa-facts__row {
+  display: grid;
+  gap: var(--space-0-5);
+}
+
+.wa-facts dt {
+  font-weight: var(--weight-medium);
+}
+
+.wa-facts dd {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-facts__row {
+    grid-template-columns: 9rem minmax(0, 1fr);
+    gap: 0 var(--space-6);
+  }
+}
+
+/* ---------- Forms in the app ---------- */
+
+.wa-app-form {
+  display: grid;
+  gap: var(--space-5);
+  max-inline-size: var(--w-form);
+}
+
+.wa-app-form__done {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-ui);
+  color: var(--ink);
+}
+
+.wa-inline-toggle {
+  justify-self: start;
+}
+
+/* ---------- Danger zone ---------- */
+
+.wa-danger-row {
+  display: grid;
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.wa-danger-row:first-child,
+:not(.wa-danger-row) + .wa-danger-row {
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-danger-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+
+/* ---------- Loading ---------- */
+
+.wa-loading {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.wa-loading__bar {
+  display: block;
+  block-size: 1rem;
+  border-radius: var(--radius-1);
+  background: var(--surface-tonal);
+}
+
+.wa-loading__bar--title {
+  inline-size: min(14rem, 60%);
+  block-size: 2rem;
+}
+
+.wa-loading__bar--line {
+  inline-size: min(32rem, 90%);
+}
+
+.wa-loading__rows {
+  display: grid;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.wa-loading__rows > span {
+  display: block;
+  block-size: 4.5rem;
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+@media (forced-colors: active) {
+  .wa-app-note,
+  .wa-fit-row__editor {
+    border: 1px solid CanvasText;
+  }
+}
+
+.wa-fit-row__measured {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+}

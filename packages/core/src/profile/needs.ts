@@ -2,10 +2,11 @@ import type { FitProfile, LatentDim, NeedLevel, NeedLevels } from './schema';
 
 /** Standard normal CDF (Abramowitz & Stegun 7.1.26, max error 1.5e-7). */
 export function normCdf(x: number): number {
-  const t = 1 / (1 + 0.3275911 * Math.abs(x) / Math.SQRT2);
+  const t = 1 / (1 + (0.3275911 * Math.abs(x)) / Math.SQRT2);
   const y =
     1 -
-    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) * t +
+    ((((1.061405429 * t - 1.453152027) * t + 1.421413741) * t - 0.284496736) *
+      t +
       0.254829592) *
       t *
       Math.exp(-(x * x) / 2);
@@ -34,20 +35,37 @@ function evidenced(dim: LatentDim): boolean {
 export function needLevels(profile: FitProfile): NeedLevels {
   const { vision, motor, attention } = profile;
   const text = vision.textMinPx.value;
-  const chunking = evidenced(attention.chunking) ? benefitProbability(attention.chunking) : 0;
-  const density = evidenced(attention.density) ? benefitProbability(attention.density) : 0;
+  const chunking = evidenced(attention.chunking)
+    ? benefitProbability(attention.chunking)
+    : 0;
+  const density = evidenced(attention.density)
+    ? benefitProbability(attention.density)
+    : 0;
 
   return {
     text: text >= 21 ? 2 : text >= 17 ? 1 : 0,
-    contrast: vision.contrastFloor.value === 21 ? 2 : vision.contrastFloor.value === 7 ? 1 : 0,
+    contrast:
+      vision.contrastFloor.value === 21
+        ? 2
+        : vision.contrastFloor.value === 7
+          ? 1
+          : 0,
     spacing:
       vision.lineHeight.value >= 1.8
         ? 2
-        : vision.lineHeight.value >= 1.6 || vision.wordSpacingEm.value >= 0.1 || chunking >= 0.7
+        : vision.lineHeight.value >= 1.6 ||
+            vision.wordSpacingEm.value >= 0.1 ||
+            chunking >= 0.7
           ? 1
           : 0,
-    lineLength: vision.maxLineCh.value <= 62 ? 2 : vision.maxLineCh.value <= 72 || density >= 0.6 ? 1 : 0,
-    targets: motor.minTargetPx.value >= 56 ? 2 : motor.minTargetPx.value >= 44 ? 1 : 0,
+    lineLength:
+      vision.maxLineCh.value <= 62
+        ? 2
+        : vision.maxLineCh.value <= 72 || density >= 0.6
+          ? 1
+          : 0,
+    targets:
+      motor.minTargetPx.value >= 56 ? 2 : motor.minTargetPx.value >= 44 ? 1 : 0,
     clicks: motor.steadyClicks.value.on
       ? 2
       : motor.repeatGuard.value.on || motor.hoverGraceMs.value > 0

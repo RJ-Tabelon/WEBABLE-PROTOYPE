@@ -53,5 +53,12 @@ if (checkStatus !== 0) process.exit(checkStatus);
 
 const extra = process.argv.slice(2).filter((a) => a !== '--');
 process.exit(
-  run(['test', '--no-config', '--allow-env', '--allow-net=127.0.0.1', ...extra, ...TEST_ROOTS]),
+  run([
+    'test',
+    '--no-config',
+    '--allow-env',
+    '--allow-net=127.0.0.1',
+    ...extra,
+    ...TEST_ROOTS,
+  ]),
 );

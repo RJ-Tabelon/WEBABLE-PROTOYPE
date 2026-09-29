@@ -30,7 +30,11 @@ export const REGION_ROLES = [
 export type RegionRole = (typeof REGION_ROLES)[number];
 
 /** Roles WebAble may soften. Everything else is protected. */
-export const DIMMABLE_ROLES: readonly RegionRole[] = ['promo_ad', 'recommendations', 'chat_widget'];
+export const DIMMABLE_ROLES: readonly RegionRole[] = [
+  'promo_ad',
+  'recommendations',
+  'chat_widget',
+];
 /**
  * Roles WebAble never dims or hides (help must stay findable: WCAG 3.2.6).
  * The one exception: a navigation bar may be unpinned so it scrolls away (unpin_bars).
@@ -68,7 +72,15 @@ export const PAGE_SIGNALS = [
 ] as const;
 export type PageSignal = (typeof PAGE_SIGNALS)[number];
 
-export const COUNT_BUCKETS = ['0', '1', '2-3', '4-10', '11-30', '31-100', '>100'] as const;
+export const COUNT_BUCKETS = [
+  '0',
+  '1',
+  '2-3',
+  '4-10',
+  '11-30',
+  '31-100',
+  '>100',
+] as const;
 export type CountBucket = (typeof COUNT_BUCKETS)[number];
 
 export function countToBucket(count: number): CountBucket {

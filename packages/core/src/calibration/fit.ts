@@ -378,7 +378,10 @@ function deriveVision(
   let band: ContrastBand | null = null;
   if (s.contrast) {
     // Two or more "I can't see a word" answers at high contrast go straight to the maximum band.
-    band = (s.contrast.cantSeeHigh ?? 0) >= 2 ? 'S' : contrastBand(s.contrast.alphaLog);
+    band =
+      (s.contrast.cantSeeHigh ?? 0) >= 2
+        ? 'S'
+        : contrastBand(s.contrast.alphaLog);
     const floor = BAND_FLOOR[band];
     const conf = contrastConfidence(s.contrast, band, device.dprBucket);
     const stated: ContrastFloor | undefined = moreContrast ? 7 : undefined;
@@ -856,6 +859,33 @@ export function deriveFitProfile(input: DeriveInput): FitProfile {
       ),
       previous?.vision,
     );
+  } else if (reading) {
+    // The reading tasks were skipped, but a comfortable size chosen on the first
+    // screen (or a preview nudge) is still the person's stated preference.
+    const zoom = clamp(device.zoom, 0.25, 5);
+    const toProfilePx = (fontPx: number) =>
+      Math.round(clamp(fontPx * zoom, 12, 96));
+    vision = { ...base.vision };
+    if (
+      reading.comfortPx !== null &&
+      base.vision.textMinPx.source !== 'override'
+    ) {
+      const stated = toProfilePx(reading.comfortPx);
+      vision.textMinPx = param(stated, 'stated', 0.3, { stated });
+    }
+    if (reading.overrides.textPx !== undefined) {
+      vision.textMinPx = withOverride(
+        vision.textMinPx,
+        toProfilePx(reading.overrides.textPx),
+      );
+    }
+    if (reading.overrides.polarity !== undefined) {
+      vision.polarity = withOverride(
+        vision.polarity,
+        reading.overrides.polarity,
+      );
+    }
+    vision = keepVisionOverrides(vision, previous?.vision);
   }
 
   // Motor

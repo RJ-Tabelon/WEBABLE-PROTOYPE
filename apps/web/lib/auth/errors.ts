@@ -34,7 +34,7 @@ export const AUTH_ERROR_MESSAGES: Readonly<Record<AuthErrorCode, string>> =
     weak_password: 'Use a password with at least 8 characters.',
     invalid_input: 'Check the details and try again.',
     invalid_credentials:
-      "That email and password don't match. Try again, or get a sign-in link instead.",
+      "That email and password don’t match. Try again, or get a sign-in link instead.",
     email_not_confirmed:
       'Confirm your email first. Open the link we sent you, then sign in.',
     email_taken: 'An account already uses this email. Sign in instead.',

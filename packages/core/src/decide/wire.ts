@@ -23,7 +23,9 @@ export const decideRequestSchema = z.strictObject({
   catalog: z.literal(CATALOG_VERSION),
   lang: z.literal('en'),
   page: pageContextSchema,
-  regions: z.array(z.strictObject({ rid: regionIdSchema, ev: regionEvidenceSchema })).max(10),
+  regions: z
+    .array(z.strictObject({ rid: regionIdSchema, ev: regionEvidenceSchema }))
+    .max(10),
   mainCandidates: z
     .array(z.strictObject({ cid: candidateIdSchema, ev: regionEvidenceSchema }))
     .min(2)
@@ -62,10 +64,15 @@ export const decideResponseSchema = z.discriminatedUnion('ok', [
     catalog: z.literal(CATALOG_VERSION),
     model: z.string(),
     pageType: z.record(pageCategorySchema, prob).optional(),
-    mainPick: z.partialRecord(z.enum(['c1', 'c2', 'c3', 'c4', 'none']), prob).optional(),
+    mainPick: z
+      .partialRecord(z.enum(['c1', 'c2', 'c3', 'c4', 'none']), prob)
+      .optional(),
     regions: z.record(regionIdSchema, regionAnswerSchema),
     inputTokens: z.number().int().nonnegative(),
-    ms: z.object({ jev: z.number().nonnegative(), edge: z.number().nonnegative() }),
+    ms: z.object({
+      jev: z.number().nonnegative(),
+      edge: z.number().nonnegative(),
+    }),
   }),
   z.object({
     v: z.literal(1),

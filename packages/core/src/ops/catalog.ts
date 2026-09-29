@@ -71,7 +71,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   text_floor: {
     id: 'text_floor',
     label: 'Text size',
-    description: 'Raises small text to your comfortable size. Text that is already large stays as it is.',
+    description:
+      'Raises small text to your comfortable size. Text that is already large stays as it is.',
     areas: ['text'],
     dim: 'textPx',
     levels: [14, 16, 18, 21, 24, 28, 32, 40, 48],
@@ -127,7 +128,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   contrast: {
     id: 'contrast',
     label: 'Contrast',
-    description: 'Darkens faint text against its background. Colours and layout stay the same.',
+    description:
+      'Darkens faint text against its background. Colours and layout stay the same.',
     areas: ['contrast'],
     dim: null,
     levels: [4.5, 7, 21],
@@ -155,7 +157,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   target_size: {
     id: 'target_size',
     label: 'Click targets',
-    description: 'Makes the clickable area around small links and buttons larger, without moving them.',
+    description:
+      'Makes the clickable area around small links and buttons larger, without moving them.',
     areas: ['targets'],
     dim: 'targetPx',
     levels: [24, 32, 44, 56, 72],
@@ -169,7 +172,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   target_spacing: {
     id: 'target_spacing',
     label: 'Space between controls',
-    description: 'Adds room between links and buttons that sit very close together.',
+    description:
+      'Adds room between links and buttons that sit very close together.',
     areas: ['targets'],
     dim: null,
     levels: [4, 8, 12],
@@ -183,7 +187,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   steady_clicks: {
     id: 'steady_clicks',
     label: 'Steady clicks',
-    description: 'Counts a click on the button you pressed, even if the pointer slips a little before you let go.',
+    description:
+      'Counts a click on the button you pressed, even if the pointer slips a little before you let go.',
     areas: ['clicks'],
     dim: 'clickWindowMs',
     levels: [200, 300, 400],
@@ -197,7 +202,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   menu_grace: {
     id: 'menu_grace',
     label: 'Menus stay open',
-    description: 'Keeps menus that open on hover from closing the moment the pointer drifts off.',
+    description:
+      'Keeps menus that open on hover from closing the moment the pointer drifts off.',
     areas: ['clicks'],
     dim: null,
     levels: [400, 700],
@@ -225,7 +231,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   pause_media: {
     id: 'pause_media',
     label: 'Autoplay',
-    description: 'Pauses videos and animated images that start on their own. You can play them again.',
+    description:
+      'Pauses videos and animated images that start on their own. You can play them again.',
     areas: ['motion', 'distraction'],
     dim: null,
     levels: [1],
@@ -239,7 +246,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   dim_distractions: {
     id: 'dim_distractions',
     label: 'Busy areas',
-    description: 'Fades ads and side rails so the main content stands out. Hover or tab into them to bring them back.',
+    description:
+      'Fades ads and side rails so the main content stands out. Hover or tab into them to bring them back.',
     areas: ['distraction'],
     dim: 'dimOpacity',
     levels: [0.6, 0.45, 0.3],
@@ -267,7 +275,8 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   unpin_bars: {
     id: 'unpin_bars',
     label: 'Sticky bars',
-    description: 'Lets bars that stick to the top of the screen scroll away with the page.',
+    description:
+      'Lets bars that stick to the top of the screen scroll away with the page.',
     areas: ['text', 'distraction'],
     dim: null,
     levels: [1],
@@ -299,14 +308,19 @@ export const opDefinition = (id: OpId): OpDefinition => OP_CATALOG[id];
 /** Human-readable value for an op level, e.g. "18 px", "1.8", "70 ch", "300 ms". */
 export function formatOpValue(id: OpId, level: number): string {
   const def = OP_CATALOG[id];
-  const value = def.levels[Math.max(0, Math.min(level, def.levels.length - 1))] ?? 0;
+  const value =
+    def.levels[Math.max(0, Math.min(level, def.levels.length - 1))] ?? 0;
   switch (def.unit) {
     case 'px':
       return `${value} px`;
     case 'x':
       return `${Math.round(value * 100)}%`;
     case 'ratio':
-      return id === 'contrast' ? (value >= 21 ? 'Maximum' : `${value}:1`) : String(value);
+      return id === 'contrast'
+        ? value >= 21
+          ? 'Maximum'
+          : `${value}:1`
+        : String(value);
     case 'ch':
       return `${value} characters`;
     case 'ms':
@@ -324,7 +338,9 @@ export function nearestLevel(id: OpId, value: number): number {
   let best = 0;
   let bestDist = Infinity;
   levels.forEach((level, index) => {
-    const dist = Math.abs(Math.log(Math.max(level, 1e-6)) - Math.log(Math.max(value, 1e-6)));
+    const dist = Math.abs(
+      Math.log(Math.max(level, 1e-6)) - Math.log(Math.max(value, 1e-6)),
+    );
     if (dist < bestDist) {
       bestDist = dist;
       best = index;

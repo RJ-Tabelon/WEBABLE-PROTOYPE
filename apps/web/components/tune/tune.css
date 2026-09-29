@@ -1,0 +1,1989 @@
+/*
+ * Tune: the calibration flow (Task density, design-final §9 and §14).
+ *
+ * Structure
+ * - One purpose per screen: heading, one or two lines, the stage, then 64 px
+ *   task controls 16 px apart. Screens change in 0 ms; nothing here animates a
+ *   screen in or out.
+ * - The stage is a fixed white field (#FFFFFF, stimuli #111111) in both themes.
+ *   Its subtree pins light tokens (data-theme="light" in primitives.tsx) and all
+ *   of its geometry is in CSS px, so neither the theme nor the person's --wa-*
+ *   settings ever change a stimulus.
+ * - Mock pages, sample pages and thumbnails are pictures of other people's pages:
+ *   fixed greyscale colours and a generic system face, never WebAble's tokens.
+ * - Motion exists only on the Focus "moving" trials, only under
+ *   prefers-reduced-motion: no-preference, never above 3 Hz and never flashing.
+ */
+
+/* Reading stimuli: a plain, widely installed sans from the device, never the
+   brand face (design-final §9.2 asks for Noto Sans 400; the measured x-height
+   and advance are read at runtime, so any of these faces gives valid sizes). */
+@font-face {
+  font-family: 'WebAble Stimulus';
+  src:
+    local('Noto Sans'), local('NotoSans-Regular'), local('Arial'),
+    local('ArialMT'), local('Helvetica Neue'), local('HelveticaNeue'),
+    local('Liberation Sans'), local('LiberationSans');
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+
+.tn-screen {
+  --tn-page-font:
+    'Helvetica Neue', Helvetica, Arial, 'Liberation Sans', sans-serif;
+  --tn-gap: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--tn-gap);
+  padding-block-end: var(--space-8);
+}
+
+/* Screens that wrap their parts in one element lay them out the same way. */
+.tn-intro,
+.tn-rest,
+.tn-fit,
+.tn-preview,
+.tn-fit-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--tn-gap);
+}
+
+/* ======================================================================
+   Heading, deck, lead, meta
+   ====================================================================== */
+
+.tn-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The index-rule tick (design-final §7.11): a 24 px ink segment before the label. */
+.tn-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+.tn-eyebrow::before {
+  content: '';
+  inline-size: 24px;
+  block-size: 2px;
+  background: var(--ink);
+}
+
+.tn-title {
+  max-inline-size: 22ch;
+  font-size: var(--text-h1);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+  color: var(--ink);
+  text-wrap: balance;
+  scroll-margin-block-start: var(--space-16);
+}
+/* The heading takes focus on every screen change; it is not a control. */
+.tn-title:focus,
+.tn-goal:focus,
+.tn-findbar__prompt:focus {
+  outline: none;
+}
+
+/* The deck sits close under the heading (one idea, at most two lines). */
+.tn-head + .tn-deck,
+.tn-head + .tn-lead,
+.tn-head + .tn-goal {
+  margin-block-start: calc(var(--space-3) - var(--tn-gap));
+}
+/* A little more air above the stage than between the controls below it. */
+.tn-deck + .tn-stage,
+.tn-goal + .tn-stage,
+.tn-deck + .tn-field-wrap,
+.tn-note + .tn-field-wrap {
+  margin-block-start: var(--space-2);
+}
+
+.tn-deck {
+  max-inline-size: 38rem;
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.tn-lead {
+  max-inline-size: 34rem;
+  margin: 0;
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.tn-meta {
+  max-inline-size: 38rem;
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.tn-goal__question {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+/* ======================================================================
+   Intro
+   ====================================================================== */
+
+.tn-intro {
+  --tn-gap: var(--space-10);
+}
+
+/* The three parts, drawn as the ruler's sections: a hairline with a 12 px tick. */
+.tn-parts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: tn-part;
+}
+
+.tn-parts > li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-4) 0 0;
+  border-block-start: var(--bw-hair) solid var(--line-strong);
+  counter-increment: tn-part;
+}
+.tn-parts > li::before {
+  content: '';
+  position: absolute;
+  inset-block-start: -7px;
+  inset-inline-start: 0;
+  inline-size: 1px;
+  block-size: 12px;
+  background: var(--ink);
+}
+
+.tn-parts__name {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  color: var(--ink);
+}
+.tn-parts__name::before {
+  content: counter(tn-part);
+  margin-inline-end: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  color: var(--ink-3);
+}
+
+.tn-parts__what {
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.tn-intro__setup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.tn-intro__assistive {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+/* ======================================================================
+   The stage (design-final §9.1-9.2)
+   ====================================================================== */
+
+.tn-stage {
+  position: relative;
+  display: block;
+  /* 360 px, less on short windows so the answers stay in view. Pointing
+     fields and mock pages set their own exact height. */
+  min-block-size: clamp(220px, calc(100dvh - 540px), 360px);
+  padding: 32px;
+  border: 1px solid #e0dfd8;
+  border-radius: 12px;
+  background: var(--stage);
+  color: var(--stimulus);
+  /* Stimuli are text on white; let nothing inherit WebAble's reading tweaks. */
+  font-size: 16px;
+  line-height: 1.4;
+  letter-spacing: 0;
+  word-spacing: 0;
+  overflow-wrap: normal;
+  hyphens: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .tn-stage {
+    border-color: #85847b;
+  }
+}
+:root[data-theme='dark'] .tn-stage {
+  border-color: #85847b;
+}
+
+.tn-stage--center {
+  display: grid;
+  /* A definite track, so stimuli can size against the stage width. */
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+}
+
+.tn-stage--bleed {
+  padding: 0;
+}
+
+.tn-stage--page {
+  min-block-size: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.tn-stage--text {
+  padding: 0;
+}
+
+.tn-stimulus-text {
+  margin: 0;
+  max-inline-size: 100%;
+  font-weight: 400;
+  color: var(--stimulus);
+  font-kerning: normal;
+  font-synthesis: none;
+}
+
+.tn-stimulus-text--box {
+  text-align: start;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.tn-stimulus-word {
+  margin: 0;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: 0;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Light and dark sentences are both drawn inside the white stage. */
+.tn-polarity-box {
+  /* The text box keeps its measured width; the padding sits outside it, and
+     never pushes past the stage on narrow screens. */
+  box-sizing: content-box;
+  max-inline-size: calc(100% - 40px);
+  margin: 0;
+  padding: 16px 20px;
+  border-radius: 8px;
+  font-weight: 400;
+}
+.tn-polarity-box--light {
+  background: #ffffff;
+  color: #111111;
+}
+.tn-polarity-box--dark {
+  background: #111111;
+  color: #ffffff;
+}
+
+/* The light and dark answers carry a small sample of what they mean. */
+.tn-swatch {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  inline-size: 44px;
+  block-size: 32px;
+  border: 1px solid #c9c8c0;
+  border-radius: 6px;
+  font-family: 'WebAble Stimulus', Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 400;
+  line-height: 1;
+}
+.tn-swatch--light {
+  background: #ffffff;
+  color: #111111;
+}
+.tn-swatch--dark {
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+}
+
+/* ======================================================================
+   Controls around the stage: 64 px, 16 px apart
+   ====================================================================== */
+
+.tn-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.tn-controls--end {
+  justify-content: flex-end;
+}
+
+.tn-controls__pair {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.tn-responses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.tn-responses > .tn-response {
+  flex: 1 1 10rem;
+}
+
+.tn-responses--grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* "True   T": the label and its key, as on a keycap legend. */
+.tn-response.wa-btn {
+  padding-inline: var(--space-6) var(--space-4);
+}
+.tn-response > .wa-btn__label {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.tn-response .tn-response__label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  text-align: start;
+}
+
+.tn-keyhint {
+  display: inline-flex;
+  flex: none;
+}
+
+.tn-response__kbd.wa-kbd,
+.tn-keyhint .wa-kbd {
+  min-inline-size: 1.75rem;
+  padding-inline: 0.4rem;
+  border-color: var(--line-strong);
+  background: transparent;
+  color: var(--ink-2);
+  text-align: center;
+}
+
+.wa-btn--primary .tn-keyhint .wa-kbd {
+  border-color: currentColor;
+  color: inherit;
+}
+
+/* The idle note and hints never move the controls. */
+.tn-controls .wa-btn,
+.tn-responses .wa-btn {
+  white-space: nowrap;
+}
+
+/* ======================================================================
+   Options as 64 px chips (native radios and checkboxes)
+   ====================================================================== */
+
+.tn-options {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.tn-options__legend {
+  display: block;
+  margin: 0 0 var(--space-4);
+  padding: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  color: var(--ink);
+}
+
+.tn-options__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.tn-option {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: max(var(--control-task), var(--target-min));
+  padding: var(--space-2) var(--space-6) var(--space-2) var(--space-5);
+  border: var(--bw-control) solid var(--line-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-body);
+  line-height: var(--leading-label);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    background-color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease),
+    box-shadow var(--dur-1) var(--ease);
+}
+
+/* The native input covers the chip: it keeps keyboard, name and state. */
+.tn-option__input {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  margin: 0;
+  border-radius: inherit;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.tn-option:has(.tn-option__input:focus-visible) {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: var(--focus-offset);
+}
+
+.tn-option__mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  inline-size: 22px;
+  block-size: 22px;
+  border: var(--bw-strong) solid var(--line-strong);
+  border-radius: 50%;
+  color: var(--on-action);
+  pointer-events: none;
+  transition:
+    background-color var(--dur-2) var(--ease),
+    border-color var(--dur-2) var(--ease);
+}
+.tn-option--check .tn-option__mark {
+  border-radius: var(--radius-1);
+}
+
+.tn-option__text {
+  display: flex;
+  flex-direction: column;
+  min-inline-size: 0;
+  pointer-events: none;
+}
+
+.tn-option__label {
+  font-weight: var(--weight-medium);
+}
+
+.tn-option__hint {
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.tn-option[data-selected] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+  background: var(--surface-raised);
+}
+.tn-option[data-selected] .tn-option__mark {
+  border-color: var(--action);
+  background: var(--action);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tn-option:not([data-selected]):hover {
+    background: var(--surface-hover);
+  }
+}
+
+.tn-option:active {
+  background: var(--surface-press);
+}
+
+.tn-options--stacked .tn-options__list {
+  flex-direction: column;
+}
+.tn-options--stacked .tn-option {
+  inline-size: 100%;
+}
+
+.tn-options--inset {
+  padding-inline-start: var(--space-8);
+  border-inline-start: var(--bw-hair) solid var(--line);
+}
+.tn-options--inset .tn-options__legend {
+  font-size: var(--text-ui);
+}
+
+/* The -2..2 preference scale: five equal steps in one row. */
+.tn-options--scale .tn-options__list {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+.tn-options--scale .tn-option {
+  justify-content: center;
+  min-block-size: 72px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-3);
+  text-align: center;
+}
+.tn-options--scale .tn-option__mark {
+  display: none;
+}
+.tn-options--scale .tn-option__text {
+  align-items: center;
+}
+.tn-options--scale .tn-option__label {
+  font-size: var(--text-ui);
+}
+
+/* ======================================================================
+   Rest between parts, and the note for keys on pointing screens
+   ====================================================================== */
+
+.tn-rest {
+  --tn-gap: var(--space-8);
+  padding-block-start: var(--space-8);
+}
+
+.tn-rest__done {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 calc(var(--space-2) - var(--tn-gap));
+  font-size: var(--text-body);
+  line-height: var(--leading-label);
+  color: var(--ink-2);
+}
+
+.tn-rest__check {
+  inline-size: 20px;
+  block-size: 20px;
+  color: var(--ink);
+}
+
+.tn-rest__action {
+  padding-block-start: var(--space-2);
+}
+
+.tn-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-6);
+  border-radius: var(--radius-3);
+  background: var(--surface-tonal);
+}
+
+.tn-note__text {
+  flex: 1 1 18rem;
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink);
+}
+
+/* ======================================================================
+   Pointing (cal-motor §5): fixed geometry, silent, no hover or hit effects
+   ====================================================================== */
+
+.tn-field-wrap {
+  inline-size: 100%;
+}
+
+.tn-field {
+  min-block-size: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.tn-field__surface {
+  position: absolute;
+  inset: 0;
+  cursor: default;
+}
+
+.tn-target {
+  position: absolute;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #111111;
+  appearance: none;
+  cursor: default;
+  -webkit-tap-highlight-color: transparent;
+}
+.tn-target:focus-visible {
+  outline: 3px solid #111111;
+  outline-offset: 4px;
+}
+
+.tn-hold-ring {
+  position: absolute;
+  overflow: visible;
+  pointer-events: none;
+}
+.tn-hold-ring__track {
+  fill: none;
+  stroke: #d6d6d6;
+  stroke-width: 3;
+}
+.tn-hold-ring__fill {
+  fill: none;
+  stroke: #111111;
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+
+/* Drag: the ring to drop into is the 2 px home marker; the circle is the stimulus. */
+.tn-well {
+  position: absolute;
+  border: 2px solid #111111;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.tn-token {
+  position: absolute;
+  border-radius: 50%;
+  background: #111111;
+  cursor: grab;
+}
+.tn-field__surface:active .tn-token {
+  cursor: grabbing;
+}
+
+/* ======================================================================
+   Previews: reading, pointing and Your fit
+   ====================================================================== */
+
+.tn-preview {
+  --tn-gap: var(--space-4);
+}
+
+.tn-preview__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tn-readout {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-readout);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-readout);
+  letter-spacing: var(--track-readout);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.tn-preview__frame {
+  container: tn-frame / inline-size;
+  position: relative;
+  overflow: hidden;
+  border: var(--bw-hair) solid var(--line-strong);
+  border-radius: var(--radius-4);
+  background: #ffffff;
+  color: #111111;
+}
+
+.tn-preview__frame--page {
+  padding: 28px 32px;
+}
+
+.tn-preview__frame--stack {
+  display: grid;
+  overflow: visible;
+  isolation: isolate;
+}
+.tn-preview__frame--stack > .tn-preview__layer {
+  grid-area: 1 / 1;
+  overflow: hidden;
+  border-radius: calc(var(--radius-4) - 1px);
+}
+.tn-preview__layer[data-hidden] {
+  visibility: hidden;
+}
+
+.tn-adjust-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+}
+.tn-adjust-grid > .wa-switch-field,
+.tn-adjust-grid > :last-child {
+  flex: 1 1 100%;
+}
+
+/* A page for the reading preview: somebody else's article, in its own colours. */
+.tn-sample-article {
+  padding: 32px 36px 28px;
+  font-family: var(--tn-page-font);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+.tn-sample-article__kicker {
+  margin: 0 0 0.5em;
+  font-size: 0.9375em;
+  opacity: 0.75;
+}
+.tn-sample-article__title {
+  margin: 0 0 0.6em;
+  font-family: inherit;
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: inherit;
+}
+.tn-sample-article p {
+  margin: 0 0 0.85em;
+}
+.tn-sample-article p:last-child {
+  margin-block-end: 0;
+}
+
+/* Sample controls for the pointing preview, sized by --tn-t. */
+.tn-sample-ui {
+  --tn-t: 44px;
+  display: grid;
+  gap: 20px;
+  font-family: var(--tn-page-font);
+  font-size: 16px;
+  line-height: 1.3;
+  color: #1f1f1f;
+}
+
+.tn-sample-ui__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tn-sample-ui__tool {
+  position: relative;
+  display: grid;
+  place-items: center;
+  inline-size: var(--tn-t);
+  block-size: var(--tn-t);
+  border: 1px solid #c4c4c4;
+  border-radius: 6px;
+}
+.tn-sample-ui__tool::before {
+  content: '';
+  inline-size: 38%;
+  block-size: 3px;
+  border-radius: 2px;
+  background: #4a4a4a;
+  box-shadow:
+    0 -6px 0 #4a4a4a,
+    0 6px 0 #4a4a4a;
+}
+.tn-sample-ui__tool--bold::before {
+  inline-size: 30%;
+  block-size: 42%;
+  border-radius: 3px;
+  box-shadow: none;
+}
+.tn-sample-ui__tool--link::before {
+  inline-size: 44%;
+  block-size: 18%;
+  border: 3px solid #4a4a4a;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+.tn-sample-ui__tool--image::before {
+  inline-size: 46%;
+  block-size: 36%;
+  border-radius: 3px;
+  box-shadow: none;
+}
+.tn-sample-ui__tool--more::before {
+  inline-size: 4px;
+  block-size: 4px;
+  box-shadow:
+    -8px 0 0 #4a4a4a,
+    8px 0 0 #4a4a4a;
+}
+
+.tn-sample-ui__links {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: 1px solid #e3e3e3;
+}
+.tn-sample-ui__links > li {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--tn-t);
+  border-block-end: 1px solid #e3e3e3;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.tn-sample-ui__form {
+  display: flex;
+  gap: 8px;
+}
+.tn-sample-ui__input,
+.tn-sample-ui__button {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--tn-t);
+  border-radius: 6px;
+}
+.tn-sample-ui__input {
+  flex: 1 1 auto;
+  padding-inline: 12px;
+  border: 1px solid #a8a8a8;
+  color: #6b6b6b;
+}
+.tn-sample-ui__button {
+  justify-content: center;
+  min-inline-size: var(--tn-t);
+  padding-inline: 16px;
+  background: #1f1f1f;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* ======================================================================
+   Focus: mock pages (cal-attention §4). Greyscale plus the element under test.
+   ====================================================================== */
+
+.tn-mock {
+  font-family: var(--tn-page-font);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: #1f1f1f;
+  background: #ffffff;
+}
+
+.tn-mock__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75em 1.5em;
+  padding: 0.9em 1.25em;
+  border-block-end: 1px solid #e3e3e3;
+}
+.tn-mock__logo {
+  font-weight: 700;
+  font-size: 1.0625em;
+  letter-spacing: -0.01em;
+}
+.tn-mock__nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em 1.1em;
+  font-size: 0.9375em;
+  color: #595959;
+}
+.tn-mock__pill {
+  margin-inline-start: auto;
+  padding: 0.3em 0.95em;
+  border: 1px solid #b5b5b5;
+  border-radius: 999px;
+  font-size: 0.9375em;
+}
+
+.tn-mock__ticker {
+  overflow: hidden;
+  padding-block: 0.45em;
+  border-block-end: 1px solid #ebebeb;
+  background: #f4f4f4;
+  color: #4a4a4a;
+  font-size: 0.9375em;
+  white-space: nowrap;
+}
+.tn-mock__ticker-track {
+  display: inline-flex;
+  padding-inline-start: 1.25em;
+}
+.tn-mock--clean .tn-mock__ticker {
+  background: #fafafa;
+}
+
+.tn-mock__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+.tn-mock--busy .tn-mock__body {
+  grid-template-columns: minmax(0, 1fr) minmax(9em, 30%);
+}
+.tn-mock--busy[data-mirror] .tn-mock__body {
+  grid-template-columns: minmax(9em, 30%) minmax(0, 1fr);
+}
+.tn-mock--busy[data-mirror] .tn-mock__side {
+  order: -1;
+  border-inline-start: 0;
+  border-inline-end: 1px solid #e3e3e3;
+}
+
+.tn-mock__main {
+  min-inline-size: 0;
+  padding: 1em 1.25em 1.25em;
+}
+
+.tn-mock__hero {
+  position: relative;
+  overflow: hidden;
+  block-size: 5.5em;
+  margin-block-end: 1em;
+  border-radius: 6px;
+  background: #eeeeee;
+}
+.tn-mock__slides {
+  display: flex;
+  block-size: 100%;
+}
+.tn-mock__slide {
+  display: flex;
+  flex: 0 0 100%;
+  align-items: center;
+  gap: 1em;
+  /* Room for the badge in the top corner. */
+  padding-inline: 1.1em 5em;
+  font-weight: 700;
+  color: #333333;
+}
+.tn-mock__slide-img {
+  flex: none;
+  inline-size: 3.6em;
+  block-size: 3.6em;
+  border-radius: 4px;
+  background: #d2d2d2;
+}
+.tn-mock__live {
+  position: absolute;
+  inset-block-start: 0.6em;
+  inset-inline-end: 0.6em;
+  padding: 0.15em 0.65em;
+  border-radius: 999px;
+  background: #1f1f1f;
+  color: #ffffff;
+  font-size: 0.9375em;
+  font-weight: 700;
+}
+
+/* The static stand-in for motion (reduced motion): one bright, still block. */
+.tn-mock__salient {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25em 1em;
+  margin-block-end: 1em;
+  padding: 0.85em 1.1em;
+  border-radius: 6px;
+  background: #111111;
+  color: #ffffff;
+}
+
+.tn-mock__promos {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6em;
+  margin-block-end: 1em;
+}
+.tn-mock__promo {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-inline-size: 0;
+  padding: 0.55em;
+  border: 1px solid #dddddd;
+  border-radius: 6px;
+  background: #f3f3f3;
+  font-size: 0.9375em;
+  line-height: 1.25;
+}
+.tn-mock__promo--1 {
+  background: #e6e6e6;
+}
+.tn-mock__promo--2 {
+  background: #fafafa;
+}
+.tn-mock__promo-img {
+  flex: none;
+  inline-size: 1.8em;
+  block-size: 1.8em;
+  border-radius: 4px;
+  background: #c9c9c9;
+}
+
+.tn-mock__heading {
+  margin: 0 0 0.5em;
+  font-family: inherit;
+  font-size: 1.0625em;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+  color: #1f1f1f;
+}
+
+.tn-mock__links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.1em 1em;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The side column leaves less room on busy pages: two columns keep labels whole. */
+.tn-mock--busy .tn-mock__links {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tn-mock__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  min-inline-size: 0;
+  min-block-size: 2.5em;
+}
+.tn-mock__thumb {
+  flex: none;
+  inline-size: 1.5em;
+  block-size: 1.5em;
+  border-radius: 3px;
+  background: #d9d9d9;
+}
+.tn-mock__link {
+  min-inline-size: 0;
+  min-block-size: 2.25em;
+  padding: 0.2em 0.1em;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  color: #1a1a1a;
+  font: inherit;
+  text-align: start;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tn-mock__link:focus-visible {
+  outline: 3px solid #111111;
+  outline-offset: 2px;
+}
+.tn-mock__link[data-reveal] {
+  outline: 3px solid #111111;
+  outline-offset: 3px;
+}
+.tn-mock__badge {
+  flex: none;
+  padding: 0.05em 0.5em;
+  border-radius: 3px;
+  background: #e2e2e2;
+  color: #333333;
+  font-size: 0.9375em;
+  font-weight: 700;
+}
+
+.tn-mock__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+  min-inline-size: 0;
+  padding: 1em;
+  border-inline-start: 1px solid #e3e3e3;
+  background: #fafafa;
+}
+.tn-mock__ad {
+  display: grid;
+  place-items: center;
+  min-block-size: 6.5em;
+  padding: 0.75em;
+  border-radius: 6px;
+  background: #dcdcdc;
+  font-size: 0.9375em;
+  line-height: 1.3;
+  text-align: center;
+}
+.tn-mock__side-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 0.9375em;
+  line-height: 1.3;
+  color: #444444;
+}
+.tn-mock__side-img {
+  flex: none;
+  inline-size: 2.2em;
+  block-size: 2.2em;
+  border-radius: 4px;
+  background: #d6d6d6;
+}
+
+/* Motion: only on animated trials, only when motion is welcome. Nothing faster
+   than 3 Hz, nothing that flashes (WCAG 2.3.1, cal-attention decision 5). */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-wa-motion='reduce']) .tn-mock__slides--moving {
+    transition: transform 500ms var(--ease);
+  }
+  :root:not([data-wa-motion='reduce']) .tn-mock__ticker-track--moving {
+    animation: tn-ticker 20s linear infinite;
+  }
+  :root:not([data-wa-motion='reduce']) .tn-mock__live--moving {
+    animation: tn-pulse 1600ms ease-in-out infinite alternate;
+  }
+}
+
+@keyframes tn-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes tn-pulse {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0.45;
+  }
+}
+
+/* The find bar: WebAble's instruction, drawn inside the stage. */
+.tn-findbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  min-block-size: 88px;
+  padding: 12px 12px 12px 24px;
+  border-block-end: 1px solid #e0dfd8;
+  background: #ffffff;
+  font-family: var(--font-sans);
+}
+.tn-findbar__prompt {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+  min-inline-size: 0;
+}
+.tn-findbar__verb {
+  font-size: 15px;
+  color: #45443e;
+}
+.tn-findbar__target {
+  font-size: 24px;
+  font-weight: var(--weight-medium);
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #111111;
+}
+.tn-findbar__note {
+  flex-basis: 100%;
+  font-size: 15px;
+  color: #45443e;
+}
+.tn-findbar__stop.wa-btn {
+  flex: none;
+}
+
+/* Task B: a small flow page and its action row. */
+.tn-flow__body {
+  padding: 1.5em 1.75em 1.75em;
+}
+.tn-flow__title {
+  margin: 0 0 0.6em;
+  font-family: inherit;
+  font-size: 1.375em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: #1f1f1f;
+}
+.tn-flow__lines {
+  display: grid;
+  gap: 0.3em;
+  margin: 0 0 1.5em;
+  padding: 0;
+  list-style: none;
+  color: #4a4a4a;
+}
+.tn-flow__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75em;
+}
+.tn-flow__aside {
+  margin-block-start: 1em;
+}
+.tn-flow__btn {
+  min-block-size: 2.75em;
+  padding: 0.55em 1.2em;
+  border: 1px solid #b5b5b5;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #1f1f1f;
+  font: inherit;
+  font-size: 0.9375em;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tn-flow__btn:focus-visible {
+  outline: 3px solid #111111;
+  outline-offset: 2px;
+}
+.tn-flow__btn--salient {
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+  font-weight: 700;
+}
+.tn-flow__btn--primary {
+  padding-inline: 1.6em;
+  border-color: #111111;
+  background: #111111;
+  color: #ffffff;
+  font-size: 1em;
+  font-weight: 700;
+}
+.tn-flow__btn--quiet {
+  min-block-size: 2.25em;
+  padding: 0.3em 0;
+  border: 0;
+  background: none;
+  color: #595959;
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+/* Task C: one passage, dense or chunked. */
+.tn-text {
+  padding: 1.5em 1.75em 1.75em;
+  line-height: 1.55;
+}
+.tn-text__heading {
+  margin: 0 0 0.75em;
+  font-family: inherit;
+  font-size: 1.25em;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0;
+  color: #1f1f1f;
+}
+.tn-text__para {
+  margin: 0;
+}
+.tn-text--chunked .tn-text__para + .tn-text__para {
+  margin-block-start: 0.9em;
+}
+.tn-text--dense .tn-text__para + .tn-text__para {
+  margin-block-start: 0.35em;
+}
+.tn-sentence--pick {
+  border-radius: 2px;
+  cursor: pointer;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tn-sentence--pick:hover {
+    background: #efefef;
+    box-shadow: 0 0 0 2px #efefef;
+  }
+}
+
+.tn-choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.tn-choice.wa-btn {
+  justify-content: flex-start;
+  padding-block: var(--space-4);
+  padding-inline: var(--space-6);
+  text-align: start;
+  white-space: normal;
+  font-weight: var(--weight-regular);
+}
+
+/* Task D: two pages side by side, then the scale. */
+.tn-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+}
+
+.tn-thumb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  min-inline-size: 0;
+}
+.tn-thumb__frame {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  border: var(--bw-hair) solid var(--line-strong);
+  border-radius: var(--radius-3);
+  background: #ffffff;
+}
+.tn-thumb__scale {
+  inline-size: 200%;
+  transform: scale(0.5);
+  transform-origin: 0 0;
+  pointer-events: none;
+}
+.tn-thumb__label {
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  color: var(--ink);
+}
+
+/* ======================================================================
+   Your fit (design-final §9.4-9.5)
+   ====================================================================== */
+
+.tn-fit {
+  --tn-gap: var(--space-8);
+}
+
+.tn-fit__summary {
+  margin-block-start: calc(var(--space-3) - var(--tn-gap));
+}
+
+.tn-fit-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.tn-fit-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'text value actions'
+    'keep keep keep'
+    'panel panel panel';
+  align-items: center;
+  column-gap: var(--space-6);
+  min-block-size: 72px;
+  padding-block: var(--space-5);
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.tn-fit-row__text {
+  grid-area: text;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+
+.tn-fit-row__label {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  letter-spacing: var(--track-text);
+  color: var(--ink);
+}
+
+.tn-fit-row__sentence {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+  text-wrap: pretty;
+}
+
+.tn-fit-row__source {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-3);
+}
+
+.tn-fit-row__value {
+  grid-area: value;
+  justify-self: end;
+  text-align: end;
+}
+
+.tn-fit-row__keep {
+  grid-area: keep;
+  padding-block-start: var(--space-4);
+}
+
+.tn-fit-row__actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+.tn-fit-row__actions > .wa-btn--ghost {
+  margin-inline-end: calc(-1 * var(--space-3));
+}
+
+.tn-fit-row__panel {
+  grid-area: panel;
+  padding-block-start: var(--space-4);
+}
+.tn-fit-row__panel[hidden] {
+  display: none;
+}
+
+.tn-readout-lg {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-readout);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-readout);
+  letter-spacing: var(--track-readout);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.tn-readout-lg__visual {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3em;
+}
+.tn-readout-lg__from {
+  color: var(--ink-2);
+}
+.tn-readout-lg__arrow.wa-fit-arrow {
+  inline-size: 0.6em;
+  block-size: 0.4em;
+  align-self: center;
+}
+.tn-readout-lg__to {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+.tn-readout-lg__unit {
+  font-size: 0.6em;
+  color: var(--ink-2);
+}
+.tn-readout-lg--same {
+  color: var(--ink-2);
+}
+/* The shared fit mark (design-final §7.20); an unchanged value is not a change. */
+.tn-fitmark.wa-fit-mark--readout .wa-fit-mark__value {
+  color: var(--ink-2);
+}
+.tn-fitmark--same .wa-fit-mark__to {
+  color: var(--ink);
+  font-weight: var(--weight-mono);
+}
+/* Values that are words ("Paused", "Site colors") read in the text face. */
+.tn-readout-lg--words {
+  font-family: var(--font-sans);
+  font-size: var(--text-title);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-title);
+  letter-spacing: var(--track-text);
+}
+.tn-readout-lg--words .tn-readout-lg__visual {
+  gap: 0.45em;
+}
+.tn-readout-lg--words .tn-readout-lg__arrow.wa-fit-arrow {
+  inline-size: 0.8em;
+  block-size: 0.5333em;
+}
+
+.tn-fit-preview__title {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  letter-spacing: var(--track-text);
+  color: var(--ink);
+}
+
+.tn-stepper {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+.tn-stepper__value {
+  min-inline-size: 5ch;
+  font-family: var(--font-mono);
+  font-size: var(--text-readout);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-readout);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--ink);
+}
+
+.tn-fit-preview {
+  --tn-gap: var(--space-4);
+}
+
+.tn-fit__actions {
+  padding-block-start: var(--space-2);
+}
+
+/* The sample page inside the fit preview. */
+.tn-page {
+  font-family: var(--tn-page-font);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+.tn-page__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em 1.5em;
+  padding: 0.9em 1.5em;
+  border-block-end: 1px solid rgb(128 128 128 / 0.25);
+}
+.tn-page__site {
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.tn-page__nav {
+  display: flex;
+  gap: 1.1em;
+  font-size: 0.9375em;
+}
+.tn-page__body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8em, 11em);
+  gap: 1.75em;
+  padding: 1.5em 1.5em 1.75em;
+}
+.tn-page__article {
+  min-inline-size: 0;
+}
+.tn-page__kicker {
+  margin: 0 0 0.4em;
+  font-size: 0.9375em;
+}
+.tn-page__title {
+  margin: 0 0 0.6em;
+  font-family: inherit;
+  font-size: 1.375em;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: inherit;
+}
+.tn-page__text p {
+  margin: 0 0 0.75em;
+}
+.tn-page__text p:last-child {
+  margin-block-end: 0;
+}
+.tn-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 1em;
+  inline-size: fit-content;
+}
+.tn-page__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 0.8em;
+  border: 1px solid rgb(128 128 128 / 0.55);
+  border-radius: 6px;
+}
+.tn-page__side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+  min-inline-size: 0;
+}
+.tn-page__ad {
+  display: grid;
+  place-items: center;
+  min-block-size: 6em;
+  padding: 0.75em;
+  border-radius: 6px;
+  background: rgb(128 128 128 / 0.2);
+  font-size: 0.9375em;
+  font-weight: 700;
+  text-align: center;
+}
+.tn-page__rec {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  font-size: 0.9375em;
+  line-height: 1.3;
+}
+.tn-page__rec-img {
+  flex: none;
+  inline-size: 2.4em;
+  block-size: 2.4em;
+  border-radius: 4px;
+  background: rgb(128 128 128 / 0.3);
+}
+
+@container tn-frame (max-width: 34rem) {
+  .tn-page__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tn-page__side {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .tn-page__ad {
+    flex: 1 1 100%;
+    min-block-size: 3.5em;
+  }
+  .tn-sample-article {
+    padding: 24px 20px 20px;
+  }
+}
+
+/* Ghost and fit (design-final §8): original bounds dashed, fitted bounds in
+   accent with a white casing, a fit mark on a plate outside the top-left corner. */
+.tn-ghost,
+.tn-fit-outline {
+  position: absolute;
+  z-index: 1;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.tn-ghost {
+  border: 1px dashed #1a1a17;
+  box-shadow:
+    0 0 0 1px var(--inpage-casing),
+    inset 0 0 0 1px var(--inpage-casing);
+}
+.tn-fit-outline {
+  z-index: 2;
+  border: 2px solid var(--inpage-accent);
+  background: rgb(45 106 62 / 0.06);
+  box-shadow:
+    0 0 0 1px var(--inpage-casing),
+    inset 0 0 0 1px var(--inpage-casing);
+}
+
+.tn-tag {
+  position: absolute;
+  inset-block-end: calc(100% + 4px);
+  inset-inline-start: -2px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow:
+    0 0 0 1px #1a1a17,
+    0 2px 8px rgb(26 26 23 / 0.16);
+  color: #45443e;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: var(--weight-mono);
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.tn-tag .wa-fit-arrow {
+  color: #45443e;
+}
+.tn-tag__to {
+  color: #2d6a3e;
+  font-weight: var(--weight-medium);
+}
+
+/* ======================================================================
+   Narrow screens (reflow to 320 px)
+   ====================================================================== */
+
+@container wa-task (max-width: 47.99em) {
+  /* Small screens: the stage and its answers should fit on one screen. */
+  .wa-task__main:has(> .wa-task__column > .tn-screen) {
+    padding-block-start: var(--space-6);
+  }
+  .tn-screen {
+    --tn-gap: var(--space-5);
+  }
+  .tn-intro {
+    --tn-gap: var(--space-8);
+  }
+
+  .tn-parts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+  .tn-parts > li {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: baseline;
+    column-gap: var(--space-3);
+    padding-inline-end: 0;
+    padding-block-start: var(--space-3);
+  }
+
+  .tn-stage:not(.tn-field, .tn-stage--page) {
+    min-block-size: clamp(200px, calc(100dvh - 560px), 280px);
+  }
+  .tn-stage {
+    padding: 16px;
+  }
+  .tn-stage--bleed,
+  .tn-stage--page,
+  .tn-stage--text {
+    padding: 0;
+  }
+
+  .tn-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .tn-controls > .wa-btn,
+  .tn-controls__pair {
+    inline-size: 100%;
+  }
+  /* Answers stay beside each other, so the sentence and its answers fit on one
+     screen: scrolling to answer would count as reading time. */
+  .tn-responses > .tn-response {
+    flex: 1 1 5.75rem;
+  }
+  .tn-response.wa-btn {
+    padding-inline: var(--space-3);
+  }
+  .tn-response > .wa-btn__label {
+    justify-content: center;
+  }
+  .tn-response .tn-response__label {
+    text-align: center;
+  }
+  /* Key hints are for keyboards; small screens are mostly touch. */
+  .tn-keyhint {
+    display: none;
+  }
+  .tn-controls__pair > .wa-btn {
+    flex: 1 1 0;
+  }
+  .tn-controls--end {
+    align-items: flex-end;
+  }
+  .tn-controls .wa-btn,
+  .tn-responses .wa-btn {
+    white-space: normal;
+  }
+
+  .tn-responses--grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tn-responses--stack {
+    flex-direction: column;
+  }
+  .tn-responses--stack > .tn-response {
+    flex: none;
+    inline-size: 100%;
+  }
+  .tn-responses--stack .tn-response > .wa-btn__label {
+    justify-content: flex-start;
+  }
+  /* The shell's Pause and Skip share a narrow row: keep their words whole. */
+  .wa-task:has(.tn-screen) .wa-task__actions-inner > .wa-btn {
+    padding-inline: var(--space-3);
+  }
+
+  .tn-options__list {
+    flex-direction: column;
+  }
+  .tn-option {
+    inline-size: 100%;
+  }
+  .tn-options--scale .tn-options__list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tn-options--scale .tn-option {
+    flex-direction: row;
+    justify-content: flex-start;
+    min-block-size: var(--control-task);
+    padding-inline: var(--space-5);
+    border-radius: var(--radius-pill);
+    text-align: start;
+  }
+  .tn-options--scale .tn-option__text {
+    flex-direction: row;
+    align-items: baseline;
+    gap: var(--space-2);
+  }
+  .tn-options--inset {
+    padding-inline-start: var(--space-4);
+  }
+
+  .tn-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tn-mock--busy .tn-mock__body,
+  .tn-mock--busy[data-mirror] .tn-mock__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tn-mock__side {
+    border-inline-start: 0;
+    border-block-start: 1px solid #e3e3e3;
+  }
+  .tn-mock--busy[data-mirror] .tn-mock__side {
+    order: 0;
+    border-inline-end: 0;
+  }
+  .tn-mock__links {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tn-mock__promos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tn-findbar {
+    padding-inline-start: 16px;
+  }
+  .tn-findbar__stop.wa-btn {
+    inline-size: 100%;
+  }
+
+  .tn-fit-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'text text'
+      'value actions'
+      'keep keep'
+      'panel panel';
+  }
+  .tn-fit-row__value {
+    justify-self: start;
+    text-align: start;
+  }
+  .tn-fit-row__value,
+  .tn-fit-row__actions {
+    margin-block-start: var(--space-3);
+  }
+  .tn-preview__frame--page {
+    padding: 20px;
+  }
+  /* Choices share the row and wrap their words rather than overflow. */
+  .tn-screen .wa-segmented {
+    display: flex;
+    inline-size: 100%;
+  }
+  .tn-screen .wa-segmented__item {
+    flex: 1 1 0;
+    min-inline-size: 0;
+    padding-inline: var(--space-2);
+    text-align: center;
+    white-space: normal;
+  }
+}
+
+/* ======================================================================
+   Forced colours: keep stimuli visible with system colours
+   ====================================================================== */
+
+@media (forced-colors: active) {
+  .tn-stage {
+    border-color: CanvasText;
+  }
+  .tn-target,
+  .tn-token {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .tn-well {
+    border-color: CanvasText;
+  }
+  .tn-option[data-selected] {
+    outline: 2px solid Highlight;
+  }
+  .tn-option__mark {
+    forced-color-adjust: none;
+    border-color: CanvasText;
+  }
+  .tn-option[data-selected] .tn-option__mark {
+    background: Highlight;
+    color: HighlightText;
+  }
+  .tn-parts > li::before,
+  .tn-eyebrow::before {
+    background: CanvasText;
+  }
+  .tn-fit-outline {
+    border-color: Highlight;
+  }
+}
+
+/* ======================================================================
+   Motion: chrome transitions follow the tokens and the person's setting
+   ====================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .tn-option,
+  .tn-option__mark {
+    transition: none;
+  }
+}
+:root[data-wa-motion='reduce'] .tn-option,
+:root[data-wa-motion='reduce'] .tn-option__mark {
+  transition: none;
+}

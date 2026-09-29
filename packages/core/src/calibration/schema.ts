@@ -122,7 +122,11 @@ export const visionSummarySchema = z.object({
 export type VisionSummary = z.infer<typeof visionSummarySchema>;
 
 /** A within-person log difference with its standard error (cal-attention.md 5). */
-const effect = z.object({ value: z.number().min(-5).max(5), se: n(0, 5), n: n(0, 100).int() });
+const effect = z.object({
+  value: z.number().min(-5).max(5),
+  se: n(0, 5),
+  n: n(0, 100).int(),
+});
 
 export const attentionSummarySchema = z.object({
   status: z.enum(['measured', 'skipped']),
@@ -143,7 +147,9 @@ export const attentionSummarySchema = z.object({
     hierarchy: z.number().int().min(-2).max(2).nullable(),
   }),
   /** "Did anything get in your way?" functional chips. */
-  chips: z.array(z.enum(['moving', 'busy', 'long_text', 'unclear_action', 'nothing'])).max(5),
+  chips: z
+    .array(z.enum(['moving', 'busy', 'long_text', 'unclear_action', 'nothing']))
+    .max(5),
   durationSec: n(0, 3600),
 });
 export type AttentionSummary = z.infer<typeof attentionSummarySchema>;
