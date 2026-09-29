@@ -89,6 +89,7 @@ export type JevFailure =
   | { kind: 'auth'; status: 401 | 403 }
   | { kind: 'invalid'; status: 400 | 422; body: unknown }
   | { kind: 'server'; status: number }
+  | { kind: 'aborted' }
   | { kind: 'shape'; issue: string }
   | { kind: 'model_drift'; got: string };
 

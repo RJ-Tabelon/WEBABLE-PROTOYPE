@@ -9,7 +9,9 @@
 }
 
 html {
-  font-size: calc(100% * var(--wa-text-scale)); /* browser default first, then the profile */
+  font-size: calc(
+    100% * var(--wa-text-scale)
+  ); /* browser default first, then the profile */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   background: var(--canvas);
@@ -52,6 +54,82 @@ h3,
 h4 {
   font-weight: var(--weight-medium);
   text-wrap: balance;
+}
+
+/* Default heading scale (design-final §5.1). Components set their own sizes. */
+h1 {
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+}
+
+h2 {
+  font-size: var(--text-h2);
+  line-height: var(--leading-h2);
+  letter-spacing: var(--track-h2);
+}
+
+h3 {
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
+  letter-spacing: var(--track-h3);
+}
+
+h4 {
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+}
+
+strong,
+b {
+  font-weight: var(--weight-strong);
+}
+
+/* Type roles as classes, for text that is not a heading element. */
+.wa-display {
+  font-size: var(--text-display);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-display);
+  letter-spacing: var(--track-display);
+  text-wrap: balance;
+}
+
+.wa-title {
+  font-size: var(--text-title);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-title);
+}
+
+.wa-lead {
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+.wa-body {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.wa-meta {
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.wa-mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-mono);
+  letter-spacing: 0;
+}
+
+.wa-secondary {
+  color: var(--ink-2);
+}
+
+.wa-prose {
+  max-inline-size: var(--w-prose);
 }
 
 p {
@@ -112,6 +190,11 @@ a {
 
 .wa-inverse {
   --focus: var(--focus-inverse);
+}
+
+/* A subtree pinned to a theme (tokens.css scoped blocks) also needs its smoothing. */
+[data-theme]:not(:root) {
+  -webkit-font-smoothing: var(--font-smoothing);
 }
 
 ::selection {

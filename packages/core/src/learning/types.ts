@@ -63,6 +63,13 @@ export interface DomainOp extends Counts {
   e?: Counts;
   skipUntil?: Day;
   sessionOff?: string;
+  /** Days on which the verifier rejected this op here (engine gate window). */
+  rejects?: Day[];
+  passDay?: Day;
+  /** Engine gate: the op may not run here until this day. */
+  engineUntil?: Day;
+  /** A fast or "Don't want this" undo: offers only here until accepted again. */
+  demoted?: true;
 }
 
 export interface DomainState {
@@ -121,6 +128,8 @@ export interface AdaptEvent {
   componentKey?: string;
   friction?: 'misclick_burst' | 'zoom_in' | 'scroll_reversal' | 'rage_click';
   answer?: 'yes' | 'no';
+  /** Promotion prompts can apply to one site or everywhere. */
+  scope?: 'site' | 'everywhere';
   acceptedThisSession?: boolean;
   autoApplied?: boolean;
   kept?: boolean;
@@ -133,8 +142,9 @@ export const learnDeltaSchema = z.object({
   deltaId: z.string().min(8).max(64),
   day: z.number().int(),
   op: z.string().optional(),
-  ds: z.number().min(0).max(10).optional(),
-  df: z.number().min(0).max(10).optional(),
+  /** Negative values reverse an earlier credit (an undo reason that arrived after the undo). */
+  ds: z.number().min(-10).max(10).optional(),
+  df: z.number().min(-10).max(10).optional(),
   accepts: z.number().int().min(0).max(10).optional(),
   src: z.enum(['profile', 'pinned', 'system', 'none']).optional(),
   blocked: z.boolean().optional(),

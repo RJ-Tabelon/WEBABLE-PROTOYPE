@@ -21,6 +21,11 @@ function level(p: number, one: number, two: number): NeedLevel {
   return p >= two ? 2 : p >= one ? 1 : 0;
 }
 
+/** A dimension nothing has informed yet (flat default prior) carries no need. */
+function evidenced(dim: LatentDim): boolean {
+  return dim.sources.length > 0 && dim.confidence > 0;
+}
+
 /**
  * Quantise the profile into need levels. Thresholds are cost-weighted:
  * cheap, reversible changes (motion) switch on at lower evidence than costly
@@ -29,8 +34,8 @@ function level(p: number, one: number, two: number): NeedLevel {
 export function needLevels(profile: FitProfile): NeedLevels {
   const { vision, motor, attention } = profile;
   const text = vision.textMinPx.value;
-  const chunking = benefitProbability(attention.chunking);
-  const density = benefitProbability(attention.density);
+  const chunking = evidenced(attention.chunking) ? benefitProbability(attention.chunking) : 0;
+  const density = evidenced(attention.density) ? benefitProbability(attention.density) : 0;
 
   return {
     text: text >= 21 ? 2 : text >= 17 ? 1 : 0,
@@ -48,7 +53,13 @@ export function needLevels(profile: FitProfile): NeedLevels {
       : motor.repeatGuard.value.on || motor.hoverGraceMs.value > 0
         ? 1
         : 0,
-    motion: attention.systemReducedMotion ? 2 : level(benefitProbability(attention.motion), 0.35, 0.8),
-    distraction: level(benefitProbability(attention.distraction), 0.5, 0.8),
+    motion: attention.systemReducedMotion
+      ? 2
+      : evidenced(attention.motion)
+        ? level(benefitProbability(attention.motion), 0.35, 0.8)
+        : 0,
+    distraction: evidenced(attention.distraction)
+      ? level(benefitProbability(attention.distraction), 0.5, 0.8)
+      : 0,
   };
 }

@@ -6,6 +6,8 @@ const config: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@webable/core', '@webable/ui', '@webable/tokens'],
   poweredByHeader: false,
+  // Do not generate AGENTS.md / CLAUDE.md on `next dev`.
+  agentRules: false,
 };
 
 export default config;

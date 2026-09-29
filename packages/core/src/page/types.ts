@@ -1,50 +1,25 @@
 import { z } from 'zod';
 
+import {
+  COUNT_BUCKETS,
+  PAGE_CATEGORIES,
+  PAGE_SIGNALS,
+  REGION_ROLES,
+  type PageCategory,
+  type RegionRole,
+} from './constants';
+
+export * from './constants';
+
 /**
  * Page vocabulary shared by the in-page engine (extraction), the policy
  * (service worker), and the page-analysis proxy (Edge Function).
  * Nothing in these types can carry page text, URLs, or form values.
  */
 
-export const PAGE_CATEGORIES = [
-  'article',
-  'feed_social',
-  'search_results',
-  'form_checkout',
-  'web_app',
-  'docs_reference',
-  'media_video',
-  'other',
-] as const;
 export const pageCategorySchema = z.enum(PAGE_CATEGORIES);
-export type PageCategory = z.infer<typeof pageCategorySchema>;
 
-export const REGION_ROLES = [
-  'main_content',
-  'navigation',
-  'promo_ad',
-  'recommendations',
-  'chat_widget',
-  'consent_banner',
-  'help_contact',
-  'form',
-  'footer',
-  'other',
-] as const;
 export const regionRoleSchema = z.enum(REGION_ROLES);
-export type RegionRole = z.infer<typeof regionRoleSchema>;
-
-/** Roles WebAble may soften. Everything else is protected. */
-export const DIMMABLE_ROLES: readonly RegionRole[] = ['promo_ad', 'recommendations', 'chat_widget'];
-/** Roles WebAble never dims, hides, or unpins (help must stay findable: WCAG 3.2.6). */
-export const PROTECTED_ROLES: readonly RegionRole[] = [
-  'main_content',
-  'navigation',
-  'form',
-  'help_contact',
-  'consent_banner',
-  'footer',
-];
 
 export const zoneSchema = z.enum([
   'header_band',
@@ -61,8 +36,7 @@ export const zoneSchema = z.enum([
 export type Zone = z.infer<typeof zoneSchema>;
 
 const widthBucket = z.enum(['<15%', '15-30%', '30-60%', '60-90%', '>90%']);
-const countBucket = z.enum(['0', '1', '2-3', '4-10', '11-30', '31-100', '>100']);
-export type CountBucket = z.infer<typeof countBucket>;
+const countBucket = z.enum(COUNT_BUCKETS);
 
 /** A word from the public UI vocabulary (VOCAB_V1). Enforced client- and server-side. */
 export const vocabWordSchema = z.string().regex(/^[a-z]{2,20}$/);
@@ -118,30 +92,7 @@ export const regionEvidenceSchema = z.strictObject({
 });
 export type RegionEvidence = z.infer<typeof regionEvidenceSchema>;
 
-export const PAGE_SIGNALS = [
-  'jsonld_article',
-  'jsonld_product',
-  'jsonld_video',
-  'og_type_article',
-  'og_type_video',
-  'readerable',
-  'role_feed',
-  'infinite_scroll',
-  'has_site_search',
-  'search_results_pattern',
-  'has_password_field',
-  'has_payment_fields',
-  'multi_step_form',
-  'has_comments_section',
-  'large_video_in_main',
-  'map_container',
-  'rich_text_editor',
-  'data_grid',
-  'code_blocks',
-  'many_tables',
-] as const;
 export const pageSignalSchema = z.enum(PAGE_SIGNALS);
-export type PageSignal = z.infer<typeof pageSignalSchema>;
 
 /** Page-level context sent as Jev `state`. */
 export const pageContextSchema = z.strictObject({
@@ -170,16 +121,6 @@ export const pageContextSchema = z.strictObject({
   }),
 });
 export type PageContext = z.infer<typeof pageContextSchema>;
-
-export function countToBucket(count: number): CountBucket {
-  if (count <= 0) return '0';
-  if (count === 1) return '1';
-  if (count <= 3) return '2-3';
-  if (count <= 10) return '4-10';
-  if (count <= 30) return '11-30';
-  if (count <= 100) return '31-100';
-  return '>100';
-}
 
 /**
  * Local measurements the policy uses to decide applicability. Produced by the

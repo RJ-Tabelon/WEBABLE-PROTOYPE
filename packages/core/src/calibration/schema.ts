@@ -86,9 +86,18 @@ export const visionSummarySchema = z.object({
   accuracy: n(0, 1),
   largePrint: z.boolean(),
   displayLimited: z.boolean(),
+  /** Zoom or visibility changed during reading trials (lowers size confidence). */
+  disturbed: z.boolean().optional(),
   /** V3 contrast threshold: log10 Weber, posterior sd, and whether the ceiling was hit. */
   contrast: z
-    .object({ alphaLog: z.number().min(-3).max(0), sd: n(0, 2), ceiling: z.boolean(), trials: n(0, 20).int() })
+    .object({
+      alphaLog: z.number().min(-3).max(0),
+      sd: n(0, 2),
+      ceiling: z.boolean(),
+      trials: n(0, 20).int(),
+      /** "I can't see a word" answers at Weber >= 0.3 (two or more => maximum contrast band). */
+      cantSeeHigh: n(0, 20).int().optional(),
+    })
     .nullable(),
   /** V4 polarity: mean log reading-rate difference (dark - light), SE, and stated preference. */
   polarity: z

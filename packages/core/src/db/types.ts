@@ -199,6 +199,7 @@ export type Database = {
       consume_ai_quota: { Args: { p_user: string }; Returns: Json };
       delete_my_account: { Args: Record<PropertyKey, never>; Returns: undefined };
       export_my_data: { Args: Record<PropertyKey, never>; Returns: Json };
+      ingest_agg_report: { Args: { p_user: string; p_tag: string; p_period: string; p_expires: string; p_limit: number; p_window: string; p_lib: string; p_cells: Json; p_retention_cutoff: string }; Returns: string };
       put_learning_state: { Args: { p_state: Json; p_expected_rev: number; p_engine_version: string }; Returns: { ok: boolean; rev: number; state: Json }[] };
       record_activity: { Args: { p_week: string; p_counts: Json }; Returns: undefined };
       save_fit_profile: { Args: { p_profile: Json; p_source: string; p_derivation_version: string; p_calibration_session_id?: string }; Returns: Database['public']['Tables']['fit_profiles']['Row'] };

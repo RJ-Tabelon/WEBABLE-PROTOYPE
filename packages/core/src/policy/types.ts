@@ -64,6 +64,8 @@ export interface RegionVerdict {
   source: 'rule' | 'page_analysis';
   /** P(eligible for softening), after recalibration. */
   pEligible: number;
+  /** Per-role probabilities when page analysis answered (after recalibration). */
+  roles?: Partial<Record<RegionRole, number>>;
 }
 
 /** Verifier failure codes (engine -> service worker). */

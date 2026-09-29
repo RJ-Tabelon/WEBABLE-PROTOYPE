@@ -3,6 +3,7 @@ export * from './versions';
 export * from './profile/schema';
 export * from './profile/defaults';
 export * from './profile/needs';
+export * from './profile/describe';
 
 export * from './calibration/schema';
 export * from './calibration/trials';
@@ -10,6 +11,7 @@ export * from './calibration/pointing';
 export * from './calibration/reading';
 export * from './calibration/focus';
 export * from './calibration/fit';
+export * from './calibration/stimuli';
 
 export * from './ops/catalog';
 

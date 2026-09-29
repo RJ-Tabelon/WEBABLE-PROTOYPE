@@ -34,6 +34,10 @@ export interface PointerTrial {
   pointerType: 'mouse' | 'pen' | 'touch';
   /** First click of each block positions the pointer and is not scored. */
   scored: boolean;
+  /** Times the pointer entered the target before pressing (hover settling). */
+  nEntries?: number;
+  /** Final entry to pointerdown, ms. */
+  verifMs?: number;
 }
 
 export interface PointerBlock {

@@ -62,7 +62,7 @@ export const decideResponseSchema = z.discriminatedUnion('ok', [
     catalog: z.literal(CATALOG_VERSION),
     model: z.string(),
     pageType: z.record(pageCategorySchema, prob).optional(),
-    mainPick: z.record(z.enum(['c1', 'c2', 'c3', 'c4', 'none']), prob).optional(),
+    mainPick: z.partialRecord(z.enum(['c1', 'c2', 'c3', 'c4', 'none']), prob).optional(),
     regions: z.record(regionIdSchema, regionAnswerSchema),
     inputTokens: z.number().int().nonnegative(),
     ms: z.object({ jev: z.number().nonnegative(), edge: z.number().nonnegative() }),

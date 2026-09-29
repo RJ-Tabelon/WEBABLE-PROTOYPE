@@ -62,7 +62,7 @@ export type ContrastFloor = z.infer<typeof contrastFloorSchema>;
 export const visionSchema = z.object({
   /** Minimum rendered font size in CSS px for body text. Only ever enlarges. */
   textMinPx: param(z.number().min(12).max(96)),
-  /** Minimum x-height in CSS px at the calibration zoom (for font-size-adjust aware floors). */
+  /** Minimum x-height in CSS px at 100% zoom (for font-size-adjust aware floors). */
   xHeightMinPx: z.number().min(4).max(60).optional(),
   contrastFloor: param(contrastFloorSchema),
   polarity: param(polaritySchema),

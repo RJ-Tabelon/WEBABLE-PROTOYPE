@@ -155,11 +155,17 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+site_url = "http://localhost:3000"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["https://127.0.0.1:3000"]
+# The web app finishes every email link on /auth/callback (PKCE code) or /auth/confirm (token_hash).
+additional_redirect_urls = [
+  "http://localhost:3000/auth/callback",
+  "http://localhost:3000/auth/confirm",
+  "http://127.0.0.1:3000/auth/callback",
+  "http://127.0.0.1:3000/auth/confirm",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.
@@ -178,7 +184,7 @@ enable_anonymous_sign_ins = false
 # Allow/disallow testing manual linking of accounts
 enable_manual_linking = false
 # Passwords shorter than this value will be rejected as weak. Minimum 6, recommended 8 or more.
-minimum_password_length = 6
+minimum_password_length = 8
 # Passwords that do not meet the following requirements will be rejected as weak. Supported values
 # are: `letters_digits`, `lower_upper_letters_digits`, `lower_upper_letters_digits_symbols`
 password_requirements = ""
@@ -222,7 +228,8 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+# Matches the hosted project (mailer_autoconfirm = false).
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
@@ -381,8 +388,25 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
-# [edge_runtime.secrets]
-# secret_key = "env(SECRET_VALUE)"
+# Local `supabase functions serve` only. Hosted values are set with `supabase secrets set`.
+[edge_runtime.secrets]
+WEB_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
+EXTENSION_ORIGINS = "chrome-extension://bbnblnlbgcccbbbbihngngbecbobedie"
+
+# Sign-in handoff to the extension. Only signed-in people with a live session may call it.
+[functions.extension-link]
+enabled = true
+verify_jwt = true
+
+# Page analysis proxy to Jev. Holds TYPESAFE_API_KEY; the extension never sees it.
+[functions.decide]
+enabled = true
+verify_jwt = true
+
+# Opt-in, randomized aggregate counts. Off unless the person consents.
+[functions.ingest]
+enabled = true
+verify_jwt = true
 
 [analytics]
 enabled = true

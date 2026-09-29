@@ -51,7 +51,8 @@ export type ContentToWorker =
 
 export interface ContentReplies {
   'cs:hello': HelloReply;
-  'cs:signals': { plan: AdaptationPlan };
+  /** `announce`: show the first-visit toast for this site (the service worker remembers where it has). */
+  'cs:signals': { plan: AdaptationPlan; announce?: boolean };
   'cs:applied': { ok: true };
   'cs:event': { ok: true };
   'cs:friction': { offer: AdaptationPlan['ops'][number] | null };
@@ -72,7 +73,9 @@ export type WorkerToContent =
   | { type: 'sw:show-on-page'; op: OpId | null; on: boolean }
   | { type: 'sw:reading-guide'; on: boolean }
   | { type: 'sw:offer'; offer: AdaptationPlan['ops'][number] }
-  | { type: 'sw:get-changes' };
+  | { type: 'sw:get-changes' }
+  /** The focus-layer command: move keyboard focus into WebAble's in-page message, if one is showing. */
+  | { type: 'sw:focus-layer' };
 
 export interface WorkerReplies {
   'sw:plan': { changes: AppliedChange[] };
@@ -84,6 +87,7 @@ export interface WorkerReplies {
   'sw:reading-guide': { ok: true };
   'sw:offer': { ok: true };
   'sw:get-changes': { changes: AppliedChange[]; status: EngineStatus };
+  'sw:focus-layer': { ok: boolean };
 }
 
 export type EngineStatus = 'idle' | 'checking' | 'ready' | 'unreadable';
