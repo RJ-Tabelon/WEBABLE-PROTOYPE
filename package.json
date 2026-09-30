@@ -7,6 +7,7 @@
   "scripts": {
     "build": "pnpm -r --filter './packages/*' --filter @webable/web run --if-present build",
     "build:functions": "node scripts/build-functions.mjs",
+    "deploy:functions": "node scripts/deploy-functions.mjs",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:functions && pnpm build:functions --check && pnpm --filter @webable/tokens contrast && WXT_WEB_ORIGINS=https://webable.invalid/* WXT_WEB_ORIGIN=https://webable.invalid pnpm extension:release",
     "dev": "pnpm --filter @webable/web dev",
     "dev:web": "pnpm --filter @webable/web dev",

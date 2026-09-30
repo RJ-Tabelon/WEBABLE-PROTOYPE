@@ -64,16 +64,19 @@ carries no development key; the package check fails the build otherwise.
 ## Edge Functions
 
 `decide` (page analysis through Jev), `extension-link` (sign-in handoff to the extension)
-and `ingest` (opt-in anonymous counts). Deploy with an account that owns the project:
+and `ingest` (opt-in anonymous counts). Connecting the extension on `/connect` needs
+`extension-link` deployed. Deploy all three, with their secrets, as an account that can see
+the project in `SUPABASE_URL`:
 
 ```sh
-supabase link --project-ref <ref>
-supabase secrets set WEB_ORIGINS=http://localhost:3000 \
-  EXTENSION_ORIGINS=chrome-extension://bbnblnlbgcccbbbbihngngbecbobedie \
-  INGEST_TAG_SECRET=<32+ random characters>
-supabase secrets set TYPESAFE_API_KEY=<key>   # optional: without it, page analysis stays local
-supabase functions deploy decide extension-link ingest
+SUPABASE_ACCESS_TOKEN=<token> pnpm deploy:functions
 ```
+
+Create the token at https://supabase.com/dashboard/account/tokens while signed in as the
+project owner. The script sets `WEB_ORIGINS` (from `WEB_ORIGIN`), `EXTENSION_ORIGINS` (the
+development extension id unless set), a generated `INGEST_TAG_SECRET` (kept on later runs)
+and `TYPESAFE_API_KEY` when `.env` has one (without it, page analysis stays on-device), then
+deploys without Docker and checks each function answers.
 
 In the Supabase dashboard, set the Auth site URL to the web origin and add
 `/auth/callback` and `/auth/confirm` as redirect URLs.
