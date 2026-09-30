@@ -304,6 +304,14 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
 };
 
+/**
+ * Ops kept in the catalog (stored learning, history and old plans still name
+ * them) that WebAble no longer applies. page_zoom: text size, spacing and the
+ * other ops already cover it, and zooming the person's tab changes the whole
+ * layout of a site they didn't ask to change.
+ */
+export const RETIRED_OPS: ReadonlySet<OpId> = new Set<OpId>(['page_zoom']);
+
 export const opDefinition = (id: OpId): OpDefinition => OP_CATALOG[id];
 
 /** Human-readable value for an op level, e.g. "18 px", "1.8", "70 characters", "300 ms" (no-break space before the unit). */

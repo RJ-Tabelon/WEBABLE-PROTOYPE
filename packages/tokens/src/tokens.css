@@ -138,7 +138,7 @@
   --w-wide: 90rem; /* 1440 hero media */
   --w-modal: 35rem; /* 560 */
   --w-rail: 15rem; /* 240 app rail */
-  --w-popup: 23.75rem; /* 380 at scale 1; 570 at 1.5; 760 at 2 (Chrome cap 800) */
+  --w-popup: 380px; /* fixed: larger text reflows inside it instead of widening the popup */
   --h-popup-max: 600px; /* Chrome cap */
   --w-toast: 27.5rem; /* 440 */
   --w-tooltip: 17.5rem; /* 280 */

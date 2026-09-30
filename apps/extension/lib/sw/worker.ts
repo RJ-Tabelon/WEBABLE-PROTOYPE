@@ -2,7 +2,7 @@ import { levelValue, toDay } from '@webable/core/learning/learners';
 import { subtractCounts } from '@webable/core/learning/math';
 import { FRICTION_LR, K, W } from '@webable/core/learning/params';
 import type { SiteRule, UserLearningState } from '@webable/core/learning/types';
-import { OP_CATALOG, type OpId } from '@webable/core/ops/catalog';
+import { OP_CATALOG, RETIRED_OPS, type OpId } from '@webable/core/ops/catalog';
 import { isExcludedSite } from '@webable/core/page/excluded';
 import type { PageSignals } from '@webable/core/page/types';
 import { buildPlan, type PolicyInput } from '@webable/core/policy/decide';
@@ -145,8 +145,6 @@ function aiLabelOf(c: {
       return e.label;
   return undefined;
 }
-
-const pct = (factor: number): string => `${Math.round(factor * 100)}%`;
 
 /** decide answered 503 without a retry time: pause page analysis this long. */
 const UNAVAILABLE_BACKOFF_MS = 5 * 60_000;
@@ -487,9 +485,9 @@ export class Worker {
         t.offer = offer;
     });
 
-    const zoom = plan.ops.find((p) => p.op === 'page_zoom');
-    if (zoom && zoom.mode === 'auto') await this.applyZoom(tabId, zoom);
-    else await this.resetZoom(tabId);
+    // WebAble never zooms the tab (page_zoom is retired in core). Undo a zoom
+    // an earlier version set.
+    await this.resetZoom(tabId);
 
     void this.maybeAnalyze(tabId, tabSession, memo).catch(() => undefined);
     this.d.port.broadcast({ type: 'ui:changed', tabId });
@@ -733,11 +731,7 @@ export class Worker {
       basis: tab.plan?.basis ?? 'local',
       ops: [offer],
     };
-    if (op === 'page_zoom') {
-      await this.applyZoom(tabId, { ...offer, mode: 'offer' });
-      await this.afterChange(tabId);
-      return { plan: null };
-    }
+    if (RETIRED_OPS.has(op)) return { plan: null };
     if (via === 'page') return { plan };
     const reply = await this.d.port.sendToTab(tabId, {
       type: 'sw:plan',
@@ -963,45 +957,6 @@ export class Worker {
     });
     await this.record(tab, events);
     await this.afterChange(tabId);
-  }
-
-  private async applyZoom(tabId: number, planned: PlannedOp): Promise<void> {
-    const tab = await this.d.tabs.get(tabId);
-    const levels = OP_CATALOG.page_zoom.levels;
-    const level = Math.max(0, Math.min(levels.length - 1, planned.level));
-    const factor = levels[level] ?? 1;
-    if (tab.zoom?.factor === factor) return;
-    const previous = tab.zoom?.previous ?? (await this.d.port.getZoom(tabId));
-    try {
-      await this.d.port.setZoom(tabId, factor);
-    } catch {
-      return;
-    }
-    const change: AppliedChange = {
-      op: 'page_zoom',
-      level,
-      mode: planned.mode,
-      status: 'applied',
-      count: 1,
-      fit: { before: pct(previous), after: pct(factor) },
-      trace: planned.trace,
-    };
-    const fresh = !tab.zoom;
-    await this.d.tabs.update(tabId, (t) => {
-      t.zoom = { level, factor, previous };
-      t.changes = [...t.changes.filter((c) => c.op !== 'page_zoom'), change];
-      if (fresh) t.appliedAt.page_zoom = this.now;
-    });
-    if (fresh)
-      await this.record(tab, [
-        {
-          cat: tab.category,
-          op: 'page_zoom',
-          level,
-          src: planned.mode === 'offer' ? 'offer' : planned.trace.source,
-          kind: 'applied',
-        },
-      ]);
   }
 
   private async resetZoom(tabId: number): Promise<void> {
@@ -1659,11 +1614,7 @@ export class Worker {
     await this.d.tabs.update(tabId, (t) => {
       t.plan = plan;
     });
-    const zoom = plan.ops.find(
-      (p) => p.op === 'page_zoom' && p.mode === 'auto',
-    );
-    if (zoom) await this.applyZoom(tabId, zoom);
-    else await this.resetZoom(tabId);
+    await this.resetZoom(tabId);
     const reply = await this.d.port.sendToTab(tabId, {
       type: 'sw:plan',
       plan,

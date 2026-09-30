@@ -372,10 +372,18 @@ describe('buildPlan', () => {
     expect(plan.category).toBe('article');
   });
 
-  it('picks page zoom over a text floor when most text is small (strategy 3.7)', () => {
-    const plan = buildPlan(makeInput());
-    expect(plan.ops.map((o) => o.op)).toContain('page_zoom');
-    expect(plan.ops.map((o) => o.op)).not.toContain('text_floor');
+  it('never zooms the tab: when most text is small, a text floor applies (page_zoom is retired)', () => {
+    const { plan, traces } = planWithTraces(makeInput());
+    expect(plan.ops.map((o) => o.op)).toContain('text_floor');
+    expect(plan.ops.map((o) => o.op)).not.toContain('page_zoom');
+    expect(traces.find((t) => t.op === 'page_zoom')?.why).toBe('retired');
+  });
+
+  it('never zooms the tab, even when the site pins page zoom', () => {
+    const ops = buildPlan(
+      makeInput({ patch: { site: site({ pins: ['page_zoom'] }) } }),
+    ).ops.map((o) => o.op);
+    expect(ops).not.toContain('page_zoom');
   });
 
   it('picks a text floor over page zoom when only outliers are small', () => {

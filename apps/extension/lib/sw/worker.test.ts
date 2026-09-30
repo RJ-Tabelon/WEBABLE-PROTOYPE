@@ -256,19 +256,19 @@ describe('a page load', () => {
     expect(hello.enabled).toBe(false);
   });
 
-  it('plans from the fit, zooms the tab, and lists every change', async () => {
+  it('plans from the fit, never zooms the tab, and lists every change', async () => {
     await seedProfile(env.stores);
     const { plan, announce } = await loadPage(env);
     expect(announce).toBe(true);
-    const zoomOp = plan.ops.find((p) => p.op === 'page_zoom');
-    expect(zoomOp?.mode).toBe('auto');
-    expect(env.zoom.get(TAB)).toBe(1.25);
+    // Small text gets a text floor; the tab's zoom is never touched.
+    expect(plan.ops.find((p) => p.op === 'text_floor')?.mode).toBe('auto');
+    expect(plan.ops.some((p) => p.op === 'page_zoom')).toBe(false);
+    expect(env.zoom.has(TAB)).toBe(false);
 
     const view = await env.worker.view(TAB);
     expect(view.status).toBe('adapted');
     expect(view.domain).toBe('example.com');
-    const zoomChange = view.changes.find((c) => c.op === 'page_zoom');
-    expect(zoomChange?.fit).toEqual({ before: '100%', after: '125%' });
+    expect(view.changes.some((c) => c.op === 'text_floor')).toBe(true);
     const count = view.changes.filter((c) => c.status === 'applied').length;
     expect(env.badges.get(TAB)).toMatchObject({
       text: String(count),
@@ -299,7 +299,7 @@ describe('a page load', () => {
     await loadPage(env);
     const events = await env.stores.events.list();
     expect(
-      events.some((e) => e.kind === 'applied' && e.op === 'page_zoom'),
+      events.some((e) => e.kind === 'applied' && e.op === 'text_floor'),
     ).toBe(true);
     expect(events.every((e) => e.domain === 'example.com')).toBe(true);
     const learning = await env.stores.learning.read();
@@ -351,7 +351,7 @@ describe('undo', () => {
     );
     expect(targets.length).toBeGreaterThan(0);
     await env.worker.undo(TAB, 'all');
-    expect(env.zoom.get(TAB)).toBe(1);
+    expect(env.zoom.has(TAB)).toBe(false);
     expect(env.engine.changes).toEqual([]);
     expect(
       (await env.stores.events.list()).some((e) => e.kind === 'undo'),
@@ -371,7 +371,7 @@ describe('undo', () => {
   it('flushes held undos before the next page view starts', async () => {
     await seedProfile(env.stores);
     await loadPage(env);
-    await env.worker.undo(TAB, 'page_zoom');
+    await env.worker.undo(TAB, 'text_floor');
     expect(
       (await env.stores.events.list()).some((e) => e.kind === 'undo'),
     ).toBe(false);
@@ -387,7 +387,7 @@ describe('pause and off', () => {
     await loadPage(env);
     await env.worker.pauseSite(TAB, true);
     expect(env.engine.changes).toEqual([]);
-    expect(env.zoom.get(TAB)).toBe(1);
+    expect(env.zoom.has(TAB)).toBe(false);
     const view = await env.worker.view(TAB);
     expect(view.status).toBe('paused');
     expect(env.badges.get(TAB)).toMatchObject({ icon: 'paused', text: '' });
@@ -464,8 +464,7 @@ describe('settings from the popup', () => {
     expect(env.engine.changes.find((c) => c.op === 'text_floor')?.level).toBe(
       3,
     );
-    // The chosen size beats the zoom WebAble picked.
-    expect(env.zoom.get(TAB)).toBe(1);
+    expect(env.zoom.has(TAB)).toBe(false);
   });
 
   it('opening the popup on a page without the engine starts it there (activeTab)', async () => {

@@ -1,16 +1,16 @@
 /*
  * Extension popup, Compact density (design-final 10 and 14).
- * Tokens only. Width is rem-based so it grows with WebAble's own text scale
- * (380 px at scale 1, 760 at 2, under Chrome's 800 px cap). It must not depend
- * on the viewport: Chrome opens a popup tiny and grows it to the content's
- * width, so a vw-based cap pins the popup at its initial few pixels. Height is
- * capped at 600 px and only the body between the fixed header and footer
- * scrolls. Full-bleed hairlines belong to the header and footer only; body
- * rules sit on the content column.
+ * Tokens only. The width is a fixed 380 px: WebAble's own text scale still
+ * applies inside, and rows reflow (the 21.24rem container query) rather than
+ * the popup growing. It must not depend on the viewport: Chrome opens a popup
+ * tiny and grows it to the content's width, so a vw-based cap pins the popup at
+ * its initial few pixels. Height is capped at 600 px and only the body between
+ * the fixed header and footer scrolls. Full-bleed hairlines belong to the
+ * header and footer only; body rules sit on the content column.
  */
 
 html {
-  inline-size: min(var(--w-popup), 800px);
+  inline-size: var(--w-popup);
   max-block-size: var(--h-popup-max);
 }
 

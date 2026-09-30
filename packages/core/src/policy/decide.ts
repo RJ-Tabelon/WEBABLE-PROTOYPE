@@ -19,7 +19,13 @@ import type {
   SiteRule,
   UserLearningState,
 } from '../learning/types';
-import { OP_CATALOG, OP_IDS, nearestLevel, type OpId } from '../ops/catalog';
+import {
+  OP_CATALOG,
+  OP_IDS,
+  RETIRED_OPS,
+  nearestLevel,
+  type OpId,
+} from '../ops/catalog';
 import {
   DIMMABLE_ROLES,
   type PageSignals,
@@ -221,10 +227,9 @@ function focusViewApplicability(input: PolicyInput): Applicability {
 
 function unpinApplicability(input: PolicyInput): Applicability {
   const { signals } = input;
-  const needs = evidenceNeeds(input.profile, input.needs);
-  const zoom =
-    needs.text >= 1 ? levelValue('page_zoom', levelFor('page_zoom', input)) : 1;
-  if (stickyBandShare(signals, zoom) <= STICKY_BAND_SHARE) return NONE;
+  // WebAble never zooms the tab (page_zoom is retired), so the bars take the
+  // share of the screen they take now.
+  if (stickyBandShare(signals, 1) <= STICKY_BAND_SHARE) return NONE;
   const perRegion: Record<string, number> = {};
   const found: Array<{ key: string; a: number; by: 'rule' | 'page_analysis' }> =
     [];
@@ -531,6 +536,7 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
     pOffer: 0,
   });
 
+  if (RETIRED_OPS.has(op)) return skip('retired');
   // Hard rules first: user authority and session predictability.
   if (site?.paused) return skip('site_paused');
   if (u.ops[op]?.blocked || d?.ops[op]?.block || site?.blocks.includes(op))

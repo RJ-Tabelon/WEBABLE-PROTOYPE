@@ -84,46 +84,53 @@ test.describe('popup', () => {
     await expectNoAxeViolations(popup);
   });
 
-  test('adapts a page, lists the change, and undo from the popup restores it', async ({
+  test('adapts a page without zooming it, lists the change, and undo and redo work', async ({
     ext,
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
 
-    // Most text here is 13 px against a 21 px fit: the whole page is zoomed.
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
-    expect(await computed(page, STORY, 'font-size')).toBe('13px');
+    // Most text here is 13 px against a larger fit: the text grows, and the
+    // tab's zoom is never touched.
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .not.toBe('13px');
+    const fitted = await computed(page, STORY, 'font-size');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
 
     const popup = await ext.openPopup(tabId);
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
-      /^Adapted · 1\schange$/,
+      /^Adapted/,
     );
     const rows = await changeRows(popup);
-    await expect(rows).toHaveCount(1);
-    await expect(rows.first()).toContainText('Page zoom');
+    const text = rows.filter({ hasText: 'Text size' });
+    await expect(text).toHaveCount(1);
     // The fit mark carries the measured values, and says them in words.
-    await expect(rows.first()).toContainText('100% to 125%');
+    await expect(text).toContainText(`13 to ${parseInt(fitted, 10)} pixels`);
+    await expect(rows.filter({ hasText: 'Page zoom' })).toHaveCount(0);
 
     await expectNoAxeViolations(popup);
 
-    await rows.first().getByRole('button', { name: 'Undo page zoom' }).click();
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1, 2);
-    await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
-      'Changes undone on this page',
-    );
+    await text.getByRole('button', { name: 'Undo text size' }).click();
+    await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
     // The optional reason; the row stays until the popup closes.
-    const reason = popup.getByRole('group', { name: 'Page zoom was undone' });
+    const reason = popup.getByRole('group', { name: 'Text size was undone' });
     await expect(reason).toBeVisible();
     await reason.getByRole('button', { name: 'Too much' }).click();
     await expect(reason.getByRole('status')).toHaveText(/Noted/);
 
-    // The undo reached the page and the worker's record.
+    // The undo reached the worker's record.
     const state = await ext.tabState(tabId);
-    expect(state?.changes.filter((c) => c.status === 'applied')).toEqual([]);
+    expect(
+      state?.changes.filter(
+        (c) => c.op === 'text_floor' && c.status === 'applied',
+      ),
+    ).toEqual([]);
 
     // Redo puts it back.
-    await reason.getByRole('button', { name: 'Redo page zoom' }).click();
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
+    await reason.getByRole('button', { name: 'Redo text size' }).click();
+    await expect.poll(() => computed(page, STORY, 'font-size')).toBe(fitted);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
   });
 
   test('a text size set for this site applies on the page, and its Undo restores the page', async ({
@@ -131,24 +138,32 @@ test.describe('popup', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .not.toBe('13px');
     const popup = await ext.openPopup(tabId);
 
     await popup.getByRole('button', { name: 'Adjust for this site' }).click();
     const slider = popup.getByRole('slider', { name: 'Text size' });
-    await expect(slider).toHaveAttribute('aria-valuetext', '18 pixels');
+    const before = (await slider.getAttribute('aria-valuetext')) ?? '';
     await popup.getByRole('button', { name: 'Increase text size' }).click();
-    await expect(slider).toHaveAttribute('aria-valuetext', '21 pixels');
+    await expect(slider).not.toHaveAttribute('aria-valuetext', before);
+    const chosen = parseInt(
+      (await slider.getAttribute('aria-valuetext')) ?? '',
+      10,
+    );
 
-    // A size the person chose wins over the zoom WebAble picked; the engine applies it.
-    await expect.poll(() => computed(page, STORY, 'font-size')).toBe('21px');
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+    // The size the person chose applies on the page; the tab is never zoomed.
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .toBe(`${chosen}px`);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
     expect(await computed(page, 'main.story h1', 'font-size')).toBe('32px');
 
     const rows = await changeRows(popup);
     const text = rows.filter({ hasText: 'Text size' });
     await expect(text).toHaveCount(1);
-    await expect(text).toContainText('13 to 21 pixels');
+    await expect(text).toContainText(`13 to ${chosen} pixels`);
     await text.getByRole('button', { name: 'Undo text size' }).click();
     await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
     await expect(
@@ -234,7 +249,9 @@ test.describe('popup', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .not.toBe('13px');
 
     const popup = await ext.openPopup(tabId);
     const siteSwitch = popup.getByRole('switch', {
@@ -250,13 +267,13 @@ test.describe('popup', () => {
       popup.getByText('127.0.0.1 looks the way the site made it.'),
     ).toBeVisible();
     await expect(siteSwitch).toHaveAttribute('aria-checked', 'false');
-    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+    await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
     await expectNoAxeViolations(popup);
 
     // A reload stays untouched: the engine is not even registered for this site.
     await page.reload({ waitUntil: 'load' });
     await page.waitForTimeout(500);
-    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+    expect(await computed(page, STORY, 'font-size')).toBe('13px');
     expect(await page.locator('html').getAttribute('data-wa-off')).toBeNull();
 
     // Resume from the popup.
@@ -267,8 +284,8 @@ test.describe('popup', () => {
     await popup.getByRole('button', { name: 'Resume on this site' }).focus();
     await popup.keyboard.press('Enter');
     await expect
-      .poll(() => tabZoom(ext, tabId), { timeout: 15_000 })
-      .toBeCloseTo(1.25, 2);
+      .poll(() => computed(page, STORY, 'font-size'), { timeout: 15_000 })
+      .not.toBe('13px');
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
       /^Adapted/,
     );
@@ -504,6 +521,26 @@ test('the popup sets its own width when Chrome opens it small', async ({
     () => document.documentElement.getBoundingClientRect().width,
   );
   expect(width).toBeCloseTo(380, 0);
+});
+
+test('the popup stays 380 px wide with a large-text fit, and never scrolls sideways', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: strongReaderProfile() });
+  const { tabId } = await ext.openFixture('article');
+  const popup = await ext.openPopup(tabId);
+  const size = await popup.evaluate(() => ({
+    width: document.documentElement.getBoundingClientRect().width,
+    scale: getComputedStyle(document.documentElement).getPropertyValue(
+      '--wa-text-scale',
+    ),
+    overflow:
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  }));
+  expect(Number(size.scale)).toBeGreaterThan(1);
+  expect(size.width).toBeCloseTo(380, 0);
+  expect(size.overflow).toBeLessThanOrEqual(0);
 });
 
 test.describe('welcome page', () => {

@@ -559,7 +559,7 @@ describe('policy invariants (learning loop)', () => {
       tabSession: 'tab-1',
       domain: 'a.example',
       cat: 'article',
-      op: 'page_zoom',
+      op: 'text_floor',
       opVer: 1,
       level: 1,
       src: 'profile',
@@ -572,7 +572,7 @@ describe('policy invariants (learning loop)', () => {
       domain: late.domain,
       tabSession: 'tab-2',
     });
-    expect(next.ops.find((o) => o.op === 'page_zoom')?.mode).toBe('auto');
+    expect(next.ops.find((o) => o.op === 'text_floor')?.mode).toBe('auto');
   });
 
   it('engine rejects pause an op on a site without touching preference', () => {
@@ -580,24 +580,24 @@ describe('policy invariants (learning loop)', () => {
     let user = base.learning;
     let domain = base.domain!;
     for (let i = 0; i < 2; i += 1) {
-      const r = applyEvent(user, domain, verifierEvent('page_zoom', false, i));
+      const r = applyEvent(user, domain, verifierEvent('text_floor', false, i));
       user = r.user;
       domain = r.domain;
     }
-    expect(engineReliability(domain, 'page_zoom', 'article', FIXTURE_DAY)).toBe(
-      0,
-    );
+    expect(
+      engineReliability(domain, 'text_floor', 'article', FIXTURE_DAY),
+    ).toBe(0);
     const { plan, traces } = planWithTraces({
       ...base,
       learning: user,
       domain,
     });
-    expect(plan.ops.find((o) => o.op === 'page_zoom')).toBeUndefined();
-    expect(traces.find((t) => t.op === 'page_zoom')?.why).toBe(
+    expect(plan.ops.find((o) => o.op === 'text_floor')).toBeUndefined();
+    expect(traces.find((t) => t.op === 'text_floor')?.why).toBe(
       'engine_unreliable_here',
     );
-    // The alternative (a text floor) takes over: the person's preference for larger text is intact.
-    expect(plan.ops.find((o) => o.op === 'text_floor')?.mode).toBe('auto');
+    // The person's preference for larger text is intact: only this site pauses it.
+    expect(user.ops.text_floor).toEqual(base.learning.ops.text_floor);
   });
 
   it('protected, focus-containing and required-field regions are never dimmed even when analysis says dim', () => {

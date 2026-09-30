@@ -289,16 +289,14 @@ describe('turning an op back on', () => {
 });
 
 describe('the toast’s Undo all', () => {
-  it('records every change as undone, resets the zoom, and sends nothing back', async () => {
+  it('records every change as undone and sends nothing back', async () => {
     await seed(env, focusProfile());
     await loadPage(env);
     const before = (await env.worker.view(TAB)).changes
       .filter((c) => c.status === 'applied')
       .map((c) => c.op)
       .sort();
-    expect(before).toContain('page_zoom');
     expect(before.length).toBeGreaterThan(1);
-    expect(env.zoom.get(TAB)).toBe(1.25);
 
     // The engine already put the page back before it said so.
     env.engine.changes = [];
@@ -307,7 +305,7 @@ describe('the toast’s Undo all', () => {
     expect(env.engine.received.slice(sent).map((m) => m.type)).not.toContain(
       'sw:undo',
     );
-    expect(env.zoom.get(TAB)).toBe(1);
+    expect(env.zoom.has(TAB)).toBe(false);
     const view = await env.worker.view(TAB);
     expect(view.changes.filter((c) => c.status === 'applied')).toEqual([]);
     expect([...view.undoneByYou].sort()).toEqual(before);

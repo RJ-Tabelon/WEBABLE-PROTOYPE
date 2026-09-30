@@ -4,6 +4,7 @@ import {
   OP_CATALOG,
   OP_IDS,
   type OpId,
+  RETIRED_OPS,
 } from '@webable/core';
 import type { FitValue } from '@webable/ui';
 import { z } from 'zod';
@@ -164,6 +165,8 @@ export function learnedSummary(state: unknown, today: number): LearnedSummary {
 
   const ops: LearnedOp[] = [];
   for (const id of OP_IDS) {
+    // Retired ops (page zoom) no longer apply, so what was learned about them doesn't matter.
+    if (RETIRED_OPS.has(id)) continue;
     const raw = parsed.data.ops?.[id];
     if (raw === undefined) continue;
     const op = opSchema.safeParse(raw);
@@ -180,7 +183,8 @@ export function learnedSummary(state: unknown, today: number): LearnedSummary {
 
   const dims: LearnedDim[] = [];
   for (const [id, raw] of Object.entries(parsed.data.dims ?? {})) {
-    if (!isDimId(id)) continue;
+    // The zoom dimension belongs to page zoom, which WebAble no longer applies.
+    if (!isDimId(id) || id === 'zoom') continue;
     const dim = dimSchema.safeParse(raw);
     if (!dim.success) continue;
     if (!Number.isFinite(dim.data.m) || !Number.isFinite(dim.data.mCal))
