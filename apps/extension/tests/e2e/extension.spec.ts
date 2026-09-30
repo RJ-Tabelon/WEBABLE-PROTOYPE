@@ -492,6 +492,20 @@ test.describe('keyboard and targets', () => {
   });
 });
 
+test('the popup sets its own width when Chrome opens it small', async ({
+  ext,
+}) => {
+  // Chrome opens an action popup at a few pixels wide and grows it to the
+  // content, so the popup's width must not follow the viewport.
+  const { tabId } = await ext.openFixture('article');
+  const popup = await ext.openPopup(tabId);
+  await popup.setViewportSize({ width: 25, height: 600 });
+  const width = await popup.evaluate(
+    () => document.documentElement.getBoundingClientRect().width,
+  );
+  expect(width).toBeCloseTo(380, 0);
+});
+
 test.describe('welcome page', () => {
   test('explains site access and links to Tune and sign-in', async ({
     ext,
