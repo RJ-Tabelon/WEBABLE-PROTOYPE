@@ -426,7 +426,8 @@ describe('WebAble wears its own adaptations', () => {
       profile: strongReaderProfile(),
     });
     expect(root.getAttribute('data-theme')).toBe('dark');
-    expect(root.style.getPropertyValue('--wa-text-scale')).toBe('1.313');
+    // Text stays at the normal size in WebAble's own pages.
+    expect(root.style.getPropertyValue('--wa-text-scale')).toBe('1');
     expect(root.style.getPropertyValue('--wa-target-min')).toBe('44px');
     applyPrefs(root, { theme: 'system', reduceMotion: true, profile: null });
     expect(root.hasAttribute('data-theme')).toBe(false);

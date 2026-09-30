@@ -523,7 +523,7 @@ test('the popup sets its own width when Chrome opens it small', async ({
   expect(width).toBeCloseTo(380, 0);
 });
 
-test('the popup stays 380 px wide with a large-text fit, and never scrolls sideways', async ({
+test('the popup keeps normal text and 380 px with a large-text fit, and never scrolls sideways', async ({
   ext,
 }) => {
   await ext.seed({ profile: strongReaderProfile() });
@@ -538,7 +538,8 @@ test('the popup stays 380 px wide with a large-text fit, and never scrolls sidew
       document.documentElement.scrollWidth -
       document.documentElement.clientWidth,
   }));
-  expect(Number(size.scale)).toBeGreaterThan(1);
+  // Normal-size text in the popup, whatever the fit.
+  expect(Number(size.scale)).toBe(1);
   expect(size.width).toBeCloseTo(380, 0);
   expect(size.overflow).toBeLessThanOrEqual(0);
 });

@@ -5,9 +5,10 @@ import type { Prefs } from '../sw/ui';
 
 /**
  * WebAble wears its own adaptations (design-final 2, principle 3): the popup
- * and the welcome page take the person's text scale, target minimum, extra
- * leading and spacing from their fit, and honour the theme and motion
- * settings. Pure DOM writes on the document root.
+ * and the welcome page take the person's target minimum, extra leading and
+ * spacing from their fit, and honour the theme and motion settings. Text stays
+ * at the normal size (scale 1): a larger fit made the compact popup unwieldy,
+ * and the browser's own zoom still enlarges it. Pure DOM writes on the root.
  */
 export function applyPrefs(root: HTMLElement, prefs: Prefs): void {
   if (prefs.theme === 'system') root.removeAttribute('data-theme');
@@ -22,6 +23,7 @@ export function applyPrefs(root: HTMLElement, prefs: Prefs): void {
   };
   for (const [name, value] of Object.entries(style))
     root.style.setProperty(name, value);
+  root.style.setProperty('--wa-text-scale', '1');
 
   const reduce =
     prefs.reduceMotion || vars?.attributes['data-wa-motion'] === 'reduce';
