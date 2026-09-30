@@ -1,4 +1,5 @@
-import { TextLink } from '@webable/ui';
+import { Icon, TextLink } from '@webable/ui';
+import { Fragment } from 'react';
 import { DOCS_UPDATED } from './ContactLine';
 import { DocPage, DocSection, type TocEntry } from './DocPage';
 import {
@@ -8,6 +9,7 @@ import {
   SOURCE_BY_ID,
   TUNE_EVIDENCE,
   type EvidenceItem,
+  type Polarity,
 } from './research-data';
 
 const TOC: readonly TocEntry[] = [
@@ -17,17 +19,58 @@ const TOC: readonly TocEntry[] = [
   { id: 'not-offered', title: 'What WebAble doesn’t offer' },
 ];
 
-function Evidence({ item }: { item: EvidenceItem }) {
-  const titleId = `ev-${item.id}`;
+const blockId = (item: EvidenceItem) => `ev-${item.id}`;
+
+/**
+ * An external source link whose last word and arrow never part, so a wrapped
+ * citation never starts a line with a lone arrow. Opens in a new tab (§7.2).
+ */
+function SourceLink({ cite, url }: { cite: string; url: string }) {
+  const cut = cite.lastIndexOf(' ');
+  return (
+    <TextLink
+      href={url}
+      external={false}
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      {cut > 0 ? cite.slice(0, cut + 1) : null}
+      <span className="ws-nowrap">
+        {cite.slice(cut + 1)}
+        <Icon name="arrow-up-right" size={16} className="wa-link__icon" />
+      </span>
+      <span className="sr-only"> (opens in a new tab)</span>
+    </TextLink>
+  );
+}
+
+/** "Evidence: strong", or "Evidence against it: strong" for ideas left out. */
+function strengthLabel(item: EvidenceItem, polarity: Polarity): string {
+  const strength = item.strength.toLowerCase();
+  return polarity === 'against'
+    ? `Evidence against it: ${strength}`
+    : `Evidence: ${strength}`;
+}
+
+function Evidence({
+  item,
+  polarity = item.polarity ?? 'for',
+}: {
+  item: EvidenceItem;
+  /** Which way the evidence points. Default: the item's own, else `for`. */
+  polarity?: Polarity;
+}) {
+  const titleId = blockId(item);
+  const sources = item.sources
+    .map((id) => SOURCE_BY_ID.get(id))
+    .filter((source) => source !== undefined);
   return (
     <div className="ws-evidence">
       <div className="ws-evidence__head">
         <h3 id={titleId} className="ws-evidence__title">
           {item.title}
         </h3>
-        <p className="ws-evidence__strength">
-          Evidence: {item.strength.toLowerCase()}
-        </p>
+        <p className="ws-evidence__strength">{strengthLabel(item, polarity)}</p>
       </div>
       <div className="ws-evidence__body ws-prose">
         <p>{item.finding}</p>
@@ -40,18 +83,47 @@ function Evidence({ item }: { item: EvidenceItem }) {
           </p>
         ) : null}
       </div>
-      <ul className="ws-cites" aria-label={`Sources for ${item.title}`}>
-        {item.sources.map((id) => {
-          const source = SOURCE_BY_ID.get(id);
-          if (!source) return null;
-          return (
-            <li key={id}>
-              <TextLink href={source.url}>{source.cite}</TextLink>
-            </li>
-          );
-        })}
-      </ul>
+      <p className="ws-cites">
+        <span className="sr-only">Sources: </span>
+        {sources.map((source, i) => (
+          <Fragment key={source.id}>
+            {i > 0 ? <span aria-hidden="true">{' · '}</span> : null}
+            <SourceLink cite={source.cite} url={source.url} />
+          </Fragment>
+        ))}
+      </p>
     </div>
+  );
+}
+
+/** Every change on one screen: its evidence and what WebAble does, each linked to its block. */
+function ChangeTable({ items }: { items: readonly EvidenceItem[] }) {
+  return (
+    <table className="ws-table">
+      <caption className="sr-only">
+        Each change, how strong its evidence is, and what WebAble does
+      </caption>
+      <thead>
+        <tr>
+          <th scope="col">Change</th>
+          <th scope="col">Evidence</th>
+          <th scope="col">What WebAble does</th>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <tr key={item.id}>
+            <th scope="row">
+              <a className="wa-link" href={`#${blockId(item)}`}>
+                {item.title}
+              </a>
+            </th>
+            <td>{item.strength}</td>
+            <td>{item.summary}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
@@ -63,12 +135,14 @@ export function ResearchDoc() {
       title="The evidence behind every change."
       deck="What the studies found, what WebAble does because of it, and what the evidence doesn’t show yet. Sources open in a new tab."
       toc={TOC}
+      notes
     >
       <DocSection
         id="changes"
         title="Each change"
         deck="WebAble only makes changes from a reviewed list, each with a fixed range of sizes. These are the reasons for each one."
       >
+        <ChangeTable items={ADAPTATIONS} />
         {ADAPTATIONS.map((item) => (
           <Evidence key={item.id} item={item} />
         ))}
@@ -77,7 +151,7 @@ export function ResearchDoc() {
       <DocSection
         id="tune"
         title="How Tune measures"
-        deck="Tune takes about 6 minutes, so each task measures only what it can measure well, and WebAble keeps learning afterwards."
+        deck="Tune is short, so each task measures only what it can measure well, and WebAble keeps learning afterwards."
       >
         {TUNE_EVIDENCE.map((item) => (
           <Evidence key={item.id} item={item} />
@@ -100,7 +174,7 @@ export function ResearchDoc() {
         deck="Some popular ideas don’t hold up in studies. WebAble leaves them out."
       >
         {NOT_OFFERED.map((item) => (
-          <Evidence key={item.id} item={item} />
+          <Evidence key={item.id} item={item} polarity={item.polarity} />
         ))}
         <p className="ws-secondary">
           See also{' '}

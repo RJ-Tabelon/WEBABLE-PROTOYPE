@@ -2,50 +2,57 @@
 
 import { Anchor, Button, Sheet, Wordmark } from '@webable/ui';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { GET_STARTED, SIGN_IN, SITE_NAV, isCurrent } from './nav';
+import { useEffect, useRef, useState } from 'react';
+import {
+  GET_STARTED,
+  SIGN_IN,
+  SITE_NAV,
+  YOUR_FIT,
+  isCurrent,
+  type NavLink,
+} from './nav';
+import { useScrolledAttr } from './useScrolledAttr';
 
-/** True after the page has scrolled more than 8 px (the header hairline appears). */
-function useScrolled(threshold = 8): boolean {
-  const [scrolled, setScrolled] = useState(false);
-  useEffect(() => {
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      setScrolled(window.scrollY > threshold);
-    };
-    const onScroll = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      if (frame) cancelAnimationFrame(frame);
-    };
-  }, [threshold]);
-  return scrolled;
+export interface SiteHeaderProps {
+  /**
+   * The visitor is signed in (read on the server by the site layout). "Sign in"
+   * goes away and the primary action becomes "Your fit", to the app.
+   */
+  signedIn?: boolean;
 }
 
 /**
  * Site header (design-final §7.8). 56 px, 64 at ≥64em. Sticky only when the viewport
  * is at least 37.5em tall, so at 400% zoom it scrolls away instead of covering the
  * page. It never hides on scroll direction. A hairline appears after 8 px of scroll.
- * Below 64em the links move into a full-screen Menu sheet.
+ *
+ * Its breakpoints are container queries in the header's own em, so they follow
+ * the person's text scale:
+ * - ≥64em: the lockup, the links, Sign in and the primary action.
+ * - 30–64em: the word alone (the mark would sit beside the Menu glyph), the
+ *   primary action and Menu with its visible word.
+ * - <30em: the word and a 48 px icon-only Menu (named "Menu").
+ * At a large text scale the row wraps rather than scrolling sideways.
  */
-export function SiteHeader() {
+export function SiteHeader({ signedIn = false }: SiteHeaderProps) {
   const pathname = usePathname();
-  const scrolled = useScrolled();
+  const headerRef = useRef<HTMLElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  useScrolledAttr(headerRef, 8);
 
   // Following a link closes the menu.
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
+  const primary: NavLink = signedIn ? YOUR_FIT : GET_STARTED;
+  const menuLinks: readonly NavLink[] = signedIn
+    ? SITE_NAV
+    : [...SITE_NAV, SIGN_IN];
+
   return (
-    <header className="wa-site-header" data-scrolled={scrolled || undefined}>
-      <div className="wa-site-header__inner">
+    <header ref={headerRef} className="wa-site-header">
+      <div className="wa-site-header__inner wa-shell-container">
         <Anchor
           href="/"
           className="wa-site-header__brand"
@@ -73,25 +80,27 @@ export function SiteHeader() {
         </nav>
 
         <div className="wa-site-header__actions">
+          {signedIn ? null : (
+            <Button
+              href={SIGN_IN.href}
+              variant="ghost"
+              size="md"
+              className="wa-site-header__sign-in"
+              aria-current={
+                isCurrent(pathname, SIGN_IN.href) ? 'page' : undefined
+              }
+            >
+              {SIGN_IN.label}
+            </Button>
+          )}
           <Button
-            href={SIGN_IN.href}
-            variant="ghost"
-            size="md"
-            className="wa-site-header__sign-in"
-            aria-current={
-              isCurrent(pathname, SIGN_IN.href) ? 'page' : undefined
-            }
-          >
-            {SIGN_IN.label}
-          </Button>
-          <Button
-            href={GET_STARTED.href}
+            href={primary.href}
             variant="primary"
             size="md"
             arrow="forward"
             className="wa-site-header__cta"
           >
-            {GET_STARTED.label}
+            {primary.label}
           </Button>
           <Button
             variant="ghost"
@@ -113,22 +122,23 @@ export function SiteHeader() {
         placement="full"
         title="Menu"
         hideTitle
-        headerStart={<Wordmark />}
+        headerStart={<Wordmark withMark={false} />}
         footer={
           <Button
-            href={GET_STARTED.href}
+            href={primary.href}
             variant="primary"
             size="lg"
             arrow="forward"
             block
+            onClick={() => setMenuOpen(false)}
           >
-            {GET_STARTED.label}
+            {primary.label}
           </Button>
         }
       >
         <nav aria-label="Main">
           <ul role="list" className="wa-menu-list">
-            {[...SITE_NAV, SIGN_IN].map((link) => (
+            {menuLinks.map((link) => (
               <li key={link.href}>
                 <Anchor
                   href={link.href}

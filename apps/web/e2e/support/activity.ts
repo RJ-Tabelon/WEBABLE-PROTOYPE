@@ -112,3 +112,25 @@ export async function seedActivity(
     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
   }
 }
+
+/** Clear what WebAble learned for the test user (an empty learning state). */
+export async function clearLearning(user: TestUser): Promise<void> {
+  const supabase = await signedIn(user);
+  try {
+    const current = await supabase
+      .from('learning_state')
+      .select('rev')
+      .maybeSingle();
+    if (current.error)
+      throw new Error(`Could not read learning state (${current.error.code}).`);
+    const { error } = await supabase.rpc('put_learning_state', {
+      p_state: { v: 1, ops: {}, dims: {} },
+      p_expected_rev: current.data?.rev ?? 0,
+      p_engine_version: 'e2e',
+    });
+    if (error)
+      throw new Error(`Could not clear learning state (${error.code}).`);
+  } finally {
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined);
+  }
+}

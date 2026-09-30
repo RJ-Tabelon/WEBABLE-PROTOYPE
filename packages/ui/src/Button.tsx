@@ -52,6 +52,13 @@ interface ButtonOwnProps {
   /** Full width. Pairs inside `Actions` go full width below 30em on their own. */
   block?: boolean;
   /**
+   * Pull a ghost button out by its own padding so its label, not its pill,
+   * sits on the text edge: `start` for a button that begins a line (the offer's
+   * "Don't suggest this here"), `end` for a row-end action ([Adjust], [Forget]).
+   * The pill still shows on hover and press.
+   */
+  flush?: 'start' | 'end';
+  /**
    * Work in progress: sets `aria-busy`, locks the current width, ignores clicks
    * and shows `busyLabel` (a gerund such as "Saving…"). No spinner.
    */
@@ -95,6 +102,7 @@ export function Button(props: ButtonProps) {
     iconEnd,
     arrow,
     block = false,
+    flush,
     busy = false,
     busyLabel,
     children,
@@ -140,6 +148,7 @@ export function Button(props: ButtonProps) {
     `wa-btn--${variant}`,
     `wa-btn--${size}`,
     block && 'wa-btn--block',
+    flush && `wa-btn--flush-${flush}`,
     className,
   );
   const mergedStyle = lockedWidth
@@ -154,6 +163,7 @@ export function Button(props: ButtonProps) {
       iconEnd: _ie,
       arrow: _a,
       block: _b,
+      flush: _f,
       busy: _busy,
       busyLabel: _bl,
       children: _c,
@@ -197,6 +207,7 @@ export function Button(props: ButtonProps) {
     iconEnd: _ie,
     arrow: _a,
     block: _b,
+    flush: _f,
     busy: _busy,
     busyLabel: _bl,
     children: _c,

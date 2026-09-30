@@ -8,10 +8,12 @@ import { ThemeControl } from '../../shell/ThemeControl';
 import type { ThemePreference } from '../../shell/theme';
 
 /**
- * System · Light · Dark. Applies at once in this browser (localStorage, before
- * first paint next time) and saves to the account so other browsers follow.
+ * Theme · System · Light · Dark, as one settings row. A choice here is an
+ * explicit one: it applies at once in this browser (ThemeControl stores it with
+ * the time it was made) and saves to the account, so other browsers follow on
+ * their next load (the most recent explicit choice wins, see AppSync).
  */
-export function ThemeSetting() {
+export function ThemeRow() {
   const labelId = useId();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState<ThemePreference | null>(null);
@@ -28,22 +30,13 @@ export function ThemeSetting() {
   }
 
   return (
-    <div className="wa-setting">
-      <div>
-        <p id={labelId} className="wa-row__label">
+    <li className="wa-row wa-row--split wa-setting-row">
+      <div className="wa-setting-row__text">
+        <p id={labelId} className="wa-row__label wa-setting-row__label">
           Theme
         </p>
-        <p className="wa-row__detail">
-          Applies here right away, and in other browsers where you’re signed in.
-        </p>
-      </div>
-      <div className="wa-setting__control">
-        <ThemeControl
-          labelledBy={labelId}
-          onChange={(theme) => void save(theme)}
-        />
-        <p className="sr-only" role="status">
-          {saved ? `Theme saved: ${saved}.` : ''}
+        <p className="wa-setting-row__value">
+          Applies here and in your other browsers
         </p>
         {error ? (
           <p className="wa-reason" role="alert">
@@ -51,6 +44,15 @@ export function ThemeSetting() {
           </p>
         ) : null}
       </div>
-    </div>
+      <div className="wa-row__actions">
+        <ThemeControl
+          labelledBy={labelId}
+          onChange={(theme) => void save(theme)}
+        />
+        <p className="sr-only" role="status">
+          {saved ? `Theme saved: ${saved}.` : ''}
+        </p>
+      </div>
+    </li>
   );
 }

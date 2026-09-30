@@ -1,8 +1,13 @@
 import { OP_CATALOG, OP_IDS } from '@webable/core/ops/catalog';
 import { Kbd, TextLink } from '@webable/ui';
 import type { ReactNode } from 'react';
+import { chromeStoreUrl } from '../../../lib/extension/store';
+import { ISSUES_URL } from '../contact';
 import { ContactLine, DOCS_UPDATED } from './ContactLine';
 import { DocPage, DocSection, Fact, type TocEntry } from './DocPage';
+
+/** The project's source repository (the issue tracker's parent). */
+const SOURCE_URL = ISSUES_URL.replace(/\/issues$/, '');
 
 const TOC: readonly TocEntry[] = [
   { id: 'start', title: 'Getting started' },
@@ -37,6 +42,7 @@ function Question({
  * (design-final §7.12, WCAG 3.2.6), and the contact section is always at the end.
  */
 export function HelpDoc() {
+  const storeUrl = chromeStoreUrl();
   return (
     <DocPage
       eyebrow={`Updated ${DOCS_UPDATED}`}
@@ -60,12 +66,43 @@ export function HelpDoc() {
           </p>
         </Question>
         <Question id="setup" q="How do I set it up?">
-          <p>
-            Choose <TextLink href="/tune">Get started</TextLink> and tune
-            WebAble, which takes about 6 minutes. Then add the extension to
-            Chrome and allow it to change pages. WebAble also makes small, safe
-            changes before you tune.
-          </p>
+          <p>Either order works.</p>
+          <ul>
+            <li>
+              <TextLink href={storeUrl ? '/get' : '#add-from-source'}>
+                Add WebAble to Chrome
+              </TextLink>{' '}
+              first. It works right away, with small, safe changes on every
+              page. Allow it on sites from its welcome page, then tune it when
+              you like.
+            </li>
+            <li>
+              Or <TextLink href="/tune">tune it first</TextLink>, then add it to
+              Chrome and connect it to your fit.
+            </li>
+          </ul>
+          {storeUrl ? null : (
+            <>
+              <p id="add-from-source">
+                WebAble isn’t in the Chrome Web Store yet. To add it from its{' '}
+                <TextLink href={SOURCE_URL}>source code</TextLink>:
+              </p>
+              <ol>
+                <li>
+                  In a copy of the source, run{' '}
+                  <code>pnpm extension:enable</code>.
+                </li>
+                <li>
+                  Open <code>chrome://extensions</code> and turn on Developer
+                  mode.
+                </li>
+                <li>
+                  Choose Load unpacked, then pick{' '}
+                  <code>apps/extension/.output/chrome-mv3</code>.
+                </li>
+              </ol>
+            </>
+          )}
         </Question>
         <Question id="tune-again" q="Can I tune again, or skip parts?">
           <p>
@@ -74,10 +111,7 @@ export function HelpDoc() {
           </p>
         </Question>
         <Question id="right-answer" q="Is there a right answer in Tune?">
-          <p>
-            No. There’s no passing or failing. Tune measures what fits you, not
-            how well you do.
-          </p>
+          <p>No. Tune measures what fits you, not how well you do.</p>
         </Question>
       </DocSection>
 
@@ -208,10 +242,6 @@ export function HelpDoc() {
         deck="Stuck, or something isn’t right? Tell us what you were doing and what happened."
       >
         <ContactLine lead="Write to the WebAble team:" />
-        <p className="ws-secondary">
-          Please don’t include passwords or personal details you wouldn’t want
-          to share.
-        </p>
       </DocSection>
     </DocPage>
   );

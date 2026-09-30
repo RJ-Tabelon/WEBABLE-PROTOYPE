@@ -3,6 +3,7 @@
 import {
   Anchor,
   Button,
+  FitArrow,
   Icon,
   Mark,
   Sheet,
@@ -18,9 +19,9 @@ import {
   type AppNavIcon,
   type AppNavLink,
 } from './nav';
+import { RouteFocus } from './RouteFocus';
 
-const ICONS: Record<Exclude<AppNavIcon, 'fit'>, IconName> = {
-  changes: 'square-dashed',
+const ICONS: Record<Exclude<AppNavIcon, 'fit' | 'changes'>, IconName> = {
   sites: 'monitor',
   privacy: 'lock',
   settings: 'settings',
@@ -30,6 +31,8 @@ const ICONS: Record<Exclude<AppNavIcon, 'fit'>, IconName> = {
 function NavIcon({ icon }: { icon: AppNavIcon }) {
   // "Your fit" wears the mark: a page, measured.
   if (icon === 'fit') return <Mark size={20} />;
+  // "Changes" wears the fit arrow: before, then after (design-final §11.3).
+  if (icon === 'changes') return <FitArrow size={20} />;
   return <Icon name={ICONS[icon]} size={20} />;
 }
 
@@ -81,9 +84,11 @@ export interface AppShellProps {
 
 /**
  * Working-density app frame (design-final §7.9). At ≥64em a 240 px rail with Your
- * fit, Changes, Sites, Privacy and Settings, and Help pinned at the bottom; below
- * that a 56 px top bar and a Menu sheet with the same items. App pages are
- * documents, not dashboards: an h2 title, index-ruled sections, hairline rows.
+ * fit, Changes, Sites, Privacy and Settings, and Help pinned at the bottom; its
+ * brand row is as tall as the site header, so the wordmark keeps its height
+ * from the site into the app. Below that a 56 px top bar and a Menu sheet with
+ * the same items. App pages are documents, not dashboards: an h2 title,
+ * index-ruled sections, hairline rows. Route changes move focus to the new h1.
  */
 export function AppShell({ children, railFooter }: AppShellProps) {
   const pathname = usePathname();
@@ -102,7 +107,9 @@ export function AppShell({ children, railFooter }: AppShellProps) {
             className="wa-app__brand"
             aria-label="WebAble, your fit"
           >
-            <Wordmark />
+            {/* Beside Menu the word stands alone, as on the site (the mark
+                would read as a second menu glyph). */}
+            <Wordmark withMark={false} />
           </Anchor>
           <Button
             variant="ghost"
@@ -117,7 +124,8 @@ export function AppShell({ children, railFooter }: AppShellProps) {
           </Button>
         </header>
 
-        <aside className="wa-app__rail" aria-label="App">
+        {/* The rail's <nav> names the region; the aside needs no second "App". */}
+        <aside className="wa-app__rail">
           <Anchor
             href="/app"
             className="wa-app__brand wa-app__brand--rail"
@@ -146,7 +154,7 @@ export function AppShell({ children, railFooter }: AppShellProps) {
           placement="full"
           title="Menu"
           hideTitle
-          headerStart={<Wordmark />}
+          headerStart={<Wordmark withMark={false} />}
         >
           <nav className="wa-app-nav wa-app-nav--sheet" aria-label="App">
             <NavList
@@ -166,6 +174,7 @@ export function AppShell({ children, railFooter }: AppShellProps) {
           </nav>
         </Sheet>
       </div>
+      <RouteFocus />
     </div>
   );
 }

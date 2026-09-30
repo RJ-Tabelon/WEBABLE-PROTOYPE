@@ -1,3 +1,4 @@
+import { OP_LABELS } from '../explain/glossary';
 import { benefitProbability, needLevels } from './needs';
 import type { FitProfile, LatentDim, ParamSource } from './schema';
 
@@ -24,21 +25,53 @@ export type FitRowId =
 
 export type ConfidenceLabel = 'high' | 'medium' | 'low';
 
-export type SourceKind = ParamSource;
+/** Where a value came from; `answered` is a Tune question rather than a measurement. */
+export type SourceKind = ParamSource | 'answered';
+
+/** A number or a short Mono value ("19", "7:1", "1.8"). */
+export type FitRowAmount = number | string;
+
+/**
+ * One row's value, in the shape `@webable/ui`'s FitValue draws. Only real
+ * values: a `change` has a known before (the browser's text size, or the
+ * previous fit); a minimum WebAble enforces is a `floor`; settings in words
+ * are `word`; rows WebAble leaves alone are `same`.
+ */
+export type FitRowValue =
+  | {
+      kind: 'change';
+      before: FitRowAmount;
+      after: FitRowAmount;
+      unit?: string;
+      srText: string;
+    }
+  | { kind: 'floor'; after: FitRowAmount; unit?: string; srText: string }
+  | { kind: 'word'; before?: string; after: string; srText: string }
+  | { kind: 'same'; srText: string };
 
 export interface FitRow {
   id: FitRowId;
   label: string;
-  /** Browser default, or the previous fit when recalibrating. */
+  /** What the row shows: this fit against pages as sites made them, or the recalibration change. */
+  value: FitRowValue;
+  /**
+   * The browser's text size, the site's own setting in words, "As the site
+   * made it", or the previous fit when recalibrating. Kept for older readers;
+   * prefer `value`.
+   */
   before: string;
   /** This fit. */
   after: string;
-  /** Screen-reader form of the fit mark, e.g. "16 to 19 pixels". */
+  /** Screen-reader form of the value, e.g. "16 to 19 pixels" (`value.srText`). */
   srText: string;
+  /** Whether the value differs from pages as sites made them, or from the previous fit. */
   changed: boolean;
   /** One plain sentence in the design's voice. */
   sentence: string;
-  /** "Measured today", "Set by you", "Your system setting", "Learned as you browse" or "Default". */
+  /**
+   * "Measured today", "Set by you", "From your answers in Tune", "Your system
+   * setting", "Learned as you browse" or "Default".
+   */
   source: string;
   sourceKind: SourceKind;
   confidence: ConfidenceLabel;
@@ -56,6 +89,10 @@ export interface FitRowOptions {
 const NBSP = ' ';
 const px = (n: number) => `${formatNumber(n)}${NBSP}px`;
 const ms = (n: number) => `${formatNumber(n)}${NBSP}ms`;
+/** Rows with no real "before" of their own (FitValue's `same` text). */
+const AS_SITE = 'As the site made it';
+const SAME: FitRowValue = { kind: 'same', srText: 'as the site made it' };
+const amount = (n: number): number => Math.round(n * 100) / 100;
 const MONTHS = [
   'Jan',
   'Feb',
@@ -96,6 +133,8 @@ function sourceLabel(
       return 'Your system setting';
     case 'learned':
       return 'Learned as you browse';
+    case 'answered':
+      return 'From your answers in Tune';
     case 'default':
       return 'Default';
     case 'measured': {
@@ -120,12 +159,9 @@ function latentConfidence(c: number): ConfidenceLabel {
 function latentSource(dim: LatentDim): SourceKind {
   if (dim.sources.includes('override')) return 'override';
   if (dim.sources.includes('learned')) return 'learned';
-  if (
-    dim.sources.some(
-      (s) => s === 'behavior' || s === 'preference' || s === 'chips',
-    )
-  )
-    return 'measured';
+  if (dim.sources.includes('behavior')) return 'measured';
+  if (dim.sources.some((s) => s === 'preference' || s === 'chips'))
+    return 'answered';
   if (dim.sources.includes('system')) return 'system';
   return 'default';
 }
@@ -133,6 +169,9 @@ function latentSource(dim: LatentDim): SourceKind {
 interface Shown {
   value: string;
   sr: string;
+  /** The Mono amount, when the value is a number ("19", "7:1"). */
+  amount?: FitRowAmount;
+  unit?: string;
 }
 
 function fitMark(
@@ -156,13 +195,22 @@ function fitMark(
 
 function textShown(p: FitProfile, browserPx: number): Shown {
   const body = Math.max(p.vision.textMinPx.value, browserPx);
-  return { value: px(body), sr: `${formatNumber(body)} pixels` };
+  return {
+    value: px(body),
+    sr: `${formatNumber(body)} pixels`,
+    amount: amount(body),
+    unit: 'px',
+  };
 }
 
 function contrastShown(p: FitProfile): Shown {
   const v = p.vision.contrastFloor.value;
   if (v === 21) return { value: 'Maximum', sr: 'maximum contrast' };
-  return { value: `${formatNumber(v)}:1`, sr: `${formatNumber(v)} to 1` };
+  return {
+    value: `${formatNumber(v)}:1`,
+    sr: `${formatNumber(v)} to 1`,
+    amount: `${formatNumber(v)}:1`,
+  };
 }
 
 function polarityShown(p: FitProfile): Shown {
@@ -174,17 +222,26 @@ function polarityShown(p: FitProfile): Shown {
 
 function spacingShown(p: FitProfile): Shown {
   const v = p.vision.lineHeight.value;
-  return { value: formatNumber(v), sr: `line spacing ${formatNumber(v)}` };
+  return {
+    value: formatNumber(v),
+    sr: `line spacing ${formatNumber(v)}`,
+    amount: amount(v),
+  };
 }
 
 function lengthShown(p: FitProfile): Shown {
   const v = p.vision.maxLineCh.value;
-  return { value: `${v}${NBSP}characters`, sr: `${v} characters` };
+  return {
+    value: `${v}${NBSP}characters`,
+    sr: `${v} characters`,
+    amount: v,
+    unit: 'characters',
+  };
 }
 
 function targetShown(p: FitProfile): Shown {
   const v = p.motor.minTargetPx.value;
-  return { value: px(v), sr: `${v} pixels` };
+  return { value: px(v), sr: `${v} pixels`, amount: v, unit: 'px' };
 }
 
 function steadyShown(p: FitProfile): Shown {
@@ -195,7 +252,7 @@ function steadyShown(p: FitProfile): Shown {
 
 function hoverShown(p: FitProfile): Shown {
   const v = p.motor.hoverGraceMs.value;
-  return { value: ms(v), sr: `${v} milliseconds` };
+  return { value: ms(v), sr: `${v} milliseconds`, amount: v, unit: 'ms' };
 }
 
 function motionPaused(p: FitProfile): boolean {
@@ -223,6 +280,109 @@ function busyShown(p: FitProfile): Shown {
   if (mode === 'simplified') return { value: 'Simplified', sr: 'simplified' };
   if (mode === 'ask') return { value: 'Ask first', sr: 'ask first' };
   return { value: 'Unchanged', sr: 'unchanged' };
+}
+
+/* ------------------------------------------------------------------------ */
+/* Values                                                                     */
+/* ------------------------------------------------------------------------ */
+
+/** A row with no real "before": what pages look like without WebAble. */
+const SITE: Shown = { value: AS_SITE, sr: 'as the site made it' };
+
+/** A setting in words against the site's own ("Site colors → Dark"), or `same`. */
+function wordValue(site: Shown, after: Shown): FitRowValue {
+  if (site.value === after.value) return SAME;
+  return {
+    kind: 'word',
+    before: site.value,
+    after: after.value,
+    srText: `from ${site.sr} to ${after.sr}`,
+  };
+}
+
+/** The recalibration change: Mono digits when both sides are numbers in one unit. */
+function changeValue(before: Shown, after: Shown, srText: string): FitRowValue {
+  if (
+    before.amount !== undefined &&
+    after.amount !== undefined &&
+    before.unit === after.unit
+  ) {
+    return {
+      kind: 'change',
+      before: before.amount,
+      after: after.amount,
+      ...(after.unit ? { unit: after.unit } : {}),
+      srText,
+    };
+  }
+  return { kind: 'word', before: before.value, after: after.value, srText };
+}
+
+function textValue(p: FitProfile, browserPx: number): FitRowValue {
+  const after = textShown(p, browserPx);
+  const before = amount(browserPx);
+  if (needLevels(p).text === 0 || after.amount === before) return SAME;
+  return {
+    kind: 'change',
+    before,
+    after: after.amount ?? before,
+    unit: 'px',
+    srText: `${formatNumber(before)} to ${after.sr}`,
+  };
+}
+
+function contrastValue(p: FitProfile): FitRowValue {
+  const v = p.vision.contrastFloor.value;
+  if (needLevels(p).contrast === 0) return SAME;
+  if (v === 21)
+    return { kind: 'word', after: 'Maximum', srText: 'maximum contrast' };
+  return {
+    kind: 'floor',
+    after: `${formatNumber(v)}:1`,
+    srText: `at least ${formatNumber(v)} to 1`,
+  };
+}
+
+function spacingValue(p: FitProfile): FitRowValue {
+  const v = p.vision.lineHeight.value;
+  if (needLevels(p).spacing === 0) return SAME;
+  return {
+    kind: 'floor',
+    after: amount(v),
+    srText: `at least ${formatNumber(v)}`,
+  };
+}
+
+function lengthValue(p: FitProfile): FitRowValue {
+  const v = p.vision.maxLineCh.value;
+  if (needLevels(p).lineLength === 0) return SAME;
+  return {
+    kind: 'word',
+    after: `Up to ${v}${NBSP}characters`,
+    srText: `up to ${v} characters`,
+  };
+}
+
+function targetValue(p: FitProfile): FitRowValue {
+  const v = p.motor.minTargetPx.value;
+  if (needLevels(p).targets === 0) return SAME;
+  return {
+    kind: 'floor',
+    after: v,
+    unit: 'px',
+    srText: `at least ${v} pixels`,
+  };
+}
+
+function hoverValue(p: FitProfile): FitRowValue {
+  const v = p.motor.hoverGraceMs.value;
+  if (v <= 0) return SAME;
+  return {
+    kind: 'floor',
+    after: v,
+    unit: 'ms',
+    srText: `at least ${v} milliseconds`,
+  };
 }
 
 /* ------------------------------------------------------------------------ */
@@ -287,9 +447,9 @@ function targetSentence(p: FitProfile): string {
     p.motor.minTargetPx.source === 'override' ||
     p.motor.minTargetPx.source === 'stated'
   ) {
-    return `You chose click areas of at least ${v}.`;
+    return `You chose click areas up to ${v} where there’s room.`;
   }
-  return `Click areas of at least ${v} will likely make browsing easier on this device.`;
+  return `Click areas grow up to ${v} where there’s room.`;
 }
 
 function steadySentence(p: FitProfile): string {
@@ -329,8 +489,10 @@ interface RowSpec {
   id: FitRowId;
   label: string;
   shown: (p: FitProfile) => Shown;
-  /** Browser-default display when there is no previous fit. */
-  browser: (browserPx: number) => Shown;
+  /** What pages do without WebAble: a real value or setting, or "As the site made it". */
+  site: Shown;
+  /** This fit against pages as sites made them. */
+  value: (p: FitProfile) => FitRowValue;
   unit: string | null;
   sentence: (p: FitProfile) => string;
   source: (p: FitProfile) => SourceKind;
@@ -342,9 +504,15 @@ function rowSpecs(browserPx: number): RowSpec[] {
   return [
     {
       id: 'textSize',
-      label: 'Text size',
+      label: OP_LABELS.text_floor,
       shown: (p) => textShown(p, browserPx),
-      browser: (b) => ({ value: px(b), sr: `${formatNumber(b)} pixels` }),
+      site: {
+        value: px(browserPx),
+        sr: `${formatNumber(browserPx)} pixels`,
+        amount: amount(browserPx),
+        unit: 'px',
+      },
+      value: (p) => textValue(p, browserPx),
       unit: 'pixels',
       sentence: (p) => textSentence(p, browserPx),
       source: (p) => p.vision.textMinPx.source,
@@ -353,9 +521,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'contrast',
-      label: 'Contrast',
+      label: OP_LABELS.contrast,
       shown: contrastShown,
-      browser: () => ({ value: '4.5:1', sr: '4.5 to 1' }),
+      site: SITE,
+      value: contrastValue,
       unit: null,
       sentence: contrastSentence,
       source: (p) => p.vision.contrastFloor.source,
@@ -366,7 +535,12 @@ function rowSpecs(browserPx: number): RowSpec[] {
       id: 'polarity',
       label: 'Light or dark',
       shown: polarityShown,
-      browser: () => ({ value: 'Site colors', sr: 'site colors' }),
+      site: { value: 'Site colors', sr: 'site colors' },
+      value: (p) =>
+        wordValue(
+          { value: 'Site colors', sr: 'site colors' },
+          polarityShown(p),
+        ),
       unit: null,
       sentence: polaritySentence,
       source: (p) => p.vision.polarity.source,
@@ -375,9 +549,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'lineSpacing',
-      label: 'Line spacing',
+      label: OP_LABELS.line_spacing,
       shown: spacingShown,
-      browser: () => ({ value: '1.5', sr: 'line spacing 1.5' }),
+      site: SITE,
+      value: spacingValue,
       unit: null,
       sentence: spacingSentence,
       source: (p) => p.vision.lineHeight.source,
@@ -386,9 +561,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'lineLength',
-      label: 'Line length',
+      label: OP_LABELS.line_length,
       shown: lengthShown,
-      browser: () => ({ value: `80${NBSP}characters`, sr: '80 characters' }),
+      site: SITE,
+      value: lengthValue,
       unit: 'characters',
       sentence: lengthSentence,
       source: (p) => p.vision.maxLineCh.source,
@@ -397,9 +573,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'targets',
-      label: 'Click targets',
+      label: OP_LABELS.target_size,
       shown: targetShown,
-      browser: () => ({ value: px(24), sr: '24 pixels' }),
+      site: SITE,
+      value: targetValue,
       unit: 'pixels',
       sentence: targetSentence,
       source: (p) => p.motor.minTargetPx.source,
@@ -408,9 +585,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'steadyClicks',
-      label: 'Steady clicks',
+      label: OP_LABELS.steady_clicks,
       shown: steadyShown,
-      browser: () => ({ value: 'Off', sr: 'off' }),
+      site: { value: 'Off', sr: 'off' },
+      value: (p) => wordValue({ value: 'Off', sr: 'off' }, steadyShown(p)),
       unit: null,
       sentence: steadySentence,
       source: (p) => p.motor.steadyClicks.source,
@@ -419,9 +597,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'hoverGrace',
-      label: 'Menus stay open',
+      label: OP_LABELS.menu_grace,
       shown: hoverShown,
-      browser: () => ({ value: ms(0), sr: '0 milliseconds' }),
+      site: SITE,
+      value: hoverValue,
       unit: 'milliseconds',
       sentence: hoverSentence,
       source: (p) => p.motor.hoverGraceMs.source,
@@ -430,9 +609,10 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'motion',
-      label: 'Moving things',
+      label: OP_LABELS.calm_motion,
       shown: motionShown,
-      browser: () => ({ value: 'Plays', sr: 'plays' }),
+      site: { value: 'Plays', sr: 'plays' },
+      value: (p) => wordValue({ value: 'Plays', sr: 'plays' }, motionShown(p)),
       unit: null,
       sentence: motionSentence,
       source: (p) => latentSource(p.attention.motion),
@@ -441,9 +621,11 @@ function rowSpecs(browserPx: number): RowSpec[] {
     },
     {
       id: 'busyPages',
-      label: 'Busy pages',
+      label: OP_LABELS.dim_distractions,
       shown: busyShown,
-      browser: () => ({ value: 'Unchanged', sr: 'unchanged' }),
+      site: { value: 'Unchanged', sr: 'unchanged' },
+      value: (p) =>
+        wordValue({ value: 'Unchanged', sr: 'unchanged' }, busyShown(p)),
       unit: null,
       sentence: busySentence,
       source: (p) => {
@@ -477,9 +659,10 @@ const ROW_MODULE: Record<FitRowId, keyof FitProfile['modules']> = {
 };
 
 /**
- * Rows for the "Your fit" screen, in display order. Without `previous`, the
- * "before" value is what the browser or site does on its own; with it, the
- * rows show the recalibration diff (design-final.md 9.5).
+ * Rows for the "Your fit" screen, in display order. Without `previous`, each
+ * value is this fit against pages as sites made them (never an invented
+ * "before"); with it, rows that changed show the recalibration diff
+ * (design-final.md 9.5) and the rest show this fit.
  */
 export function fitRows(
   profile: FitProfile,
@@ -492,8 +675,14 @@ export function fitRows(
       : 16;
   return rowSpecs(browserPx).map((spec) => {
     const after = spec.shown(profile);
-    const before = previous ? spec.shown(previous) : spec.browser(browserPx);
-    const { srText, changed } = fitMark(before, after, spec.unit);
+    const before = previous ? spec.shown(previous) : spec.site;
+    let value = spec.value(profile);
+    let changed = value.kind !== 'same';
+    if (previous) {
+      const diff = fitMark(before, after, spec.unit);
+      changed = diff.changed;
+      if (changed) value = changeValue(before, after, diff.srText);
+    }
     const kind = spec.source(profile);
     // A module skipped during recalibration keeps the earlier measurement and its date.
     const measuredIn =
@@ -503,9 +692,10 @@ export function fitRows(
     return {
       id: spec.id,
       label: spec.label,
+      value,
       before: before.value,
       after: after.value,
-      srText,
+      srText: value.srText,
       changed,
       sentence: spec.sentence(profile),
       source: sourceLabel(kind, measuredIn, options.now),

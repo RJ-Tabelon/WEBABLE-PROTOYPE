@@ -1,53 +1,42 @@
-import { Button, EmptyState, ErrorPanel } from '@webable/ui';
+import { Button, ErrorPanel } from '@webable/ui';
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 
 import {
-  type ActivityItem,
+  activityTable,
+  askedLine,
   rowsForWeek,
-  summarize,
+  totalsOf,
+  weekSentence,
 } from '../../../components/app/changes/activity';
-import { FitReadout } from '../../../components/app/fit/FitReadout';
+import { ActivityTable } from '../../../components/app/changes/ActivityTable';
+import { ChangesEmpty } from '../../../components/app/changes/ChangesEmpty';
+import { learnedRows } from '../../../components/app/changes/learned';
+import { LearnedSection } from '../../../components/app/changes/LearnedSection';
 import { formatDay, formatShortDay } from '../../../components/app/format';
 import { AppSection, PageHead } from '../../../components/app/PageHead';
 import { getWeeklyActivity } from '../../../lib/data/activity';
-import { learnedRows } from '../../../components/app/changes/learned';
+import { loadCurrentFit, loadUser } from '../data';
 import { getLearnedState } from './learning';
-import { connection } from 'next/server';
 
 export const metadata: Metadata = { title: 'Changes' };
 
 const WEEKS = 8;
 
-function ActivityList({
-  items,
-  label,
-}: {
-  items: ActivityItem[];
-  label: string;
-}) {
-  return (
-    <ul role="list" className="wa-rows" aria-label={label}>
-      {items.map((item) => (
-        <li key={item.key} className="wa-activity-row">
-          <p className="wa-row__label">{item.label}</p>
-          <p className="wa-row__detail">{item.detail}</p>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
 /**
- * /app/changes: what WebAble changed on pages, week by week, as sentences and a
- * short list per kind of change, plus what it has learned. Domain-free: only
- * weekly counts per change are stored, never sites or pages.
+ * /app/changes: what WebAble changed on pages, as one sentence about this week
+ * and one table by kind of change over 8 weeks, then what it has learned (each
+ * part undoable). Domain-free: only weekly counts per change are stored, never
+ * sites or pages.
  */
 export default async function ChangesPage() {
   await connection();
   const now = new Date();
-  const [activity, learned] = await Promise.all([
+  const [activity, learned, user, fit] = await Promise.all([
     getWeeklyActivity({ weeks: WEEKS }, now),
     getLearnedState(now),
+    loadUser(),
+    loadCurrentFit(),
   ]);
 
   const head = (
@@ -81,112 +70,50 @@ export default async function ChangesPage() {
 
   const { weeks, rows } = activity.data;
   const thisWeek = weeks[weeks.length - 1] ?? '';
-  const week = summarize(rowsForWeek(rows, thisWeek), 'this week');
-  const period = summarize(rows, `in the last ${WEEKS} weeks`);
+  const firstWeek = weeks[0] ?? thisWeek;
+  const table = activityTable(rows, thisWeek);
+  const week = totalsOf(rowsForWeek(rows, thisWeek));
+  const asked = askedLine(totalsOf(rows));
   const learnedOk = learned.ok ? learned.data : null;
-  const hasLearned = Boolean(
-    learnedOk && (learnedOk.ops.length > 0 || learnedOk.dims.length > 0),
-  );
-
-  if (period.items.length === 0 && !hasLearned) {
-    return (
-      <div className="wa-page">
-        {head}
-        <EmptyState
-          title="No changes yet"
-          action={
-            <Button href="/connect" variant="secondary" arrow="forward">
-              Check this browser
-            </Button>
-          }
-        >
-          Each week, the changes WebAble makes on pages are counted here.
-        </EmptyState>
-      </div>
-    );
-  }
+  const learnedList = learnedOk ? learnedRows(learnedOk) : [];
+  const hasFit = fit.ok && fit.data !== null;
 
   return (
     <div className="wa-page">
       {head}
 
-      <AppSection
-        id="this-week"
-        title="This week"
-        eyebrow={`Since Monday, ${formatShortDay(`${thisWeek}T00:00:00Z`)}`}
-      >
-        {week.items.length > 0 ? (
-          <>
-            <p className="wa-sentences">{week.sentences.join(' ')}</p>
-            <ActivityList
-              items={week.items}
-              label="This week, by kind of change"
-            />
-          </>
-        ) : (
-          <p className="wa-sentences">Nothing yet this week.</p>
-        )}
-      </AppSection>
+      {table.length === 0 ? (
+        <ChangesEmpty hasFit={hasFit} email={user?.email ?? null} />
+      ) : (
+        <AppSection
+          id="recent"
+          title={`Last ${WEEKS} weeks`}
+          eyebrow={`Since ${formatShortDay(`${firstWeek}T00:00:00Z`)}`}
+        >
+          <div className="wa-changes-summary">
+            <p className="wa-changes-summary__sentence">{weekSentence(week)}</p>
+            {asked ? <p className="wa-app-meta">{asked}</p> : null}
+          </div>
+          <ActivityTable rows={table} weeks={WEEKS} />
+        </AppSection>
+      )}
 
-      <AppSection
-        id="recent"
-        title={`Last ${WEEKS} weeks`}
-        eyebrow={`Since ${formatDay(`${weeks[0] ?? thisWeek}T00:00:00Z`)}`}
-      >
-        <p className="wa-sentences">{period.sentences.join(' ')}</p>
-        <ActivityList
-          items={period.items}
-          label={`Last ${WEEKS} weeks, by kind of change`}
-        />
-      </AppSection>
-
-      <AppSection
-        id="learned"
-        title="What WebAble has learned"
-        eyebrow={
-          learnedOk?.updatedAt
-            ? `Last updated ${formatDay(learnedOk.updatedAt)}`
-            : undefined
-        }
-        deck="From the changes you keep and undo. It’s saved with your account, without any sites."
-      >
-        {!learned.ok ? (
+      {!learned.ok ? (
+        <AppSection id="learned" title="What WebAble has learned">
           <ErrorPanel title="This part didn’t load" as="h3">
             <p>{learned.error.message}</p>
           </ErrorPanel>
-        ) : hasLearned && learnedOk ? (
-          <ul
-            role="list"
-            className="wa-rows"
-            aria-label="What WebAble has learned"
-          >
-            {learnedRows(learnedOk).map((row) => (
-              <li key={row.key} className="wa-activity-row">
-                <p className="wa-row__label">{row.label}</p>
-                <div className="wa-row__detail wa-learned">
-                  {row.dim ? (
-                    <p>
-                      Adjusted as you browse{' '}
-                      <FitReadout
-                        size="inline"
-                        before={row.dim.from}
-                        after={row.dim.to}
-                        srText={row.dim.srText}
-                        changed
-                      />
-                    </p>
-                  ) : null}
-                  {row.sentence ? <p>{row.sentence}</p> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="wa-app-prose">
-            Nothing yet. WebAble learns from the changes you keep and undo.
-          </p>
-        )}
-      </AppSection>
+        </AppSection>
+      ) : table.length > 0 || learnedList.length > 0 ? (
+        <LearnedSection
+          initial={learnedList}
+          eyebrow={
+            learnedOk?.updatedAt
+              ? `Last updated ${formatDay(learnedOk.updatedAt)}`
+              : undefined
+          }
+        />
+      ) : null}
     </div>
   );
 }

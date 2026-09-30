@@ -1,8 +1,10 @@
 import { readFile } from 'node:fs/promises';
 
 import { expect, type Page, test } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 
 import { expectNoSeriousAxeViolations, expectPageBasics } from './support/a11y';
+import { supabaseEnv, testUser } from './support/env';
 
 /*
  * The signed-in app, in a browser without the extension (the test profile has
@@ -34,10 +36,9 @@ test.describe('app frame', () => {
     ]) {
       await expect(nav.getByRole('link', { name })).toBeVisible();
     }
+    // Help stays at the end of the rail (the rail's nav names the region).
     await expect(
-      page
-        .getByRole('complementary', { name: 'App' })
-        .getByRole('link', { name: 'Help' }),
+      page.getByRole('complementary').getByRole('link', { name: 'Help' }),
     ).toBeVisible();
   });
 
@@ -72,8 +73,12 @@ test.describe('pages', () => {
         page.getByRole('link', { name: 'Tune WebAble' }),
       ).toHaveAttribute('href', '/tune');
     }
+    // No extension in the test profile: the note says so, with the one step.
     await expect(
-      page.getByText('WebAble isn’t installed in this browser.'),
+      page.getByText('Your fit isn’t used in this browser yet'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: /^Add WebAble/ }),
     ).toBeVisible();
   });
 
@@ -83,19 +88,21 @@ test.describe('pages', () => {
     await expect(page.getByText(/never the sites or pages/)).toBeVisible();
   });
 
-  test('Sites says the list stays on this device, and needs the extension', async ({
-    page,
-  }) => {
+  test('Sites needs the extension, and says so once', async ({ page }) => {
     await open(page, '/app/sites', 'Sites');
     await expect(
-      page.getByText('This list stays on this device.'),
+      page.getByText('Sites where you paused WebAble or changed a setting.'),
+    ).toBeVisible();
+    // The list lives in the extension: without it, no privacy line and no list.
+    await expect(page.getByText(/This list stays in this browser/)).toHaveCount(
+      0,
+    );
+    await expect(
+      page.getByText('Your fit isn’t used in this browser yet'),
     ).toBeVisible();
     await expect(
-      page.getByRole('heading', { name: 'WebAble isn’t in this browser' }),
+      page.getByRole('link', { name: /^Add WebAble/ }),
     ).toBeVisible();
-    await expect(
-      page.getByRole('link', { name: 'Add WebAble' }),
-    ).toHaveAttribute('href', '/connect');
     await expectPageBasics(page, { h1: 'Sites', app: true });
   });
 
@@ -114,13 +121,21 @@ test.describe('pages', () => {
     await expect(page.getByText(/nothing was sent from it/)).toBeVisible();
   });
 
-  test('Settings', async ({ page }) => {
+  test('Settings reads as a document', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await open(page, '/app/settings', 'Settings');
     await expectPageBasics(page, { h1: 'Settings', app: true });
+    for (const name of ['Account', 'Connected browsers'])
+      await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
     await expect(page.getByRole('radiogroup', { name: 'Theme' })).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Sign out everywhere' }),
     ).toBeVisible();
+    // At rest, the whole page fits one 1440×900 screen.
+    const height = await page.evaluate(
+      () => document.documentElement.scrollHeight,
+    );
+    expect(height).toBeLessThanOrEqual(900);
   });
 
   test('Connect offers to add the extension', async ({ page }) => {
@@ -167,7 +182,11 @@ test.describe('changes people make', () => {
     await theme.getByRole('radio', { name: 'Dark' }).click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(page.getByText('Theme saved: dark.')).toBeAttached();
-    await page.evaluate(() => window.localStorage.removeItem('wa-theme'));
+    // Another browser: nothing chosen there, so the account's choice applies.
+    await page.evaluate(() => {
+      window.localStorage.removeItem('wa-theme');
+      window.localStorage.removeItem('wa-theme-at');
+    });
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 
@@ -177,6 +196,100 @@ test.describe('changes people make', () => {
       .click();
     await expect(page.locator('html')).not.toHaveAttribute('data-theme', /./);
     await expect(page.getByText('Theme saved: system.')).toBeAttached();
+  });
+
+  test('a newer choice in Settings wins over an older one in another browser', async ({
+    page,
+  }) => {
+    await open(page, '/app/settings', 'Settings');
+    await page
+      .getByRole('radiogroup', { name: 'Theme' })
+      .getByRole('radio', { name: 'Dark' })
+      .click();
+    await expect(page.getByText('Theme saved: dark.')).toBeAttached();
+    // Another browser, where Light was chosen explicitly, long before.
+    await page.evaluate(() => {
+      window.localStorage.setItem('wa-theme', 'light');
+      window.localStorage.setItem('wa-theme-at', '1000');
+    });
+    await open(page, '/app', 'Your fit');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+
+    await open(page, '/app/settings', 'Settings');
+    await page
+      .getByRole('radiogroup', { name: 'Theme' })
+      .getByRole('radio', { name: 'System' })
+      .click();
+    await expect(page.getByText('Theme saved: system.')).toBeAttached();
+  });
+
+  test('a theme chosen on the site is the one the app keeps, and the account follows', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await page
+      .getByRole('contentinfo')
+      .getByRole('radiogroup', { name: /Theme/ })
+      .getByRole('radio', { name: 'Dark' })
+      .click();
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await open(page, '/app', 'Your fit');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    // The account took it: a browser with no choice of its own gets Dark too.
+    await expect
+      .poll(async () => {
+        await page.evaluate(() => {
+          window.localStorage.removeItem('wa-theme');
+          window.localStorage.removeItem('wa-theme-at');
+        });
+        await page.reload();
+        await page.getByRole('heading', { level: 1 }).waitFor();
+        return page.locator('html').getAttribute('data-theme');
+      })
+      .toBe('dark');
+
+    // Put it back: System, chosen in Settings.
+    await open(page, '/app/settings', 'Settings');
+    await page
+      .getByRole('radiogroup', { name: 'Theme' })
+      .getByRole('radio', { name: 'System' })
+      .click();
+    await expect(page.getByText('Theme saved: system.')).toBeAttached();
+  });
+
+  test('changing the password asks for the current one, and a wrong one changes nothing', async ({
+    page,
+  }) => {
+    await open(page, '/app/settings', 'Settings');
+    const change = page.getByRole('button', { name: 'Change password' });
+    await change.click();
+    await expect(change).toHaveAttribute('aria-expanded', 'true');
+    const current = page.getByLabel('Current password', { exact: true });
+    await expect(current).toBeFocused();
+    await current.fill('not-the-password-1');
+    await page
+      .getByLabel('New password', { exact: true })
+      .fill('a-new-password-that-is-long');
+    await page.getByRole('button', { name: 'Save', exact: true }).click();
+    await expect(
+      page.getByText('That’s not your current password.'),
+    ).toBeVisible();
+    await expect(current).toHaveAttribute('aria-invalid', 'true');
+    await expect(current).toBeFocused();
+
+    // Cancel closes it and puts focus back on Change.
+    await page.getByRole('button', { name: 'Cancel' }).click();
+    await expect(change).toBeFocused();
+    await expect(change).toHaveAttribute('aria-expanded', 'false');
+
+    // The real password still signs in.
+    const { url, key } = supabaseEnv();
+    const check = createClient(url, key, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+    const { error } = await check.auth.signInWithPassword(testUser());
+    expect(error).toBeNull();
+    await check.auth.signOut({ scope: 'local' });
   });
 
   test('download my data saves a JSON file', async ({ page }) => {
@@ -204,6 +317,10 @@ test.describe('changes people make', () => {
     await expect(
       dialog.getByRole('button', { name: 'Delete my account' }),
     ).toBeVisible();
+    // A copy first: the link in the dialog runs the export.
+    const download = page.waitForEvent('download');
+    await dialog.getByRole('button', { name: 'Download your data' }).click();
+    expect((await download).suggestedFilename()).toMatch(/\.json$/);
     await dialog.getByRole('button', { name: 'Keep my account' }).click();
     await expect(dialog).toBeHidden();
     await expect(opener).toBeFocused();

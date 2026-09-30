@@ -111,8 +111,8 @@ test.describe('popup', () => {
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
       'Changes undone on this page',
     );
-    // The optional reason, for 8 s.
-    const reason = popup.getByRole('group', { name: 'Page zoom undone' });
+    // The optional reason; the row stays until the popup closes.
+    const reason = popup.getByRole('group', { name: 'Page zoom was undone' });
     await expect(reason).toBeVisible();
     await reason.getByRole('button', { name: 'Too much' }).click();
     await expect(reason.getByRole('status')).toHaveText(/Noted/);
@@ -120,6 +120,10 @@ test.describe('popup', () => {
     // The undo reached the page and the worker's record.
     const state = await ext.tabState(tabId);
     expect(state?.changes.filter((c) => c.status === 'applied')).toEqual([]);
+
+    // Redo puts it back.
+    await reason.getByRole('button', { name: 'Redo page zoom' }).click();
+    await expect.poll(() => tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
   });
 
   test('a text size set for this site applies on the page, and its Undo restores the page', async ({
@@ -148,7 +152,7 @@ test.describe('popup', () => {
     await text.getByRole('button', { name: 'Undo text size' }).click();
     await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
     await expect(
-      popup.getByRole('group', { name: 'Text size undone' }),
+      popup.getByRole('group', { name: 'Text size was undone' }),
     ).toBeVisible();
   });
 
@@ -200,9 +204,12 @@ test.describe('popup', () => {
 
     // "Larger text" pins an 18 px floor for this site; 12 px captions in fixed boxes would clip.
     await popup.getByRole('switch', { name: 'Larger text' }).click();
+    // The switch tells the truth: the checks undid it here, so it reads Off
+    // (the pin for this site is kept).
     await expect(
       popup.getByRole('switch', { name: 'Larger text' }),
-    ).toHaveAttribute('aria-checked', 'true');
+    ).toHaveAttribute('aria-checked', 'false');
+    await expect(popup.getByText(/Undone here/)).toBeVisible();
     await expect(popup.getByText('Larger text was undone')).toBeVisible();
     await expect(popup.getByText(/so WebAble put it back\./)).toBeVisible();
     // No "is on" confirmation for a change that did not stay.
@@ -212,9 +219,11 @@ test.describe('popup', () => {
     // The page is exactly as the site made it.
     expect(await computed(page, '#card-1 p', 'font-size')).toBe('12px');
     // Not an error: no alert, and "Why?" explains the checks.
-    await popup.getByRole('button', { name: 'Why?' }).click();
+    await popup.getByRole('button', { name: 'Why?' }).first().click();
     await expect(
-      popup.getByText(/WebAble checks every change right after it makes it/),
+      popup
+        .getByText(/WebAble checks every change right after it makes it/)
+        .first(),
     ).toBeVisible();
 
     await expectNoAxeViolations(popup);
@@ -433,7 +442,6 @@ test.describe('keyboard and targets', () => {
     await ext.seed({ profile: strongReaderProfile() });
     const { tabId } = await ext.openFixture('store');
     const popup = await ext.openPopup(tabId);
-    await popup.getByRole('button', { name: /^What changed/ }).click();
     await popup.getByRole('button', { name: 'Adjust for this site' }).click();
     expect(await smallTargets(popup)).toEqual([]);
 
@@ -485,7 +493,9 @@ test.describe('keyboard and targets', () => {
 });
 
 test.describe('welcome page', () => {
-  test('explains site access and links to Connect', async ({ ext }) => {
+  test('explains site access and links to Tune and sign-in', async ({
+    ext,
+  }) => {
     const page = await ext.context.newPage();
     await page.goto(`chrome-extension://${ext.id}/welcome.html`);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -494,17 +504,29 @@ test.describe('welcome page', () => {
     await expect(
       page.getByRole('heading', {
         level: 2,
-        name: 'Let WebAble work on every site',
+        name: 'Allow WebAble on sites',
       }),
     ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Allow on all sites' }),
     ).toBeVisible();
     await expect(
-      page.getByText('What never leaves this computer'),
+      page.getByRole('button', { name: 'What WebAble reads and sends' }),
     ).toBeVisible();
-    const connect = page.getByRole('link', { name: /Connect your fit/ });
-    await expect(connect).toHaveAttribute('href', /\/connect$/);
+    await expect(
+      page.getByRole('link', { name: /Tune WebAble/ }),
+    ).toHaveAttribute('href', /\/tune$/);
+    await expect(
+      page.getByRole('link', { name: 'I have an account' }),
+    ).toHaveAttribute('href', /\/sign-in\?next=\/connect$/);
     await expectNoAxeViolations(page);
+  });
+
+  test('#allow focuses the Allow button', async ({ ext }) => {
+    const page = await ext.context.newPage();
+    await page.goto(`chrome-extension://${ext.id}/welcome.html#allow`);
+    await expect(
+      page.getByRole('button', { name: 'Allow on all sites' }),
+    ).toBeFocused();
   });
 });

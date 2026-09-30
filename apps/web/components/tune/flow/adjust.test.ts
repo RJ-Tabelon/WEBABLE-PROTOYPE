@@ -2,7 +2,13 @@ import { defaultFitProfile, fitProfileSchema } from '@webable/core';
 import { fitRows } from '@webable/core/profile/describe';
 import { describe, expect, it } from 'vitest';
 
-import { adjustSpec, applyAdjustment, keepOldRows, TEXT_STEPS } from './adjust';
+import {
+  adjustSpec,
+  applyAdjustment,
+  applyEditorValue,
+  keepOldRows,
+  TEXT_STEPS,
+} from './adjust';
 
 const NOW = new Date('2026-09-29T12:00:00.000Z');
 const base = () => defaultFitProfile(undefined, NOW);
@@ -150,5 +156,25 @@ describe('keepOldRows', () => {
     expect(merged.motor.minTargetPx.value).toBe(56);
     expect(merged.vision.textMinPx.value).toBe(18);
     expect(keepOldRows(next, previous, new Set())).toBe(next);
+  });
+});
+
+describe('applyEditorValue (the shared row editor, live in Tune)', () => {
+  it("applies the editor value with Tune's override rules", () => {
+    let p = base();
+    p = applyEditorValue(p, { row: 'textSize', value: 21 });
+    p = applyEditorValue(p, { row: 'contrast', value: 7 });
+    p = applyEditorValue(p, { row: 'steadyClicks', value: true });
+    p = applyEditorValue(p, { row: 'busyPages', value: 'ask' });
+    expect(row(p, 'textSize').after).toBe('21\u00a0px');
+    expect(row(p, 'contrast').after).toBe('7:1');
+    expect(row(p, 'steadyClicks').after).toBe('On');
+    expect(row(p, 'busyPages').after).toBe('Ask first');
+    expect(p.vision.textMinPx.source).toBe('override');
+  });
+
+  it('ignores a value of the wrong kind', () => {
+    const p = base();
+    expect(applyEditorValue(p, { row: 'textSize', value: true })).toBe(p);
   });
 });

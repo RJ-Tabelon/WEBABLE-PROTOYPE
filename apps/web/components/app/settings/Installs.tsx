@@ -9,17 +9,16 @@ import { DATA_ERROR_MESSAGES } from '../../../lib/data/result';
 import { extension } from '../../../lib/extension/bridge';
 import { useExtension } from '../../../lib/extension/useExtension';
 import { formatRelativeDay } from '../format';
+import { describeInstall } from './names';
 
-function describe(install: ExtensionInstall): string {
-  const browser = install.browser || 'Browser';
-  return install.platform ? `${browser} on ${install.platform}` : browser;
-}
+const describe = describeInstall;
 
+/** "today", "yesterday" or "Sep 18" (kept on one line). */
 function day(value: string): string {
   const shown = formatRelativeDay(value);
   return shown === 'Today' || shown === 'Yesterday'
     ? shown.toLowerCase()
-    : shown;
+    : shown.replace(/ /g, '\u00a0');
 }
 
 /**
@@ -58,8 +57,8 @@ export function Installs({ initial }: { initial: ExtensionInstall[] }) {
     if (isThis) await extension.disconnect();
     toast.show({
       message: isThis
-        ? 'Removed this browser and signed WebAble out here.'
-        : `Removed ${describe(install)}. It stays signed in until it signs out.`,
+        ? 'Removed. WebAble in this browser is signed out.'
+        : 'Removed. WebAble in that browser signs out at its next sync.',
     });
   }
 
@@ -84,7 +83,10 @@ export function Installs({ initial }: { initial: ExtensionInstall[] }) {
       {installs.map((install) => {
         const isThis = install.id === thisInstall;
         return (
-          <li key={install.id} className="wa-row wa-row--split">
+          <li
+            key={install.id}
+            className="wa-row wa-row--split wa-row--end-action wa-row--compact"
+          >
             <div>
               <p className="wa-row__label">
                 {describe(install)}
@@ -93,7 +95,7 @@ export function Installs({ initial }: { initial: ExtensionInstall[] }) {
                 ) : null}
               </p>
               <p className="wa-row__detail">
-                WebAble {install.extensionVersion} · connected{' '}
+                Version {install.extensionVersion} · connected{' '}
                 {day(install.connectedAt)} · last seen {day(install.lastSeenAt)}
               </p>
             </div>
@@ -101,6 +103,7 @@ export function Installs({ initial }: { initial: ExtensionInstall[] }) {
               <Button
                 variant="ghost"
                 size="md"
+                flush="end"
                 busy={pending === install.id}
                 busyLabel="Removing…"
                 onClick={() => void remove(install)}

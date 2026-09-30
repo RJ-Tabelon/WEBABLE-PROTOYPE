@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from 'react';
 import { CheckGlyph } from './glyphs';
+import { Icon } from './icons';
 import { IconButton } from './IconButton';
 import { cx } from './internal/cx';
 import { readDurationMs } from './internal/motion';
@@ -28,11 +29,25 @@ export interface ToastOptions {
   applied?: boolean;
   /** With an action the toast stays until dismissed or the page changes. */
   action?: ToastAction;
+  /**
+   * `error` toasts ("Couldn't undo. …") stay until dismissed, like toasts with an
+   * action, and carry a warning glyph. Default `default`.
+   */
+  tone?: 'default' | 'error';
+  /**
+   * Where focus goes if it is inside the toast when the toast leaves (after
+   * Undo, Dismiss or a replacement). Default: the element that had focus when
+   * `show()` was called, else the page's `main h1`.
+   */
+  returnFocus?: HTMLElement | null;
   /** Called when the toast leaves for any reason. */
   onDismiss?: () => void;
 }
 
-export interface ToastProps extends Omit<ToastOptions, 'onDismiss'> {
+export interface ToastProps extends Omit<
+  ToastOptions,
+  'onDismiss' | 'returnFocus'
+> {
   /** Called by the close button (and after the action runs). */
   onDismiss?: () => void;
   /** Label for the close button. Default "Dismiss". */
@@ -50,6 +65,7 @@ export function Toast({
   message,
   applied = false,
   action,
+  tone = 'default',
   onDismiss,
   dismissLabel = 'Dismiss',
   exiting = false,
@@ -59,8 +75,13 @@ export function Toast({
     <div
       className={cx('wa-toast', 'wa-inverse', className)}
       data-exiting={exiting || undefined}
+      data-tone={tone === 'error' ? 'error' : undefined}
     >
-      {applied ? <CheckGlyph size={20} className="wa-toast__check" /> : null}
+      {tone === 'error' ? (
+        <Icon name="triangle-alert" size={20} className="wa-toast__alert" />
+      ) : applied ? (
+        <CheckGlyph size={20} className="wa-toast__check" />
+      ) : null}
       <p className="wa-toast__message">{message}</p>
       {action ? (
         <button
@@ -119,13 +140,37 @@ export interface ToastProviderProps {
    * dismissed: a toast with an action stays until dismissed or the page changes.
    */
   resetKey?: unknown;
-  /** Lifetime of a toast without an action, in ms. Default 6000. Paused on hover or focus. */
+  /** Lifetime of a toast without an action, in ms. Default 6000. Paused on hover or focus. Errors never time out. */
   duration?: number;
 }
 
 interface ActiveToast extends ToastOptions {
   key: number;
   exiting: boolean;
+}
+
+function focusable(el: Element | null | undefined): el is HTMLElement {
+  return (
+    el instanceof HTMLElement &&
+    el.isConnected &&
+    el !== document.body &&
+    !el.closest('[inert], [hidden], [aria-hidden="true"]')
+  );
+}
+
+/**
+ * Moves focus back to where it was before the person went into the toast, or to
+ * the page's h1 when that element is gone (it never falls to <body>).
+ */
+function restoreFocus(target: HTMLElement | null | undefined) {
+  if (focusable(target)) {
+    target.focus({ preventScroll: true });
+    if (document.activeElement === target) return;
+  }
+  const heading = document.querySelector<HTMLElement>('main h1');
+  if (!heading) return;
+  if (!heading.hasAttribute('tabindex')) heading.tabIndex = -1;
+  heading.focus({ preventScroll: true });
 }
 
 /**
@@ -149,15 +194,23 @@ export function ToastProvider({
     setToast(next);
   }, []);
 
+  /** If focus is inside the region, send it back before the toast goes. */
+  const releaseFocus = useCallback((toastLeaving: ActiveToast | null) => {
+    const region = regionRef.current;
+    if (!region || !region.contains(document.activeElement)) return;
+    restoreFocus(toastLeaving?.returnFocus);
+  }, []);
+
   const leave = useCallback(
     (key?: number) => {
       const current = toastRef.current;
       if (!current || current.exiting) return;
       if (key !== undefined && current.key !== key) return;
       current.onDismiss?.();
+      releaseFocus(current);
       commit({ ...current, exiting: true });
     },
-    [commit],
+    [commit, releaseFocus],
   );
 
   const remove = useCallback((key: number) => leave(key), [leave]);
@@ -166,14 +219,29 @@ export function ToastProvider({
   const show = useCallback(
     (options: ToastOptions) => {
       const current = toastRef.current;
+      const region = regionRef.current;
+      const active =
+        typeof document !== 'undefined' ? document.activeElement : null;
+      // A toast shown from inside the toast (Undo, then "… is back to …") keeps
+      // the first toast's return target.
+      const fromToast = !!region && !!active && region.contains(active);
+      const returnFocus =
+        options.returnFocus !== undefined
+          ? options.returnFocus
+          : fromToast
+            ? (current?.returnFocus ?? null)
+            : focusable(active)
+              ? active
+              : null;
       if (current && !current.exiting) current.onDismiss?.();
+      releaseFocus(current ? { ...current, returnFocus } : null);
       keyRef.current += 1;
       const key = keyRef.current;
-      commit({ ...options, key, exiting: false });
+      commit({ ...options, returnFocus, key, exiting: false });
       setPaused(false);
       return () => remove(key);
     },
-    [commit, remove],
+    [commit, remove, releaseFocus],
   );
 
   // Unmount after the exit fade.
@@ -182,14 +250,25 @@ export function ToastProvider({
     const ms = readDurationMs(regionRef.current, '--dur-3-exit', 150);
     const key = toast.key;
     const timer = setTimeout(() => {
-      if (toastRef.current?.key === key) commit(null);
+      const current = toastRef.current;
+      if (current?.key !== key) return;
+      releaseFocus(current);
+      commit(null);
     }, ms);
     return () => clearTimeout(timer);
-  }, [toast, commit]);
+  }, [toast, commit, releaseFocus]);
 
   // Toasts without an action time out, except while hovered or focused.
+  // Errors stay until dismissed.
   useEffect(() => {
-    if (!toast || toast.exiting || toast.action || paused) return;
+    if (
+      !toast ||
+      toast.exiting ||
+      toast.action ||
+      toast.tone === 'error' ||
+      paused
+    )
+      return;
     const key = toast.key;
     const timer = setTimeout(() => remove(key), duration);
     return () => clearTimeout(timer);
@@ -230,6 +309,7 @@ export function ToastProvider({
             message={toast.message}
             applied={toast.applied}
             action={toast.action}
+            tone={toast.tone}
             exiting={toast.exiting}
             onDismiss={() => remove(toast.key)}
           />

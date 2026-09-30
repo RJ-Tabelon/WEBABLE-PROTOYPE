@@ -10,7 +10,8 @@ import {
   type Box,
   type TargetBox,
 } from '../util/geometry';
-import { BOOST, tok } from './css';
+import { tok } from './css';
+import { hasToken } from './marks';
 import { px } from './text';
 import { notNeeded, type OpEnv, type OpImpl } from './types';
 
@@ -160,16 +161,16 @@ export const targetSize: OpImpl = {
       return notNeeded('no small targets with room to grow');
     const rules = [
       `${tok('hp')} { position: relative !important; }`,
-      `[data-wa~="hs"]${BOOST}::after { content: "" !important; display: block !important; position: absolute !important; inset: 0 !important; pointer-events: auto !important; background: none !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; transform: none !important; opacity: 0 !important; margin: 0 !important; padding: 0 !important; }`,
+      `${tok('hs')}::after { content: "" !important; display: block !important; position: absolute !important; inset: 0 !important; pointer-events: auto !important; background: none !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; transform: none !important; opacity: 0 !important; margin: 0 !important; padding: 0 !important; }`,
     ];
     for (const x of [...xs].sort((a, b) => a - b)) {
       rules.push(
-        `[data-wa~="hx${x}"]${BOOST}::after { left: -${x}px !important; right: -${x}px !important; }`,
+        `${tok(`hx${x}`)}::after { left: -${x}px !important; right: -${x}px !important; }`,
       );
     }
     for (const y of [...ys].sort((a, b) => a - b)) {
       rules.push(
-        `[data-wa~="hy${y}"]${BOOST}::after { top: -${y}px !important; bottom: -${y}px !important; }`,
+        `${tok(`hy${y}`)}::after { top: -${y}px !important; bottom: -${y}px !important; }`,
       );
     }
     const hosts = marks.filter(([, k]) => k === 'hs').map(([el]) => el);
@@ -200,11 +201,7 @@ export const targetSize: OpImpl = {
     const vh = env.view.innerHeight;
     const effective: number[] = [];
     for (const el of env.marks.elementsFor('target_size')) {
-      if (
-        !el.isConnected ||
-        !el.getAttribute('data-wa')?.split(' ').includes('hs')
-      )
-        continue;
+      if (!el.isConnected || !hasToken(el, 'hs')) continue;
       const r = el.getBoundingClientRect();
       const box = applied.prepared.fitBox?.(el, r) ?? r;
       const inset = 1;
@@ -235,9 +232,7 @@ export const targetSize: OpImpl = {
     }
     applied.prepared.count = env.marks
       .elementsFor('target_size')
-      .filter((e) =>
-        e.getAttribute('data-wa')?.split(' ').includes('hs'),
-      ).length;
+      .filter((e) => hasToken(e, 'hs')).length;
     const m = median(effective);
     if (m !== null && applied.prepared.fit)
       applied.prepared.fit = { ...applied.prepared.fit, after: px(m) };

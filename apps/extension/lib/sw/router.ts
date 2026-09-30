@@ -18,6 +18,18 @@ const CATS: ReadonlySet<string> = new Set(PAGE_CATEGORIES);
 const isOp = (v: unknown): v is OpId => typeof v === 'string' && OP_SET.has(v);
 const isTabId = (v: unknown): v is number =>
   typeof v === 'number' && Number.isInteger(v) && v >= 0;
+/** An http(s) origin with no path, as the popup passes to chrome.permissions.request. */
+const isOrigin = (v: unknown): v is string => {
+  if (typeof v !== 'string' || v.length > 300) return false;
+  try {
+    const u = new URL(v);
+    return (
+      (u.protocol === 'https:' || u.protocol === 'http:') && u.origin === v
+    );
+  } catch {
+    return false;
+  }
+};
 
 export interface RuntimeSender {
   id?: string;
@@ -54,7 +66,9 @@ export function parseContent(msg: unknown): ContentToWorker | null {
   if (!isRecord(msg) || typeof msg.type !== 'string') return null;
   switch (msg.type) {
     case 'cs:hello':
-      return { type: 'cs:hello' };
+      return msg.restored === true
+        ? { type: 'cs:hello', restored: true }
+        : { type: 'cs:hello' };
     case 'cs:signals':
       return isRecord(msg.signals) &&
         isRecord(msg.evidence) &&
@@ -93,6 +107,10 @@ export function parseContent(msg: unknown): ContentToWorker | null {
         OFFER_ANSWERS.has(msg.answer)
         ? (msg as unknown as ContentToWorker)
         : null;
+    case 'cs:undo-all':
+      return msg.source === 'toast'
+        ? { type: 'cs:undo-all', source: 'toast' }
+        : null;
     default:
       return null;
   }
@@ -112,6 +130,8 @@ const UI_WITH_TAB = new Set([
   'ui:quick',
   'ui:use-everywhere',
   'ui:undo-reason',
+  'ui:redo',
+  'ui:grant-site',
 ]);
 
 const REASONS: ReadonlySet<string> = new Set(UNDO_REASONS);
@@ -137,7 +157,10 @@ export function parseUi(msg: unknown, e2e: boolean): UiMessage | null {
         ? (msg as UiMessage)
         : null;
     case 'ui:undo':
+    case 'ui:redo':
       return msg.op === 'all' || isOp(msg.op) ? (msg as UiMessage) : null;
+    case 'ui:grant-site':
+      return isOrigin(msg.origin) ? (msg as UiMessage) : null;
     case 'ui:undo-reason':
       return isOp(msg.op) &&
         typeof msg.reason === 'string' &&
@@ -185,12 +208,15 @@ export function parseUi(msg: unknown, e2e: boolean): UiMessage | null {
         msg.theme === 'light' ||
         msg.theme === 'dark') &&
         (msg.reduceMotion === undefined ||
-          typeof msg.reduceMotion === 'boolean')
+          typeof msg.reduceMotion === 'boolean') &&
+        (msg.hideAllSitesAsk === undefined ||
+          typeof msg.hideAllSitesAsk === 'boolean')
         ? (msg as UiMessage)
         : null;
     case 'ui:system':
       return isRecord(msg.signals) ? (msg as UiMessage) : null;
     case 'ui:grant-all-sites':
+    case 'ui:clear-everywhere':
     case 'ui:receipts':
     case 'ui:sign-out':
     case 'ui:prefs':

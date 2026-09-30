@@ -91,7 +91,9 @@ export async function completeAuthRedirect(
           next,
         );
       }
-      return redirectTo(request, next);
+      // Validated again right before the redirect: nothing between here and the
+      // top of the function may widen `next`.
+      return redirectTo(request, safeNextPath(next));
     }
 
     if (tokenHash && isOtpType(type)) {
@@ -109,7 +111,7 @@ export async function completeAuthRedirect(
       }
       return redirectTo(
         request,
-        type === 'recovery' ? UPDATE_PASSWORD_PATH : next,
+        type === 'recovery' ? UPDATE_PASSWORD_PATH : safeNextPath(next),
       );
     }
   } catch {

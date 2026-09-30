@@ -13,6 +13,18 @@ const LIMITS = [
   'Chrome’s own pages and the Chrome Web Store.',
 ] as const;
 
+/** The fields the home page shows; the privacy page shows the whole block. */
+const HOME_PAYLOAD_FIELDS = [
+  'zone',
+  'width',
+  'landmark',
+  'links',
+  'text_amount',
+  'class_words',
+  'heading_words',
+  'control_words',
+] as const;
+
 /** The home page: one idea per viewport, in the order a visitor needs them. */
 export function HomePage() {
   return (
@@ -28,16 +40,13 @@ export function HomePage() {
               site to fit. You see every change and can undo it.
             </p>
             <div className="ws-hero__actions">
-              <Button href="/tune" variant="primary" arrow="forward">
-                Get started
+              <Button href="/get" variant="primary" arrow="forward">
+                Add to Chrome
               </Button>
-              <TextLink href="#how" kind="standalone">
-                See how it works
+              <TextLink href="/tune" kind="standalone">
+                Or tune it first
               </TextLink>
             </div>
-            <p className="ws-hero__meta">
-              An extension for Chrome · Tune it in about 6 minutes
-            </p>
           </div>
           <HeroDemo />
         </div>
@@ -49,7 +58,7 @@ export function HomePage() {
             eyebrow="One page · three fits"
             title="Different people, different fits."
             titleId="fits-title"
-            deck="The same page, adapted three ways. Each fit comes from a person’s own Tune, not from a preset."
+            deck="The same page, adapted three ways. Each fit comes from a person’s own Tune."
           />
           <FitsDemo />
         </div>
@@ -58,8 +67,8 @@ export function HomePage() {
       <section id="how" className="ws-section" aria-labelledby="how-title">
         <div className="wa-container">
           <SectionHeader
-            eyebrow="3 steps · about 6 minutes to start"
-            title="Three short tasks. Then every site fits."
+            eyebrow="3 steps"
+            title="Three short tasks. Then sites fit you."
             titleId="how-title"
             deck="WebAble measures how you read, point and focus, then carries your fit to every site you visit."
             link={{ href: '/research', label: 'See the research' }}
@@ -91,7 +100,7 @@ export function HomePage() {
           <div className="ws-privacy">
             <dl className="ws-ledger">
               <div>
-                <dt className="ws-ledger__term">Sent</dt>
+                <dt className="ws-ledger__term">Sent with page analysis</dt>
                 <dd>
                   <ul role="list" className="ws-ledger__list">
                     <li>
@@ -103,7 +112,9 @@ export function HomePage() {
                 </dd>
               </div>
               <div>
-                <dt className="ws-ledger__term">Not sent</dt>
+                <dt className="ws-ledger__term">
+                  Never sent with page analysis
+                </dt>
                 <dd>
                   <ul role="list" className="ws-ledger__list">
                     <li>Page text</li>
@@ -115,7 +126,10 @@ export function HomePage() {
               </div>
             </dl>
             <div>
-              <Payload />
+              <Payload
+                fields={HOME_PAYLOAD_FIELDS}
+                caption="Part of what page analysis would send about one area of the sample page."
+              />
               <p className="ws-link-row">
                 <TextLink href="/privacy" kind="standalone">
                   Read the privacy details
@@ -129,7 +143,7 @@ export function HomePage() {
       <section className="ws-section" aria-labelledby="limits-title">
         <div className="wa-container ws-boundary">
           <SectionHeader
-            eyebrow="Honest limits"
+            eyebrow={`${LIMITS.length} things only a site can fix`}
             title="What WebAble can’t change."
             titleId="limits-title"
             deck="WebAble changes how pages look and respond for you. It never claims a site is accessible or compliant. Some problems live in a site’s own code, and only the site can change them."
@@ -154,12 +168,13 @@ export function HomePage() {
           Tune WebAble to you.
         </h2>
         <p className="ws-cta__deck">
-          About 6 minutes. There’s no passing or failing, and you can skip any
-          part.
+          {
+            'About 6\u00a0minutes. There’s no passing or failing, and you can skip any part.'
+          }
         </p>
         <div className="ws-cta__actions">
           <Button href="/tune" variant="primary" arrow="forward">
-            Get started
+            Start tuning
           </Button>
         </div>
       </section>

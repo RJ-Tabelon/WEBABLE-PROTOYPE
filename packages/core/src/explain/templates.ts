@@ -1,4 +1,5 @@
 import { OP_CATALOG, type OpId } from '../ops/catalog';
+import { OP_LABELS } from './glossary';
 import type { RegionRole } from '../page/types';
 import type {
   AppliedChange,
@@ -52,6 +53,12 @@ const px = (n: number): string => `${Math.round(n)}${NBSP}px`;
 const ms = (n: number): string => `${Math.round(n)}${NBSP}ms`;
 const plural = (n: number, one: string, many: string): string =>
   n === 1 ? one : many;
+
+/** The measured median size of the page's links and buttons, when the evidence carries one. */
+function medianPx(ev: EvidenceOf<'target_failures'>): number | null {
+  const median: unknown = 'medianPx' in ev ? ev.medianPx : undefined;
+  return typeof median === 'number' && median > 0 ? median : null;
+}
 
 /** A level's value in copy form, e.g. "18 px", "125%", "1.6", "70 characters", "7:1". */
 export function formatLevel(op: OpId, level: number): string {
@@ -268,7 +275,7 @@ function appliedDetail(change: AppliedChange): string {
         count > 0
           ? `${count} ${plural(count, 'link or button', 'links and buttons')} here ${plural(count, 'was', 'were')} smaller than ${size}. `
           : '';
-      return `${lead}WebAble made the clickable area ${size}. Nothing moved.`;
+      return `${lead}WebAble grew clickable areas up to ${size} where there’s room. Nothing moved.`;
     }
     case 'target_spacing': {
       const ev = find(trace, 'crowded_targets');
@@ -327,7 +334,7 @@ function appliedDetail(change: AppliedChange): string {
 
 /** "Why this changed" for one change the content script reported. */
 export function explainChange(change: AppliedChange): Explanation {
-  const title = OP_CATALOG[change.op].label;
+  const title = OP_LABELS[change.op];
   if (change.status === 'undone_by_checks') return explainUndone(change);
   const subject = SUBJECT[change.op];
   if (change.status === 'not_needed') {
@@ -402,10 +409,10 @@ export function offerQuestion(trace: DecisionTrace): {
     case 'line_length': {
       const ev = find(trace, 'long_lines');
       const measured = ev
-        ? `Lines here run to ${ev.lineCh}${NBSP}characters. Your fit is ${ev.maxCh}.`
+        ? `They run to ${ev.lineCh}${NBSP}characters. Your fit is ${ev.maxCh} or fewer.`
         : 'Lines here are long.';
       return {
-        question: 'Lines here are long. Keep them shorter?',
+        question: 'Keep lines shorter here?',
         reason: why(measured),
       };
     }
@@ -426,9 +433,12 @@ export function offerQuestion(trace: DecisionTrace): {
       };
     case 'target_size': {
       const ev = find(trace, 'target_failures');
-      const measured = ev
-        ? `${ev.count} ${plural(ev.count, 'link or button', 'links and buttons')} here ${plural(ev.count, 'is', 'are')} smaller than ${px(ev.targetPx)}.`
-        : 'Some links and buttons here are small.';
+      const median = ev ? medianPx(ev) : null;
+      const measured = median
+        ? `Most buttons here are ${px(median)}.`
+        : ev
+          ? `${ev.count} ${plural(ev.count, 'link or button', 'links and buttons')} here ${plural(ev.count, 'is', 'are')} smaller than ${px(ev.targetPx)}.`
+          : 'Some links and buttons here are small.';
       return {
         question: 'Buttons on this page are small. Make them bigger here?',
         reason: why(measured),
@@ -535,7 +545,7 @@ const UNDONE_REASON: Readonly<Record<VerifyCode, string>> = {
 
 /** Neutral copy for a change the checks undid: "Line spacing was undone. It made text overlap here…" */
 export function explainUndone(change: AppliedChange): Explanation {
-  const title = OP_CATALOG[change.op].label;
+  const title = OP_LABELS[change.op];
   const subject = SUBJECT[change.op];
   const verb = subject.plural ? 'were' : 'was';
   const object = subject.plural ? 'them' : 'it';

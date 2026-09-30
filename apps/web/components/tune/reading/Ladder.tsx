@@ -13,6 +13,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import {
   elapsedSince,
+  measureContentBox,
   useDisturbance,
   useStimulusOnset,
   useTaskKeys,
@@ -23,10 +24,12 @@ import {
   Responses,
   Stage,
   TaskHeading,
+  useStimulusFontReady,
 } from '../shared/primitives';
 import {
   boxWidthPx,
   ladderStartPx,
+  maxFitHeightPx,
   maxFitPx,
   MIN_CHARS,
   MIN_CHARS_LARGE_PRINT,
@@ -34,6 +37,9 @@ import {
   wordCount,
   type StimulusMetrics,
 } from './geometry';
+
+/** Line height of the ladder sentences. */
+const LINE_HEIGHT = 1.3;
 
 type Answer = ReadingTrial['response'];
 
@@ -47,15 +53,6 @@ export interface LadderProps {
   /** Changes on every resume from Pause; a trial open across a pause is marked disturbed. */
   epoch: number;
   onDone: (trials: ReadingTrial[], displayLimited: boolean) => void;
-}
-
-function contentWidth(el: HTMLElement): number {
-  const style = getComputedStyle(el);
-  return (
-    el.clientWidth -
-    Number.parseFloat(style.paddingLeft) -
-    Number.parseFloat(style.paddingRight)
-  );
 }
 
 /**
@@ -84,26 +81,38 @@ export function Ladder({
     [seed],
   );
 
-  // S_fit and S0 are fixed once, from the stage width when the screen opens.
+  // S_fit and S0 are fixed once, from the stage when the screen opens: the
+  // largest size whose sentence fits the stage's width and its height, so the
+  // answers below always stay in view.
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
-    const width = Math.max(200, contentWidth(el));
-    const fitPx = maxFitPx(
+    const box = measureContentBox(el);
+    const width = Math.max(200, box?.width ?? 200);
+    const widthFit = maxFitPx(
       width,
       metrics.advanceEm,
       largePrint ? MIN_CHARS_LARGE_PRINT : MIN_CHARS,
     );
+    const fitPx = maxFitHeightPx({
+      heightPx: box?.height ?? 0,
+      widthPx: width,
+      advanceEm: metrics.advanceEm,
+      lineHeight: LINE_HEIGHT,
+      maxPx: widthFit,
+    });
     setGeometry({ width, fitPx, startPx: ladderStartPx(comfortPx, fitPx) });
   }, [comfortPx, largePrint, metrics.advanceEm]);
 
-  const size = geometry
-    ? nextReadingSize({
-        trials,
-        startPx: geometry.startPx,
-        maxFitPx: geometry.fitPx,
-      })
-    : null;
+  const fontReady = useStimulusFontReady();
+  const size =
+    geometry && fontReady
+      ? nextReadingSize({
+          trials,
+          startPx: geometry.startPx,
+          maxFitPx: geometry.fitPx,
+        })
+      : null;
   const index = trials.length;
   const sentence = sentences[index % sentences.length];
   const trialKey = size === null ? null : index;
@@ -117,7 +126,8 @@ export function Ladder({
     // Only on a new trial; a resume keeps the old epoch so the open trial is marked.
   }, [trialKey]);
 
-  const finished = geometry !== null && size === null && trials.length > 0;
+  const finished =
+    geometry !== null && fontReady && size === null && trials.length > 0;
   const doneSent = useRef(false);
   useEffect(() => {
     if (!finished || doneSent.current || !geometry) return;
@@ -156,9 +166,6 @@ export function Ladder({
       t: () => respond('true'),
       f: () => respond('false'),
       c: () => respond('cant'),
-      ArrowLeft: () => respond('true'),
-      ArrowRight: () => respond('false'),
-      ArrowDown: () => respond('cant'),
     },
     active && size !== null,
   );
@@ -167,18 +174,18 @@ export function Ladder({
     <>
       <TaskHeading>Is it true?</TaskHeading>
       <Deck>
-        Read each sentence at your normal pace, then answer. Can&rsquo;t read it
-        is always a fine answer.
+        Read at your usual pace. &ldquo;Can&rsquo;t read it&rdquo; is always
+        fine.
       </Deck>
       <Stage ref={stageRef} label="Sentence" className="tn-stage--center">
         {geometry && size !== null && sentence ? (
           <p
             key={index}
-            className="tn-stimulus-text tn-stimulus-text--box"
+            className="tn-stimulus tn-stimulus-text tn-stimulus-text--box"
             style={{
               fontFamily: STIMULUS_FAMILY,
               fontSize: `${size}px`,
-              lineHeight: 1.3,
+              lineHeight: LINE_HEIGHT,
               inlineSize: `${boxWidthPx(size, metrics.advanceEm, geometry.width)}px`,
             }}
           >

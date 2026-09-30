@@ -12,9 +12,11 @@ import { elapsedSince, useStimulusOnset } from '../shared/hooks';
 import {
   Deck,
   OptionGroup,
+  Scale,
   Stage,
   TaskHeading,
   type ChoiceOption,
+  type ScaleProps,
 } from '../shared/primitives';
 import { FlowPage, MockPage, TextPage, Thumbnail } from './pages';
 import {
@@ -200,7 +202,7 @@ export function FindText({
           ))}
         </div>
       ) : (
-        <div className="tn-controls tn-controls--end">
+        <div className="tn-controls">
           <Button
             variant="ghost"
             size="md"
@@ -220,13 +222,21 @@ export function FindText({
 
 /* ---------- Task D: Which worked better for you? ---------- */
 
-const SCALE: ReadonlyArray<ChoiceOption<string>> = [
-  { value: '2', label: 'Version 1', hint: 'clearly' },
-  { value: '1', label: 'Version 1', hint: 'a little' },
-  { value: '0', label: 'About', hint: 'the same' },
-  { value: '-1', label: 'Version 2', hint: 'a little' },
-  { value: '-2', label: 'Version 2', hint: 'clearly' },
+const ALL_SOURCES = ['ticker', 'carousel', 'badge'] as const;
+
+const SCALE: ScaleProps<string>['options'] = [
+  { value: '2', name: 'Version 1, clearly' },
+  { value: '1', name: 'Version 1, a little' },
+  { value: '0', name: 'About the same' },
+  { value: '-1', name: 'Version 2, a little' },
+  { value: '-2', name: 'Version 2, clearly' },
 ];
+
+const SCALE_ENDS = {
+  start: 'Version 1',
+  middle: 'About the same',
+  end: 'Version 2',
+} as const;
 
 export interface PreferencesProps {
   pairs: readonly PairPlan[];
@@ -269,12 +279,13 @@ export function Preferences({
     if (pair.id === 'still' && sample) {
       const template = TEMPLATES[sample.template];
       const moving = reducedMotion ? 'salient' : 'animated';
+      // The moving version moves: every source runs, so the two pictures differ.
       return (
         <MockPage
           template={template}
           clutter="clean"
           motion={adapted ? 'still' : moving}
-          sources={[]}
+          sources={adapted || reducedMotion ? [] : ALL_SOURCES}
           mirror={false}
           links={sample.links}
           interactive={false}
@@ -336,9 +347,7 @@ export function Preferences({
 
   return (
     <>
-      <TaskHeading key={pair.id} eyebrow="Which worked better for you?">
-        {pair.question}
-      </TaskHeading>
+      <TaskHeading key={pair.id}>{pair.question}</TaskHeading>
       <div className="tn-pair">
         <Thumbnail label={caption(pair.adaptedFirst, 1)}>
           {version(pair.adaptedFirst)}
@@ -347,13 +356,13 @@ export function Preferences({
           {version(!pair.adaptedFirst)}
         </Thumbnail>
       </div>
-      <OptionGroup
+      <Scale
+        key={`scale-${pair.id}`}
         legend={pair.question}
-        hideLegend
         options={SCALE}
+        ends={SCALE_ENDS}
         value={choice}
         onChange={setChoice}
-        className="tn-options--scale"
       />
       <div className="tn-controls">
         <Button variant="primary" size="task" arrow="forward" onClick={advance}>

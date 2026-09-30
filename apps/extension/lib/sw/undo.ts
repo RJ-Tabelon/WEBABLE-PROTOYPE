@@ -41,6 +41,11 @@ export interface HeldUndo {
   domain: string;
   tabSession: string;
   input: EventInput;
+  /**
+   * Component keys of the regions a region-scoped op targeted on this page.
+   * An "I needed that" makes each one an exception on this site.
+   */
+  regions?: string[];
   /** When the hold ends and the event is applied. */
   due: number;
   /** Applied already (kept for late reasons until `LATE_REASON_MS`). */
@@ -57,7 +62,10 @@ function isHeld(v: unknown): v is HeldUndo {
     isRecord(v.input) &&
     v.input.kind === 'undo' &&
     typeof v.due === 'number' &&
-    (v.flushedAt === null || typeof v.flushedAt === 'number')
+    (v.flushedAt === null || typeof v.flushedAt === 'number') &&
+    (v.regions === undefined ||
+      (Array.isArray(v.regions) &&
+        v.regions.every((k) => typeof k === 'string')))
   );
 }
 
@@ -67,6 +75,24 @@ export type ReasonOutcome =
   /** The undo was applied already: apply an 'undo_reason' event. */
   | { kind: 'late'; entry: HeldUndo; event: EventInput }
   | { kind: 'none' };
+
+/**
+ * Pure: the component keys an "I needed that" on this held undo marks as
+ * exceptions (none for any other reason, or a page-wide op).
+ */
+export function neededKeys(entry: HeldUndo): string[] {
+  return entry.input.reason === 'needed_that' ? (entry.regions ?? []) : [];
+}
+
+/** The first key rides on the event itself; core adds it to the site's exceptions. */
+function withComponentKey(
+  input: EventInput,
+  reason: UndoReason,
+  regions: readonly string[] | undefined,
+): EventInput {
+  const key = reason === 'needed_that' ? regions?.[0] : undefined;
+  return key !== undefined ? { ...input, componentKey: key } : input;
+}
 
 /** Pure: what a reason does to the hold list. */
 export function applyReason(
@@ -88,7 +114,11 @@ export function applyReason(
   if (entry.flushedAt === null) {
     const updated: HeldUndo = {
       ...entry,
-      input: { ...entry.input, reason },
+      input: withComponentKey(
+        { ...entry.input, reason },
+        reason,
+        entry.regions,
+      ),
       due: now,
     };
     return {
@@ -98,23 +128,27 @@ export function applyReason(
   }
   if (now - entry.flushedAt > LATE_REASON_MS)
     return { list: [...list], outcome: { kind: 'none' } };
-  const event: EventInput = {
-    cat: entry.input.cat,
-    op: entry.input.op,
-    level: entry.input.level,
-    src: entry.input.src,
-    kind: 'undo_reason',
+  const event: EventInput = withComponentKey(
+    {
+      cat: entry.input.cat,
+      op: entry.input.op,
+      level: entry.input.level,
+      src: entry.input.src,
+      kind: 'undo_reason',
+      reason,
+      ...(entry.input.dtApplyMs !== undefined
+        ? { dtApplyMs: entry.input.dtApplyMs }
+        : {}),
+      ...(entry.input.aiLabel !== undefined
+        ? { aiLabel: entry.input.aiLabel }
+        : {}),
+      ...(entry.input.componentKey !== undefined
+        ? { componentKey: entry.input.componentKey }
+        : {}),
+    },
     reason,
-    ...(entry.input.dtApplyMs !== undefined
-      ? { dtApplyMs: entry.input.dtApplyMs }
-      : {}),
-    ...(entry.input.aiLabel !== undefined
-      ? { aiLabel: entry.input.aiLabel }
-      : {}),
-    ...(entry.input.componentKey !== undefined
-      ? { componentKey: entry.input.componentKey }
-      : {}),
-  };
+    entry.regions,
+  );
   const updated: HeldUndo = { ...entry, input: { ...entry.input, reason } };
   return {
     list: list.map((h) => (h.id === entry.id ? updated : h)),

@@ -8,7 +8,8 @@
 //     ['<all_urls>'], and there are no required host permissions or static
 //     content scripts (the engine is registered at runtime after a click).
 //   - No web-accessible resources (they let pages fingerprint the extension).
-//   - externally_connectable lists exact origins (no wildcard hosts).
+//   - externally_connectable lists exact https origins (no wildcard hosts, no
+//     http:// and no loopback host), and the manifest carries no dev `key`.
 //   - Every file the manifest and the service worker load is present, including
 //     the engine, the pre-paint stylesheets, the welcome page and the icons.
 //   - Test-only hooks from the e2e build are not reachable.
@@ -22,6 +23,10 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const extensionDirectory = resolve(root, 'apps/extension/.output/chrome-mv3');
 const configPath = resolve(root, 'apps/extension/wxt.config.ts');
+
+/** localhost, 127.0.0.0/8, [::1] and *.localhost hosts in a match pattern. */
+const LOOPBACK =
+  /^[a-z]+:\/\/(?:[^/]*\.)?(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?\//i;
 
 const problems = [];
 const fail = (message) => problems.push(message);
@@ -85,7 +90,15 @@ try {
       fail(
         `externally_connectable pattern is not an exact origin: ${pattern}.`,
       );
+    if (!pattern.startsWith('https://'))
+      fail(`externally_connectable pattern is not https: ${pattern}.`);
+    if (LOOPBACK.test(pattern))
+      fail(`externally_connectable trusts a loopback host: ${pattern}.`);
   }
+  if ('key' in manifest)
+    fail(
+      'The manifest carries the development key; production builds omit it (the store assigns the id).',
+    );
   if (manifest.externally_connectable?.ids)
     fail(
       'externally_connectable must not accept messages from other extensions.',
@@ -125,7 +138,8 @@ try {
 
 if (problems.length > 0) {
   console.error(
-    'Extension package check failed. Run "pnpm --filter @webable/extension build" first.',
+    'Extension package check failed. Build with the production web origins first: ' +
+      'WXT_WEB_ORIGINS=https://<web origin>/* pnpm --filter @webable/extension build',
   );
   for (const problem of problems) console.error(`  - ${problem}`);
   process.exitCode = 1;

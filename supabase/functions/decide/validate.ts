@@ -9,20 +9,20 @@
 import {
   CATALOG_VERSION,
   decideRequestSchema,
-  DROPPED_MARK,
-  unknownEvidenceWords,
+  MAX_CONTROL_WORDS,
+  MAX_HEADING_WORDS,
+  vocabularyViolations,
   type DecideRequest,
-  type RegionEvidence,
 } from '../_shared/core.bundle.js';
+
+// The check itself lives in core (page/vocab-check.ts), so the extension runs
+// the same one before anything leaves the device.
+export { MAX_CONTROL_WORDS, MAX_HEADING_WORDS, vocabularyViolations };
 
 /** Catalogs this deployment can answer. During a rollout it holds N and N-1. */
 export const SUPPORTED_CATALOGS: ReadonlySet<string> = new Set([
   CATALOG_VERSION,
 ]);
-
-/** Vocabulary words per phrase (ai-architecture.md 3.2.2); dropped-word marks do not count. */
-export const MAX_HEADING_WORDS = 6;
-export const MAX_CONTROL_WORDS = 4;
 
 export type Validation =
   | { ok: true; request: DecideRequest }
@@ -39,25 +39,6 @@ export type Validation =
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
-function wordCount(phrase: string): number {
-  if (phrase === '') return 0;
-  let n = 0;
-  for (const token of phrase.split(' '))
-    if (token !== DROPPED_MARK && token !== '') n += 1;
-  return n;
-}
-
-/** Vocabulary violations in one evidence object: unknown words plus over-long phrases. */
-export function vocabularyViolations(
-  ev: Pick<RegionEvidence, 'class_words' | 'heading_words' | 'control_words'>,
-): number {
-  let violations = unknownEvidenceWords(ev).length;
-  if (wordCount(ev.heading_words) > MAX_HEADING_WORDS) violations += 1;
-  for (const phrase of ev.control_words)
-    if (wordCount(phrase) > MAX_CONTROL_WORDS) violations += 1;
-  return violations;
 }
 
 function describeIssue(issue: {

@@ -3,7 +3,7 @@ import { PROTECTED_ROLES } from '../contract';
 import { CMP_SELECTOR } from '../extract/rules';
 import type { RegionFact } from '../types';
 import { HOST_TAG, isOurs, isRendered } from '../util/dom';
-import { BOOST, tok } from './css';
+import { tok } from './css';
 import { px } from './text';
 import { notNeeded, type OpEnv, type OpImpl } from './types';
 
@@ -57,7 +57,7 @@ export function isProtected(env: OpEnv, el: Element): boolean {
 function softenCss(token: string, opacity: number): string {
   return [
     `${tok(token)} { opacity: ${opacity} !important; }`,
-    `[data-wa~="${token}"]${BOOST}:is(:hover, :focus-within) { opacity: 1 !important; }`,
+    `${tok(token)}:is(:hover, :focus-within) { opacity: 1 !important; }`,
   ].join('\n');
 }
 

@@ -281,7 +281,7 @@ test.describe('ops apply, verify and remove cleanly', () => {
         expect(state.running).toBe(0);
         expect(state.label).toBe('Play slideshow');
         const c = (await p.evaluate(() => window.__webableEngine.changes()))[0];
-        expect(c?.fit?.after).toBe('0 moving');
+        expect(c?.fit?.after).toBe('0\u00a0moving');
       },
     );
     const running = await page.evaluate(
@@ -309,7 +309,10 @@ test.describe('ops apply, verify and remove cleanly', () => {
       plan([{ op: 'pause_media' }]),
     );
     expect(changes[0]?.status).toBe('applied');
-    expect(changes[0]?.fit).toEqual({ before: '2 playing', after: '2 paused' });
+    expect(changes[0]?.fit).toEqual({
+      before: '2\u00a0playing',
+      after: '0\u00a0playing',
+    });
     await page.waitForTimeout(300);
     expect(
       await page.evaluate(

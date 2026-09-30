@@ -19,6 +19,7 @@ export const FIT_SOURCES = [
   'adjustment',
   'learned',
   'import',
+  'restore',
 ] as const;
 export type FitSource = (typeof FIT_SOURCES)[number];
 

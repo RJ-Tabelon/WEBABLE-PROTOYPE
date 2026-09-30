@@ -2,13 +2,17 @@ import { READING_STEP_LOG } from '@webable/core';
 
 /**
  * Reading stimulus geometry (cal-vision §3). Sizes are CSS px of the stimulus
- * font; the x-height ratio and average advance are measured at runtime because
- * the stimulus face is whatever typical sans the device has (see tune.css).
+ * font. The face is bundled Noto Sans 400 (design-final §9.2); its x-height
+ * ratio and average advance are still measured at runtime, so a fallback face
+ * (if the file could not load) also gives valid sizes.
  */
 
-/** The CSS family for reading stimuli. Defined in tune.css from local faces only. */
+/** The CSS family for reading stimuli (the face is loaded by shared/primitives). */
 export const STIMULUS_FAMILY =
-  "'WebAble Stimulus', Arial, 'Helvetica Neue', Helvetica, 'Liberation Sans', sans-serif";
+  "'Noto Sans', Arial, 'Helvetica Neue', Helvetica, 'Liberation Sans', sans-serif";
+
+/** The longest reading sentence, in characters (they are 55-60, cal-vision §3). */
+export const SENTENCE_CHARS = 60;
 
 /** Fallbacks when the canvas cannot measure (tests, very old engines). */
 export const FALLBACK_XHEIGHT_RATIO = 0.52;
@@ -114,6 +118,61 @@ export function maxFitPx(
   const width = Math.max(0, availableWidthPx) * FIT_SHARE;
   const perChar = Math.max(0.2, advanceEm);
   return round(Math.max(8, width / (minChars * perChar)));
+}
+
+/**
+ * Lines a sentence of `chars` characters takes in a box `boxPx` wide. Words
+ * wrap early, so each line is counted two characters short (a 22-character
+ * box holds the 55-60 character sentences in 3 lines).
+ */
+export function linesAt(
+  fontPx: number,
+  advanceEm: number,
+  boxPx: number,
+  chars = SENTENCE_CHARS,
+): number {
+  const perLine = Math.floor(boxPx / (Math.max(0.2, advanceEm) * fontPx));
+  const usable = Math.max(1, perLine - 2);
+  return Math.ceil(chars / usable);
+}
+
+/**
+ * The largest font size, at most `maxPx`, at which a sentence set in the
+ * reading box fits `heightPx` of stage (the stage sits between the heading and
+ * the answers, so a stimulus that fits never pushes the answers out of view;
+ * scrolling to answer would count as reading time). `insetPx` is space the box
+ * adds around the text (the light and dark boxes have padding).
+ */
+export function maxFitHeightPx(input: {
+  heightPx: number;
+  widthPx: number;
+  advanceEm: number;
+  lineHeight: number;
+  maxPx: number;
+  chars?: number;
+  insetInlinePx?: number;
+  insetBlockPx?: number;
+  minPx?: number;
+}): number {
+  const {
+    heightPx,
+    widthPx,
+    advanceEm,
+    lineHeight,
+    maxPx,
+    chars = SENTENCE_CHARS,
+    insetInlinePx = 0,
+    insetBlockPx = 0,
+    minPx = 12,
+  } = input;
+  if (!(heightPx > 0) || !(widthPx > 0)) return round(Math.max(minPx, maxPx));
+  const room = heightPx - insetBlockPx;
+  for (let px = maxPx; px > minPx; px -= 0.5) {
+    const box = boxWidthPx(px, advanceEm, widthPx - insetInlinePx);
+    if (linesAt(px, advanceEm, box, chars) * px * lineHeight <= room)
+      return round(px);
+  }
+  return minPx;
 }
 
 /** Width of the sentence box: about 22 characters, never wider than the space. */

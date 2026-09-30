@@ -1,9 +1,20 @@
 import type { FitProfile } from '@webable/core/profile/schema';
-import type { SystemSignals } from '@webable/core/profile/defaults';
+import {
+  defaultFitProfile,
+  type SystemSignals,
+} from '@webable/core/profile/defaults';
 
 import type { KvArea } from './area';
 import { KEYS } from './keys';
-import { bool, isRecord, JsonStore, num, str, strOrNull } from './store';
+import {
+  bool,
+  isRecord,
+  JsonStore,
+  num,
+  ownerField,
+  str,
+  strOrNull,
+} from './store';
 
 /**
  * What the extension mirrors from the person's account. No tokens (those are
@@ -19,7 +30,13 @@ export interface AccountRecord {
   /** The session ended without the person signing out (refresh failed). */
   needsReauth: boolean;
   connectedAt: number;
+  /** The last sync in which every step succeeded (0 = never). */
   lastSyncAt: number;
+  /**
+   * This install's `extension_installs` row exists. Only connecting creates
+   * it; later syncs update it, and a missing row means the browser was removed.
+   */
+  installRegistered?: boolean;
 }
 
 const STEPS = new Set(['new', 'tuning', 'tuned', 'connected']);
@@ -45,6 +62,7 @@ export function normalizeAccount(raw: unknown): AccountRecord | null {
     needsReauth: bool(raw.needsReauth, false),
     connectedAt: num(raw.connectedAt, 0),
     lastSyncAt: num(raw.lastSyncAt, 0),
+    ...(raw.installRegistered === true ? { installRegistered: true } : {}),
   };
 }
 
@@ -63,6 +81,21 @@ export interface ProfileRecord {
   /** fit_profiles.version, or null for the default profile. */
   version: number | null;
   fetchedAt: number;
+  /** The account this record belongs to (absent: not yet claimed by one). */
+  ownerUserId?: string;
+}
+
+/** The tier-0 profile from system signals: works with no account and no network. */
+export function defaultProfileRecord(
+  system: SystemSignals,
+  now: number,
+): ProfileRecord {
+  return {
+    profile: defaultFitProfile(system, new Date(now)),
+    source: 'default',
+    version: null,
+    fetchedAt: now,
+  };
 }
 
 export function normalizeProfileRecord(raw: unknown): ProfileRecord | null {
@@ -75,6 +108,7 @@ export function normalizeProfileRecord(raw: unknown): ProfileRecord | null {
     source: raw.source === 'account' ? 'account' : 'default',
     version: typeof raw.version === 'number' ? raw.version : null,
     fetchedAt: num(raw.fetchedAt, 0),
+    ...ownerField(raw),
   };
 }
 

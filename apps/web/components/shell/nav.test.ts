@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { APP_HELP, APP_NAV, FOOTER_COLUMNS, SITE_NAV, isCurrent } from './nav';
+import {
+  APP_HELP,
+  APP_NAV,
+  FOOTER_COLUMNS,
+  GET_STARTED,
+  SITE_NAV,
+  YOUR_FIT,
+  isCurrent,
+} from './nav';
 
 describe('isCurrent', () => {
   it('matches a section and its subpages', () => {
@@ -43,5 +51,10 @@ describe('navigation content', () => {
       'Settings',
     ]);
     expect(APP_HELP.label).toBe('Help');
+  });
+
+  it('points the primary action at the install page, or the app when signed in', () => {
+    expect(GET_STARTED).toEqual({ label: 'Add to Chrome', href: '/get' });
+    expect(YOUR_FIT).toEqual({ label: 'Your fit', href: '/app' });
   });
 });

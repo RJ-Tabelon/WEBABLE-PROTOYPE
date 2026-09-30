@@ -51,7 +51,22 @@ describe('FitMark', () => {
     );
     expect(screen.getByText('13 to 18 pixels')).toBeTruthy();
     expect(container.textContent).not.toMatch(/[→↗↺✓]/);
-    expect(container.textContent).toContain('18 px');
+    // The unit is its own element, spaced by margin: no no-break-space glyph.
+    const unit = container.querySelector('.wa-fit-unit');
+    expect(unit?.textContent).toBe('px');
+    expect(container.querySelector('.wa-fit-mark__visual')?.textContent).toBe(
+      '1318px',
+    );
+    expect(container.textContent).not.toContain('\u00a0');
+  });
+
+  it('pulls in the "." and ":" of Mono values', () => {
+    const { container } = render(<FitMark from="4.5:1" to="7:1" />);
+    const punct = [...container.querySelectorAll('.wa-fit-punct')].map(
+      (el) => el.textContent,
+    );
+    expect(punct).toEqual(['.', ':', ':']);
+    expect(screen.getByText('4.5:1 to 7:1')).toBeTruthy();
   });
 });
 

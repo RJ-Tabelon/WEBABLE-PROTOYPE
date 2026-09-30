@@ -107,6 +107,87 @@ test.describe('content script flow (fake service worker)', () => {
     expect(await domState(page)).toEqual(dom0);
   });
 
+  test('one engine per document: a second injection reports the running one', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    const p = plan([{ op: 'text_floor', level: 2 }]);
+    const first = await page.evaluate(
+      ([pl, h]) =>
+        window.__webableEngine.injectAdapter(pl as never, h as never),
+      [p, hello] as const,
+    );
+    expect(first.created).toBe(true);
+    expect(first.sent.map((m) => m.type)).toEqual([
+      'cs:hello',
+      'cs:signals',
+      'cs:applied',
+    ]);
+    const second = await page.evaluate(
+      ([pl, h]) =>
+        window.__webableEngine.injectAdapter(pl as never, h as never),
+      [p, hello] as const,
+    );
+    expect(second.created).toBe(false);
+    expect(second.adaptersCreated).toBe(1);
+    expect(second.sent).toEqual([
+      { type: 'cs:hello', restored: true },
+      {
+        type: 'cs:applied',
+        planId: p.id,
+        changes: [
+          expect.objectContaining({ op: 'text_floor', status: 'applied' }),
+        ],
+      },
+    ]);
+    expect(
+      await page.evaluate(() => document.querySelectorAll('webable-ui').length),
+    ).toBe(1);
+    await page.evaluate(() => window.__webableEngine.stopAdapter());
+  });
+
+  test('sw:offer-resolved is answered; the toast Undo sends one cs:undo-all', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.evaluate(
+      ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+      [
+        plan([{ op: 'text_floor', level: 2 }, { op: 'contrast' }]),
+        hello,
+      ] as const,
+    );
+    expect(
+      await page.evaluate(() =>
+        window.__webableEngine.workerMessage({
+          type: 'sw:offer-resolved',
+          op: 'line_spacing',
+        }),
+      ),
+    ).toEqual({ ok: true });
+    const pressed = await page.evaluate(
+      () =>
+        window.__webableEngine.adapterPress('Undo') ||
+        window.__webableEngine.adapterPress('Undo all'),
+    );
+    expect(pressed).toBe(true);
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          window.__webableEngine.sentMessages().map((m) => m.type),
+        ),
+      )
+      .toContain('cs:undo-all');
+    const sent = await page.evaluate(() =>
+      window.__webableEngine.sentMessages(),
+    );
+    expect(sent.filter((m) => m.type === 'cs:undo-all')).toEqual([
+      { type: 'cs:undo-all', source: 'toast' },
+    ]);
+    expect(sent.filter((m) => m.type === 'cs:event')).toEqual([]);
+    await page.evaluate(() => window.__webableEngine.stopAdapter());
+  });
+
   test('turned off or paused: the page is left exactly as the site made it', async ({
     page,
   }) => {

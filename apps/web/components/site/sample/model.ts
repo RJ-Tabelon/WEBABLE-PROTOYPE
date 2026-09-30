@@ -60,26 +60,27 @@ export const ORIGINAL_FIT: SampleFit = {
   focusView: false,
 };
 
-/** The hero's "Fitted" view (design-final §14): 13 → 18 px, 24 → 44 px, 3 → 0. */
+/**
+ * The hero's "Fitted" view (design-final §14): exactly three changes, each with a
+ * fit mark: 13 → 18 px text, 24 → 44 px targets, 3 → 0 moving things.
+ */
 export const HERO_FIT: SampleFit = {
   ...ORIGINAL_FIT,
   id: 'hero',
   textFloorPx: 18,
   targetPx: 44,
   calmMotion: true,
-  railOpacity: 0.45,
 };
 
 export type ProfileFitId = 'reading' | 'pointing' | 'focus';
 
 export interface ProfileFit {
   id: ProfileFitId;
-  /** Short functional name for the segmented control. */
-  short: string;
-  /** Full functional name. Describes the page, never a person. */
-  title: string;
-  /** One sentence on what this fit does. */
-  summary: string;
+  /**
+   * Column head: a fact about where the fit came from, never a mode name and never
+   * a person ("Fit from a reading-heavy Tune").
+   */
+  head: string;
   fit: SampleFit;
 }
 
@@ -87,10 +88,7 @@ export interface ProfileFit {
 export const PROFILE_FITS: readonly ProfileFit[] = [
   {
     id: 'reading',
-    short: 'Larger text',
-    title: 'Larger text and calmer pages',
-    summary:
-      'Text grows to a size that reads easily, lines get room, and nothing moves on its own.',
+    head: 'Fit from a reading-heavy Tune',
     fit: {
       ...ORIGINAL_FIT,
       id: 'reading',
@@ -101,10 +99,7 @@ export const PROFILE_FITS: readonly ProfileFit[] = [
   },
   {
     id: 'pointing',
-    short: 'Bigger clicks',
-    title: 'Bigger, steadier clicks',
-    summary:
-      'Small buttons get a larger clickable area, a little more room, and clicks that forgive a slip.',
+    head: 'Fit from a pointing-heavy Tune',
     fit: {
       ...ORIGINAL_FIT,
       id: 'pointing',
@@ -115,10 +110,7 @@ export const PROFILE_FITS: readonly ProfileFit[] = [
   },
   {
     id: 'focus',
-    short: 'Fewer distractions',
-    title: 'Fewer distractions',
-    summary:
-      'Moving things stop, and the side column and banners fade so the article stands out.',
+    head: 'Fit from a focus-heavy Tune',
     fit: {
       ...ORIGINAL_FIT,
       id: 'focus',
@@ -249,6 +241,12 @@ export function marksFor(fit: SampleFit): SampleMark[] {
 /** Number of separate changes a fit makes (the frame's "Adapted · N changes"). */
 export function changeCount(fit: SampleFit): number {
   return marksFor(fit).length;
+}
+
+/** The frame's status line for a fitted page, as the popup words it (§10.2). */
+export function adaptedStatus(fit: SampleFit): string {
+  const n = changeCount(fit);
+  return `Adapted · ${n} ${n === 1 ? 'change' : 'changes'}`;
 }
 
 /**

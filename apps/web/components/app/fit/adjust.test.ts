@@ -209,7 +209,8 @@ describe('copyRow', () => {
 describe('editor', () => {
   it('always includes the current value in slider steps', () => {
     expect(stepsWith([16, 18, 21], 19)).toEqual([16, 18, 19, 21]);
-    const spec = editorFor(measuredProfile(), 'textSize');
+    const p = measuredProfile();
+    const spec = editorFor('textSize', currentValue(p, 'textSize'));
     expect(spec.control === 'slider' && spec.steps).toContain(19);
   });
 
@@ -238,7 +239,9 @@ describe('editor', () => {
       { ...defaultSignals(), reducedMotion: true },
       NOW,
     );
-    const spec = editorFor(p, 'motion');
+    const spec = editorFor('motion', currentValue(p, 'motion'), {
+      systemReducedMotion: p.attention.systemReducedMotion,
+    });
     expect(spec.control).toBe('choice');
     if (spec.control !== 'choice') return;
     const plays = spec.options.find((o) => o.value === 'plays');

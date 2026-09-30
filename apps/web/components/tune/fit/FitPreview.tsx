@@ -1,34 +1,43 @@
 'use client';
 
+import './fit-preview.css';
+
 import type { FitProfile } from '@webable/core';
 import { needLevels } from '@webable/core';
 import type { FitRow } from '@webable/core/profile/describe';
-import { FitArrow, SegmentedControl } from '@webable/ui';
+import { FitValue, SegmentedControl } from '@webable/ui';
 import {
   useId,
   useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
-  type ReactNode,
   type RefObject,
 } from 'react';
 
+import { rowValue, type FitValueShape } from '../shared/fit';
+
 /**
  * "Your fit" preview (design-final §9.4): a real sample page in a radius-20
- * frame, Original or Fitted, with ghost-and-fit outlines on up to three regions
- * that changed. Every number on a tag is a real value from the fit rows.
+ * frame, Original or Fitted. In Fitted, up to three regions that change get a
+ * fern outline 4 px outside their bounds and a numbered disc at the outline's
+ * top-right; the legend under the frame gives each number its real value.
+ *
+ * Self-contained: it brings its own styles and needs no Tune context, so the
+ * app can show it too. Props: { profile, rows, rootFontPx }.
  */
 
 type RegionId = 'text' | 'actions' | 'side';
 
 interface Region {
   id: RegionId;
-  /** The fit mark on the tag. */
-  tag: { from?: string; to: string; label: string };
+  label: string;
+  value: FitValueShape;
 }
 
 const BASE_PX = 16;
+/** The outline sits this far outside the region's own bounds. */
+const OUTLINE_GAP = 4;
 
 function readable(
   profile: FitProfile,
@@ -181,89 +190,54 @@ function relativeRect(
   return { x: a.left - f.left, y: a.top - f.top, w: a.width, h: a.height };
 }
 
-function regionsFor(rows: readonly FitRow[]): Region[] {
+/** Up to three regions that change, each with the value from its fit row. */
+export function regionsFor(rows: readonly FitRow[]): Region[] {
   const byId = new Map(rows.map((r) => [r.id, r]));
+  const changes = (id: FitRow['id']) => {
+    const row = byId.get(id);
+    return row && row.changesPages && rowValue(row).kind !== 'same'
+      ? row
+      : null;
+  };
   const out: Region[] = [];
-  const text = byId.get('textSize');
-  const spacing = byId.get('lineSpacing');
-  const contrast = byId.get('contrast');
-  if (text?.changed)
-    out.push({
-      id: 'text',
-      tag: { from: text.before, to: text.after, label: 'Text size' },
-    });
-  else if (spacing?.changed)
-    out.push({
-      id: 'text',
-      tag: { from: spacing.before, to: spacing.after, label: 'Line spacing' },
-    });
-  else if (contrast?.changed)
-    out.push({
-      id: 'text',
-      tag: { from: contrast.before, to: contrast.after, label: 'Contrast' },
-    });
-  const targets = byId.get('targets');
-  if (targets?.changed)
-    out.push({
-      id: 'actions',
-      tag: { from: targets.before, to: targets.after, label: 'Click targets' },
-    });
-  const busy = byId.get('busyPages');
-  if (busy?.changed && busy.after === 'Simplified')
-    out.push({ id: 'side', tag: { to: 'Toned down', label: 'Busy pages' } });
+  const text =
+    changes('textSize') ?? changes('lineSpacing') ?? changes('contrast');
+  if (text) out.push({ id: 'text', label: text.label, value: rowValue(text) });
+  const targets = changes('targets');
+  if (targets)
+    out.push({ id: 'actions', label: targets.label, value: rowValue(targets) });
+  const busy = changes('busyPages');
+  if (busy && busy.after === 'Simplified')
+    out.push({ id: 'side', label: busy.label, value: rowValue(busy) });
   return out.slice(0, 3);
-}
-
-function Tag({ from, to }: { from?: string; to: string }) {
-  return (
-    <span className="tn-tag" aria-hidden="true">
-      {from ? (
-        <>
-          <span className="tn-tag__from">{from}</span>
-          <FitArrow />
-        </>
-      ) : null}
-      <span className="tn-tag__to">{to}</span>
-    </span>
-  );
 }
 
 export interface FitPreviewProps {
   profile: FitProfile;
   rows: readonly FitRow[];
   rootFontPx: number;
-  children?: ReactNode;
 }
 
 export function FitPreview({ profile, rows, rootFontPx }: FitPreviewProps) {
   const titleId = useId();
   const [view, setView] = useState<'original' | 'fitted'>('fitted');
   const frame = useRef<HTMLDivElement>(null);
-  const originalRefs = {
-    text: useRef<HTMLDivElement>(null),
-    actions: useRef<HTMLDivElement>(null),
-    side: useRef<HTMLDivElement>(null),
-  };
   const fittedRefs = {
     text: useRef<HTMLDivElement>(null),
     actions: useRef<HTMLDivElement>(null),
     side: useRef<HTMLDivElement>(null),
   };
   const regions = regionsFor(rows);
-  const [rects, setRects] = useState<
-    Record<string, { ghost: Rect | null; fit: Rect | null }>
-  >({});
+  const [rects, setRects] = useState<Partial<Record<RegionId, Rect>>>({});
   const fitted = view === 'fitted';
   const regionKey = regions.map((r) => r.id).join(',');
 
   useLayoutEffect(() => {
     const measure = () => {
-      const next: Record<string, { ghost: Rect | null; fit: Rect | null }> = {};
+      const next: Partial<Record<RegionId, Rect>> = {};
       for (const r of regions) {
-        next[r.id] = {
-          ghost: relativeRect(originalRefs[r.id].current, frame.current),
-          fit: relativeRect(fittedRefs[r.id].current, frame.current),
-        };
+        const rect = relativeRect(fittedRefs[r.id].current, frame.current);
+        if (rect) next[r.id] = rect;
       }
       setRects(next);
     };
@@ -276,17 +250,13 @@ export function FitPreview({ profile, rows, rootFontPx }: FitPreviewProps) {
   }, [profile, regionKey]);
 
   const describe = regions
-    .map((r) =>
-      r.tag.from
-        ? `${r.tag.label}: ${r.tag.from} to ${r.tag.to}`
-        : `${r.tag.label}: ${r.tag.to}`,
-    )
+    .map((r, i) => `${i + 1}, ${r.label}: ${r.value.srText}`)
     .join('. ');
 
   return (
-    <section className="tn-fit-preview" aria-labelledby={titleId}>
-      <div className="tn-preview__bar">
-        <h2 id={titleId} className="tn-fit-preview__title">
+    <section className="tn-fitpv" aria-labelledby={titleId}>
+      <div className="tn-fitpv__bar">
+        <h2 id={titleId} className="tn-fitpv__title">
           On a sample page
         </h2>
         <SegmentedControl<'original' | 'fitted'>
@@ -301,7 +271,7 @@ export function FitPreview({ profile, rows, rootFontPx }: FitPreviewProps) {
       </div>
       <div
         ref={frame}
-        className="tn-preview__frame tn-preview__frame--stack"
+        className="tn-fitpv__frame"
         role="img"
         aria-label={
           fitted
@@ -310,14 +280,15 @@ export function FitPreview({ profile, rows, rootFontPx }: FitPreviewProps) {
         }
       >
         <div
-          className="tn-preview__layer"
+          className="tn-fitpv__layer"
           data-hidden={fitted || undefined}
           aria-hidden="true"
         >
-          <SamplePage look={originalLook()} refs={originalRefs} />
+          <SamplePage look={originalLook()} />
         </div>
         <div
-          className="tn-preview__layer"
+          className="tn-fitpv__layer"
+          data-layer="fitted"
           data-hidden={!fitted || undefined}
           aria-hidden="true"
         >
@@ -327,40 +298,42 @@ export function FitPreview({ profile, rows, rootFontPx }: FitPreviewProps) {
           />
         </div>
         {fitted
-          ? regions.map((r) => {
+          ? regions.map((r, i) => {
               const rect = rects[r.id];
-              if (!rect?.fit) return null;
+              if (!rect) return null;
               return (
-                <div key={r.id} aria-hidden="true">
-                  {rect.ghost ? (
-                    <span
-                      className="tn-ghost"
-                      style={{
-                        insetInlineStart: rect.ghost.x - 4,
-                        insetBlockStart: rect.ghost.y - 4,
-                        inlineSize: rect.ghost.w + 8,
-                        blockSize: rect.ghost.h + 8,
-                      }}
-                    />
-                  ) : null}
-                  <span
-                    className="tn-fit-outline"
-                    style={{
-                      insetInlineStart: rect.fit.x - 6,
-                      insetBlockStart: rect.fit.y - 6,
-                      inlineSize: rect.fit.w + 12,
-                      blockSize: rect.fit.h + 12,
-                    }}
-                  >
-                    <Tag from={r.tag.from} to={r.tag.to} />
-                  </span>
-                </div>
+                <span
+                  key={r.id}
+                  className="tn-fit-outline"
+                  aria-hidden="true"
+                  style={{
+                    insetInlineStart: rect.x - OUTLINE_GAP,
+                    insetBlockStart: rect.y - OUTLINE_GAP,
+                    inlineSize: rect.w + 2 * OUTLINE_GAP,
+                    blockSize: rect.h + 2 * OUTLINE_GAP,
+                  }}
+                >
+                  <span className="tn-fit-disc">{i + 1}</span>
+                </span>
               );
             })
           : null}
       </div>
+      {fitted && regions.length > 0 ? (
+        <ol className="tn-fit-legend" aria-label="What changes on this page">
+          {regions.map((r, i) => (
+            <li key={r.id} className="tn-fit-legend__item">
+              <span className="tn-fit-legend__n" aria-hidden="true">
+                {i + 1}
+              </span>
+              <span className="tn-fit-legend__label">{r.label}</span>
+              <FitValue value={r.value} size="inline" />
+            </li>
+          ))}
+        </ol>
+      ) : null}
       {fitted && regions.length === 0 ? (
-        <p className="tn-meta">This page already fits you.</p>
+        <p className="tn-fitpv__meta">This page already fits you.</p>
       ) : null}
     </section>
   );

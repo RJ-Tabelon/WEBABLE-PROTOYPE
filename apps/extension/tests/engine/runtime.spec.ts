@@ -93,7 +93,7 @@ test.describe('runtime', () => {
     expect(signals).toEqual(expect.arrayContaining(['rage_click', 'zoom_in']));
   });
 
-  test('toast: first auto changes on a site are announced with a fit mark and Undo', async ({
+  test('toast: first auto changes are announced as WebAble actions, with Undo all', async ({
     page,
   }) => {
     await open(page, 'article');
@@ -104,12 +104,11 @@ test.describe('runtime', () => {
       plan([{ op: 'text_floor', level: 2 }, { op: 'contrast' }]),
     );
     const layer = await page.evaluate(() => window.__webableEngine.layer());
-    expect(layer.toast?.text).toContain('Text size');
-    expect(layer.toast?.text).toContain('13 to 18 pixels');
-    expect(layer.toast?.text).toContain('1 more change on this page');
-    expect(layer.toast?.buttons).toEqual(['Undo', 'Close']);
+    expect(layer.toast?.text).toContain('WebAble set text to 18');
+    expect(layer.toast?.text).not.toContain('more change');
+    expect(layer.toast?.buttons).toEqual(['Undo all', 'Close']);
     expect(
-      await page.evaluate(() => window.__webableEngine.press('Undo')),
+      await page.evaluate(() => window.__webableEngine.press('Undo all')),
     ).toBe(true);
     await page.waitForFunction(
       () => window.__webableEngine.changes().length === 0,
@@ -251,7 +250,7 @@ test.describe('runtime', () => {
     expect(size).toBe('18px');
     const layer = await page.evaluate(() => window.__webableEngine.layer());
     expect(layer.mounted).toBe(true);
-    expect(layer.toast?.text).toContain('Text size');
+    expect(layer.toast?.text).toContain('WebAble set text to');
     await page.waitForTimeout(100);
     // WebAble added no CSP violations of its own.
     expect(violations.length).toBe(pageOwn);

@@ -21,7 +21,8 @@ export interface SectionHeaderProps {
 /**
  * Section header with the index rule (design-final §7.11): a hairline whose first
  * 24 px is a 2 px ink segment (the fit mark's tick), then eyebrow, heading and deck.
- * Left-aligned on the page's one text edge.
+ * Left-aligned on the page's one text edge. The optional link sits on the
+ * eyebrow's baseline at 48em and wider, and after the deck below that.
  */
 export function SectionHeader({
   eyebrow,
@@ -37,32 +38,27 @@ export function SectionHeader({
       className={cx(
         'wa-section-head',
         `wa-section-head--${Heading}`,
+        link && 'wa-section-head--link',
         className,
       )}
     >
       <IndexRule />
-      {eyebrow || link ? (
-        <div className="wa-section-head__top">
-          {eyebrow ? (
-            <p className="wa-section-head__eyebrow">{eyebrow}</p>
-          ) : (
-            <span />
-          )}
-          {link ? (
-            <TextLink
-              href={link.href}
-              kind="standalone"
-              className="wa-section-head__link"
-            >
-              {link.label}
-            </TextLink>
-          ) : null}
-        </div>
-      ) : null}
+      {eyebrow ? <p className="wa-section-head__eyebrow">{eyebrow}</p> : null}
       <Heading id={titleId} className="wa-section-head__title">
         {title}
       </Heading>
       {deck ? <p className="wa-section-head__deck">{deck}</p> : null}
+      {/* Last in the source, so the reading order is eyebrow, title, deck, link.
+          At 48em and wider it is placed on the eyebrow's baseline. */}
+      {link ? (
+        <TextLink
+          href={link.href}
+          kind="standalone"
+          className="wa-section-head__link"
+        >
+          {link.label}
+        </TextLink>
+      ) : null}
     </header>
   );
 }

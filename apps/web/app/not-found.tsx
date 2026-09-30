@@ -15,7 +15,6 @@ export default function NotFound() {
         aria-labelledby="not-found-title"
       >
         <IndexRule />
-        <p className="wa-status-page__eyebrow">Error 404</p>
         <h1 id="not-found-title" className="wa-status-page__title">
           This page isn’t here.
         </h1>
@@ -31,6 +30,8 @@ export default function NotFound() {
             Get help
           </Button>
         </Actions>
+        {/* The code is a detail for support, not the headline. */}
+        <p className="wa-status-page__code wa-meta">Error 404</p>
       </section>
     </SiteShell>
   );

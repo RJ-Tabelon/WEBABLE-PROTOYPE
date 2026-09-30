@@ -56,10 +56,10 @@ describe('parseInput', () => {
     }
   });
 
-  it('requires 8 characters and at most 72 bytes for new passwords', () => {
+  it('requires 10 characters and at most 72 bytes for new passwords', () => {
     const short = parseInput(
       signUpSchema,
-      { email: 'a@b.co', password: '1234567' },
+      { email: 'a@b.co', password: '123456789' },
       KEYS,
     );
     expect(!short.ok && short.error.code).toBe('weak_password');
@@ -70,8 +70,11 @@ describe('parseInput', () => {
     );
     expect(!long.ok && long.error.code).toBe('weak_password');
     expect(
-      parseInput(signUpSchema, { email: 'a@b.co', password: '12345678' }, KEYS)
-        .ok,
+      parseInput(
+        signUpSchema,
+        { email: 'a@b.co', password: '1234567890' },
+        KEYS,
+      ).ok,
     ).toBe(true);
   });
 

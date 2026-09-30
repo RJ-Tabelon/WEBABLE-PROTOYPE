@@ -66,6 +66,7 @@ export function OfferBlock({
           <Button
             variant="ghost"
             size="md"
+            flush="start"
             className="wa-offer__never"
             onClick={onNeverHere}
           >

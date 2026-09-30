@@ -79,9 +79,9 @@ test.describe('verification and rollback', () => {
       plan([{ op: 'dim_distractions', level: 2, regions: all }]),
     );
     const dimmed = await page.evaluate(() =>
-      [...document.querySelectorAll('[data-wa~="dm"]')].map(
-        (e) => e.id || e.className || e.localName,
-      ),
+      [
+        ...document.querySelectorAll(window.__webableEngine.markSelector('dm')),
+      ].map((e) => e.id || e.className || e.localName),
     );
     // Dimmable regions follow the plan; protected ones are vetoed locally.
     expect(dimmed).toEqual(

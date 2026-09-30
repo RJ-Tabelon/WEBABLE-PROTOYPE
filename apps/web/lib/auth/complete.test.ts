@@ -41,6 +41,15 @@ describe('completeAuthRedirect', () => {
     expect(location(res)).toBe('http://localhost:3000/app');
   });
 
+  it('ignores next values that normalize to another host', async () => {
+    for (const next of ['/.//evil.example/phish', '/a/..//evil.example']) {
+      const res = await completeAuthRedirect(
+        request(`/auth/callback?code=abc&next=${encodeURIComponent(next)}`),
+      );
+      expect(location(res)).toBe('http://localhost:3000/app');
+    }
+  });
+
   it('verifies a token hash', async () => {
     const res = await completeAuthRedirect(
       request('/auth/confirm?token_hash=h1&type=email&next=/connect'),

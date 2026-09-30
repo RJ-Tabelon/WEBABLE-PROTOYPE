@@ -42,6 +42,7 @@ function handlers(overrides: Partial<BridgeHandlers> = {}): BridgeHandlers {
     siteUpdate: vi.fn(async () => [SITE]),
     receipts: vi.fn(async () => []),
     clearLocal: vi.fn(async () => undefined),
+    openWelcome: vi.fn(async () => undefined),
     ...overrides,
   };
 }
@@ -208,6 +209,45 @@ describe('bridge messages', () => {
       data: STATUS,
     });
     expect(h.clearLocal).toHaveBeenCalledTimes(1);
+    expect(await send({ type: 'wa:open-welcome', focus: 'allow' })).toEqual({
+      ok: true,
+      data: { ok: true },
+    });
+    expect(h.openWelcome).toHaveBeenCalledWith('allow');
+    await send({ type: 'wa:open-welcome' });
+    expect(h.openWelcome).toHaveBeenLastCalledWith(undefined);
+  });
+
+  it('passes site resets and pins through, and refuses unknown ops', async () => {
+    const h = handlers();
+    const send = (msg: unknown) => handleBridge(msg, OK_SENDER, PATTERNS, h);
+    await send({
+      type: 'wa:site-update',
+      domain: 'a.com',
+      change: { kind: 'reset' },
+    });
+    expect(h.siteUpdate).toHaveBeenLastCalledWith('a.com', { kind: 'reset' });
+    await send({
+      type: 'wa:site-update',
+      domain: 'a.com',
+      change: { kind: 'pin', op: 'text_floor', on: true },
+    });
+    expect(h.siteUpdate).toHaveBeenLastCalledWith('a.com', {
+      kind: 'pin',
+      op: 'text_floor',
+      on: true,
+    });
+    expect(
+      await send({
+        type: 'wa:site-update',
+        domain: 'a.com',
+        change: { kind: 'pin', op: 'nope', on: true },
+      }),
+    ).toEqual({
+      ok: false,
+      error: expect.objectContaining({ code: 'bad_request' }),
+    });
+    expect(h.siteUpdate).toHaveBeenCalledTimes(2);
   });
 
   it('reports a failed handoff and a refresh without a session', async () => {

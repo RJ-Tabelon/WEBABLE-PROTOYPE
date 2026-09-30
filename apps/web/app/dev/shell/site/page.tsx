@@ -4,9 +4,15 @@ import { SiteShell } from '../../../../components/shell/SiteShell';
 
 export const metadata: Metadata = { title: 'Site shell preview' };
 
-export default function SiteShellPreview() {
+/** `?signedIn=1` previews the header a signed-in visitor sees. */
+export default async function SiteShellPreview({
+  searchParams,
+}: {
+  searchParams: Promise<{ signedIn?: string }>;
+}) {
+  const { signedIn } = await searchParams;
   return (
-    <SiteShell>
+    <SiteShell signedIn={signedIn === '1'}>
       <p className="g-preview-note">
         Preview of the site shell. Content is placeholder copy from the design
         spec.
@@ -21,8 +27,8 @@ export default function SiteShellPreview() {
             to fit. You see every change and can undo it.
           </p>
           <div>
-            <Button href="/tune" variant="primary" arrow="forward">
-              Get started
+            <Button href="/get" variant="primary" arrow="forward">
+              Add to Chrome
             </Button>
           </div>
         </section>

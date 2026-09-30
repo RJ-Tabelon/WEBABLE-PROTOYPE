@@ -37,9 +37,28 @@ describe('research data', () => {
       expect(item.sources.length, item.id).toBeGreaterThan(0);
   });
 
+  it('sums up every change in a few words for the summary table', () => {
+    for (const item of ADAPTATIONS) {
+      expect(item.summary, item.id).toBeTruthy();
+      expect(item.summary!.split(' ').length, item.id).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it('says which way the evidence points for ideas WebAble leaves out', () => {
+    for (const item of NOT_OFFERED) {
+      // Consensus alone is not evidence against anything.
+      expect(item.polarity ?? 'for', item.id).toBe(
+        item.strength === 'Consensus only' ? 'for' : 'against',
+      );
+    }
+    for (const item of [...ADAPTATIONS, ...TUNE_EVIDENCE, ...DECISION_EVIDENCE])
+      expect(item.polarity ?? 'for', item.id).toBe('for');
+  });
+
   it('never names a condition or makes a conformance claim', () => {
     const text = ALL.map(
-      (i) => `${i.title} ${i.finding} ${i.practice} ${i.gap ?? ''}`,
+      (i) =>
+        `${i.title} ${i.finding} ${i.practice} ${i.gap ?? ''} ${i.summary ?? ''}`,
     ).join(' ');
     expect(text).not.toMatch(
       /\b(disabilit\w*|impairment\w*|patients?|dyslexi\w*|ADHD|cataract\w*|tremor\w*|diagnos\w*)\b/i,

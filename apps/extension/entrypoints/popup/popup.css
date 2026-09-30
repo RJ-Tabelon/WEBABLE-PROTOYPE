@@ -1,14 +1,17 @@
 /*
  * Extension popup, Compact density (design-final 10 and 14).
  * Tokens only. Width is rem-based so it grows with WebAble's own text scale
- * (380 px at scale 1, 760 at 2, under Chrome's 800 px cap); height is capped
- * at 600 px and only the body between the fixed header and footer scrolls.
+ * (380 px at scale 1, 760 at 2, under Chrome's 800 px cap) and never exceeds
+ * the window, so under browser zoom the rows reflow (the 21.24rem container
+ * query) instead of being cut off. Height is capped at 600 px and only the
+ * body between the fixed header and footer scrolls. Full-bleed hairlines
+ * belong to the header and footer only; body rules sit on the content column.
  */
 
 html {
-  inline-size: min(var(--w-popup), 800px);
+  inline-size: var(--w-popup);
+  max-inline-size: 100vw;
   max-block-size: var(--h-popup-max);
-  overflow: hidden;
 }
 
 body {
@@ -26,6 +29,8 @@ body {
   flex-direction: column;
   inline-size: 100%;
   max-block-size: var(--h-popup-max);
+  /* The body's enter shift never adds a scrollbar at the height cap. */
+  overflow-y: clip;
 }
 
 /* ---------------------------------------------------------------- header */
@@ -57,7 +62,7 @@ body {
   overflow-x: hidden;
   overscroll-behavior: contain;
   padding: var(--popup-pad) var(--popup-pad) var(--space-6);
-  scrollbar-gutter: stable;
+  scrollbar-width: thin;
 }
 
 .pp-loading {
@@ -94,12 +99,14 @@ body {
 .pp-state {
   display: grid;
   gap: var(--space-1);
-  margin-inline: calc(-1 * var(--popup-pad));
-  padding-inline: var(--popup-pad);
   padding-block-end: var(--space-4);
 }
 .pp-state:not(:last-child) {
   border-block-end: var(--bw-hair) solid var(--line);
+}
+/* What changed opens with its own index rule: one line, not two. */
+.pp-state:has(+ .pp-changes > .wa-index-rule) {
+  border-block-end: 0;
 }
 .pp-state:has(> .pp-site-switch:last-child) {
   padding-block-end: 0;
@@ -184,6 +191,12 @@ body {
 
 .pp-offer {
   padding-block-start: var(--space-4);
+}
+
+/* Show on page, while on: a tonal fill and a line, not just a state word. */
+.pp .wa-btn--ghost[aria-pressed='true'] {
+  background: var(--surface-tonal);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
 }
 
 /* ---------------------------------------------------------------- change rows */
@@ -341,10 +354,22 @@ body {
   outline: var(--focus-width) solid var(--focus);
   outline-offset: var(--focus-offset);
 }
+.pp-reason__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: var(--control-md);
+}
+.pp-reason__redo {
+  flex: none;
+  margin-inline-end: calc(-1 * var(--space-4));
+}
 .pp-reason__title {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-inline-size: 0;
 }
 .pp-reason__title .wa-icon {
   color: var(--ink-2);

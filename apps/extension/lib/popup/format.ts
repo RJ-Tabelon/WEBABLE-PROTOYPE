@@ -2,10 +2,14 @@ import { formatLevel } from '@webable/core/explain/templates';
 import { OP_CATALOG } from '@webable/core/ops/catalog';
 import type { AppliedChange } from '@webable/core/policy/types';
 
-import type { FitValue } from '@webable/ui';
+import type { FitMarkValue } from '@webable/ui';
 
+/**
+ * A number and its unit: a symbol ("18px", "18 px", "125%") or, after a
+ * space, a word ("2 moving", "0 playing").
+ */
 const NUMBER_UNIT =
-  /^\s*(-?\d+(?:\.\d+)?)[\s\u00a0]*(px|ms|%|ch|characters|s)?\s*$/i;
+  /^\s*(-?\d+(?:\.\d+)?)(?:[\s\u00a0]*(px|ms|%|ch|characters|s)|[\s\u00a0]+([a-z]+))?\s*$/i;
 
 interface Parsed {
   value: string;
@@ -15,19 +19,20 @@ interface Parsed {
 function parse(raw: string): Parsed | null {
   const m = NUMBER_UNIT.exec(raw);
   if (!m || m[1] === undefined) return null;
-  const unit = m[2]?.toLowerCase();
+  const unit = (m[2] ?? m[3])?.toLowerCase();
   return { value: m[1], unit: unit === 'characters' ? 'ch' : unit };
 }
 
 /**
  * The fit mark for a change, from the engine's measured before/after values.
- * "13 px" -> "18 px" becomes 13 -> 18 px; values that are not numbers with the
- * same unit ("2 playing" -> "2 paused") show only the after value. Without
- * measured values the level itself is shown ("18 px"). Never invents numbers.
+ * "13 px" -> "18 px" becomes 13 -> 18 px and "2 moving" -> "0 moving" becomes
+ * 2 -> 0 moving, as in the page's toast and tag; values that are not numbers
+ * with the same unit show only the after value. Without measured values the
+ * level itself is shown ("18 px"). Never invents numbers.
  */
 export function fitValue(
   change: Pick<AppliedChange, 'op' | 'level' | 'fit'>,
-): FitValue {
+): FitMarkValue {
   const fit = change.fit;
   if (fit) {
     const before = parse(fit.before);
@@ -56,7 +61,7 @@ export function fitValue(
 function withUnit(
   unit: string | undefined,
   v: { from?: string; to: string },
-): FitValue {
+): FitMarkValue {
   if (unit === '%') {
     return {
       ...(v.from !== undefined ? { from: `${v.from}%` } : {}),
@@ -64,6 +69,39 @@ function withUnit(
     };
   }
   return { ...v, ...(unit ? { unit } : {}) };
+}
+
+/** The click target size WebAble aims for, in px. */
+const TARGET_PX = 44;
+
+/**
+ * Click targets that ended under 44 px: nearby buttons left no room to grow.
+ * Read from the applied change's measured after value; false without one.
+ */
+export function targetLimited(
+  change: Pick<AppliedChange, 'op' | 'status' | 'fit'>,
+): boolean {
+  if (change.op !== 'target_size' || change.status !== 'applied') return false;
+  const after = change.fit ? parse(change.fit.after) : null;
+  if (!after || (after.unit !== undefined && after.unit !== 'px')) return false;
+  return Number(after.value) < TARGET_PX;
+}
+
+/** The op is applied on the page now (not planned, undone or blocked). */
+export const isApplied = (
+  changes: readonly Pick<AppliedChange, 'op' | 'status'>[],
+  op: AppliedChange['op'],
+): boolean => changes.some((c) => c.op === op && c.status === 'applied');
+
+/**
+ * Ops the person undid on this page view that are not back on it: each gets a
+ * "{label} was undone" row with Redo. Undo order, oldest first.
+ */
+export function redoableOps(
+  undoneByYou: readonly AppliedChange['op'][],
+  changes: readonly Pick<AppliedChange, 'op' | 'status'>[],
+): AppliedChange['op'][] {
+  return undoneByYou.filter((op) => !isApplied(changes, op));
 }
 
 /** Row label for a change ("Text size"). */

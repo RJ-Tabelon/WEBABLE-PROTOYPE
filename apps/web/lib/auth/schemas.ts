@@ -7,7 +7,8 @@ import { type AuthActionError, type AuthErrorCode, authError } from './errors';
  * or the FormData a <form action={...}> posts, so forms work before hydration.
  */
 
-export const PASSWORD_MIN = 8;
+/** Matches auth.password.minimum_password_length in supabase/config.toml. */
+export const PASSWORD_MIN = 10;
 /** bcrypt ignores bytes after 72, so longer passwords would silently truncate. */
 export const PASSWORD_MAX_BYTES = 72;
 

@@ -17,6 +17,7 @@ import {
   type RegionAnswer,
 } from '@webable/core/decide/wire';
 import type { PageSignals, RegionEvidence } from '@webable/core/page/types';
+import { vocabularyViolations } from '@webable/core/page/vocab-check';
 import type { RegionVerdict } from '@webable/core/policy/types';
 import { CATALOG_VERSION, JEV_PINNED_MODEL } from '@webable/core/versions';
 
@@ -56,8 +57,9 @@ const CIDS = ['c1', 'c2', 'c3', 'c4'] as const;
 
 /**
  * DecideRequest from the content script's vocabulary-filtered evidence. The
- * result is validated with the shared strict schema: if anything outside the
- * contract slipped in, nothing is sent.
+ * result is validated with the shared strict schema and re-checked against the
+ * vocabulary and the phrase word caps (the same check `decide` runs): if
+ * anything outside the contract slipped in, nothing is sent.
  */
 export function buildDecideRequest(
   evidence: PageEvidence,
@@ -100,6 +102,11 @@ export function buildDecideRequest(
   };
   const parsed = decideRequestSchema.safeParse(candidate);
   if (!parsed.success) return null;
+  const evidences = [
+    ...parsed.data.regions.map((r) => r.ev),
+    ...(parsed.data.mainCandidates ?? []).map((c) => c.ev),
+  ];
+  if (evidences.some((ev) => vocabularyViolations(ev) > 0)) return null;
   return {
     request: parsed.data,
     body: JSON.stringify(parsed.data),

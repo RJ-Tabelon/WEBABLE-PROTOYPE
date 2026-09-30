@@ -8,6 +8,7 @@ import { describeHistory } from '../../components/app/fit/history';
 import { formatDay } from '../../components/app/format';
 import { AppSection, PageHead } from '../../components/app/PageHead';
 import { listFitHistory } from '../../lib/data/fit';
+import { getLearnedState } from './changes/learning';
 import { loadCurrentFit, loadUser } from './data';
 import { connection } from 'next/server';
 
@@ -77,27 +78,33 @@ export default async function YourFitPage() {
   }
 
   const fit = current.data;
-  const history = await listFitHistory({ limit: HISTORY_LIMIT });
+  const now = new Date();
+  const [history, learned] = await Promise.all([
+    listFitHistory({ limit: HISTORY_LIMIT }),
+    getLearnedState(now),
+  ]);
   const items = history.ok
     ? describeHistory(history.data, history.data.length < HISTORY_LIMIT)
     : [];
 
   return (
-    <div className="wa-page">
-      <PageHead
-        eyebrow={`Version ${fit.version} · saved ${formatDay(fit.createdAt)}`}
-        title="Your fit"
-        deck="Here’s what WebAble changes on pages for you, and why. You can adjust any of it."
-      >
-        <div className="wa-page-head__status">
-          <BrowserStatus email={email} />
-        </div>
-      </PageHead>
-
+    <div className="wa-page wa-page--fit">
       <FitDocument
         profile={fit.profile}
         version={fit.version}
-        now={new Date().toISOString()}
+        now={now.toISOString()}
+        learned={learned.ok ? learned.data.dims : []}
+        head={
+          <PageHead
+            eyebrow={`Version ${fit.version} · saved ${formatDay(fit.createdAt)}`}
+            title="Your fit"
+            deck="Here’s what WebAble changes on pages for you, and why. You can adjust any of it."
+          >
+            <div className="wa-page-head__status">
+              <BrowserStatus email={email} />
+            </div>
+          </PageHead>
+        }
       />
 
       <AppSection

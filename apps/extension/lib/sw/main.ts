@@ -5,7 +5,7 @@ import type { ContentToWorker } from '../protocol';
 import { normalizeSystem } from '../storage/account';
 import { chromeArea, restrictToTrustedContexts } from '../storage/area';
 import { clearLocalData, createStores } from '../storage';
-import { listLocalSites } from '../storage/sites';
+import { listLocalSites, resetRule } from '../storage/sites';
 import { createAuthService } from './auth';
 import { handleBridge, type BridgeHandlers } from './bridge';
 import { siteKey } from './cachekeys';
@@ -189,18 +189,51 @@ export function startServiceWorker(): void {
         await stores.receipts.forgetDomain(domain);
         await stores.answers.forgetSite(await siteKey(install.secret, domain));
       } else {
+        const wasPaused = (await stores.sites.get(domain)).rule.paused;
         await stores.sites.update(domain, (s) => {
-          if (change.kind === 'pause') s.rule.paused = change.paused;
-          else if (change.blocked) {
-            s.rule.blocks = [...new Set([...s.rule.blocks, change.op])];
-            s.rule.pins = s.rule.pins.filter((p) => p !== change.op);
-          } else {
-            s.rule.blocks = s.rule.blocks.filter((b) => b !== change.op);
-            const dop = s.state.ops[change.op];
-            if (dop) delete dop.block;
+          switch (change.kind) {
+            case 'pause':
+              s.rule.paused = change.paused;
+              break;
+            case 'block':
+              if (change.blocked) {
+                s.rule.blocks = [...new Set([...s.rule.blocks, change.op])];
+                s.rule.pins = s.rule.pins.filter((p) => p !== change.op);
+              } else {
+                s.rule.blocks = s.rule.blocks.filter((b) => b !== change.op);
+                const dop = s.state.ops[change.op];
+                if (dop) delete dop.block;
+              }
+              break;
+            case 'pin': {
+              const dop = s.state.ops[change.op];
+              if (change.on) {
+                s.rule.pins = [...new Set([...s.rule.pins, change.op])];
+                s.rule.blocks = s.rule.blocks.filter((b) => b !== change.op);
+                if (dop) delete dop.block;
+              } else {
+                s.rule.pins = s.rule.pins.filter((p) => p !== change.op);
+                if (dop) delete dop.pin;
+              }
+              break;
+            }
+            case 'reset':
+              resetRule(s, Date.now());
+              break;
           }
           s.rule.updatedAt = Date.now();
         });
+        // Open tabs on the site follow the new rule at once.
+        if (change.kind === 'pause' && change.paused)
+          await worker.pauseDomain(domain);
+        else if (
+          wasPaused &&
+          (change.kind === 'pause' || change.kind === 'reset')
+        )
+          await worker.resumeDomain(domain);
+        else if (change.kind === 'block' && change.blocked)
+          await worker.blockOnDomain(domain, change.op);
+        else await worker.replanDomain(domain);
       }
       await worker.reconcileRegistration();
       await worker.refreshAllBadges();
@@ -213,8 +246,29 @@ export function startServiceWorker(): void {
       await clearLocalData(stores);
       await undos.clear();
       await local.remove([LEGACY_ANNOUNCED_KEY]).catch(() => undefined);
+      // The profile is back to the basic fit and learning is gone: replan.
+      await worker.profileChanged();
       await worker.reconcileRegistration(true);
       await worker.refreshAllBadges();
+    },
+    async openWelcome(focus) {
+      const base = browser.runtime.getURL('/welcome.html');
+      const url = focus === 'allow' ? `${base}#allow` : base;
+      const open = (await browser.tabs.query({})).find(
+        (t) => typeof t.id === 'number' && t.url?.startsWith(base),
+      );
+      if (open?.id === undefined) {
+        await browser.tabs.create({ url });
+        return;
+      }
+      // A new hash on the open page is a same-document navigation (no reload).
+      await browser.tabs.update(open.id, {
+        active: true,
+        ...(focus === 'allow' && open.url !== url ? { url } : {}),
+      });
+      await browser.windows
+        .update(open.windowId, { focused: true })
+        .catch(() => undefined);
     },
   };
 
@@ -240,6 +294,9 @@ export function startServiceWorker(): void {
         return worker.friction(tabId, m.signal, m.ops);
       case 'cs:offer-answer':
         return worker.offerAnswer(tabId, m.op, m.answer, 'page');
+      case 'cs:undo-all':
+        await worker.undoAllOnPage(tabId, frameId);
+        return { ok: true };
     }
   };
 
@@ -281,15 +338,16 @@ export function startServiceWorker(): void {
         await worker.rate(m.tabId, m.op, m.rating);
         return { ok: true };
       case 'ui:show-on-page':
-        return (
-          (await port.sendToTab(m.tabId, {
-            type: 'sw:show-on-page',
-            op: m.op,
-            on: m.on,
-          })) ?? {
-            ok: false,
-          }
-        );
+        return worker.showOnPage(m.tabId, m.op, m.on);
+      case 'ui:redo':
+        await worker.redo(m.tabId, m.op);
+        return worker.view(m.tabId);
+      case 'ui:grant-site':
+        await worker.grantSite(m.tabId);
+        return worker.view(m.tabId);
+      case 'ui:clear-everywhere':
+        await worker.clearEverywhere();
+        return { ok: true };
       case 'ui:reading-guide':
         return (
           (await port.sendToTab(m.tabId, {
@@ -385,7 +443,12 @@ export function startServiceWorker(): void {
   browser.webNavigation.onCommitted.addListener((details) => {
     if (details.frameId !== 0) return;
     void worker
-      .navigated(details.tabId, details.url, details.timeStamp)
+      .navigated(
+        details.tabId,
+        details.url,
+        details.timeStamp,
+        details.transitionQualifiers ?? [],
+      )
       .catch(() => undefined);
   });
   browser.alarms.onAlarm.addListener((alarm) => {

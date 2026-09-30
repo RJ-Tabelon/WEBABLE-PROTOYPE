@@ -45,6 +45,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     >
       <AppSync
         theme={account.ok ? account.data.theme : null}
+        themeSetAt={account.ok ? account.data.themeSetAt : null}
         fitUi={fit.ok && fit.data ? fitUiFor(fit.data.profile) : null}
       />
       {children}

@@ -1,3 +1,4 @@
+import { bridgeRequestSchema } from '@webable/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { copyProblems } from '../auth/copy-lint';
@@ -276,6 +277,75 @@ describe('parseBridgeReply', () => {
       data: [receipt],
     });
     expect(result).toEqual({ ok: true, data: [receipt] });
+  });
+});
+
+/*
+ * Requests added by the protocol contract (C6): the page sends them as soon as
+ * @webable/core's bridge protocol allows them. Until then these are skipped.
+ */
+const allows = (request: unknown) =>
+  bridgeRequestSchema.safeParse(request).success;
+const OPEN_WELCOME = { type: 'wa:open-welcome', focus: 'allow' } as const;
+const PIN_OFF = {
+  type: 'wa:site-update',
+  domain: 'news.example.com',
+  change: { kind: 'pin', op: 'target_size', on: false },
+} as const;
+const RESET = {
+  type: 'wa:site-update',
+  domain: 'news.example.com',
+  change: { kind: 'reset' },
+} as const;
+
+describe('protocol additions', () => {
+  it.skipIf(!allows(OPEN_WELCOME))(
+    'asks the extension to show its welcome page at "Allow on all sites"',
+    async () => {
+      const { runtime, sent } = fakeRuntime([
+        { response: { ok: true, data: { ok: true } } },
+      ]);
+      const bridge = createBridge({ extensionId: EXT, runtime: () => runtime });
+      const result = await bridge.send(OPEN_WELCOME);
+      expect(result).toEqual({ ok: true, data: { ok: true } });
+      expect(sent).toEqual([{ id: EXT, message: OPEN_WELCOME }]);
+    },
+  );
+
+  it.skipIf(!allows(PIN_OFF) || !allows(RESET))(
+    'sends a site’s always-on change and a whole-site reset',
+    async () => {
+      const { runtime, sent } = fakeRuntime([
+        { response: { ok: true, data: [] } },
+        { response: { ok: true, data: [] } },
+      ]);
+      const bridge = createBridge({ extensionId: EXT, runtime: () => runtime });
+      await bridge.send(PIN_OFF);
+      await bridge.send(RESET);
+      expect(sent.map((s) => s.message)).toEqual([PIN_OFF, RESET]);
+    },
+  );
+
+  it('reads the welcome page answer and per-site levels', () => {
+    expect(
+      parseBridgeReply('wa:open-welcome', {
+        ok: true,
+        data: { ok: true },
+      }),
+    ).toEqual({ ok: true, data: { ok: true } });
+    const site = {
+      domain: 'news.example.com',
+      paused: false,
+      blocked: [],
+      pinned: [],
+      levels: { text_floor: 3 },
+      lastChanges: 2,
+      lastVisit: 1_700_000_000_000,
+    };
+    expect(parseBridgeReply('wa:sites', { ok: true, data: [site] })).toEqual({
+      ok: true,
+      data: [site],
+    });
   });
 });
 

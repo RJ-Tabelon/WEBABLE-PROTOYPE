@@ -1,38 +1,38 @@
 'use client';
 
-import type { LocalSite } from '@webable/core';
 import {
   Actions,
   Button,
   Dialog,
   EmptyState,
   ErrorPanel,
-  Icon,
   StatusGlyph,
-  StatusPill,
   TextField,
-  TextLink,
   useToast,
 } from '@webable/ui';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { type BridgeFailure, extension } from '../../../lib/extension/bridge';
-import { connectView } from '../../../lib/extension/state';
 import { useExtension } from '../../../lib/extension/useExtension';
 import { formatRelativeDay, plural } from '../format';
 import {
+  appliesAgain,
   applyLocally,
   FILTER_AFTER,
   filterSites,
-  opLabels,
+  hasRules,
+  inverse,
   type SiteChange,
+  type SitePreference,
+  type SiteView,
+  sitePreferences,
   sortSites,
 } from './sites';
 
 type Load =
   | { phase: 'idle' }
   | { phase: 'loading' }
-  | { phase: 'ready'; sites: LocalSite[] }
+  | { phase: 'ready'; sites: SiteView[] }
   | { phase: 'failed'; error: BridgeFailure };
 
 function toastFor(domain: string, change: SiteChange, label?: string): string {
@@ -45,6 +45,12 @@ function toastFor(domain: string, change: SiteChange, label?: string): string {
       return change.blocked
         ? `${label ?? 'That change'} is off on ${domain}.`
         : `${label ?? 'That change'} is back on for ${domain}.`;
+    case 'pin':
+      return change.on
+        ? `${label ?? 'That change'} is always on for ${domain}.`
+        : `${label ?? 'That change'} follows your fit on ${domain} again.`;
+    case 'reset':
+      return `${domain} follows your fit again.`;
     case 'forget':
       return `WebAble forgot its settings for ${domain}.`;
   }
@@ -55,29 +61,28 @@ function visitDay(ms: number): string {
   return day === 'Today' || day === 'Yesterday' ? day.toLowerCase() : day;
 }
 
-function inverse(change: SiteChange): SiteChange | null {
-  switch (change.kind) {
-    case 'pause':
-      return { kind: 'pause', paused: !change.paused };
-    case 'block':
-      return { kind: 'block', op: change.op, blocked: !change.blocked };
-    case 'forget':
-      return null;
-  }
+/** The op name in a preference row ("Click targets"), for toasts. */
+function prefLabel(pref: SitePreference): string {
+  const colon = pref.label.indexOf(': ');
+  return colon >= 0 ? pref.label.slice(colon + 2) : pref.label;
 }
 
 /**
- * Sites from this browser's extension (wa:sites), with Pause and Resume, turning
- * a change back on, and Forget. Updates show at once and are put back if the
- * extension refuses them. The list is never sent to WebAble's server.
+ * Sites from this browser's extension (wa:sites): only sites that keep
+ * something of their own. Each thing a site keeps is a row with the action
+ * that undoes it, and [Reset site] clears them all. Updates show at once and
+ * are put back if the extension refuses them. The list never leaves this
+ * browser.
  */
-export function SitesPanel({ email }: { email: string | null }) {
+export function SitesPanel() {
   const { state, recheck } = useExtension();
   const [load, setLoad] = useState<Load>({ phase: 'idle' });
   const [query, setQuery] = useState('');
   const [pendingDomain, setPendingDomain] = useState<string | null>(null);
-  const [forgetting, setForgetting] = useState<string | null>(null);
-  const [forgetBusy, setForgetBusy] = useState(false);
+  const [resetting, setResetting] = useState<string | null>(null);
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+  const listRef = useRef<HTMLUListElement>(null);
   const toast = useToast();
 
   const read = useCallback(async () => {
@@ -86,7 +91,10 @@ export function SitesPanel({ email }: { email: string | null }) {
     );
     const result = await extension.sites();
     if (result.ok) {
-      setLoad({ phase: 'ready', sites: result.data });
+      setLoad({
+        phase: 'ready',
+        sites: (result.data as SiteView[]).filter(hasRules),
+      });
     } else setLoad({ phase: 'failed', error: result.error });
   }, []);
 
@@ -100,8 +108,8 @@ export function SitesPanel({ email }: { email: string | null }) {
     change: SiteChange,
     label?: string,
     undoable = true,
-  ): Promise<boolean> {
-    if (load.phase !== 'ready') return false;
+  ): Promise<string | null> {
+    if (load.phase !== 'ready') return 'Not ready';
     const before = load.sites;
     setPendingDomain(domain);
     setLoad({ phase: 'ready', sites: applyLocally(before, domain, change) });
@@ -110,13 +118,17 @@ export function SitesPanel({ email }: { email: string | null }) {
     if (!result.ok) {
       setLoad({ phase: 'ready', sites: before });
       toast.show({ message: `Nothing changed. ${result.error.message}` });
-      return false;
+      return result.error.message;
     }
-    setLoad({ phase: 'ready', sites: result.data });
+    const sites = (result.data as SiteView[]).filter(hasRules);
+    setLoad({ phase: 'ready', sites });
+    // A site with nothing left of its own leaves the list: keep focus on it.
+    if (!sites.some((s) => s.domain === domain))
+      requestAnimationFrame(() => listRef.current?.focus());
     const undo = undoable ? inverse(change) : null;
     toast.show({
       message: toastFor(domain, change, label),
-      applied: change.kind !== 'forget',
+      applied: appliesAgain(change),
       ...(undo
         ? {
             action: {
@@ -126,39 +138,20 @@ export function SitesPanel({ email }: { email: string | null }) {
           }
         : {}),
     });
-    return true;
+    return null;
   }
 
-  async function confirmForget() {
-    if (!forgetting) return;
-    setForgetBusy(true);
-    const ok = await update(forgetting, { kind: 'forget' });
-    setForgetBusy(false);
-    if (ok) setForgetting(null);
+  async function confirmReset() {
+    if (!resetting) return;
+    setResetBusy(true);
+    setResetError(null);
+    const error = await update(resetting, { kind: 'reset' });
+    setResetBusy(false);
+    if (error) setResetError(error);
+    else setResetting(null);
   }
 
-  // Site settings live in this browser whether or not it is connected; say so
-  // when it isn't, because the fit it applies here may not be this account's.
-  const view = connectView(state, email);
-  const notConnectedNote =
-    view.view === 'connect' ? (
-      <div className="wa-app-note" role="note">
-        <Icon name="info" size={20} />
-        <div className="wa-app-note__body">
-          <p className="wa-app-note__title">
-            {view.otherEmail
-              ? 'WebAble here is connected to a different account.'
-              : 'WebAble here isn’t connected to your account.'}
-          </p>
-          <p>
-            These sites are still this browser’s. Connect it to use your fit
-            here. <TextLink href="/connect">Connect this browser</TextLink>
-          </p>
-        </div>
-      </div>
-    ) : null;
-
-  /* ----- States before the list ----- */
+  /* ----- States before the list (the page head says the rest) ----- */
 
   if (
     state.phase === 'checking' ||
@@ -178,16 +171,9 @@ export function SitesPanel({ email }: { email: string | null }) {
 
   if (state.phase === 'missing') {
     return (
-      <EmptyState
-        title="WebAble isn’t in this browser"
-        action={
-          <Button href="/connect" variant="primary" arrow="forward">
-            Add WebAble
-          </Button>
-        }
-      >
-        Your sites live in the extension, in this browser only. Add it to see
-        them here.
+      <EmptyState title="No sites here yet" as="h3">
+        Sites live in the extension, in this browser only. They show up here
+        once WebAble is in this browser.
       </EmptyState>
     );
   }
@@ -196,6 +182,7 @@ export function SitesPanel({ email }: { email: string | null }) {
     return (
       <ErrorPanel
         title="Couldn’t reach WebAble"
+        as="h3"
         live
         action={
           <Button
@@ -215,21 +202,16 @@ export function SitesPanel({ email }: { email: string | null }) {
   if (load.phase === 'failed') {
     if (load.error.code === 'not_connected') {
       return (
-        <EmptyState
-          title="Connect this browser first"
-          action={
-            <Button href="/connect" variant="primary" arrow="forward">
-              Connect this browser
-            </Button>
-          }
-        >
-          Once it’s connected to your account, its sites show up here.
+        <EmptyState title="No sites here yet" as="h3">
+          Once this browser is connected to your account, its sites show up
+          here.
         </EmptyState>
       );
     }
     return (
       <ErrorPanel
         title="Couldn’t read your sites"
+        as="h3"
         live
         action={
           <Button
@@ -251,12 +233,9 @@ export function SitesPanel({ email }: { email: string | null }) {
   const sites = sortSites(load.sites);
   if (sites.length === 0) {
     return (
-      <>
-        {notConnectedNote}
-        <EmptyState title="No sites yet">
-          Sites where you pause WebAble or turn a change off show up here.
-        </EmptyState>
-      </>
+      <EmptyState title="No sites yet" as="h3">
+        Sites where you pause WebAble or change a setting show up here.
+      </EmptyState>
     );
   }
 
@@ -264,7 +243,6 @@ export function SitesPanel({ email }: { email: string | null }) {
 
   return (
     <>
-      {notConnectedNote}
       {sites.length > FILTER_AFTER ? (
         <TextField
           label="Find a site"
@@ -277,103 +255,83 @@ export function SitesPanel({ email }: { email: string | null }) {
         />
       ) : null}
 
-      <ul role="list" className="wa-rows" aria-label="Sites in this browser">
+      <ul
+        ref={listRef}
+        tabIndex={-1}
+        role="list"
+        className="wa-rows wa-sites"
+        aria-label="Sites in this browser"
+      >
         {shown.map((site) => {
-          const blocked = opLabels(site.blocked);
-          const pinned = opLabels(site.pinned);
           const busy = pendingDomain === site.domain;
-          const pill = site.paused
-            ? { state: 'paused' as const, label: 'Paused' }
-            : site.lastChanges > 0
-              ? {
-                  state: 'adapted' as const,
-                  label: (
-                    <>
-                      Adapted · {site.lastChanges}
-                      <span className="sr-only">
-                        {site.lastChanges === 1 ? ' change' : ' changes'} on the
-                        last visit
-                      </span>
-                    </>
-                  ),
-                }
-              : { state: 'on' as const, label: 'On' };
+          const prefs = sitePreferences(site);
           return (
             <li
               key={site.domain}
               className="wa-site-row"
               aria-busy={busy || undefined}
             >
-              <div>
-                <div className="wa-site-row__head">
+              <div className="wa-row wa-row--split wa-row--end-action wa-site-row__head">
+                <div>
                   <h3 className="wa-site-row__domain">{site.domain}</h3>
-                  <StatusPill state={pill.state} label={pill.label} />
+                  {site.lastVisit > 0 ? (
+                    <p className="wa-row__detail">
+                      Last visit {visitDay(site.lastVisit)}
+                    </p>
+                  ) : null}
                 </div>
-                <p className="wa-row__detail">
-                  {/* The pill already says how many changes are in effect. */}
-                  Last visit {visitDay(site.lastVisit)}
-                  {pinned.length > 0
-                    ? ` · always on here: ${pinned.map((p) => p.label.toLowerCase()).join(', ')}`
-                    : ''}
-                </p>
+                <div className="wa-row__actions">
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    flush="end"
+                    disabled={busy}
+                    onClick={() => {
+                      setResetError(null);
+                      setResetting(site.domain);
+                    }}
+                  >
+                    Reset site
+                    <span className="sr-only"> {site.domain}</span>
+                  </Button>
+                </div>
               </div>
-              <div className="wa-row__actions">
-                <Button
-                  variant="secondary"
-                  size="md"
-                  iconStart={site.paused ? 'play' : 'pause'}
-                  disabled={busy}
-                  onClick={() =>
-                    void update(site.domain, {
-                      kind: 'pause',
-                      paused: !site.paused,
-                    })
-                  }
-                >
-                  {site.paused ? 'Resume' : 'Pause'}
-                  <span className="sr-only"> on {site.domain}</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="md"
-                  disabled={busy}
-                  onClick={() => setForgetting(site.domain)}
-                >
-                  Forget
-                  <span className="sr-only"> {site.domain}</span>
-                </Button>
-              </div>
-              {blocked.length > 0 ? (
-                <ul
-                  role="list"
-                  className="wa-site-row__ops"
-                  aria-label={`Changes turned off on ${site.domain}`}
-                >
-                  {blocked.map(({ op, label }) => (
-                    <li key={op} className="wa-site-row__op">
-                      <span>{label} is off here</span>
-                      <Button
-                        variant="ghost"
-                        size="md"
-                        disabled={busy}
-                        onClick={() =>
-                          void update(
-                            site.domain,
-                            { kind: 'block', op, blocked: false },
-                            label,
-                          )
-                        }
-                      >
-                        Turn back on
-                        <span className="sr-only">
-                          {' '}
-                          {label.toLowerCase()} on {site.domain}
+              <ul
+                role="list"
+                className="wa-site-row__prefs"
+                aria-label={`What ${site.domain} keeps`}
+              >
+                {prefs.map((pref) => (
+                  <li
+                    key={pref.key}
+                    className="wa-row wa-row--split wa-row--end-action wa-site-pref"
+                  >
+                    <p className="wa-site-pref__label">{pref.label}</p>
+                    <div className="wa-row__actions">
+                      {pref.change ? (
+                        <Button
+                          variant="ghost"
+                          size="md"
+                          flush="end"
+                          disabled={busy}
+                          onClick={() => {
+                            const change = pref.change;
+                            if (change)
+                              void update(site.domain, change, prefLabel(pref));
+                          }}
+                        >
+                          {pref.action}
+                          <span className="sr-only"> {pref.actionContext}</span>
+                        </Button>
+                      ) : (
+                        <span className="wa-site-pref__hint">
+                          Clears with Reset site
                         </span>
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </li>
           );
         })}
@@ -385,32 +343,38 @@ export function SitesPanel({ email }: { email: string | null }) {
       ) : null}
 
       <Dialog
-        open={forgetting !== null}
+        open={resetting !== null}
         onOpenChange={(open) => {
-          if (!open && !forgetBusy) setForgetting(null);
+          if (!open && !resetBusy) setResetting(null);
         }}
-        title={`Forget ${forgetting ?? 'this site'}?`}
-        description="WebAble removes what it keeps for this site in this browser: pauses, changes you turned off, and changes you kept on. This can’t be undone."
+        title={`Reset ${resetting ?? 'this site'}?`}
+        description="WebAble drops what this site keeps in this browser: a pause, changes you turned off or kept on, and sizes set for it. The site follows your fit again. This can’t be undone."
         actions={
           <Actions>
             <Button
               variant="danger-filled"
-              busy={forgetBusy}
-              busyLabel="Forgetting…"
-              onClick={() => void confirmForget()}
+              busy={resetBusy}
+              busyLabel="Resetting…"
+              onClick={() => void confirmReset()}
             >
-              Forget this site
+              Reset site
             </Button>
             <Button
               variant="secondary"
-              disabled={forgetBusy}
-              onClick={() => setForgetting(null)}
+              disabled={resetBusy}
+              onClick={() => setResetting(null)}
             >
               Keep it
             </Button>
           </Actions>
         }
-      />
+      >
+        {resetError ? (
+          <p className="wa-reason" role="alert">
+            Nothing changed. {resetError}
+          </p>
+        ) : null}
+      </Dialog>
     </>
   );
 }

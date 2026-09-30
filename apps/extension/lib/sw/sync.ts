@@ -11,7 +11,7 @@ import type { Json } from '@webable/core/db/types';
 
 import type { AccountRecord, ProfileRecord } from '../storage/account';
 import { subtractFlushed } from '../storage/activity';
-import type { LocalStores } from '../storage';
+import { claimPersonalData, type LocalStores } from '../storage';
 import { isLearningState } from '../storage/learning';
 import type { AuthService } from './auth';
 import { contextFor, profileIdentity, type ProfileContext } from './profile';
@@ -33,6 +33,19 @@ export interface SyncDeps {
 export interface RefreshResult {
   account: AccountRecord | null;
   profileChanged: boolean;
+  /** This browser was removed from the account elsewhere, so it signed out. */
+  removed?: true;
+}
+
+/**
+ * When the last sync in which every step succeeded finished (null: never, or
+ * signed out). The worker reads it for the popup's "Synced" line.
+ */
+export async function lastSuccessfulSync(
+  stores: LocalStores,
+): Promise<number | null> {
+  const account = await stores.account.read();
+  return account && account.lastSyncAt > 0 ? account.lastSyncAt : null;
 }
 
 /** Browser platform bucket for `extension_installs` (never a device identifier). */
@@ -60,12 +73,20 @@ export class AccountSync {
     const now = this.deps.now();
     const previous = await this.deps.stores.account.read();
     const samePerson = previous?.userId === userId;
-    if (previous && !samePerson) {
-      // A different person on this install: nothing learned for the previous
-      // account carries over. Their state is reseeded from their own profile.
-      await this.deps.stores.learning.clear();
-      await this.deps.stores.profile.clear();
-    }
+    // Nothing learned for another account carries over, whether or not its
+    // account record is still here (signing out keeps the fit on this device).
+    // Their state is reseeded from their own profile.
+    const reset = await claimPersonalData(
+      this.deps.stores,
+      userId,
+      previous?.userId ?? null,
+      now,
+    );
+    // The only place this install's row is created.
+    const registered = await this.upsertInstall(userId).then(
+      () => true,
+      () => false,
+    );
     await this.deps.stores.account.write({
       userId,
       email,
@@ -76,12 +97,38 @@ export class AccountSync {
       needsReauth: false,
       connectedAt: now,
       lastSyncAt: samePerson ? previous.lastSyncAt : 0,
+      ...(registered ? { installRegistered: true } : {}),
     });
-    return this.refresh();
+    const result = await this.refresh();
+    return reset ? { ...result, profileChanged: true } : result;
   }
 
-  /** Pull everything, push learning and counts. Each step fails on its own. */
-  async refresh(): Promise<RefreshResult> {
+  private inflight: Promise<RefreshResult> | null = null;
+  private queued: Promise<RefreshResult> | null = null;
+
+  /**
+   * Pull everything, push learning and counts. Single flight: a call while one
+   * runs waits for it and then runs once more (at most one follow-up, shared
+   * by every caller that arrived meanwhile), so counts are never sent twice.
+   */
+  refresh(): Promise<RefreshResult> {
+    if (!this.inflight) {
+      this.inflight = this.runRefresh().finally(() => {
+        this.inflight = null;
+      });
+      return this.inflight;
+    }
+    this.queued ??= this.inflight
+      .catch(() => undefined)
+      .then(() => {
+        this.queued = null;
+        return this.refresh();
+      });
+    return this.queued;
+  }
+
+  /** One sync. Each step fails on its own; lastSyncAt moves only when all succeed. */
+  private async runRefresh(): Promise<RefreshResult> {
     const session = await this.deps.auth.session();
     if (!session) {
       return {
@@ -89,31 +136,57 @@ export class AccountSync {
         profileChanged: false,
       };
     }
-    const account = await this.pullAccount(
-      session.user.id,
-      session.user.email ?? '',
+    const userId = session.user.id;
+    const before = await this.deps.stores.account.read();
+    // Never push one account's records under another's session.
+    const reset = await claimPersonalData(
+      this.deps.stores,
+      userId,
+      before?.userId ?? null,
+      this.deps.now(),
     );
-    const profileChanged = await this.pullProfile().catch(() => false);
+    let ok = true;
+    const step = async <T>(run: () => Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await run();
+      } catch {
+        ok = false;
+        return fallback;
+      }
+    };
+    const install = await step(() => this.touchInstall(userId, before), 'ok');
+    if (install === 'removed') {
+      // Removed from the account on the web: sign out and send nothing more.
+      // `profileChanged` so the worker redraws the popup and the badges.
+      await this.deps.auth.signOut().catch(() => undefined);
+      await this.signedOut(false);
+      return { account: null, profileChanged: true, removed: true };
+    }
+    const pulled = await this.pullAccount(userId, session.user.email ?? '');
+    ok &&= pulled.ok;
+    const profileChanged = await step(() => this.pullProfile(), false);
     const rec = await this.deps.stores.profile.read();
-    if (rec) await this.syncLearning(contextFor(rec)).catch(() => undefined);
-    await this.upsertInstall(session.user.id).catch(() => undefined);
-    await this.flushActivity().catch(() => undefined);
-    await this.deps.stores.account.update((cur) =>
-      cur ? { ...cur, lastSyncAt: this.deps.now() } : cur,
-    );
-    return { account, profileChanged };
+    if (rec) await step(() => this.syncLearning(contextFor(rec)), undefined);
+    await step(() => this.flushActivity(), undefined);
+    const account = ok
+      ? await this.deps.stores.account.update((cur) =>
+          cur ? { ...cur, lastSyncAt: this.deps.now() } : cur,
+        )
+      : pulled.account;
+    return { account, profileChanged: profileChanged || reset };
   }
 
+  /** Consents and settings from `accounts`. `ok`: the row was read. */
   async pullAccount(
     userId: string,
     email: string,
-  ): Promise<AccountRecord | null> {
+  ): Promise<{ account: AccountRecord | null; ok: boolean }> {
     const { data, error } = await this.db
       .from('accounts')
       .select('cloud_analysis, product_learning, theme, onboarding_step')
       .eq('user_id', userId)
       .maybeSingle();
-    return this.deps.stores.account.update((cur) => {
+    const account = await this.deps.stores.account.update((cur) => {
       const base: AccountRecord =
         cur && cur.userId === userId
           ? cur
@@ -142,6 +215,7 @@ export class AccountSync {
         needsReauth: false,
       };
     });
+    return { account, ok: !error && data !== null };
   }
 
   /** Returns true when the profile in use changed. Invalid profiles are ignored. */
@@ -155,11 +229,13 @@ export class AccountSync {
     if (!data) return false;
     const parsed = fitProfileSchema.safeParse(data.profile);
     if (!parsed.success) return false;
+    const owner = (await this.deps.stores.account.read())?.userId;
     const next: ProfileRecord = {
       profile: parsed.data,
       source: 'account',
       version: data.version,
       fetchedAt: this.deps.now(),
+      ...(owner ? { ownerUserId: owner } : {}),
     };
     let changed = false;
     await this.deps.stores.profile.update((cur) => {
@@ -214,8 +290,14 @@ export class AccountSync {
       if (!local.user) return;
       const sent = new Set(local.pending.map((d) => d.deltaId));
 
+      // Deltas the server already merged (a push whose reply was lost) count once.
       let merged: UserLearningState = serverState
-        ? mergeDeltas(serverState, local.pending, new Set(), local.user)
+        ? mergeDeltas(
+            serverState,
+            local.pending,
+            new Set(serverState.recentDeltaIds ?? []),
+            local.user,
+          )
         : local.user;
       if (local.reseed)
         merged = reseedFromProfile(merged, ctx.profile, ctx.needs, day);
@@ -282,6 +364,7 @@ export class AccountSync {
     }
   }
 
+  /** Create (or take over) this install's row. Only `connected` calls it. */
   async upsertInstall(userId: string): Promise<void> {
     const install = await this.deps.stores.install.get();
     const { error } = await this.db.from('extension_installs').upsert(
@@ -298,6 +381,38 @@ export class AccountSync {
     if (error) throw new Error('install upsert failed');
   }
 
+  /**
+   * Mark this install as seen. Never creates the row after connecting: a row
+   * that is gone was removed on the web, and this browser stays removed. A
+   * connect whose upsert failed registers here instead.
+   */
+  async touchInstall(
+    userId: string,
+    account: AccountRecord | null,
+  ): Promise<'ok' | 'removed'> {
+    if (account?.userId !== userId || !account.installRegistered) {
+      await this.upsertInstall(userId);
+      await this.deps.stores.account.update((cur) =>
+        cur && cur.userId === userId
+          ? { ...cur, installRegistered: true }
+          : cur,
+      );
+      return 'ok';
+    }
+    const install = await this.deps.stores.install.get();
+    const { data, error } = await this.db
+      .from('extension_installs')
+      .update({
+        platform: this.deps.platform,
+        extension_version: this.deps.version.slice(0, 32),
+        last_seen_at: new Date(this.deps.now()).toISOString(),
+      })
+      .eq('id', install.id)
+      .select('id');
+    if (error) throw new Error('install update failed');
+    return data && data.length > 0 ? 'ok' : 'removed';
+  }
+
   /** The session ended. `lost`: without the person signing out (sign in again). */
   async signedOut(lost: boolean): Promise<void> {
     if (lost) {
@@ -307,7 +422,15 @@ export class AccountSync {
       return;
     }
     await this.deps.stores.account.clear();
-    // The fit and the learned preferences stay on this device ("Your fit is on this device only").
-    await this.deps.stores.learning.update((cur) => ({ ...cur, rev: 0 }));
+    // The fit and the learned preferences stay on this device ("Your fit is on
+    // this device only"), still owned by the account: a different account
+    // connecting here starts over. What was not yet sent is dropped, so nothing
+    // from this session can reach another account.
+    await this.deps.stores.learning.update((cur) => ({
+      ...cur,
+      rev: 0,
+      pending: [],
+    }));
+    await this.deps.stores.activity.update((cur) => ({ ...cur, weeks: {} }));
   }
 }

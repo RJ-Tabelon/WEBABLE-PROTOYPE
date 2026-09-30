@@ -3,34 +3,47 @@
 import type { FitProfile } from '@webable/core';
 import {
   fitRows,
-  type FitRow,
+  type FitRow as CoreFitRow,
   type FitRowId,
 } from '@webable/core/profile/describe';
 import {
   Button,
-  cx,
+  Disclosure,
   ErrorPanel,
-  FitArrow,
-  FitMark,
+  FitRow,
   SegmentedControl,
 } from '@webable/ui';
-import { useId, useMemo, useState } from 'react';
-
 import {
-  adjustSpec,
-  applyAdjustment,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from 'react';
+
+import { currentValue } from '../../app/fit/adjust';
+import { RowEditor } from '../../app/fit/RowEditor';
+import {
+  applyEditorValue,
   keepOldRows,
-  type AdjustSpec,
+  type EditorValue,
 } from '../flow/adjust';
+import { rowSource, rowValue, type FitValueShape } from '../shared/fit';
 import { TaskHeading } from '../shared/primitives';
 import { FitPreview } from './FitPreview';
 
 export type SaveState =
   { kind: 'idle' } | { kind: 'saving' } | { kind: 'error'; message: string };
 
+/** What the action bar calls: [Use this fit] and [Adjust first]. */
+export interface YourFitControl {
+  use: () => void;
+  adjustFirst: () => void;
+}
+
 export interface YourFitProps {
   profile: FitProfile;
-  /** The current fit when recalibrating: rows show the diff with Keep new / Keep old. */
+  /** The current fit, when there is one: rows show the diff with Keep new / Keep old. */
   previous: FitProfile | null;
   /** When the previous fit was made (ISO), for "since Jun 12". */
   previousDate: string | null;
@@ -39,6 +52,8 @@ export interface YourFitProps {
   signedIn: boolean;
   save: SaveState;
   onUse: (profile: FitProfile) => void;
+  /** The shell's action bar drives [Use this fit] and [Adjust first] through this. */
+  controlRef?: Ref<YourFitControl>;
 }
 
 const MONTHS = [
@@ -63,185 +78,42 @@ function since(iso: string | null): string | null {
   return `since ${MONTHS[d.getMonth()] ?? ''} ${d.getDate()}`;
 }
 
-/** "16 px" → value and unit; anything else stays a word ("Paused"). */
-function split(value: string): { n: string; unit?: string } {
-  const m = /^([\d.:]+)\u00a0(px|ms|characters)$/.exec(value);
-  return m && m[1] ? { n: m[1], unit: m[2] } : { n: value };
+/** Only displayed controls can take focus: the slider thumb, then the chosen option. */
+const EDITOR_FOCUS = [
+  '[role="slider"]',
+  '[role="radio"][tabindex="0"]',
+  'input[type="radio"]:checked',
+  'button',
+] as const;
+
+function focusEditor(root: HTMLElement | null): void {
+  if (!root || root.contains(document.activeElement)) return;
+  const shown = (el: HTMLElement) => el.getClientRects().length > 0;
+  const target = EDITOR_FOCUS.map((selector) =>
+    Array.from(root.querySelectorAll<HTMLElement>(selector)).find(shown),
+  ).find((el): el is HTMLElement => el !== undefined);
+  target?.focus();
 }
 
-function isNumeric(value: string): boolean {
-  return /^[\d.:]+$/.test(value);
+const labelIdOf = (id: FitRowId) => `tn-fit-row-${id}`;
+const editorId = (id: FitRowId) => `tn-fit-editor-${id}`;
+
+/** Whether a row changes pages (it goes in the main list) or is left as sites made it. */
+function changes(row: CoreFitRow): boolean {
+  return row.changesPages && rowValue(row).kind !== 'same';
 }
 
-function Readout({ row }: { row: FitRow }) {
-  const after = split(row.after);
-  const before = split(row.before);
-  // Words ("Paused", "Site colors") read as words; numbers get the Mono fit mark.
-  const words = !isNumeric(after.n) || (row.changed && !isNumeric(before.n));
-  if (!words) {
-    const sameUnit = !before.unit || before.unit === after.unit;
-    return (
-      <span className="tn-readout-lg">
-        <span aria-hidden="true">
-          <FitMark
-            size="readout"
-            className={cx('tn-fitmark', !row.changed && 'tn-fitmark--same')}
-            {...(row.changed ? { from: sameUnit ? before.n : row.before } : {})}
-            to={after.n}
-            {...(after.unit ? { unit: after.unit } : {})}
-          />
-        </span>
-        <span className="sr-only">{row.srText}</span>
-      </span>
-    );
-  }
-  if (!row.changed) {
-    return (
-      <span className="tn-readout-lg tn-readout-lg--same tn-readout-lg--words">
-        <span aria-hidden="true">{row.after}</span>
-        <span className="sr-only">{row.srText}</span>
-      </span>
-    );
-  }
-  return (
-    <span className="tn-readout-lg tn-readout-lg--words">
-      <span aria-hidden="true" className="tn-readout-lg__visual">
-        <span className="tn-readout-lg__from">{row.before}</span>
-        <FitArrow className="tn-readout-lg__arrow" />
-        <span className="tn-readout-lg__to">{row.after}</span>
-      </span>
-      <span className="sr-only">{row.srText}</span>
-    </span>
-  );
-}
-
-function AdjustControl({
-  spec,
-  onChange,
-}: {
-  spec: AdjustSpec;
-  onChange: (value: string | number) => void;
-}) {
-  if (spec.kind === 'note') return <p className="tn-meta">{spec.text}</p>;
-  if (spec.kind === 'choice') {
-    return (
-      <SegmentedControl
-        label={spec.label}
-        value={spec.current}
-        onValueChange={(v) => onChange(v)}
-        options={spec.options.map((o) => ({ value: o.value, label: o.label }))}
-      />
-    );
-  }
-  const i = spec.values.indexOf(spec.current);
-  const lower = i > 0 ? spec.values[i - 1] : undefined;
-  const higher =
-    i >= 0 && i < spec.values.length - 1 ? spec.values[i + 1] : undefined;
-  return (
-    <div className="tn-stepper" role="group" aria-label={spec.label}>
-      <Button
-        variant="secondary"
-        size="task"
-        iconStart="minus"
-        disabled={lower === undefined}
-        onClick={() => lower !== undefined && onChange(lower)}
-      >
-        Smaller
-      </Button>
-      <output className="tn-stepper__value" aria-live="polite">
-        {spec.current}
-        {' '}
-        {spec.unit}
-      </output>
-      <Button
-        variant="secondary"
-        size="task"
-        iconStart="plus"
-        disabled={higher === undefined}
-        onClick={() => higher !== undefined && onChange(higher)}
-      >
-        Larger
-      </Button>
-    </div>
-  );
-}
-
-function RowView({
-  row,
-  spec,
-  open,
-  onToggle,
-  onAdjust,
-  recalibrating,
-  keepOld,
-  onKeep,
-  sinceText,
-}: {
-  row: FitRow;
-  spec: AdjustSpec;
-  open: boolean;
-  onToggle: () => void;
-  onAdjust: (value: string | number) => void;
-  recalibrating: boolean;
-  keepOld: boolean;
-  onKeep: (old: boolean) => void;
-  sinceText: string | null;
-}) {
-  const panelId = useId();
-  const labelId = useId();
-  return (
-    <li className="tn-fit-row" data-open={open || undefined}>
-      <div className="tn-fit-row__text">
-        <h2 id={labelId} className="tn-fit-row__label">
-          {row.label}
-        </h2>
-        <p className="tn-fit-row__sentence">{row.sentence}</p>
-        <p className="tn-fit-row__source">
-          {row.source}
-          {recalibrating && row.changed && sinceText
-            ? ` · changed ${sinceText}`
-            : ''}
-        </p>
-      </div>
-      <div className="tn-fit-row__value">
-        <Readout row={row} />
-      </div>
-      <div className="tn-fit-row__actions">
-        <Button
-          variant="ghost"
-          size="md"
-          aria-expanded={open}
-          aria-controls={panelId}
-          iconStart="sliders-horizontal"
-          onClick={onToggle}
-        >
-          Adjust<span className="sr-only"> {row.label.toLowerCase()}</span>
-        </Button>
-      </div>
-      {recalibrating && row.changed ? (
-        <div className="tn-fit-row__keep">
-          <SegmentedControl<'new' | 'old'>
-            labelledBy={labelId}
-            value={keepOld ? 'old' : 'new'}
-            onValueChange={(v) => onKeep(v === 'old')}
-            options={[
-              { value: 'new', label: 'Keep new' },
-              { value: 'old', label: 'Keep old' },
-            ]}
-          />
-        </div>
-      ) : null}
-      <div id={panelId} className="tn-fit-row__panel" hidden={!open}>
-        {open ? <AdjustControl spec={spec} onChange={onAdjust} /> : null}
-      </div>
-    </li>
-  );
-}
+const SAME: (row: CoreFitRow) => FitValueShape = (row) => ({
+  kind: 'same',
+  srText: `${row.label}: as the site made it`,
+});
 
 /**
- * "Your fit" (design-final §9.4-9.5): what WebAble will change and why, one row
- * per setting with a real before and after, a source line, Adjust, and a live
- * preview on a sample page. Recalibration adds Keep new / Keep old per row.
+ * "Your fit" (design-final §9.4-9.5): what WebAble will change and why, one
+ * row per change with its real value and where it came from, a preview on a
+ * sample page, then the settings left as sites made them. Adjust opens the
+ * same editor as the app, live: the preview follows it. With a current fit,
+ * the rows show what changed since then, with Keep new / Keep old.
  */
 export function YourFit({
   profile,
@@ -251,110 +123,241 @@ export function YourFit({
   signedIn,
   save,
   onUse,
+  controlRef,
 }: YourFitProps) {
   const [adjusted, setAdjusted] = useState(profile);
   const [keepOld, setKeepOld] = useState<ReadonlySet<FitRowId>>(new Set());
-  const [open, setOpen] = useState<ReadonlySet<FitRowId>>(new Set());
-  const recalibrating = previous !== null;
+  const [open, setOpen] = useState<FitRowId | null>(null);
+  const [restOpen, setRestOpen] = useState(false);
+  /** The profile when the open editor was opened, for Esc. */
+  const openedWith = useRef<FitProfile | null>(null);
+  const rowEls = useRef(new Map<FitRowId, HTMLElement>());
+  const adjustEls = useRef(new Map<FitRowId, HTMLButtonElement>());
+  const comparing = previous !== null;
   const now = useMemo(() => new Date(), []);
+  const options = { browserDefaultPx: rootFontPx, now };
 
   const final = useMemo(
     () => (previous ? keepOldRows(adjusted, previous, keepOld) : adjusted),
     [adjusted, previous, keepOld],
   );
-  const markRows = fitRows(adjusted, previous ?? undefined, {
-    browserDefaultPx: rootFontPx,
-    now,
-  });
-  const finalRows = fitRows(final, previous ?? undefined, {
-    browserDefaultPx: rootFontPx,
-    now,
-  });
-  const previewRows = fitRows(final, undefined, {
-    browserDefaultPx: rootFontPx,
-    now,
-  });
-  const changedCount = previewRows.filter((r) => r.changesPages).length;
+  // Rows against the browser's defaults: what WebAble will change on pages.
+  const siteRows = fitRows(final, undefined, options);
+  // With a current fit, the diff shows the new value (before Keep old applies).
+  const diffRows = previous ? fitRows(adjusted, previous, options) : null;
   const sinceText = since(previousDate);
 
-  const toggle = (id: FitRowId) =>
-    setOpen((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  const mainRows = diffRows
+    ? diffRows.filter((row) => row.changed)
+    : siteRows.filter(changes);
+  const shownIds = new Set(mainRows.map((row) => row.id));
+  const otherRows = siteRows.filter((row) => !shownIds.has(row.id));
 
-  const adjustFirst = () => {
-    setOpen(new Set(markRows.map((r) => r.id)));
-    requestAnimationFrame(() => {
-      document
-        .querySelector<HTMLElement>(
-          '.tn-fit-row__panel:not([hidden]) button, .tn-fit-row__panel:not([hidden]) [role="radio"][tabindex="0"]',
-        )
-        ?.focus();
-    });
+  const openRow = (id: FitRowId) => {
+    openedWith.current = adjusted;
+    // A row in the closed "Left as sites made them" list opens it first.
+    if (!shownIds.has(id)) setRestOpen(true);
+    setOpen(id);
+    requestAnimationFrame(() => focusEditor(rowEls.current.get(id) ?? null));
+  };
+  const closeRow = (id: FitRowId, revert: boolean) => {
+    if (revert && openedWith.current) setAdjusted(openedWith.current);
+    openedWith.current = null;
+    setOpen(null);
+    requestAnimationFrame(() => adjustEls.current.get(id)?.focus());
+  };
+  const edit = (id: FitRowId, value: EditorValue) => {
+    setAdjusted((p) => applyEditorValue(p, value));
+    if (keepOld.has(id)) {
+      setKeepOld((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }
   };
 
-  const saving = save.kind === 'saving';
+  useImperativeHandle(
+    controlRef,
+    () => ({
+      use: () => onUse(final),
+      adjustFirst: () => {
+        const first = mainRows[0] ?? otherRows[0];
+        if (first) openRow(first.id);
+      },
+    }),
+    // openRow reads refs and state setters only.
+    [final, onUse, mainRows[0]?.id, otherRows[0]?.id, adjusted],
+  );
+
+  const adjustButton = (row: CoreFitRow) => {
+    const isOpen = open === row.id;
+    return (
+      <Button
+        ref={(el: HTMLButtonElement | null) => {
+          if (el) adjustEls.current.set(row.id, el);
+          else adjustEls.current.delete(row.id);
+        }}
+        variant="ghost"
+        size="md"
+        flush="end"
+        iconStart="sliders-horizontal"
+        aria-expanded={isOpen}
+        aria-controls={isOpen ? editorId(row.id) : undefined}
+        onClick={() => (isOpen ? closeRow(row.id, false) : openRow(row.id))}
+      >
+        {isOpen ? 'Done' : 'Adjust'}
+        <span className="sr-only"> {row.label.toLowerCase()}</span>
+      </Button>
+    );
+  };
+
+  const editorFor = (row: CoreFitRow) =>
+    open === row.id ? (
+      <RowEditor
+        id={editorId(row.id)}
+        labelledBy={labelIdOf(row.id)}
+        row={row}
+        value={currentValue(adjusted, row.id)}
+        mode="live"
+        systemReducedMotion={adjusted.attention.systemReducedMotion}
+        onDraft={(value: EditorValue) => edit(row.id, value)}
+        onCommit={(value: EditorValue) => {
+          edit(row.id, value);
+          closeRow(row.id, false);
+        }}
+        onCancel={() => closeRow(row.id, true)}
+      />
+    ) : null;
+
+  const rowRef = (id: FitRowId) => (el: HTMLElement | null) => {
+    if (el) rowEls.current.set(id, el);
+    else rowEls.current.delete(id);
+  };
 
   return (
     <div className="tn-fit">
       <TaskHeading>Your fit</TaskHeading>
       <p className="tn-deck">
-        {recalibrating
-          ? 'Here is what changed since your last fit. Keep the new value or the old one for each.'
+        {comparing
+          ? 'Here’s what changed since your last fit. Keep the new value or the old one.'
           : 'Here’s what WebAble will change, and why. You can adjust any of it.'}
       </p>
-      <p className="tn-meta tn-fit__summary">
-        {changedCount === 0
-          ? 'Most pages already fit you, so WebAble will change very little.'
-          : `WebAble will change ${changedCount} ${changedCount === 1 ? 'thing' : 'things'} on pages for you.`}
-      </p>
 
-      <ol className="tn-fit-rows">
-        {finalRows.map((row, i) => {
-          const mark = markRows[i] ?? row;
-          return (
-            <RowView
-              key={row.id}
-              row={{
-                ...row,
-                before: mark.before,
-                after: mark.after,
-                srText: mark.srText,
-                changed: mark.changed,
-              }}
-              spec={adjustSpec(adjusted, row.id, rootFontPx)}
-              open={open.has(row.id)}
-              onToggle={() => toggle(row.id)}
-              onAdjust={(value) => {
-                setAdjusted((p) => applyAdjustment(p, row.id, value));
-                if (keepOld.has(row.id)) {
-                  setKeepOld((prev) => {
-                    const next = new Set(prev);
-                    next.delete(row.id);
-                    return next;
-                  });
-                }
-              }}
-              recalibrating={recalibrating}
-              keepOld={keepOld.has(row.id)}
-              onKeep={(old) =>
-                setKeepOld((prev) => {
-                  const next = new Set(prev);
-                  if (old) next.add(row.id);
-                  else next.delete(row.id);
-                  return next;
-                })
-              }
-              sinceText={sinceText}
-            />
-          );
-        })}
-      </ol>
+      {mainRows.length > 0 ? (
+        <ol className="wa-fitrows tn-fit__rows">
+          {mainRows.map((row) => {
+            const labelId = labelIdOf(row.id);
+            const keepControl =
+              comparing && row.changed ? (
+                <div className="tn-fit__keep">
+                  <SegmentedControl<'new' | 'old'>
+                    labelledBy={labelId}
+                    value={keepOld.has(row.id) ? 'old' : 'new'}
+                    onValueChange={(v) =>
+                      setKeepOld((prev) => {
+                        const next = new Set(prev);
+                        if (v === 'old') next.add(row.id);
+                        else next.delete(row.id);
+                        return next;
+                      })
+                    }
+                    options={[
+                      { value: 'new', label: 'Keep new' },
+                      { value: 'old', label: 'Keep old' },
+                    ]}
+                  />
+                </div>
+              ) : null;
+            const editor = editorFor(row);
+            return (
+              <li
+                key={row.id}
+                ref={rowRef(row.id)}
+                className="tn-fit__item"
+                data-open={open === row.id || undefined}
+              >
+                <FitRow
+                  density="task"
+                  headingLevel={2}
+                  labelId={labelId}
+                  label={row.label}
+                  sentence={row.sentence}
+                  source={
+                    comparing && sinceText
+                      ? `${rowSource(row)} · changed ${sinceText}`
+                      : rowSource(row)
+                  }
+                  value={
+                    comparing ? rowValue(row, { diff: true }) : rowValue(row)
+                  }
+                  changed
+                  action={adjustButton(row)}
+                  editor={
+                    keepControl || editor ? (
+                      <>
+                        {keepControl}
+                        {editor}
+                      </>
+                    ) : undefined
+                  }
+                />
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="tn-meta">
+          {comparing
+            ? 'Nothing changed since your last fit.'
+            : 'Most pages already fit you, so WebAble will change very little.'}
+        </p>
+      )}
 
-      <FitPreview profile={final} rows={previewRows} rootFontPx={rootFontPx} />
+      <FitPreview profile={final} rows={siteRows} rootFontPx={rootFontPx} />
+
+      {otherRows.length > 0 ? (
+        <Disclosure
+          title={
+            comparing
+              ? `The rest of your fit (${otherRows.length})`
+              : `Left as sites made them (${otherRows.length})`
+          }
+          headingLevel={2}
+          className="tn-fit__rest"
+          open={restOpen}
+          onOpenChange={setRestOpen}
+        >
+          <ul className="wa-fitrows tn-fit__rows tn-fit__rows--compact">
+            {otherRows.map((row) => {
+              const editor = editorFor(row);
+              const value: FitValueShape =
+                comparing && changes(row) ? rowValue(row) : SAME(row);
+              return (
+                <li
+                  key={row.id}
+                  ref={rowRef(row.id)}
+                  className="tn-fit__item"
+                  data-open={open === row.id || undefined}
+                >
+                  <FitRow
+                    density="task"
+                    headingLevel={3}
+                    labelId={labelIdOf(row.id)}
+                    label={row.label}
+                    sentence={null}
+                    value={value}
+                    changed={false}
+                    size="inline"
+                    action={adjustButton(row)}
+                    editor={editor ?? undefined}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </Disclosure>
+      ) : null}
 
       {save.kind === 'error' ? (
         <ErrorPanel title="Your fit wasn’t saved" live as="h2">
@@ -362,26 +365,6 @@ export function YourFit({
         </ErrorPanel>
       ) : null}
 
-      <div className="tn-controls tn-fit__actions">
-        <Button
-          variant="primary"
-          size="task"
-          arrow="forward"
-          busy={saving}
-          busyLabel="Saving…"
-          onClick={() => onUse(final)}
-        >
-          {recalibrating ? 'Save my fit' : 'Use this fit'}
-        </Button>
-        <Button
-          variant="secondary"
-          size="task"
-          onClick={adjustFirst}
-          disabled={saving}
-        >
-          Adjust first
-        </Button>
-      </div>
       <p className="tn-meta">
         {signedIn
           ? 'WebAble saves your fit and a short summary of each part to your account. The answers you gave stay in this browser and are cleared when you leave.'

@@ -3,19 +3,39 @@ import { defineConfig } from 'wxt';
 /**
  * Public half of the development signing key. It pins the unpacked extension id
  * to bbnblnlbgcccbbbbihngngbecbobedie so the web app can reach it over
- * externally_connectable. The Chrome Web Store build omits it (the store assigns
- * the id); set WXT_OMIT_DEV_KEY=1 for store packaging.
+ * externally_connectable. Only development and e2e builds carry it; the
+ * production build omits it (the Chrome Web Store assigns the id).
  */
 const DEV_PUBLIC_KEY =
   'MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAumLEz+AH2IbHshjs8G9KKPLJhH1Dl/qjejGfCt1YQZXDKP9DW/imqzo3yHDTXCpTvyM/IpKnbc/PwUMygXYx4eGXbwp2+lwIPMMxmVs4xytvrUfZm2T7ftP2vkLZg1I0PuahGA5coIGarKz3exuDA2lMAWKjY3+DBz9dFdrH23dQN5BatDXthVxyZ3zomKBGnt2/VTgMUYr78EYHvK+9WYMpRQjBP6BHLjlizfrLENFGM/jQb2QNIqh75mqTm50y/lvGmxhsA4I8V5whcPWlWgAh36lCOOvj9N0Zqg1LKbPb3NSsUp9PoYx0OH05QlqcKN0qbwf697odlU9nVh6rxwIDAQAB';
 
-const webOrigins = (
-  process.env.WXT_WEB_ORIGINS ??
-  'http://localhost:3000/*,http://127.0.0.1:3000/*'
-)
-  .split(',')
-  .map((origin) => origin.trim())
-  .filter(Boolean);
+/** Development and e2e builds; every other mode is treated as production. */
+const isLocalMode = (mode: string): boolean =>
+  mode === 'development' || mode === 'e2e';
+
+const LOCAL_WEB_ORIGINS = 'http://localhost:3000/*,http://127.0.0.1:3000/*';
+
+/**
+ * externally_connectable patterns. Read when the manifest is built, after WXT
+ * has loaded .env.local. A production build must name its web origins: it never
+ * falls back to localhost, so a page on the person's own machine cannot reach it.
+ */
+function webOrigins(mode: string): string[] {
+  const raw =
+    process.env.WXT_WEB_ORIGINS ??
+    (isLocalMode(mode) ? LOCAL_WEB_ORIGINS : undefined);
+  const origins = (raw ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+  if (origins.length === 0) {
+    throw new Error(
+      `WXT_WEB_ORIGINS is required for a ${mode} build (comma-separated match patterns, e.g. https://webable.app/*). ` +
+        'Set it in the environment or apps/extension/.env.local, or build with --mode development.',
+    );
+  }
+  return origins;
+}
 
 export default defineConfig({
   modules: ['@wxt-dev/module-react'],
@@ -24,7 +44,7 @@ export default defineConfig({
     short_name: 'WebAble',
     description:
       'Adapts websites to how you read, point and focus. Every change is shown and can be undone.',
-    ...(process.env.WXT_OMIT_DEV_KEY ? {} : { key: DEV_PUBLIC_KEY }),
+    ...(isLocalMode(mode) ? { key: DEV_PUBLIC_KEY } : {}),
     minimum_chrome_version: '135',
     permissions: [
       'storage',
@@ -41,7 +61,7 @@ export default defineConfig({
       mode === 'e2e'
         ? ['http://127.0.0.1:4173/*', 'http://localhost:4173/*']
         : undefined,
-    externally_connectable: { matches: webOrigins },
+    externally_connectable: { matches: webOrigins(mode) },
     commands: {
       'focus-layer': {
         suggested_key: { default: 'Alt+Shift+W' },

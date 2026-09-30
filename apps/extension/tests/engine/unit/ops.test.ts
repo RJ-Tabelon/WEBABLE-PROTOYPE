@@ -15,8 +15,10 @@ import {
   calmMotionCss,
   focusOutlineCss,
   PREPAINT_FILES,
+  tok,
 } from '../../../lib/engine/ops/css';
 import {
+  MARK_ATTR,
   MarkBook,
   opsNear,
   setOffGate,
@@ -91,7 +93,27 @@ describe('marks', () => {
     book.unmarkOp('text_floor');
     expect(tokensOf(p)).toEqual(['ct0']);
     book.unmarkOp('contrast');
-    expect(p.hasAttribute('data-wa')).toBe(false);
+    expect(p.hasAttribute(MARK_ATTR)).toBe(false);
+  });
+
+  it('writes a random attribute and opaque tokens: no name or value reaches the page', () => {
+    document.body.innerHTML = '<p id="p">x</p>';
+    const p = document.getElementById('p') as Element;
+    const book = new MarkBook();
+    book.mark(p, 'tflh150');
+    book.mark(p, 'ct3');
+    book.mark(p, 'hx12');
+    expect(MARK_ATTR).toMatch(/^data-[a-z]{6}$/);
+    expect(MARK_ATTR.startsWith('data-wa')).toBe(false);
+    const raw = (p.getAttribute(MARK_ATTR) ?? '').split(' ');
+    expect(raw).toHaveLength(3);
+    for (const t of raw) expect(t).toMatch(/^[a-z]{5}$/);
+    expect(raw.join(' ')).not.toMatch(/tf|ct\d|hx|150|12/);
+    expect(tokensOf(p)).toEqual(['tflh150', 'ct3', 'hx12']);
+    expect(tok('ct3')).toContain(`[${MARK_ATTR}~="${raw[1]}"]`);
+    expect(tok('ct3')).not.toContain('ct3');
+    book.clear();
+    expect(p.hasAttribute(MARK_ATTR)).toBe(false);
   });
 
   it('keeps the pre-paint stand-down list on <html>', () => {

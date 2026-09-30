@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { OP_IDS } from '../ops/catalog';
+import { OP_IDS, type OpId } from '../ops/catalog';
 
 /**
  * Messages from the WebAble web app to the extension over
@@ -37,10 +37,24 @@ export const bridgeRequestSchema = z.discriminatedUnion('type', [
       z.object({ kind: z.literal('pause'), paused: z.boolean() }),
       z.object({ kind: z.literal('block'), op: opId, blocked: z.boolean() }),
       z.object({ kind: z.literal('forget') }),
+      /** Drop every rule for the site (pause, pins, blocks, levels). */
+      z.object({ kind: z.literal('reset') }),
+      /** Always apply (on) or stop always applying (off) an op on this site. */
+      z.object({ kind: z.literal('pin'), op: opId, on: z.boolean() }),
     ]),
   }),
   z.object({ type: z.literal('wa:receipts') }),
+  /**
+   * Wipe everything WebAble keeps in this browser: sites, events, receipts,
+   * learning, the fit profile (back to the basic fit), activity and pending
+   * learning deltas.
+   */
   z.object({ type: z.literal('wa:clear-local') }),
+  /** Focus the welcome page (or open it); `allow` focuses its Allow button. */
+  z.object({
+    type: z.literal('wa:open-welcome'),
+    focus: z.literal('allow').optional(),
+  }),
 ]);
 export type BridgeRequest = z.infer<typeof bridgeRequestSchema>;
 
@@ -58,6 +72,8 @@ export interface LocalSite {
   paused: boolean;
   blocked: string[];
   pinned: string[];
+  /** Ladder levels set for this site, by op (absent from older extension builds). */
+  levels?: Partial<Record<OpId, number>>;
   /** Changes currently in effect on the last visit. */
   lastChanges: number;
   lastVisit: number;
@@ -94,4 +110,5 @@ export interface BridgeResponses {
   'wa:site-update': LocalSite[];
   'wa:receipts': SentReceipt[];
   'wa:clear-local': BridgeStatus;
+  'wa:open-welcome': { ok: true };
 }

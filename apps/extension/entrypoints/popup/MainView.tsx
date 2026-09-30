@@ -1,12 +1,29 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import {
+  Fragment,
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import { browser } from 'wxt/browser';
-import { Button, OfferBlock, SwitchRow, useToast } from '@webable/ui';
+import {
+  Button,
+  Disclosure,
+  IconButton,
+  OfferBlock,
+  SwitchRow,
+  useToast,
+} from '@webable/ui';
 
 import { COPY } from '@/lib/popup/copy';
 import {
+  originOf,
   popupModel,
   type PopupModel,
   type PrimaryAction,
+  type QuickRow,
 } from '@/lib/popup/model';
 import type { TabDetail } from '@/lib/sw/ui';
 
@@ -22,7 +39,11 @@ export interface MainViewProps {
   onOpenSent: () => void;
 }
 
-/** Block order: domain, state line, sentence, state body, (offer), What changed, Adjust, notes. */
+/**
+ * Block order: domain, state line, sentence, state body, What changed,
+ * (offer), Adjust or the quick switches, the all-sites line, notes. What
+ * changed and Show on page stay in view whatever the offer does.
+ */
 export function MainView({ view, api, titleRef }: MainViewProps) {
   const model = popupModel(view);
   return (
@@ -54,7 +75,12 @@ export function MainView({ view, api, titleRef }: MainViewProps) {
           <Primary action={model.primary} view={view} api={api} />
         ) : null}
         {model.primary?.kind === 'allow' ? (
-          <p className="pp-note">{COPY.siteAccess}</p>
+          <>
+            <LinkButton standalone onClick={() => requestAllSites(api)}>
+              {COPY.orAllowAll}
+            </LinkButton>
+            <p className="pp-note">{COPY.siteAccess}</p>
+          </>
         ) : null}
 
         {model.siteSwitch ? (
@@ -70,29 +96,38 @@ export function MainView({ view, api, titleRef }: MainViewProps) {
         ) : null}
       </section>
 
-      {model.quick ? <QuickSection view={view} api={api} /> : null}
+      {model.changes.length > 0 ||
+      model.undone.length > 0 ||
+      view.undoneByYou.length > 0 ||
+      view.reasonOpen.length > 0 ? (
+        <ChangesSection model={model} view={view} api={api} />
+      ) : null}
 
       {model.offer ? <Offer model={model} api={api} /> : null}
 
-      {model.changes.length > 0 ||
-      model.undone.length > 0 ||
-      view.reasonOpen.length > 0 ? (
-        <ChangesSection model={model} view={view} api={api} />
+      {model.quick ? (
+        <QuickSection rows={model.quickRows} view={view} api={api} />
       ) : null}
 
       {model.showAdjust ? <AdjustPanel view={view} api={api} /> : null}
 
       {model.askAllSites ? (
-        <div className="pp-notes pp-access">
-          <p className="pp-note">{COPY.activeTabOnly}</p>
-          <Button
-            variant="secondary"
-            size="md"
-            className="pp-access__allow"
-            onClick={() => requestAllSites(api)}
-          >
-            {COPY.allowAll}
-          </Button>
+        <div className="pp-notes pp-access" style={ASK_ROW}>
+          <div>
+            <p className="pp-note">{COPY.activeTabOnly}</p>
+            {/* Its own line, so the action keeps a 44 px target. */}
+            <LinkButton standalone onClick={() => requestAllSites(api)}>
+              {COPY.allowAll}
+            </LinkButton>
+          </div>
+          <IconButton
+            icon="x"
+            label={COPY.hideAsk}
+            tooltipPlacement="top"
+            onClick={() =>
+              void api.call({ type: 'ui:set-prefs', hideAllSitesAsk: true })
+            }
+          />
         </div>
       ) : null}
 
@@ -106,6 +141,47 @@ export function MainView({ view, api, titleRef }: MainViewProps) {
         </div>
       ) : null}
     </>
+  );
+}
+
+/** Meta line beside its 44 px ✕ (popup.css has no rule for this row yet). */
+const ASK_ROW: CSSProperties = {
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
+  alignItems: 'start',
+  justifyItems: 'stretch',
+  marginInlineEnd: 'calc(-1 * var(--space-3))',
+};
+
+/** A button that reads as an ink, underlined link (an action, not a place). */
+const LINK_RESET: CSSProperties = {
+  margin: 0,
+  padding: 0,
+  border: 0,
+  background: 'none',
+  font: 'inherit',
+  letterSpacing: 'inherit',
+  textAlign: 'start',
+  cursor: 'pointer',
+};
+
+function LinkButton({
+  standalone = false,
+  onClick,
+  children,
+}: {
+  standalone?: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      className={standalone ? 'wa-link wa-link--standalone' : 'wa-link'}
+      style={standalone ? { ...LINK_RESET, justifySelf: 'start' } : LINK_RESET}
+      onClick={onClick}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -123,6 +199,36 @@ function requestAllSites(api: PopupApi): void {
     .catch(() => undefined);
 }
 
+/** This tab's http(s) origin, read ahead so the click can ask Chrome at once. */
+function useTabOrigin(tabId: number | null, wanted: boolean): string | null {
+  const [origin, setOrigin] = useState<string | null>(null);
+  useEffect(() => {
+    if (!wanted || tabId === null) return;
+    let live = true;
+    void browser.tabs
+      .get(tabId)
+      .then((tab) => {
+        if (live) setOrigin(originOf(tab.url));
+      })
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [tabId, wanted]);
+  return origin;
+}
+
+/** Ask Chrome for this one site (inside the click), then tell the worker. */
+function requestSite(api: PopupApi, origin: string | null): void {
+  if (!origin) return;
+  void browser.permissions
+    .request({ origins: [`${origin}/*`] })
+    .then((granted) =>
+      granted ? api.act({ type: 'ui:grant-site', origin }) : null,
+    )
+    .catch(() => undefined);
+}
+
 function Primary({
   action,
   view,
@@ -132,6 +238,7 @@ function Primary({
   view: TabDetail;
   api: PopupApi;
 }) {
+  const origin = useTabOrigin(api.tabId, action.kind === 'allow');
   switch (action.kind) {
     case 'resume':
       return (
@@ -179,17 +286,25 @@ function Primary({
           variant="primary"
           size="lg"
           block
-          onClick={() => requestAllSites(api)}
+          onClick={() => requestSite(api, origin)}
         >
           {action.label}
         </Button>
       );
+    case 'tune':
+    case 'sign_in':
     case 'fit':
       return (
         <Button
           variant="ghost"
           size="md"
-          href={view.links.fit}
+          href={
+            action.kind === 'tune'
+              ? view.links.tune
+              : action.kind === 'sign_in'
+                ? view.links.connect
+                : view.links.fit
+          }
           arrow="external"
           className="pp-inline-action"
         >
@@ -199,52 +314,59 @@ function Primary({
   }
 }
 
-const QUICK_OP = {
-  text: 'text_floor',
-  targets: 'target_size',
-  calm: 'calm_motion',
-} as const;
-
-/** First run: three switches that change this site at once, then the call to Tune. */
-function QuickSection({ view, api }: { view: TabDetail; api: PopupApi }) {
+/**
+ * First run: three switches that change this site at once, then the call to
+ * Tune. A switch the checks undid here reads Off, says why, and keeps its pin.
+ */
+function QuickSection({
+  rows,
+  view,
+  api,
+}: {
+  rows: QuickRow[];
+  view: TabDetail;
+  api: PopupApi;
+}) {
   const toast = useToast();
-  const toggle =
-    (key: 'text' | 'targets' | 'calm', label: string) => (on: boolean) => {
-      void api.act({ type: 'ui:quick', key, on }).then((next) => {
-        // Confirm only a change that is on the page now; one the checks put back has its own row.
-        const stayed = next?.changes.some(
-          (c) => c.op === QUICK_OP[key] && c.status === 'applied',
-        );
-        if (on && stayed)
-          toast.show({
-            message: `${label} is on for this site.`,
-            applied: true,
-          });
-      });
-    };
+  const toggle = (row: QuickRow) => (on: boolean) => {
+    void api.act({ type: 'ui:quick', key: row.key, on }).then((next) => {
+      // Confirm only a change that is on the page now; one the checks put back says so on its row.
+      const stayed = next?.changes.some(
+        (c) => c.op === row.op && c.status === 'applied',
+      );
+      if (on && stayed)
+        toast.show({
+          message: `${row.label} is on for this site.`,
+          applied: true,
+        });
+    });
+  };
   return (
     <section className="pp-section pp-quick" aria-labelledby="pp-quick-title">
       <h2 id="pp-quick-title" className="pp-eyebrow">
         {COPY.quickTitle}
       </h2>
-      <SwitchRow
-        label={COPY.quickText}
-        changesPage
-        checked={view.quick.text}
-        onCheckedChange={toggle('text', COPY.quickText)}
-      />
-      <SwitchRow
-        label={COPY.quickTargets}
-        changesPage
-        checked={view.quick.targets}
-        onCheckedChange={toggle('targets', COPY.quickTargets)}
-      />
-      <SwitchRow
-        label={COPY.quickCalm}
-        changesPage
-        checked={view.quick.calm}
-        onCheckedChange={toggle('calm', COPY.quickCalm)}
-      />
+      {rows.map((row) => (
+        <Fragment key={row.key}>
+          <SwitchRow
+            label={row.label}
+            description={row.undone ?? undefined}
+            changesPage={row.undone === null}
+            checked={row.on}
+            onCheckedChange={toggle(row)}
+          />
+          {row.undone !== null ? (
+            <Disclosure
+              title={COPY.why}
+              density="compact"
+              headingLevel={null}
+              className="pp-why"
+            >
+              <p>{COPY.whyUndone}</p>
+            </Disclosure>
+          ) : null}
+        </Fragment>
+      ))}
       <div className="pp-tune">
         <Button
           variant="primary"

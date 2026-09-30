@@ -14,12 +14,23 @@ test.describe('sign in', () => {
   test('is a calm, accessible form', async ({ page }) => {
     await page.goto('/sign-in');
     await expectPageBasics(page, { h1: 'Sign in', app: false });
-    await expect(
-      page.getByRole('button', { name: 'Email me a sign-in link' }),
-    ).toBeVisible();
+    // One row of actions under the fields; the link-by-email explains itself.
+    const link = page.getByRole('button', { name: 'Email me a link' });
+    await expect(link).toBeVisible();
+    await expect(link).toHaveAccessibleDescription(
+      'A link signs you in without a password.',
+    );
     await expect(
       page.getByRole('link', { name: 'Forgot your password?' }),
     ).toBeVisible();
+    // Reading order follows the label row: label, then the link, then the field.
+    const forgot = await page
+      .getByRole('link', { name: 'Forgot your password?' })
+      .boundingBox();
+    const label = await page
+      .getByText('Password', { exact: true })
+      .boundingBox();
+    expect(Math.abs((forgot?.y ?? 0) - (label?.y ?? 0))).toBeLessThan(12);
     await expect(page.getByLabel('Email')).toHaveAttribute(
       'autocomplete',
       'email',
@@ -116,7 +127,7 @@ test.describe('other account pages', () => {
     await page.getByLabel('Email').fill('someone@example.com');
     await page.getByRole('button', { name: 'Create account' }).click();
     await expect(
-      page.getByText('Use a password with at least 8 characters.'),
+      page.getByText(/Use a password with at least \d+ characters\./),
     ).toBeVisible();
   });
 
@@ -145,5 +156,15 @@ test.describe('other account pages', () => {
     await page.goto('/check-email?kind=reset');
     await expectPageBasics(page, { h1: 'Check your email', app: false });
     await expect(page.getByText(/your email address/)).toBeVisible();
+  });
+
+  test('check your email keeps where you were going', async ({ page }) => {
+    await page.goto('/check-email?kind=sign-up&next=%2Fconnect');
+    await expect(
+      page.getByText(/Open it on this computer so your fit can be saved\./),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'Use a different email' }),
+    ).toHaveAttribute('href', '/sign-up?next=%2Fconnect');
   });
 });

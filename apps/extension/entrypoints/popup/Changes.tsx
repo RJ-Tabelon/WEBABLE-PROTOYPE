@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Button, Disclosure, FitMark, Icon, IndexRule } from '@webable/ui';
 import { OP_CATALOG, type OpId } from '@webable/core/ops/catalog';
 
 import { COPY } from '@/lib/popup/copy';
-import { fitValue } from '@/lib/popup/format';
+import { fitValue, redoableOps, targetLimited } from '@/lib/popup/format';
 import {
   reasonChips,
   type ChangeRow,
@@ -20,54 +20,56 @@ export interface ChangesSectionProps {
   api: PopupApi;
 }
 
+const HIDE_ON_PAGE = 'Hide on page';
+const TARGET_LIMITED = 'Limited by nearby buttons';
+
 /**
  * "What changed" (design-final 10.1-10.2): one row per change with its fit
  * mark and an Undo right beside it. Changes WebAble's checks put back sit at
- * the top as neutral rows; they are not errors. Undoing a row offers an
- * optional reason for 8 s.
+ * the top as neutral rows; they are not errors. A change the person undid
+ * stays as a "{label} was undone" row with Redo until the popup closes; one
+ * undone here also offers an optional reason.
  */
 export function ChangesSection({ model, view, api }: ChangesSectionProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const [showing, setShowing] = useState(false);
   const [undoneHere, setUndoneHere] = useState<OpId[]>([]);
   const count = model.changes.length;
 
+  /** Keep keyboard focus in the list when the focused row goes away. */
+  const focusSoon = (id: string) =>
+    requestAnimationFrame(() => {
+      (document.getElementById(id) ?? headingRef.current)?.focus();
+    });
+
   const undo = (op: OpId) => {
     setUndoneHere((list) => (list.includes(op) ? list : [...list, op]));
-    void api.act({ type: 'ui:undo', op }).then(() => {
-      // The row is gone: keep keyboard focus in the list.
-      requestAnimationFrame(() => {
-        const reasonRow = document.getElementById(`pp-reason-${op}`);
-        (reasonRow ?? headingRef.current)?.focus();
-      });
-    });
+    void api
+      .act({ type: 'ui:undo', op })
+      .then(() => focusSoon(`pp-reason-${op}`));
+  };
+
+  const redo = (op: OpId) => {
+    setUndoneHere((list) => list.filter((o) => o !== op));
+    void api.act({ type: 'ui:redo', op }).then(() => focusSoon(`pp-row-${op}`));
   };
 
   const showOnPage = (op: OpId | null, on: boolean) =>
-    void api.client.send({
-      type: 'ui:show-on-page',
-      tabId: view.tabId,
-      op,
-      on,
-    });
+    void api.act({ type: 'ui:show-on-page', op, on });
 
-  const reasons = view.reasonOpen.filter((r) => undoneHere.includes(r.op));
+  const redoable = redoableOps(view.undoneByYou, view.changes);
 
   const rows = (
     <>
       {model.undone.map((row) => (
         <UndoneByChecks key={`undone-${row.op}`} row={row} />
       ))}
-      {reasons.map((r) => (
+      {redoable.map((op) => (
         <ReasonRow
-          key={`reason-${r.op}`}
-          op={r.op}
-          until={r.until}
+          key={`reason-${op}`}
+          op={op}
+          ask={undoneHere.includes(op)}
           api={api}
-          onDone={() => {
-            if (document.activeElement?.closest(`#pp-reason-${r.op}`))
-              headingRef.current?.focus();
-          }}
+          onRedo={redo}
         />
       ))}
       {model.changes.length > 0 ? (
@@ -120,14 +122,10 @@ export function ChangesSection({ model, view, api }: ChangesSectionProps) {
             variant="ghost"
             size="md"
             iconStart="square-dashed"
-            aria-pressed={showing}
-            onClick={() => {
-              const next = !showing;
-              setShowing(next);
-              showOnPage(null, next);
-            }}
+            aria-pressed={view.showing}
+            onClick={() => showOnPage(null, !view.showing)}
           >
-            {COPY.showOnPage}
+            {view.showing ? HIDE_ON_PAGE : COPY.showOnPage}
           </Button>
         ) : null}
       </div>
@@ -151,6 +149,7 @@ function Row({
     <li className="pp-row">
       <button
         type="button"
+        id={`pp-row-${row.op}`}
         className="pp-row__label"
         onClick={() => onShow(row.op)}
         aria-label={`${row.label}: show on page`}
@@ -161,6 +160,9 @@ function Row({
         <FitMark {...value} />
         {system ? (
           <span className="pp-row__source">from your system setting</span>
+        ) : null}
+        {targetLimited(row.change) ? (
+          <span className="pp-row__source">{TARGET_LIMITED}</span>
         ) : null}
       </span>
       <Button
@@ -199,55 +201,49 @@ function UndoneByChecks({ row }: { row: UndoneRow }) {
   );
 }
 
-/** Optional: why the person undid a change. Hides after the 8 s window. */
+/**
+ * A change the person undid: "{label} was undone" with Redo. It stays until
+ * the popup closes; `ask` adds the optional "What was wrong?" chips.
+ */
 function ReasonRow({
   op,
-  until,
+  ask,
   api,
-  onDone,
+  onRedo,
 }: {
   op: OpId;
-  until: number;
+  ask: boolean;
   api: PopupApi;
-  onDone: () => void;
+  onRedo: (op: OpId) => void;
 }) {
   const [answered, setAnswered] = useState(false);
-  const [open, setOpen] = useState(() => until > Date.now());
   const label = OP_CATALOG[op].label;
-  const onDoneRef = useRef(onDone);
-  onDoneRef.current = onDone;
-
-  useEffect(() => {
-    const ms = until - Date.now();
-    if (ms <= 0) {
-      setOpen(false);
-      return;
-    }
-    const timer = setTimeout(
-      () => setOpen(false),
-      answered ? Math.min(ms, 2_500) : ms,
-    );
-    return () => clearTimeout(timer);
-  }, [until, answered]);
-
-  useEffect(() => {
-    if (!open) onDoneRef.current();
-  }, [open]);
-
-  if (!open) return null;
+  const title = `${label} was undone`;
   return (
     <div
       id={`pp-reason-${op}`}
       className="pp-reason"
       role="group"
-      aria-label={`${label} undone`}
+      aria-label={title}
       tabIndex={-1}
     >
-      <p className="pp-reason__title">
-        <Icon name="rotate-ccw" size={16} />
-        <span>{`${label} undone`}</span>
-      </p>
-      {answered ? (
+      <div className="pp-reason__head">
+        <p className="pp-reason__title">
+          <Icon name="rotate-ccw" size={16} />
+          <span>{title}</span>
+        </p>
+        <Button
+          variant="ghost"
+          size="md"
+          iconStart={<Icon name="rotate-cw" size={16} />}
+          className="pp-reason__redo"
+          aria-label={`Redo ${label.toLowerCase()}`}
+          onClick={() => onRedo(op)}
+        >
+          Redo
+        </Button>
+      </div>
+      {!ask ? null : answered ? (
         <p className="pp-reason__meta" role="status">
           Noted. WebAble will use this next time.
         </p>

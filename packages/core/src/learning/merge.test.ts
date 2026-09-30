@@ -13,7 +13,12 @@ import {
   initialLearningState,
   mergeDeltas,
 } from './learners';
-import type { AdaptEvent, LearnDelta, UserLearningState } from './types';
+import {
+  RECENT_DELTA_IDS_MAX,
+  type AdaptEvent,
+  type LearnDelta,
+  type UserLearningState,
+} from './types';
 
 const DAY_MS = 86_400_000;
 
@@ -106,6 +111,34 @@ describe('mergeDeltas', () => {
     expect(twice).toEqual(once);
     const doubled = mergeDeltas(base(), [...deltas, ...deltas], new Set());
     expect(doubled).toEqual(once);
+  });
+
+  it('remembers recent delta ids, so a delta pushed twice counts once', () => {
+    const deltas = sampleDeltas();
+    const once = mergeDeltas(base(), deltas, new Set());
+    expect(once.recentDeltaIds).toHaveLength(
+      new Set(deltas.map((d) => d.deltaId)).size,
+    );
+    // The reply to the first push was lost: the same deltas arrive again.
+    expect(mergeDeltas(once, deltas, new Set())).toEqual(once);
+    // A state written before the field existed still merges.
+    const legacy = base();
+    delete legacy.recentDeltaIds;
+    expect(mergeDeltas(legacy, deltas, new Set())).toEqual(once);
+  });
+
+  it('keeps only the newest recent delta ids', () => {
+    const many: LearnDelta[] = Array.from({ length: 300 }, (_, i) => ({
+      v: 1,
+      deltaId: `bulk-${String(i).padStart(4, '0')}`,
+      day: FIXTURE_DAY,
+      op: 'text_floor',
+      ds: 1,
+    }));
+    const merged = mergeDeltas(base(), many, new Set());
+    expect(merged.recentDeltaIds).toHaveLength(RECENT_DELTA_IDS_MAX);
+    expect(merged.recentDeltaIds?.at(-1)).toBe('bulk-0299');
+    expect(merged.recentDeltaIds?.[0]).toBe('bulk-0044');
   });
 
   it('adds counts commutatively (G-counter): order and batching do not matter', () => {
@@ -214,7 +247,11 @@ describe('mergeDeltas', () => {
       ] as LearnDelta[],
       new Set(),
     );
-    expect(merged).toEqual(b);
+    // Schema-valid ids are remembered even when they change nothing.
+    expect(merged).toEqual({
+      ...b,
+      recentDeltaIds: ['delta-unknown-dim', 'delta-unknown-op'],
+    });
   });
 
   it('applies flags last-writer-wins and carries local cooldowns with max semantics', () => {

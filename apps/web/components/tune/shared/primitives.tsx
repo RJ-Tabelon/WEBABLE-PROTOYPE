@@ -1,11 +1,16 @@
 'use client';
 
+// Reading stimuli are set in bundled Noto Sans 400 (design-final §9.2). Only the
+// stage module brings the face, so no other page downloads it.
+import '@fontsource/noto-sans/latin-400.css';
+
 import { Button, CheckGlyph, cx, Kbd } from '@webable/ui';
 import {
   forwardRef,
   useEffect,
   useId,
   useRef,
+  useState,
   type CSSProperties,
   type ReactNode,
 } from 'react';
@@ -15,6 +20,57 @@ import {
  * focus when a screen opens, the fixed white stage, 64 px response buttons with
  * key hints, option chips, and the calm rest screen between parts.
  */
+
+/* ---------- The stimulus face ---------- */
+
+/** What the stimulus face is asked for; `document.fonts` loads it on demand. */
+const STIMULUS_FACE = "400 16px 'Noto Sans'";
+/** After this, stimuli show in the fallback face rather than wait for ever. */
+const FONT_WAIT_MS = 3000;
+
+let fontPromise: Promise<boolean> | null = null;
+let fontSettled = false;
+
+/**
+ * Load the stimulus face once. The fontsource file declares `swap`; Tune gets
+ * `block` behaviour by showing no stimulus until this settles, so a face never
+ * swaps in the middle of a timed trial. Resolves true when Noto Sans is in use.
+ */
+export function loadStimulusFont(): Promise<boolean> {
+  if (typeof document === 'undefined' || !document.fonts?.load) {
+    fontSettled = true;
+    return Promise.resolve(false);
+  }
+  fontPromise ??= Promise.race([
+    document.fonts
+      .load(STIMULUS_FACE, 'Aa')
+      .then((faces) => faces.length > 0)
+      .catch(() => false),
+    new Promise<boolean>((resolve) =>
+      setTimeout(() => resolve(false), FONT_WAIT_MS),
+    ),
+  ]).then((loaded) => {
+    fontSettled = true;
+    return loaded;
+  });
+  return fontPromise;
+}
+
+/** Whether stimuli may be drawn: the stimulus face has loaded, or given up. */
+export function useStimulusFontReady(): boolean {
+  const [ready, setReady] = useState(() => fontSettled);
+  useEffect(() => {
+    if (ready) return;
+    let live = true;
+    void loadStimulusFont().then(() => {
+      if (live) setReady(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready]);
+  return ready;
+}
 
 export interface TaskHeadingProps {
   children: ReactNode;
@@ -235,7 +291,7 @@ export function OptionGroup<T extends string>(props: OptionGroupProps<T>) {
                 onChange={() => toggle(option.value)}
               />
               <span className="tn-option__mark" aria-hidden="true">
-                {on ? <CheckGlyph size={16} /> : null}
+                {on && props.multiple ? <CheckGlyph size={16} /> : null}
               </span>
               <span className="tn-option__text">
                 <span className="tn-option__label">{option.label}</span>
@@ -287,23 +343,102 @@ export function CheckChip({
   );
 }
 
+export interface ScaleOption<T extends string> {
+  value: T;
+  /** The full accessible name ("Version 1, clearly"). */
+  name: string;
+}
+
+export interface ScaleProps<T extends string> {
+  legend: ReactNode;
+  /** Five steps, from one end to the other. */
+  options: readonly [
+    ScaleOption<T>,
+    ScaleOption<T>,
+    ScaleOption<T>,
+    ScaleOption<T>,
+    ScaleOption<T>,
+  ];
+  /** Visible words under the first, middle and last steps. */
+  ends: { start: string; middle: string; end: string };
+  value: T | null;
+  onChange: (value: T) => void;
+}
+
+/**
+ * A five-step scale: 64 px circular radios on a hairline, 16 px apart, with
+ * words only at the ends and the centre. Each radio carries its full name, so
+ * the words on screen are never the only label. Native radios keep the
+ * semantics: one Tab stop, arrows move the choice.
+ */
+export function Scale<T extends string>({
+  legend,
+  options,
+  ends,
+  value,
+  onChange,
+}: ScaleProps<T>) {
+  const name = useId();
+  return (
+    <fieldset className="tn-scale">
+      <legend className="sr-only">{legend}</legend>
+      <div className="tn-scale__steps">
+        {options.map((option) => {
+          const on = value === option.value;
+          return (
+            <label
+              key={option.value}
+              className="tn-scale__step"
+              data-selected={on || undefined}
+            >
+              <input
+                className="tn-scale__input"
+                type="radio"
+                name={name}
+                value={option.value}
+                checked={on}
+                onChange={() => onChange(option.value)}
+              />
+              <span className="sr-only">{option.name}</span>
+            </label>
+          );
+        })}
+      </div>
+      <div className="tn-scale__words" aria-hidden="true">
+        <span className="tn-scale__word tn-scale__word--start">
+          {ends.start}
+        </span>
+        <span className="tn-scale__word tn-scale__word--middle">
+          {ends.middle}
+        </span>
+        <span className="tn-scale__word tn-scale__word--end">{ends.end}</span>
+      </div>
+    </fieldset>
+  );
+}
+
 export interface RestProps {
   /** A calm line about what just finished ("Reading is done."), with a check. */
   done?: string | null;
+  /** One real value from the part that finished, when it changed (a fit mark). */
+  fit?: ReactNode;
   title: ReactNode;
   children?: ReactNode;
   action: ReactNode;
 }
 
 /** A moment of rest between parts: one calm line and a Continue button. */
-export function Rest({ done, title, children, action }: RestProps) {
+export function Rest({ done, fit, title, children, action }: RestProps) {
   return (
     <div className="tn-rest">
       {done ? (
-        <p className="tn-rest__done">
-          <CheckGlyph size={20} className="tn-rest__check" />
-          <span>{done}</span>
-        </p>
+        <div className="tn-rest__done">
+          <p className="tn-rest__line">
+            <CheckGlyph size={20} className="tn-rest__check" />
+            <span>{done}</span>
+          </p>
+          {fit ? <p className="tn-rest__fit">{fit}</p> : null}
+        </div>
       ) : null}
       <TaskHeading>{title}</TaskHeading>
       {children}

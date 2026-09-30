@@ -3,10 +3,10 @@
 import {
   Actions,
   Button,
-  CheckGlyph,
   ErrorPanel,
-  Icon,
   StatusLine,
+  StatusPill,
+  TextLink,
 } from '@webable/ui';
 import { useEffect, useId, useRef, useState } from 'react';
 
@@ -24,6 +24,7 @@ import {
   currentBrowser,
 } from '../../../lib/extension/state';
 import { useExtension } from '../../../lib/extension/useExtension';
+import { useOpenWelcome } from '../../../lib/extension/welcome';
 import { type ConnectFailure, linkFailure } from './failures';
 
 export interface ConnectFlowProps {
@@ -41,8 +42,10 @@ export interface ConnectFlowProps {
  * The extension handoff (platform.md 3.3, docs/08 §8). Not installed: add it.
  * Installed: [Connect this browser] asks the server for a single-use sign-in
  * token and hands it to the extension, which signs itself in with its own
- * session (this page's session is never shared). Connected: say so, and say
- * whether it may change every site yet. Marks onboarding "connected".
+ * session (this page's session is never shared). Connected but not yet
+ * allowed on every site: [Allow on all sites] asks the extension to show its
+ * welcome page at that step (only the extension's page can ask Chrome).
+ * Marks onboarding "connected".
  */
 export function ConnectFlow({
   email,
@@ -51,6 +54,7 @@ export function ConnectFlow({
   showDevSteps,
 }: ConnectFlowProps) {
   const { state, recheck, setStatus } = useExtension();
+  const welcome = useOpenWelcome();
   const [connecting, setConnecting] = useState(false);
   const [failure, setFailure] = useState<ConnectFailure | null>(null);
   const [checkingAgain, setCheckingAgain] = useState(false);
@@ -145,7 +149,7 @@ export function ConnectFlow({
     return (
       <div className="wa-connect">
         <header className="wa-auth-head">
-          <p className="wa-auth-head__eyebrow">Connect WebAble</p>
+          <p className="wa-auth-head__eyebrow">Connect this browser</p>
           {heading('Checking this browser')}
           <p className="wa-auth-deck">Looking for WebAble in this browser.</p>
         </header>
@@ -163,9 +167,7 @@ export function ConnectFlow({
     return (
       <div className="wa-connect">
         <header className="wa-auth-head">
-          <p className="wa-auth-head__eyebrow">
-            Step 1 of 2 · add the extension
-          </p>
+          <p className="wa-auth-head__eyebrow">Add WebAble</p>
           {heading(
             unsupported
               ? 'WebAble works in Chrome on a computer'
@@ -180,23 +182,12 @@ export function ConnectFlow({
 
         {unsupported ? null : (
           <>
-            <ul role="list" className="wa-connect__facts">
+            <ul role="list" className="wa-facts-list">
               <li>
-                <CheckGlyph size={16} />
-                <span>
-                  It adjusts pages with your fit. You can undo every change.
-                </span>
+                It adjusts pages with your fit. You can undo every change.
               </li>
-              <li>
-                <CheckGlyph size={16} />
-                <span>
-                  Its welcome page asks to work on all sites. You choose.
-                </span>
-              </li>
-              <li>
-                <CheckGlyph size={16} />
-                <span>The sites you visit stay in this browser.</span>
-              </li>
+              <li>Its welcome page asks to work on all sites. You choose.</li>
+              <li>The sites you visit stay in this browser.</li>
             </ul>
             <Actions>
               {storeUrl ? (
@@ -267,7 +258,7 @@ export function ConnectFlow({
     return (
       <div className="wa-connect">
         <header className="wa-auth-head">
-          <p className="wa-auth-head__eyebrow">Connect WebAble</p>
+          <p className="wa-auth-head__eyebrow">Connect this browser</p>
           {heading('WebAble didn’t answer')}
           <p className="wa-auth-deck">
             It’s installed, but this page couldn’t reach it. Nothing changed.
@@ -292,30 +283,25 @@ export function ConnectFlow({
   }
 
   if (view.view === 'connect') {
+    const account = email ?? 'your account';
     return (
       <div className="wa-connect">
         <header className="wa-auth-head">
-          <p className="wa-auth-head__eyebrow">Step 2 of 2 · connect</p>
-          {heading('Connect this browser')}
+          <p className="wa-auth-head__eyebrow">Connect this browser</p>
+          {heading('Use your fit in this browser')}
           <p className="wa-auth-deck">
             {view.otherEmail
-              ? `WebAble here is signed in as ${view.otherEmail}. Connect it to ${email ?? 'your account'} instead?`
-              : `WebAble signs in to ${email ?? 'your account'} here, so your fit applies on every site you open.`}
+              ? `WebAble in this browser is signed in as ${view.otherEmail}. Switching signs them out here.`
+              : `WebAble signs in to ${account} here, so your fit applies on every site you open.`}
           </p>
         </header>
 
-        <ul role="list" className="wa-connect__facts">
+        <ul role="list" className="wa-facts-list">
           <li>
-            <Icon name="lock" size={16} />
-            <span>
-              The extension gets its own sign-in, for this browser only. Your
-              password is never shared with it.
-            </span>
+            The extension gets its own sign-in, for this browser only. Your
+            password is never shared with it.
           </li>
-          <li>
-            <CheckGlyph size={16} />
-            <span>You can disconnect it any time from Settings.</span>
-          </li>
+          <li>You can disconnect it any time from Settings.</li>
         </ul>
 
         {failure ? (
@@ -351,7 +337,11 @@ export function ConnectFlow({
               disabled={!email}
               aria-describedby={email ? undefined : noEmailId}
             >
-              {failure ? 'Try again' : 'Connect this browser'}
+              {failure
+                ? 'Try again'
+                : view.otherEmail && email
+                  ? `Switch to ${email}`
+                  : 'Connect this browser'}
             </Button>
           )}
         </Actions>
@@ -375,7 +365,10 @@ export function ConnectFlow({
     ? 'Turn it on from WebAble in the toolbar, and your fit applies to the sites you open.'
     : view.allSites
       ? 'Your fit now applies to the sites you open in this browser. Every change shows, and you can undo it.'
-      : 'WebAble needs your permission to change the sites you open.';
+      : 'Chrome asks before WebAble can change sites. You allow it once, on WebAble’s welcome page.';
+  const fitLink = hasFit
+    ? { href: '/app', label: 'See your fit' }
+    : { href: '/tune', label: 'Tune WebAble' };
   return (
     <div className="wa-connect">
       <header className="wa-auth-head">
@@ -384,52 +377,57 @@ export function ConnectFlow({
         </p>
         {heading(title)}
         <p className="wa-auth-deck">{deck}</p>
+        {view.enabled && view.allSites ? (
+          <StatusPill
+            state="on"
+            label="On · all sites"
+            className="wa-connect__pill"
+          />
+        ) : !view.enabled ? (
+          <StatusPill
+            state="paused"
+            label="Turned off here"
+            className="wa-connect__pill"
+          />
+        ) : null}
       </header>
 
-      {!view.enabled ? (
-        <StatusLine
-          state="paused"
-          title="WebAble is turned off in this browser"
-          as="h2"
-          className="wa-connect__status"
-        />
-      ) : view.allSites ? (
-        <StatusLine
-          state="on"
-          title="Allowed on all sites"
-          as="h2"
-          className="wa-connect__status"
-        />
+      {!view.enabled || view.allSites ? (
+        <Actions>{nextStep}</Actions>
       ) : (
-        <div className="wa-auth-notice">
-          <Icon name="info" size={20} />
-          <div>
-            <h2 className="wa-connect__dev-title">
-              WebAble can’t change sites yet
-            </h2>
-            <p>
-              Chrome asks you first. WebAble’s welcome page has the button:
-              choose to allow it on all sites. You can also allow it from
-              WebAble in the toolbar.
+        <div className="wa-connect__step">
+          <Actions>
+            <Button
+              variant="primary"
+              arrow="external"
+              onClick={() => void welcome.open()}
+              busy={welcome.pending}
+              busyLabel="Opening…"
+            >
+              Allow on all sites
+            </Button>
+            <Button
+              variant="secondary"
+              iconStart="refresh-cw"
+              onClick={() => void checkAgain()}
+              busy={checkingAgain}
+              busyLabel="Checking…"
+            >
+              Check again
+            </Button>
+          </Actions>
+          {welcome.error ? (
+            <p className="wa-reason" role="alert">
+              {welcome.error}
             </p>
-          </div>
+          ) : null}
+          <p className="wa-connect__next">
+            <TextLink href={fitLink.href} kind="standalone">
+              {fitLink.label}
+            </TextLink>
+          </p>
         </div>
       )}
-
-      <Actions>
-        {nextStep}
-        {view.allSites ? null : (
-          <Button
-            variant="secondary"
-            iconStart="refresh-cw"
-            onClick={() => void checkAgain()}
-            busy={checkingAgain}
-            busyLabel="Checking…"
-          >
-            Check again
-          </Button>
-        )}
-      </Actions>
     </div>
   );
 }

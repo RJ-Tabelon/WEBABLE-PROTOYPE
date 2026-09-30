@@ -1,6 +1,12 @@
 // @vitest-environment node
-import { initialLearningState } from '@webable/core/learning/learners';
-import type { LearnDelta } from '@webable/core/learning/types';
+import {
+  initialLearningState,
+  mergeDeltas,
+} from '@webable/core/learning/learners';
+import type {
+  LearnDelta,
+  UserLearningState,
+} from '@webable/core/learning/types';
 import {
   FIXTURE_DAY,
   FIXTURE_NOW,
@@ -13,7 +19,7 @@ import { memoryArea } from '../storage/area';
 import { createStores } from '../storage';
 import { addActivity } from '../storage/activity';
 import type { AuthService } from './auth';
-import { AccountSync, platformBucket } from './sync';
+import { AccountSync, lastSuccessfulSync, platformBucket } from './sync';
 
 /**
  * AccountSync against a fake Supabase client that records every call and
@@ -28,6 +34,8 @@ interface Script {
   learning?: Row;
   /** Replies of put_learning_state, in order. */
   puts?: Array<{ ok: boolean; rev: number }>;
+  /** False once this install's row was removed on the web. */
+  installRow?: boolean;
 }
 
 function fakeDb(script: Script) {
@@ -58,6 +66,17 @@ function fakeDb(script: Script) {
         calls.push({ kind: 'upsert', table, args: row });
         return { error: null };
       },
+      update: (row: unknown) => {
+        calls.push({ kind: 'update', table, args: row });
+        const u = {
+          eq: () => u,
+          select: async () => ({
+            data: script.installRow === false ? [] : [{ id: 'install' }],
+            error: null,
+          }),
+        };
+        return u;
+      },
     };
     return b;
   };
@@ -76,21 +95,32 @@ function fakeDb(script: Script) {
   return { client, calls };
 }
 
-function auth(client: unknown): AuthService {
+/** The signed-in person, switchable between accounts. */
+interface Who {
+  id: string;
+  email: string;
+  signedOut: number;
+}
+
+function auth(client: unknown, who: Who): AuthService {
   return {
     client: client as AuthService['client'],
     async accessToken() {
       return 'jwt';
     },
     async session() {
-      return { user: { id: 'u1', email: 'person@example.com' } } as Awaited<
+      if (who.id === '') return null;
+      return { user: { id: who.id, email: who.email } } as Awaited<
         ReturnType<AuthService['session']>
       >;
     },
     async connect() {
-      return { ok: true, userId: 'u1', email: 'person@example.com' };
+      return { ok: true, userId: who.id, email: who.email };
     },
-    async signOut() {},
+    async signOut() {
+      who.signedOut += 1;
+      who.id = '';
+    },
     async refresh() {
       return 'ok';
     },
@@ -112,14 +142,15 @@ const delta = (i: number): LearnDelta => ({
 function setup(script: Script) {
   const stores = createStores(memoryArea(), () => FIXTURE_NOW);
   const db = fakeDb(script);
+  const who: Who = { id: 'u1', email: 'person@example.com', signedOut: 0 };
   const sync = new AccountSync({
     stores,
-    auth: auth(db.client),
+    auth: auth(db.client, who),
     now: () => FIXTURE_NOW,
     version: '0.1.0',
     platform: 'macos',
   });
-  return { stores, sync, db, script };
+  return { stores, sync, db, script, who };
 }
 
 describe('account sync', () => {
@@ -146,7 +177,9 @@ describe('account sync', () => {
       source: 'account',
       version: 3,
     });
-    const install = db.calls.find((c) => c.table === 'extension_installs');
+    const install = db.calls.find(
+      (c) => c.table === 'extension_installs' && c.kind === 'upsert',
+    );
     expect(install?.args).toMatchObject({
       browser: 'chrome',
       platform: 'macos',
@@ -263,6 +296,142 @@ describe('account sync', () => {
     await sync.connected('u1', 'person@example.com');
     expect((await stores.learning.read()).pending).toEqual([]);
     expect((await stores.account.read())?.cloudAnalysis).toBe(false);
+  });
+
+  it('nothing carries over between accounts, even after signing out', async () => {
+    const profile = strongReaderProfile();
+    const serverA = initialLearningState(
+      profile,
+      needLevels(profile),
+      FIXTURE_DAY,
+    );
+    serverA.ops.text_floor.accepts = 5;
+    const { stores, sync, db, script, who } = setup({
+      account: {
+        cloud_analysis: true,
+        product_learning: false,
+        theme: 'dark',
+        onboarding_step: 'tuned',
+      },
+      profile: { version: 7, profile },
+      learning: { state: serverA, rev: 3 },
+    });
+    who.id = 'user-a';
+    await sync.connected('user-a', 'a@example.com');
+    await stores.learning.update((rec) => ({
+      ...rec,
+      pending: [delta(1), delta(2)],
+    }));
+    await stores.activity.update((rec) =>
+      addActivity(rec, FIXTURE_NOW, 'text_floor', 'applied', 3),
+    );
+    await sync.signedOut(false);
+    expect((await stores.learning.read()).pending).toEqual([]);
+    expect((await stores.activity.read()).weeks).toEqual({});
+
+    // Someone else signs in on this browser; their account holds nothing yet.
+    script.account = null;
+    script.profile = null;
+    script.learning = null;
+    Object.assign(who, { id: 'user-b', email: 'b@example.com' });
+    db.calls.length = 0;
+    await sync.connected('user-b', 'b@example.com');
+
+    const puts = db.calls.filter((c) => c.fn === 'put_learning_state');
+    expect(puts.length).toBeGreaterThan(0);
+    for (const put of puts) {
+      const args = put.args as {
+        p_state: UserLearningState;
+        p_expected_rev: number;
+      };
+      expect(args.p_expected_rev).toBe(0);
+      expect(args.p_state.ops.text_floor.accepts).toBe(0);
+      expect(args.p_state.recentDeltaIds ?? []).toEqual([]);
+    }
+    expect(db.calls.some((c) => c.fn === 'record_activity')).toBe(false);
+    expect(await stores.profile.read()).toMatchObject({
+      source: 'default',
+      ownerUserId: 'user-b',
+    });
+    expect((await stores.learning.read()).ownerUserId).toBe('user-b');
+  });
+
+  it('runs one sync at a time, so counts are sent once', async () => {
+    const { stores, sync, db } = setup({});
+    await stores.activity.update((rec) =>
+      addActivity(rec, FIXTURE_NOW, 'text_floor', 'applied', 3),
+    );
+    await Promise.all([sync.refresh(), sync.refresh(), sync.refresh()]);
+    const flushes = db.calls.filter((c) => c.fn === 'record_activity');
+    expect(flushes).toHaveLength(1);
+    expect(flushes[0]?.args).toMatchObject({
+      p_counts: { text_floor: { applied: 3 } },
+    });
+  });
+
+  it('a browser removed on the web stays removed', async () => {
+    const profile = strongReaderProfile();
+    const { stores, sync, db, script, who } = setup({
+      profile: { version: 1, profile },
+    });
+    await sync.connected('u1', 'person@example.com');
+    const upserts = () =>
+      db.calls.filter(
+        (c) => c.table === 'extension_installs' && c.kind === 'upsert',
+      );
+    expect(upserts()).toHaveLength(1);
+    await sync.refresh();
+    expect(upserts()).toHaveLength(1);
+
+    script.installRow = false;
+    db.calls.length = 0;
+    const result = await sync.refresh();
+    expect(result).toMatchObject({ account: null, removed: true });
+    expect(who.signedOut).toBe(1);
+    expect(await stores.account.read()).toBeNull();
+    expect(upserts()).toHaveLength(0);
+    expect(db.calls.some((c) => c.kind === 'rpc')).toBe(false);
+  });
+
+  it('records when the last complete sync finished', async () => {
+    const { stores, sync, script } = setup({});
+    await sync.connected('u1', 'person@example.com');
+    // No accounts row came back: the sync did not complete.
+    expect(await lastSuccessfulSync(stores)).toBeNull();
+    script.account = {
+      cloud_analysis: false,
+      product_learning: false,
+      theme: 'system',
+      onboarding_step: 'connected',
+    };
+    await sync.refresh();
+    expect(await lastSuccessfulSync(stores)).toBe(FIXTURE_NOW);
+  });
+
+  it('a delta the server already merged is not counted again', async () => {
+    const profile = strongReaderProfile();
+    const start = initialLearningState(
+      profile,
+      needLevels(profile),
+      FIXTURE_DAY,
+    );
+    // The push with delta 1 landed, but its reply was lost.
+    const server = mergeDeltas(start, [delta(1)], new Set());
+    const { stores, sync, db } = setup({
+      profile: { version: 1, profile },
+      learning: { state: server, rev: 5 },
+    });
+    await sync.connected('u1', 'person@example.com');
+    await stores.learning.update((rec) => ({
+      ...rec,
+      pending: [delta(1), delta(2)],
+    }));
+    await sync.refresh();
+    const put = db.calls.findLast((c) => c.fn === 'put_learning_state');
+    const sent = (put?.args as { p_state: UserLearningState }).p_state;
+    const once = mergeDeltas(server, [delta(2)], new Set());
+    expect(sent.ops.text_floor.c).toEqual(once.ops.text_floor.c);
+    expect(sent.recentDeltaIds).toEqual([delta(1).deltaId, delta(2).deltaId]);
   });
 
   it('buckets the platform coarsely', () => {

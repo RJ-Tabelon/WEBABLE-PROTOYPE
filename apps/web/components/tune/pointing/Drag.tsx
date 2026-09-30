@@ -147,8 +147,7 @@ export function Drag({ touch, active, epoch, onDone }: DragProps) {
     <>
       <TaskHeading>Drag the circle into the ring.</TaskHeading>
       <Deck>
-        This one is optional. If dragging is hard, or you&rsquo;d rather not,
-        choose I&rsquo;d rather not drag.
+        Optional. You can choose &ldquo;I&rsquo;d rather not drag.&rdquo;
       </Deck>
       <div ref={wrap} className="tn-field-wrap">
         <Stage

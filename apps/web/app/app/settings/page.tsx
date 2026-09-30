@@ -1,49 +1,61 @@
 import { Button, ErrorPanel } from '@webable/ui';
 import type { Metadata } from 'next';
+import { connection } from 'next/server';
 
 import { AppSection, PageHead } from '../../../components/app/PageHead';
 import {
-  EmailForm,
-  PasswordForm,
+  EmailRow,
+  PasswordRow,
 } from '../../../components/app/settings/AccountForms';
 import { Installs } from '../../../components/app/settings/Installs';
 import { SignOut } from '../../../components/app/settings/SignOut';
-import { ThemeSetting } from '../../../components/app/settings/ThemeSetting';
+import { ThemeRow } from '../../../components/app/settings/ThemeSetting';
 import { listInstalls } from '../../../lib/data/installs';
+import { createClient } from '../../../lib/supabase/server';
 import { loadUser } from '../data';
-import { connection } from 'next/server';
+import { hasPasswordFromClaims, type PasswordClaims } from './password';
 
 export const metadata: Metadata = { title: 'Settings' };
 
-/** /app/settings: appearance, sign-in details, connected browsers, sign out. */
+/** Whether this account has a password, from the verified session claims. */
+async function accountHasPassword(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getClaims();
+    return data?.claims
+      ? hasPasswordFromClaims(data.claims as PasswordClaims)
+      : false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * /app/settings, as a document: the account (email, password, theme) as
+ * hairline rows that open in place, the browsers connected to it, and signing
+ * out last.
+ */
 export default async function SettingsPage() {
   await connection();
-  const [user, installs] = await Promise.all([loadUser(), listInstalls()]);
+  const [user, installs, hasPassword] = await Promise.all([
+    loadUser(),
+    listInstalls(),
+    accountHasPassword(),
+  ]);
 
   return (
     <div className="wa-page">
-      <PageHead
-        title="Settings"
-        deck="How WebAble looks, how you sign in, and where it’s connected."
-      />
+      <PageHead title="Settings" />
 
-      <AppSection id="appearance" title="Appearance">
-        <ThemeSetting />
+      <AppSection id="account" title="Account">
+        <ul role="list" className="wa-rows">
+          <EmailRow current={user?.email ?? null} />
+          <PasswordRow hasPassword={hasPassword} />
+          <ThemeRow />
+        </ul>
       </AppSection>
 
-      <AppSection id="email" title="Email">
-        <EmailForm current={user?.email ?? null} />
-      </AppSection>
-
-      <AppSection id="password" title="Password">
-        <PasswordForm />
-      </AppSection>
-
-      <AppSection
-        id="browsers"
-        title="Connected browsers"
-        deck="Each browser where WebAble is signed in to your account."
-      >
+      <AppSection id="browsers" title="Connected browsers">
         {installs.ok ? (
           <Installs initial={installs.data} />
         ) : (
@@ -65,9 +77,13 @@ export default async function SettingsPage() {
         )}
       </AppSection>
 
-      <AppSection id="sign-out" title="Sign out">
+      {/* Signing out closes the page: rows under their own (visually hidden) heading. */}
+      <section aria-labelledby="sign-out-title" className="wa-app-section">
+        <h2 id="sign-out-title" className="sr-only">
+          Sign out
+        </h2>
         <SignOut />
-      </AppSection>
+      </section>
     </div>
   );
 }

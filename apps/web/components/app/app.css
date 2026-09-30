@@ -10,7 +10,8 @@
 
 .wa-page {
   display: grid;
-  gap: var(--space-16);
+  /* Working density (§14): 48 between sections. */
+  gap: var(--space-12);
   max-inline-size: 60rem;
 }
 
@@ -51,8 +52,36 @@
   letter-spacing: var(--track-h3);
 }
 
-.wa-app-section > .wa-section-head {
+.wa-app-section > .wa-section-head,
+.wa-app-section__head {
   margin-block-end: var(--space-6);
+}
+
+/* A section-wide action: under the header, or at its end on wide pages. */
+.wa-app-section__head {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.wa-app-section__head > .wa-section-head {
+  margin: 0;
+}
+
+@container wa-app (min-width: 56em) {
+  .wa-app-section__head > * {
+    grid-area: 1 / 1;
+  }
+  .wa-app-section__action {
+    justify-self: end;
+    align-self: end;
+  }
+}
+
+/* Under the header, the action's label sits on the text edge, not its end. */
+@container wa-app (max-width: 55.99em) {
+  .wa-app-section__action .wa-btn--flush-end {
+    margin-inline: calc(-1 * var(--_px)) 0;
+  }
 }
 
 .wa-app-section__body {
@@ -95,27 +124,7 @@
 .wa-row__tag {
   font-weight: var(--weight-regular);
   color: var(--ink-2);
-}
-
-/* A setting: its name and one line on the left, the control on the right. */
-.wa-setting {
-  display: grid;
-  gap: var(--space-4) var(--space-8);
-  align-items: center;
-}
-
-.wa-setting__control {
-  display: grid;
-  justify-items: start;
-}
-
-@container wa-app (min-width: 48em) {
-  .wa-setting {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-  .wa-setting__control {
-    justify-items: end;
-  }
+  white-space: nowrap;
 }
 
 .wa-row {
@@ -160,177 +169,142 @@
   }
 }
 
-/* ---------- Fit rows (§9.4) ---------- */
-
-.wa-fit-row {
-  display: grid;
+/*
+ * A settings row: label · value on one line, its action at the end. The
+ * action opens an editor in place, under the row, on the same text edge.
+ */
+/*
+ * A row whose action is one ghost word ([Change], [Remove], [Reset]): it stays
+ * at the end of the row at every width, on the right text edge (flush="end").
+ */
+.wa-row--end-action {
   grid-template-columns: minmax(0, 1fr) auto;
-  grid-template-areas:
-    'text text'
-    'value adjust';
-  align-items: center;
-  gap: var(--space-3) var(--space-6);
-  min-block-size: 4.5rem;
-  padding-block: var(--space-6);
 }
 
-.wa-fit-row__text {
-  grid-area: text;
+.wa-row--end-action > .wa-row__actions {
+  justify-content: flex-end;
+}
+
+/* Rows whose control is the tallest thing in them: the control sets the height. */
+.wa-row--compact {
+  padding-block: var(--space-2);
+}
+
+/* Label and value stack on a narrow page: the row needs its own padding. */
+.wa-setting-row {
+  padding-block: var(--space-3);
+}
+
+.wa-setting-row__text {
+  display: grid;
+  gap: var(--space-0-5) var(--space-6);
   min-inline-size: 0;
 }
 
-.wa-fit-row__label {
+.wa-setting-row__label,
+.wa-setting-row__value {
   margin: 0;
-  font-size: var(--text-body);
-  font-weight: var(--weight-medium);
-  line-height: 1.35;
-  letter-spacing: var(--track-text);
 }
 
-.wa-fit-row__sentence {
-  max-inline-size: var(--w-prose);
-  margin: var(--space-1) 0 0;
+.wa-setting-row__value {
   font-size: var(--text-ui);
   line-height: var(--leading-ui);
   color: var(--ink-2);
+  overflow-wrap: anywhere;
 }
 
-.wa-fit-row__source {
-  margin: var(--space-2) 0 0;
-  font-size: var(--text-meta);
-  line-height: var(--leading-meta);
-  letter-spacing: var(--track-meta);
-  color: var(--ink-3);
+.wa-setting-row__note .wa-app-form__done {
+  margin-block-start: var(--space-1);
 }
 
-.wa-fit-row__value {
-  grid-area: value;
-  min-inline-size: 0;
-}
-
-.wa-fit-row__adjust {
-  grid-area: adjust;
-  justify-self: end;
-}
-
-.wa-fit-row__editor {
+.wa-setting-row__editor {
   grid-column: 1 / -1;
-  display: grid;
-  gap: var(--space-5);
-  margin-block-start: var(--space-2);
-  padding: var(--space-5);
-  border-radius: var(--radius-3);
-  background: var(--surface-tonal);
+  padding-block: var(--space-2) var(--space-4);
 }
 
-.wa-fit-row__editor:focus {
+.wa-setting-row__editor:focus {
   outline: none;
 }
 
-@container wa-app (max-width: 30em) {
-  .wa-fit-row__editor {
-    padding: var(--space-4);
+@container wa-app (min-width: 40em) {
+  /* One line: the 56 px row minimum sets the height. */
+  .wa-setting-row {
+    padding-block: 0;
+  }
+  .wa-setting-row__text {
+    grid-template-columns: 10rem minmax(0, 1fr);
+    align-items: baseline;
+  }
+  .wa-setting-row__note,
+  .wa-setting-row__text > .wa-reason {
+    grid-column: 2;
   }
 }
 
-.wa-fit-row__editor .wa-segmented {
-  background: var(--canvas);
-}
+/* ---------- Your fit (§9.4): head beside a live preview ---------- */
 
-/*
- * Choices in words: a segmented control where it fits, a stack of radio rows in
- * a narrow editor. The container is measured in em, so a larger text scale
- * switches to the stack sooner.
- */
-.wa-fit-row__editor {
-  container: wa-editor / inline-size;
-}
-
-.wa-choice__segmented {
-  display: none;
-}
-
-.wa-choice__stack {
+/* Rows are @webable/ui's FitRow (Working density); this is only the page. */
+.wa-fit-top {
   display: grid;
-  border-block-start: var(--bw-hair) solid var(--line);
+  gap: var(--space-10);
 }
 
-@container wa-editor (min-width: 25em) {
-  .wa-choice__segmented {
+/* Below 48em the preview moves under the Reading rows. */
+.wa-fit-top__preview {
+  display: none;
+  min-inline-size: 0;
+}
+
+.wa-fit-preview-narrow {
+  min-inline-size: 0;
+}
+
+@container wa-app (min-width: 48em) {
+  .wa-fit-top__preview {
     display: block;
   }
-  .wa-choice__stack {
+  .wa-fit-preview-narrow {
     display: none;
   }
 }
 
-.wa-choice__option {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-block-size: max(var(--control-lg), var(--target-min));
-  border-block-end: var(--bw-hair) solid var(--line);
-  font-size: var(--text-ui);
-  font-weight: var(--weight-medium);
-  line-height: var(--leading-label);
-  color: var(--ink);
-  cursor: pointer;
-}
-
-.wa-choice__option input {
-  flex: none;
-  inline-size: 1.25rem;
-  block-size: 1.25rem;
-  margin: 0;
-  accent-color: var(--action);
-  cursor: inherit;
-}
-
-.wa-choice__option input:focus-visible {
-  outline: var(--focus-width) solid var(--focus);
-  outline-offset: var(--focus-offset);
-}
-
-.wa-choice__option[data-disabled] {
-  color: var(--ink-3);
-  cursor: not-allowed;
-}
-
-.wa-fit-row__editor-label {
-  margin: 0;
-  font-size: var(--text-label);
-  font-weight: var(--weight-medium);
-  line-height: var(--leading-label);
-}
-
-@container wa-app (min-width: 48em) {
-  .wa-fit-row {
-    grid-template-columns: minmax(0, 1fr) minmax(9rem, auto) auto;
-    grid-template-areas: 'text value adjust';
-  }
-  .wa-fit-row__value {
-    justify-self: end;
-    text-align: end;
+@container wa-app (min-width: 64em) {
+  .wa-fit-top {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 28rem);
+    align-items: start;
   }
 }
 
 /*
- * A value WebAble does not change reads in secondary ink, not in the change
- * colour, so the values that do change pages carry the eye.
+ * Fit rows on a narrow page keep @webable/ui's stacked layout (text, then the
+ * value with Adjust at its end, as in Tune), a little tighter: the app lists
+ * ten rows. The value sets the height of its line: the ghost Adjust keeps its
+ * full target but lets its pill run into the row's gap and padding, which are
+ * wider than that overhang, so it never reaches the hairline or the text.
  */
-.wa-fit-value--same .wa-fit-mark__to,
-.wa-fit-value--same .wa-fit-mark__unit {
-  color: var(--ink-2);
-  font-weight: var(--weight-mono);
+@container wa-fitrow (max-width: 39.99em) {
+  .wa-fitrow--working .wa-fitrow__main {
+    row-gap: var(--space-2);
+    padding-block: var(--space-4);
+  }
+  .wa-fitrow--working.wa-fitrow--same .wa-fitrow__main {
+    padding-block: var(--space-3);
+  }
+  .wa-fitrow--working .wa-fitrow__action {
+    margin-block: calc(-1 * var(--space-2));
+  }
 }
 
-.wa-fit-value .wa-fit-mark__value {
-  white-space: normal;
-}
-
-.wa-fit-value .wa-fit-mark__visual {
+/*
+ * The fit's own value, a click away when WebAble learned another: [Use 18 px]
+ * follows the source line, or starts the next line on the text edge when the
+ * line is full (it never splits the words before it).
+ */
+.wa-fitrow__source:has(.wa-fit-learned__use) {
+  display: flex;
   flex-wrap: wrap;
-  row-gap: 0;
+  align-items: center;
+  column-gap: var(--space-3);
 }
 
 /* ---------- History ---------- */
@@ -396,33 +370,85 @@
   color: var(--ink);
 }
 
-/* ---------- Notes (neutral, never an alarm) ---------- */
-
-.wa-app-note {
+.wa-history__use {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  justify-items: start;
   gap: var(--space-3);
-  max-inline-size: 44rem;
-  padding: var(--space-4);
-  border-radius: var(--radius-3);
-  background: var(--surface-tonal);
-  color: var(--ink);
-  font-size: var(--text-ui);
-  line-height: var(--leading-ui);
 }
 
-.wa-app-note > .wa-icon {
-  margin-block-start: 0.125rem;
+.wa-history__panel {
+  --_bleed: min(var(--space-5), var(--gutter));
+  display: grid;
+  gap: var(--space-4);
+  justify-self: stretch;
+  margin-inline: calc(-1 * var(--_bleed));
+  padding: var(--space-5) var(--_bleed);
+  border-radius: var(--radius-3);
+  background: var(--surface-tonal);
+}
+
+.wa-history__panel-lead {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
   color: var(--ink-2);
 }
 
-.wa-app-note__body > * + * {
-  margin-block-start: var(--space-2);
+/* ---------- Notes (neutral, never an alarm): one step to take ---------- */
+
+.wa-app-note {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
+  max-inline-size: 44rem;
+  padding: var(--space-5);
+  border-radius: var(--radius-3);
+  background: var(--surface-tonal);
+  color: var(--ink);
 }
 
 .wa-app-note__title {
   margin: 0;
+  font-size: var(--text-label);
   font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+
+.wa-app-note__text {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
+
+.wa-app-note__action {
+  margin-block-start: var(--space-3);
+}
+
+/* One line and its action ("You have an unsaved fit from Sep 28. [Save it]"). */
+.wa-app-sync-note {
+  margin-block-end: var(--space-10);
+}
+
+.wa-app-note--row {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  padding-block: var(--space-3);
+}
+
+.wa-app-note--row .wa-app-note__text {
+  color: var(--ink);
+}
+
+.wa-app-note--row .wa-app-note__action {
+  margin: 0;
+}
+
+@container wa-app (min-width: 40em) {
+  .wa-app-note--row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
 }
 
 /* ---------- This-browser status line ---------- */
@@ -431,7 +457,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-2) var(--space-4);
   min-block-size: var(--target-min);
   margin: 0;
   font-size: var(--text-meta);
@@ -449,55 +475,130 @@
 
 /* ---------- Changes ---------- */
 
-.wa-sentences {
+.wa-changes-summary {
+  display: grid;
+  gap: var(--space-1);
   max-inline-size: var(--w-prose);
+}
+
+.wa-changes-summary__sentence {
   margin: 0;
-  font-size: var(--text-lead);
-  line-height: var(--leading-lead);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+}
+
+/* One hairline table: numerals tabular and right-aligned (design-final §3.5). */
+.wa-table {
+  inline-size: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+.wa-table th,
+.wa-table td {
+  padding-block: var(--space-3);
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-weight: var(--weight-regular);
+  text-align: start;
+  vertical-align: baseline;
+}
+
+.wa-table thead th {
+  padding-block-start: 0;
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-table tbody th {
+  font-weight: var(--weight-medium);
   color: var(--ink);
 }
 
-.wa-activity-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-1) var(--space-6);
-  min-block-size: max(var(--row-min), var(--target-min));
-  padding-block: var(--space-4);
+.wa-table .wa-table__num {
+  padding-inline-start: var(--space-6);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-@container wa-app (min-width: 48em) {
-  .wa-activity-row {
-    grid-template-columns: 14rem minmax(0, 1fr);
-    align-items: baseline;
+.wa-table td.wa-table__zero {
+  color: var(--ink-3);
+}
+
+/* The table where it fits; one line per kind of change below 40em. */
+.wa-activity__table {
+  display: none;
+}
+
+@container wa-app (min-width: 40em) {
+  .wa-activity__table {
+    display: table;
   }
-  .wa-activity-row .wa-row__detail {
-    margin: 0;
+  .wa-activity__list {
+    display: none;
   }
 }
 
-.wa-learned {
+.wa-activity__list .wa-row {
+  gap: var(--space-0-5);
+  padding-block: var(--space-3);
+}
+
+.wa-activity__list .wa-row__detail {
+  margin: 0;
+}
+
+/* What WebAble has learned: one row each, undoable. */
+.wa-learned__text {
   display: grid;
   gap: var(--space-1);
+  min-inline-size: 0;
 }
 
-.wa-learned > p {
+.wa-learned__text > p {
   margin: 0;
+}
+
+.wa-learned__detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
 }
 
 /* ---------- Sites ---------- */
 
+.wa-lock-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-3);
+}
+
+.wa-lock-line > .wa-icon {
+  color: var(--ink-2);
+}
+
+.wa-sites:focus {
+  outline: none;
+}
+
 .wa-site-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3) var(--space-6);
-  padding-block: var(--space-5);
+  padding-block-end: var(--space-3);
 }
 
 .wa-site-row__head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
+  min-block-size: 0;
+  padding-block: var(--space-4) var(--space-2);
 }
 
 .wa-site-row__domain {
@@ -508,39 +609,45 @@
   overflow-wrap: anywhere;
 }
 
-.wa-site-row__ops {
-  display: grid;
-  gap: var(--space-1);
+.wa-site-row__head .wa-row__detail {
+  margin: 0;
+}
+
+/* What a site keeps: one row each, on the same text edge, hairlines between. */
+.wa-site-row__prefs {
   margin: 0;
   padding: 0;
 }
 
-.wa-site-row__op {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-1) var(--space-3);
-  min-block-size: var(--target-min);
-  padding-inline-start: var(--space-4);
-  border-inline-start: var(--bw-strong) solid var(--line);
-  font-size: var(--text-ui);
+.wa-site-pref {
+  min-block-size: 0;
+  padding-block: var(--space-1);
+  border-block-start: var(--bw-hair) solid var(--line);
 }
 
-@container wa-app (min-width: 48em) {
-  .wa-site-row {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-  }
-  .wa-site-row__ops {
-    grid-column: 1 / -1;
-  }
+.wa-site-pref__label {
+  margin: 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink);
+}
+
+.wa-site-pref__hint {
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
 }
 
 /* ---------- Receipts ("What was sent") ---------- */
 
 .wa-receipt {
   padding-block: var(--space-4) var(--space-2);
+}
+
+/* The row's own hairline is enough: the disclosure inside draws none. */
+.wa-receipt .wa-disclosure {
+  border-block: 0;
 }
 
 .wa-receipt__head {
@@ -652,6 +759,24 @@
   border-block-start: var(--bw-hair) solid var(--line);
 }
 
+/* After a list of rows, one hairline is enough; space sets the rows apart. */
+.wa-rows + .wa-danger-row {
+  border-block-start: 0;
+  margin-block-start: var(--space-12);
+}
+
+/* An action inside a sentence ("Download your data"): a button that reads as a link. */
+.wa-link-button {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
 @container wa-app (min-width: 48em) {
   .wa-danger-row {
     grid-template-columns: minmax(0, 1fr) auto;
@@ -694,15 +819,25 @@
 }
 
 @media (forced-colors: active) {
-  .wa-app-note,
-  .wa-fit-row__editor {
+  .wa-app-note {
     border: 1px solid CanvasText;
   }
 }
 
-.wa-fit-row__measured {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
+/* Button rows inside a hairline row go full width with the row below 30em. */
+@media (max-width: 29.99em) {
+  .wa-row__actions > .wa-actions {
+    inline-size: 100%;
+  }
+}
+
+/*
+ * With the rail showing (≥64em), toasts centre on the page's content, not on
+ * the whole window. (A media query: the region sits outside the app's
+ * container; at a larger text scale the rail appears a little later.)
+ */
+@media (min-width: 64em) {
+  body:has(.wa-app-root) .wa-toast-region--site {
+    inset-inline-start: calc(var(--w-rail) + var(--space-4));
+  }
 }

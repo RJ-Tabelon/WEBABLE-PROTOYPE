@@ -4,7 +4,12 @@ import { Button } from '@webable/ui';
 import { useRef, useState } from 'react';
 
 import { useContentWidth, useTaskKeys } from '../shared/hooks';
-import { Deck, Stage, TaskHeading } from '../shared/primitives';
+import {
+  Deck,
+  Stage,
+  TaskHeading,
+  useStimulusFontReady,
+} from '../shared/primitives';
 import {
   comfortStartPx,
   maxFitPx,
@@ -47,27 +52,15 @@ export function Comfort({ rootFontPx, metrics, active, onDone }: ComfortProps) {
   const atMin = px <= bounds.minPx + 0.05;
   const atMax = px >= bounds.maxPx - 0.05;
 
+  const fontReady = useStimulusFontReady();
+
   useTaskKeys({ '-': smaller, _: smaller, '+': larger, '=': larger }, active);
 
   return (
     <>
       <TaskHeading>Make this comfortable to read.</TaskHeading>
-      <Deck>
-        Use Smaller and Larger until the text is easy to read. You can use the
-        minus and plus keys too.
-      </Deck>
-      <Stage ref={stageRef} label="Sample text">
-        <p
-          className="tn-stimulus-text"
-          style={{
-            fontFamily: STIMULUS_FAMILY,
-            fontSize: `${px}px`,
-            lineHeight: 1.35,
-          }}
-        >
-          {PARAGRAPH}
-        </p>
-      </Stage>
+      <Deck>Make it easy to read. The + and &minus; keys work too.</Deck>
+      {/* Above the stage, so the buttons never move under the pointer. */}
       <div className="tn-controls">
         <div className="tn-controls__pair" role="group" aria-label="Text size">
           <Button
@@ -91,6 +84,22 @@ export function Comfort({ rootFontPx, metrics, active, onDone }: ComfortProps) {
             Larger
           </Button>
         </div>
+      </div>
+      <Stage ref={stageRef} label="Sample text" className="tn-stage--comfort">
+        {fontReady ? (
+          <p
+            className="tn-stimulus tn-stimulus-text"
+            style={{
+              fontFamily: STIMULUS_FAMILY,
+              fontSize: `${px}px`,
+              lineHeight: 1.35,
+            }}
+          >
+            {PARAGRAPH}
+          </p>
+        ) : null}
+      </Stage>
+      <div className="tn-controls">
         <Button
           variant="primary"
           size="task"

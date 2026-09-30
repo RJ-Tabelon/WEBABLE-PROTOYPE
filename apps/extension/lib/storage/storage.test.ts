@@ -164,11 +164,15 @@ describe('install identity', () => {
 });
 
 describe('site records', () => {
-  it('creates, updates and lists sites most recent first', async () => {
+  it('lists only sites with a rule, most recent first', async () => {
     const c = clock();
     const sites = new SiteStore(memoryArea(), c.now);
+    await sites.update('visited.com', (s) => {
+      s.lastVisit = c.now();
+    });
     await sites.update('a.com', (s) => {
       s.lastVisit = c.now();
+      s.rule.levels = { text_floor: 3 };
     });
     c.advance(1000);
     await sites.update('b.com', (s) => {
@@ -178,6 +182,7 @@ describe('site records', () => {
     const list = listLocalSites(await sites.all());
     expect(list.map((s) => s.domain)).toEqual(['b.com', 'a.com']);
     expect(list[0]).toMatchObject({ paused: true, blocked: [], pinned: [] });
+    expect(list[1]).toMatchObject({ levels: { text_floor: 3 } });
   });
 
   it('rejects keys that are not a host', async () => {
@@ -382,7 +387,7 @@ describe('settings and account', () => {
 });
 
 describe('clear local data', () => {
-  it('removes site data and rotates the install secret, keeping the account', async () => {
+  it('removes site and personal data and rotates the install secret, keeping the account', async () => {
     const c = clock();
     const area = memoryArea();
     const stores = createStores(area, c.now);
@@ -402,7 +407,28 @@ describe('clear local data', () => {
       connectedAt: 0,
       lastSyncAt: 0,
     });
-    await clearLocalData(stores);
+    await stores.learning.update((rec) => ({
+      ...rec,
+      rev: 4,
+      seededFor: 'account:3',
+      pending: [{ v: 1, deltaId: 'delta-0001', day: 1, op: 'text_floor' }],
+    }));
+    await stores.activity.update((rec) =>
+      addActivity(rec, T0, 'text_floor', 'applied', 2),
+    );
+    await clearLocalData(stores, T0);
+    expect(await stores.learning.read()).toMatchObject({
+      user: null,
+      rev: 0,
+      pending: [],
+      seededFor: null,
+      ownerUserId: 'u',
+    });
+    expect((await stores.activity.read()).weeks).toEqual({});
+    expect(await stores.profile.read()).toMatchObject({
+      source: 'default',
+      version: null,
+    });
     expect(await stores.sites.all()).toEqual({});
     expect(await stores.events.list()).toEqual([]);
     expect(await stores.receipts.list()).toEqual([]);

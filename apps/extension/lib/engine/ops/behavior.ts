@@ -3,7 +3,8 @@ import {
   HANDS_OFF_SELECTOR,
   isElement,
 } from '../util/dom';
-import { BOOST, tok } from './css';
+import { tok } from './css';
+import { sel } from './marks';
 import { notNeeded, type OpImpl } from './types';
 
 /**
@@ -149,10 +150,10 @@ export const menuGrace: OpImpl = {
       const prev = m.previousElementSibling;
       if (prev) marks.push([prev, 'mgt']);
     }
-    const open = `[data-wa~="mgt"]:is(:hover, :focus-within)`;
+    const open = `${sel('mgt')}:is(:hover, :focus-within)`;
     const css = [
       `${tok('mg')} { transition-property: display, visibility, opacity !important; transition-duration: 0s !important; transition-delay: ${Math.round(ms)}ms !important; transition-timing-function: linear !important; transition-behavior: allow-discrete !important; }`,
-      `${open} [data-wa~="mg"]${BOOST}, ${open} ~ [data-wa~="mg"]${BOOST}, [data-wa~="mg"]${BOOST}:is(:hover, :focus-within) { transition-delay: 0s !important; }`,
+      `${open} ${tok('mg')}, ${open} ~ ${tok('mg')}, ${tok('mg')}:is(:hover, :focus-within) { transition-delay: 0s !important; }`,
     ].join('\n');
     return {
       status: 'ready',

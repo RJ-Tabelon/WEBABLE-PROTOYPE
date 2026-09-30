@@ -10,6 +10,8 @@ import {
   ErrorPanel,
   FitMark,
   FitMarkBlock,
+  FitRow,
+  FitValue,
   Icon,
   ICON_NAMES,
   IconButton,
@@ -45,6 +47,86 @@ import {
 } from 'react';
 import { ThemeControl } from '../../../components/shell/ThemeControl';
 import { ColourTokens } from './ColourTokens';
+
+/* ---------------------------------------------------------------- fit data */
+
+// Real values from a measured fit (the e2e seed); invented numbers are a bug.
+const FIT_VALUES: FitValue[] = [
+  {
+    kind: 'change',
+    before: 16,
+    after: 19,
+    unit: 'px',
+    srText: '16 to 19 pixels',
+  },
+  { kind: 'floor', after: '7:1', srText: 'At least 7 to 1' },
+  {
+    kind: 'word',
+    before: 'Site colors',
+    after: 'Light',
+    srText: 'Site colors to light',
+  },
+  { kind: 'same', srText: 'As the site made it' },
+];
+
+const FIT_ROWS: Array<{
+  label: string;
+  sentence: string;
+  source?: string;
+  value: FitValue;
+  changed: boolean;
+}> = [
+  {
+    label: 'Text size',
+    sentence: 'Text reads best for you at 19 px or larger.',
+    source: 'Measured today',
+    value: {
+      kind: 'change',
+      before: 16,
+      after: 19,
+      unit: 'px',
+      srText: '16 to 19 pixels',
+    },
+    changed: true,
+  },
+  {
+    label: 'Line spacing',
+    sentence: 'Lines of running text get more room, at 1.6 line spacing.',
+    source: 'Measured today',
+    value: {
+      kind: 'change',
+      before: '1.5',
+      after: '1.6',
+      srText: '1.5 to 1.6',
+    },
+    changed: true,
+  },
+  {
+    label: 'Contrast',
+    sentence: 'Faint text is darkened to at least 7:1 against its background.',
+    source: 'Measured today',
+    value: { kind: 'floor', after: '7:1', srText: 'At least 7 to 1' },
+    changed: true,
+  },
+  {
+    label: 'Moving things',
+    sentence: 'Carousels, tickers and autoplay are paused.',
+    source: 'Set by you',
+    value: {
+      kind: 'word',
+      before: 'Plays',
+      after: 'Paused',
+      srText: 'Plays to paused',
+    },
+    changed: true,
+  },
+  {
+    label: 'Line length',
+    sentence: 'Line length stays as each site made it.',
+    value: { kind: 'same', srText: 'As the site made it' },
+    changed: false,
+  },
+];
 
 /* ---------------------------------------------------------------- scaffolding */
 
@@ -1143,19 +1225,19 @@ export function Gallery({ only = null }: { only?: string | null }) {
               <div className="g-fit-rows">
                 <div className="g-fit-row">
                   <FitMark label="Text size" from={13} to={18} unit="px" />
-                  <Button variant="ghost" size="md">
+                  <Button variant="ghost" size="md" flush="end">
                     Undo
                   </Button>
                 </div>
                 <div className="g-fit-row">
-                  <FitMark label="Click targets" from={24} to={44} unit="px" />
-                  <Button variant="ghost" size="md">
+                  <FitMark label="Contrast" from="4.5:1" to="7:1" />
+                  <Button variant="ghost" size="md" flush="end">
                     Undo
                   </Button>
                 </div>
                 <div className="g-fit-row">
                   <FitMark label="Moving things" to="2 paused" />
-                  <Button variant="ghost" size="md">
+                  <Button variant="ghost" size="md" flush="end">
                     Undo
                   </Button>
                 </div>
@@ -1163,6 +1245,38 @@ export function Gallery({ only = null }: { only?: string | null }) {
             </Specimen>
             <Specimen label="Readout (Your fit)">
               <FitMark size="readout" from={16} to={19} unit="px" />
+            </Specimen>
+            <Specimen label="Fit values: change · floor · word · same" wide>
+              <div className="g-fit-values">
+                {FIT_VALUES.map((v) => (
+                  <FitValue key={v.srText} value={v} />
+                ))}
+                {FIT_VALUES.map((v) => (
+                  <FitValue
+                    key={`inline-${v.srText}`}
+                    value={v}
+                    size="inline"
+                  />
+                ))}
+              </div>
+            </Specimen>
+            <Specimen label="Fit rows (Your fit): arrows line up" wide>
+              <ul role="list" className="wa-fitrows g-fitrows">
+                {FIT_ROWS.map((row) => (
+                  <FitRow
+                    key={row.label}
+                    as="li"
+                    density="working"
+                    headingLevel={3}
+                    {...row}
+                    action={
+                      <Button variant="ghost" size="md" flush="end">
+                        Adjust
+                      </Button>
+                    }
+                  />
+                ))}
+              </ul>
             </Specimen>
             <Specimen label="Block: on a capture, with a plate" wide>
               <div className="g-capture">
@@ -1311,7 +1425,7 @@ export function Gallery({ only = null }: { only?: string | null }) {
             eyebrow="Interim mark · a page, measured"
             title="Brand"
           >
-            <Specimen label="Mark at 16 · 20 · 24 · 48">
+            <Specimen label="Mark at 16 · 20 · 24 · 48 (24 grid)">
               <Row>
                 <Mark size={16} />
                 <Mark size={20} />
@@ -1319,9 +1433,15 @@ export function Gallery({ only = null }: { only?: string | null }) {
                 <Mark size={48} />
               </Row>
             </Specimen>
-            <Specimen label="Wordmark">
+            <Specimen label="Mark, cropped to its bounds (16 · 32)">
+              <Row>
+                <Mark tight />
+                <Mark tight size={32} />
+              </Row>
+            </Specimen>
+            <Specimen label="Lockup: 16 px mark, 8 gap, 20 px word · word alone">
               <Wordmark />
-              <Wordmark markSize={20} />
+              <Wordmark withMark={false} />
             </Specimen>
           </Section>
 

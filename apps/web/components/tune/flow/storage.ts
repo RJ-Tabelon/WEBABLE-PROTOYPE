@@ -5,6 +5,7 @@ import {
   type CalibrationRecord,
   type FitProfile,
 } from '@webable/core';
+import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 
 import type { TuneStash } from './machine';
@@ -13,7 +14,8 @@ import type { TuneStash } from './machine';
  * What Tune keeps in this browser, and only here:
  *
  * - `wa-tune-pending-v1`: a finished fit made while signed out. /tune/save
- *   stores it in the account after sign-in and then removes it.
+ *   stores it in the account after sign-in and then removes it. `usePendingFit`
+ *   follows it across tabs so nothing made here is forgotten.
  * - `wa-tune-progress-v1`: module summaries from a Tune the person chose to
  *   finish later.
  *
@@ -24,6 +26,8 @@ import type { TuneStash } from './machine';
 
 export const PENDING_FIT_KEY = 'wa-tune-pending-v1';
 export const PROGRESS_KEY = 'wa-tune-progress-v1';
+/** Same-tab signal: `storage` events only reach other tabs. */
+const PENDING_CHANGE_EVENT = 'wa-tune-pending-change';
 
 /** A pending fit older than this is not saved to an account. */
 export const PENDING_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
@@ -130,7 +134,9 @@ export function writePendingFit(
     profile: input.profile,
     record: input.record,
   };
-  return writeJson(store, PENDING_FIT_KEY, entry);
+  const written = writeJson(store, PENDING_FIT_KEY, entry);
+  announcePending();
+  return written;
 }
 
 export function readPendingFit(
@@ -148,6 +154,82 @@ export function clearPendingFit(
   store: KeyValueStore | null = browserStore(),
 ): void {
   remove(store, PENDING_FIT_KEY);
+  announcePending();
+}
+
+function announcePending(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new Event(PENDING_CHANGE_EVENT));
+  } catch {
+    // Nothing listens, or events are unavailable: readers re-check on focus.
+  }
+}
+
+/**
+ * When the pending fit was saved (ms since epoch), or null. Only the date is
+ * read: the fit itself stays in storage until /tune/save takes it.
+ */
+export function pendingSavedAt(
+  now: Date = new Date(),
+  store: KeyValueStore | null = browserStore(),
+): number | null {
+  const pending = readPendingFit(now, store);
+  if (!pending) return null;
+  const at = Date.parse(pending.savedAt);
+  return Number.isFinite(at) ? at : null;
+}
+
+function subscribePending(onChange: () => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const onStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === PENDING_FIT_KEY) onChange();
+  };
+  window.addEventListener('storage', onStorage);
+  window.addEventListener(PENDING_CHANGE_EVENT, onChange);
+  return () => {
+    window.removeEventListener('storage', onStorage);
+    window.removeEventListener(PENDING_CHANGE_EVENT, onChange);
+  };
+}
+
+const serverPending = (): number | null => null;
+
+/** getSnapshot runs on every render: parse only when the stored text changes. */
+let snapshot: { raw: string | null; day: number; savedAt: number | null } = {
+  raw: null,
+  day: -1,
+  savedAt: null,
+};
+function clientPending(): number | null {
+  const store = browserStore();
+  let raw: string | null = null;
+  try {
+    raw = store?.getItem(PENDING_FIT_KEY) ?? null;
+  } catch {
+    raw = null;
+  }
+  // Re-read once a day as well, so an entry that expires stops showing.
+  const day = Math.floor(Date.now() / 86_400_000);
+  if (raw !== snapshot.raw || day !== snapshot.day) {
+    snapshot = { raw, day, savedAt: raw ? pendingSavedAt() : null };
+  }
+  return snapshot.savedAt;
+}
+
+/**
+ * A fit made while signed out that is still waiting in this browser, kept up to
+ * date across tabs (storage events) and in this tab (write and clear). Null
+ * while server rendering and when there is none (C10: the app's AppSync and
+ * the Tune intro read it).
+ */
+export function usePendingFit(): { savedAt: number } | null {
+  const savedAt = useSyncExternalStore(
+    subscribePending,
+    clientPending,
+    serverPending,
+  );
+  return savedAt === null ? null : { savedAt };
 }
 
 /* ---------- Saved progress ("Save and finish later") ---------- */

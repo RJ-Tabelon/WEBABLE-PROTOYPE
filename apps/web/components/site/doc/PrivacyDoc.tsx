@@ -205,9 +205,10 @@ export function PrivacyDoc() {
         <p>
           Off unless you turn it on. When it is on, the extension reports
           whether changes helped, as coarse counts with random noise added on
-          your device and without your account. Totals are only published for
-          groups of 50 devices or more, so no one person’s answers can be picked
-          out.
+          your device. Your account is used to check you turned this on and to
+          allow one report every 4 weeks. It isn’t stored with the counts.
+          Totals are only published for groups of 50 devices or more, so no one
+          person’s answers can be picked out.
         </p>
       </DocSection>
 
@@ -234,7 +235,7 @@ export function PrivacyDoc() {
       </DocSection>
 
       <DocSection id="contact" title="Questions">
-        <ContactLine lead="Ask us anything about your data:" />
+        <ContactLine lead="Questions about your data:" />
       </DocSection>
     </DocPage>
   );

@@ -2,7 +2,7 @@ import type { OpId } from '@webable/core/ops/catalog';
 
 import type { OverlayPort } from '../ops/types';
 import { HOST_TAG } from '../util/dom';
-import { intersection, type Box } from '../util/geometry';
+import { inflate, intersection, type Box } from '../util/geometry';
 import { glyph } from './icons';
 import { layerCss } from './styles';
 
@@ -10,52 +10,76 @@ import { layerCss } from './styles';
  * WebAble's in-page layer (design-final.md 7.14, 7.17, 8): one closed shadow
  * root in a custom-tag host, fixed, at the maximum z-index.
  *   - Never takes focus: controls are tabindex -1; the focus-layer command
- *     moves focus in, Esc returns it to where it was.
+ *     moves focus in, Esc (or a Tab past either end) returns it.
  *   - pointer-events: none everywhere except the chip and toast controls.
  *   - Mounted lazily and removed when empty.
- *   - Decorative parts (outlines, guide, frozen frames) are aria-hidden.
+ *   - Decorative parts (outlines, guide, frozen frames) are aria-hidden; one
+ *     visually hidden status line speaks for the chip and the toast.
  */
 
 export interface OfferView {
   op: OpId;
   question: string;
   reason: string;
+  /** Spoken summary: "WebAble suggests bigger click targets here." */
+  spoken: string;
 }
 
 export interface ToastView {
-  label: string;
-  before: string;
-  after: string;
-  /** Additional changes applied with this one. */
-  more: number;
+  /** WebAble's action, one line: "WebAble set text to 18 px here." */
+  message: string;
+  /** 'one': [Undo] for the single change; 'all': [Undo all]. */
+  undo: 'one' | 'all';
 }
 
 export interface OutlineItem {
+  /** The original box (targets only), drawn dashed inside the fit outline. */
   ghost: Box | null;
   fit: Box;
-  /** Fit-mark tag on the first item of each op. */
+}
+
+/** One change's outlines, in document coordinates, most important first. */
+export interface OutlineGroup {
+  items: OutlineItem[];
+  /** Tint the fit box (targets); text blocks get the outline only. */
+  fill: boolean;
+  /** Fit-mark tag; for text ops the only place "before" is shown. */
   tag?: { label: string; before: string; after: string };
+}
+
+export interface LayerConfig {
+  reduceMotion: boolean;
+  shortcuts: { focusLayer: string; undoAll: string };
 }
 
 export interface LayerEvents {
   offerAnswer(op: OpId, answer: 'accept' | 'dismiss' | 'timeout'): void;
-  toastUndo(): void;
+  toastUndo(all: boolean): void;
 }
 
 export const OFFER_TIMEOUT_MS = 20_000;
+/** Outlines sit this far outside the element, so strokes never cross its glyphs. */
+const FIT_OUTSET = 4;
+/** At most this many outlines per change in the viewport. */
+const MAX_OUTLINES = 3;
+
+const TYPING_MS = 2000;
+const SCROLL_MS = 800;
+const POLL_MS = 400;
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+/** A number, a space (normally a no-break space), and a word unit. */
+const MEASURE = /^(-?\d+(?:[.,]\d+)?)[\u00a0 ](\S.*)$/;
 
 /** Split "13 px" / "18 px" into "13" -> "18 px" when both share a unit. */
 export function fitParts(
   before: string,
   after: string,
 ): { before: string; after: string } {
-  const unit = (s: string): string | null => {
-    const i = s.indexOf('\u00a0');
-    return i > 0 ? s.slice(i + 1) : null;
-  };
-  const ub = unit(before);
-  if (ub !== null && ub === unit(after))
-    return { before: before.slice(0, before.indexOf('\u00a0')), after };
+  const b = MEASURE.exec(before);
+  const a = MEASURE.exec(after);
+  if (b?.[1] && a && b[2] === a[2]) return { before: b[1], after };
   return { before, after };
 }
 
@@ -68,33 +92,177 @@ export function fitSpoken(before: string, after: string): string {
     .replace(/\u00a0/g, ' ');
 }
 
+/** The WebAble mark (design-final.md 11.3), cropped to the glyph: 16 px, stroke 1.5. */
+function markGlyph(doc: Document): SVGSVGElement {
+  const svg = doc.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '5 4 14 15');
+  svg.setAttribute('width', String((16 * 14) / 15));
+  svg.setAttribute('height', '16');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.5');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const path = doc.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', 'M6 8h12M6 5v6M18 5v6M6 14h12M6 18h8');
+  path.setAttribute('vector-effect', 'non-scaling-stroke');
+  svg.append(path);
+  return svg;
+}
+
+const NON_TEXT_INPUTS = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'file',
+  'hidden',
+  'image',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+]);
+
+function isEditable(el: Element | null): boolean {
+  if (!el) return false;
+  if (el instanceof HTMLTextAreaElement) return !el.readOnly;
+  if (el instanceof HTMLInputElement)
+    return !el.readOnly && !NON_TEXT_INPUTS.has(el.type);
+  return el instanceof HTMLElement && el.isContentEditable;
+}
+
+/**
+ * When the person is typing, dragging or scrolling, a chip would interrupt.
+ * Timestamps only: no key values, positions or targets are kept.
+ */
+class InputActivity {
+  private lastKey = -Infinity;
+  private lastScroll = -Infinity;
+  private down: { x: number; y: number } | null = null;
+  private dragging = false;
+  private readonly off: Array<() => void> = [];
+
+  constructor(private readonly doc: Document) {
+    const view = doc.defaultView;
+    if (!view) return;
+    const opts = { capture: true, passive: true } as const;
+    const on = <K extends keyof WindowEventMap>(
+      type: K,
+      fn: (e: WindowEventMap[K]) => void,
+    ): void => {
+      view.addEventListener(type, fn, opts);
+      this.off.push(() => view.removeEventListener(type, fn, true));
+    };
+    on('keydown', (e) => {
+      // Characters and deletions are typing; Tab, arrows and shortcuts are not.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (
+        e.key.length === 1 ||
+        e.key === 'Backspace' ||
+        e.key === 'Delete' ||
+        e.key === 'Process' ||
+        e.key === 'Dead'
+      )
+        this.lastKey = Date.now();
+    });
+    on('scroll', () => {
+      this.lastScroll = Date.now();
+    });
+    on('pointerdown', (e) => {
+      this.down = { x: e.clientX, y: e.clientY };
+      this.dragging = false;
+    });
+    on('pointermove', (e) => {
+      if (!this.down || this.dragging || e.buttons === 0) return;
+      if (Math.hypot(e.clientX - this.down.x, e.clientY - this.down.y) > 4)
+        this.dragging = true;
+    });
+    const up = (): void => {
+      if (this.dragging) this.lastScroll = Date.now();
+      this.down = null;
+      this.dragging = false;
+    };
+    on('pointerup', up);
+    on('pointercancel', up);
+  }
+
+  /** Milliseconds until the person is idle; 0 when a chip may show now. */
+  busyFor(now = Date.now()): number {
+    if (this.dragging) return POLL_MS;
+    let a: Element | null = this.doc.activeElement;
+    while (a?.shadowRoot?.activeElement) a = a.shadowRoot.activeElement;
+    if (isEditable(a)) return POLL_MS;
+    return Math.max(
+      0,
+      this.lastKey + TYPING_MS - now,
+      this.lastScroll + SCROLL_MS - now,
+    );
+  }
+
+  dispose(): void {
+    for (const off of this.off.splice(0)) off();
+  }
+}
+
 type Timer = ReturnType<typeof setTimeout>;
 
 export class InPageLayer implements OverlayPort {
   private host: HTMLElement | null = null;
   private root: ShadowRoot | null = null;
   private stack: HTMLElement | null = null;
+  private live: HTMLElement | null = null;
+  private liveRaf = 0;
   private chip: HTMLElement | null = null;
   private toast: HTMLElement | null = null;
   private marks: HTMLElement | null = null;
   private guide: HTMLElement | null = null;
   private frozen = new Map<HTMLImageElement, HTMLCanvasElement>();
   private offerOp: OpId | null = null;
+  private pendingOffer: OfferView | null = null;
+  private holdTimer: Timer | null = null;
+  private activity: InputActivity | null;
   private offerTimer: Timer | null = null;
   private offerDeadline = 0;
   private offerRemaining = OFFER_TIMEOUT_MS;
   private returnFocus: Element | null = null;
-  private outlines: OutlineItem[] = [];
+  private outlines: OutlineGroup[] = [];
+  private drawn = { fits: 0, ghosts: 0, tags: [] as string[] };
   private raf = 0;
+  private guideX: number | null = null;
   private guideY: number | null = null;
   private guideLh = 24;
+  private guideBand: { top: number; height: number } | null = null;
   private guideOff: (() => void) | null = null;
+  private config: LayerConfig = {
+    reduceMotion: false,
+    shortcuts: { focusLayer: '', undoAll: '' },
+  };
   private readonly listeners: Array<() => void> = [];
 
   constructor(
     private readonly doc: Document,
     private readonly events: LayerEvents,
-  ) {}
+  ) {
+    this.activity = new InputActivity(doc);
+  }
+
+  /** WebAble's own reduce-motion setting and the shortcuts the layer announces. */
+  configure(config: LayerConfig): void {
+    this.config = {
+      reduceMotion: config.reduceMotion,
+      shortcuts: { ...config.shortcuts },
+    };
+    this.applyMotion();
+  }
+
+  private applyMotion(): void {
+    if (!this.host) return;
+    if (this.config.reduceMotion)
+      this.host.setAttribute('data-motion', 'reduce');
+    else this.host.removeAttribute('data-motion');
+  }
 
   // ------------------------------------------------------------------ host
 
@@ -113,9 +281,13 @@ export class InPageLayer implements OverlayPort {
     const sheet = new CSSStyleSheet();
     sheet.replaceSync(layerCss());
     root.adoptedStyleSheets = [sheet];
+    // One persistent status line for the chip and the toast.
+    const live = this.doc.createElement('div');
+    live.className = 'wa-sr';
+    live.setAttribute('role', 'status');
     const stack = this.doc.createElement('div');
     stack.className = 'wa-stack';
-    root.append(stack);
+    root.append(live, stack);
     root.addEventListener('keydown', (e) => this.onKey(e as KeyboardEvent));
     this.doc.documentElement.append(host);
     const view = this.doc.defaultView;
@@ -137,6 +309,8 @@ export class InPageLayer implements OverlayPort {
     this.host = host;
     this.root = root;
     this.stack = stack;
+    this.live = live;
+    this.applyMotion();
     return root;
   }
 
@@ -153,15 +327,34 @@ export class InPageLayer implements OverlayPort {
     this.guideOff = null;
     if (this.raf) cancelAnimationFrame(this.raf);
     this.raf = 0;
+    if (this.liveRaf) cancelAnimationFrame(this.liveRaf);
+    this.liveRaf = 0;
     this.host?.remove();
     this.host = null;
     this.root = null;
     this.stack = null;
+    this.live = null;
   }
 
   /** True when `el` is the layer's host (page-side identity check for tests and checks). */
   owns(el: Element | null): boolean {
     return el !== null && el === this.host;
+  }
+
+  /** Clear the status line, then set it on the next frame so it is announced again. */
+  private say(text: string): void {
+    const live = this.live;
+    if (!live) return;
+    live.textContent = '';
+    if (this.liveRaf) cancelAnimationFrame(this.liveRaf);
+    this.liveRaf = requestAnimationFrame(() => {
+      this.liveRaf = 0;
+      if (this.live === live) live.textContent = text;
+    });
+  }
+
+  private withShortcut(text: string, key: string, action: string): string {
+    return key ? `${text} Press ${key} to ${action}.` : text;
   }
 
   // ------------------------------------------------------------------ controls
@@ -214,19 +407,51 @@ export class InPageLayer implements OverlayPort {
 
   // ------------------------------------------------------------------ offer chip
 
+  /**
+   * Show an offer once the person is idle: never while typing (focus in an
+   * editable field, or a key in the last 2 s), dragging, or scrolling (last
+   * 800 ms). The 20 s timeout starts when the chip appears.
+   */
   showOffer(view: OfferView): void {
     this.hideOffer();
+    this.pendingOffer = view;
+    this.activity ??= new InputActivity(this.doc);
+    this.showWhenIdle();
+  }
+
+  private showWhenIdle(): void {
+    this.holdTimer = null;
+    const view = this.pendingOffer;
+    if (!view) return;
+    const wait = this.activity?.busyFor() ?? 0;
+    if (wait > 0) {
+      this.holdTimer = setTimeout(
+        () => this.showWhenIdle(),
+        Math.max(50, wait),
+      );
+      return;
+    }
+    this.pendingOffer = null;
+    this.renderOffer(view);
+  }
+
+  private renderOffer(view: OfferView): void {
     this.ensure();
     const chip = this.doc.createElement('section');
     chip.className = 'wa-chip';
     chip.setAttribute('role', 'region');
     chip.setAttribute('aria-label', 'Suggested by WebAble');
+    // Source line: the region's name already says WebAble to screen readers.
+    const src = this.doc.createElement('p');
+    src.className = 'wa-chip__src';
+    src.setAttribute('aria-hidden', 'true');
+    src.append(markGlyph(this.doc), 'WebAble');
     const q = this.doc.createElement('p');
     q.className = 'wa-chip__q';
     q.textContent = view.question;
     const close = this.closeButton('Close', () => this.answer('dismiss'));
     close.classList.add('wa-chip__close');
-    chip.append(q, close);
+    chip.append(src, q, close);
     if (view.reason) {
       const why = this.doc.createElement('p');
       why.className = 'wa-chip__why';
@@ -251,10 +476,23 @@ export class InPageLayer implements OverlayPort {
     this.offerRemaining = OFFER_TIMEOUT_MS;
     this.resumeOfferTimer();
     this.avoidFocus();
+    this.say(
+      this.withShortcut(
+        view.spoken,
+        this.config.shortcuts.focusLayer,
+        'answer',
+      ),
+    );
   }
 
+  /** The op the chip shows now (null while an offer waits for the person to be idle). */
   get offerShown(): OpId | null {
     return this.offerOp;
+  }
+
+  /** The op of an offer held until the person is idle. */
+  get offerPending(): OpId | null {
+    return this.pendingOffer?.op ?? null;
   }
 
   private pauseOfferTimer(): void {
@@ -280,7 +518,11 @@ export class InPageLayer implements OverlayPort {
     if (op) this.events.offerAnswer(op, a);
   }
 
+  /** Remove the chip (or a held offer) without reporting an answer. */
   hideOffer(): void {
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = null;
+    this.pendingOffer = null;
     if (this.offerTimer) clearTimeout(this.offerTimer);
     this.offerTimer = null;
     const hadFocus =
@@ -301,31 +543,25 @@ export class InPageLayer implements OverlayPort {
     this.ensure();
     const toast = this.doc.createElement('div');
     toast.className = 'wa-toast';
-    toast.setAttribute('role', 'status');
     const msg = this.doc.createElement('p');
     msg.className = 'wa-toast__msg';
-    msg.append(`${view.label} `, this.fitMark(view.before, view.after));
-    if (view.more > 0) {
-      const more = this.doc.createElement('span');
-      more.className = 'wa-toast__more';
-      more.textContent =
-        view.more === 1
-          ? '1 more change on this page'
-          : `${view.more} more changes on this page`;
-      msg.append(more);
-    }
+    msg.textContent = view.message;
+    const all = view.undo === 'all';
     toast.append(
       glyph(this.doc, 'check', 20, 'wa-toast__check'),
       msg,
-      this.button('Undo', 'inverse', () => {
+      this.button(all ? 'Undo all' : 'Undo', 'inverse', () => {
         this.hideToast();
-        this.events.toastUndo();
+        this.events.toastUndo(all);
       }),
       this.closeButton('Close', () => this.hideToast()),
     );
     this.toast = toast;
     // The toast sits above the chip when both are shown.
     this.stack?.prepend(toast);
+    this.say(
+      this.withShortcut(view.message, this.config.shortcuts.undoAll, 'undo'),
+    );
   }
 
   hideToast(): void {
@@ -359,10 +595,12 @@ export class InPageLayer implements OverlayPort {
     return a;
   }
 
+  /** Give focus back to the page: where it was, or nowhere when it was nowhere. */
   private restoreFocus(): void {
     const el = this.returnFocus as HTMLElement | null;
     this.returnFocus = null;
     if (el?.isConnected) el.focus({ preventScroll: true });
+    else (this.root?.activeElement as HTMLElement | null)?.blur();
   }
 
   private controls(): HTMLElement[] {
@@ -385,9 +623,10 @@ export class InPageLayer implements OverlayPort {
       const i = list.indexOf(this.root?.activeElement as HTMLElement);
       if (i < 0 || list.length === 0) return;
       e.preventDefault();
-      const next =
-        list[(i + (e.shiftKey ? -1 : 1) + list.length) % list.length];
-      next?.focus();
+      const next = list[i + (e.shiftKey ? -1 : 1)];
+      // Past either end, focus goes back to the page; the layer never traps it.
+      if (next) next.focus();
+      else this.restoreFocus();
     }
   }
 
@@ -410,7 +649,7 @@ export class InPageLayer implements OverlayPort {
 
   // ------------------------------------------------------------------ show on page
 
-  showOutlines(items: OutlineItem[]): void {
+  showOutlines(groups: OutlineGroup[]): void {
     this.hideOutlines();
     const root = this.ensure();
     const marks = this.doc.createElement('div');
@@ -418,7 +657,7 @@ export class InPageLayer implements OverlayPort {
     marks.setAttribute('aria-hidden', 'true');
     root.append(marks);
     this.marks = marks;
-    this.outlines = items;
+    this.outlines = groups;
     this.drawOutlines();
   }
 
@@ -426,53 +665,151 @@ export class InPageLayer implements OverlayPort {
     this.marks?.remove();
     this.marks = null;
     this.outlines = [];
+    this.drawn = { fits: 0, ghosts: 0, tags: [] };
     this.collapse();
   }
 
+  /** Fit outlines drawn in the viewport now. */
   get outlinesShown(): number {
-    return this.outlines.length;
+    return this.drawn.fits;
   }
 
+  /**
+   * Up to three outlines per change among the items in the viewport, each 4 px
+   * outside its element; a dashed ghost only where a group supplies one. The
+   * change's tag goes on its first outlined item.
+   */
   private drawOutlines(): void {
     const marks = this.marks;
     const view = this.doc.defaultView;
     if (!marks || !view) return;
     marks.replaceChildren();
+    const drawn = { fits: 0, ghosts: 0, tags: [] as string[] };
     const sx = view.scrollX;
     const sy = view.scrollY;
+    const vw = view.innerWidth;
+    const vh = view.innerHeight;
+    const toView = (b: Box): Box => ({
+      left: b.left - sx,
+      top: b.top - sy,
+      right: b.right - sx,
+      bottom: b.bottom - sy,
+    });
     const place = (el: HTMLElement, b: Box): void => {
-      el.style.left = `${b.left - sx}px`;
-      el.style.top = `${b.top - sy}px`;
+      el.style.left = `${b.left}px`;
+      el.style.top = `${b.top}px`;
       el.style.width = `${Math.max(0, b.right - b.left)}px`;
       el.style.height = `${Math.max(0, b.bottom - b.top)}px`;
     };
-    for (const item of this.outlines) {
-      if (item.ghost) {
-        const g = this.doc.createElement('div');
-        g.className = 'wa-ghost';
-        place(g, item.ghost);
-        marks.append(g);
+    const tags: Array<[NonNullable<OutlineGroup['tag']>, Box]> = [];
+    for (const group of this.outlines) {
+      let n = 0;
+      let first: Box | null = null;
+      for (const item of group.items) {
+        if (n >= MAX_OUTLINES) break;
+        const fit = inflate(toView(item.fit), FIT_OUTSET, FIT_OUTSET);
+        if (
+          fit.right <= 0 ||
+          fit.left >= vw ||
+          fit.bottom <= 0 ||
+          fit.top >= vh
+        )
+          continue;
+        n++;
+        first ??= fit;
+        if (item.ghost) {
+          const g = this.doc.createElement('div');
+          g.className = 'wa-ghost';
+          place(g, toView(item.ghost));
+          marks.append(g);
+          drawn.ghosts++;
+        }
+        const f = this.doc.createElement('div');
+        f.className = group.fill ? 'wa-fit wa-fit--fill' : 'wa-fit';
+        place(f, fit);
+        marks.append(f);
+        drawn.fits++;
       }
-      const f = this.doc.createElement('div');
-      f.className = 'wa-fit';
-      place(f, item.fit);
-      marks.append(f);
+      if (group.tag && first) tags.push([group.tag, first]);
     }
     // Tags last, so no outline crosses a label.
-    for (const item of this.outlines) {
-      if (item.tag) {
-        const tag = this.doc.createElement('div');
-        tag.className = 'wa-tag';
-        const label = this.doc.createElement('span');
-        label.className = 'wa-tag__label';
-        label.textContent = item.tag.label;
-        tag.append(label, this.fitMark(item.tag.before, item.tag.after));
-        const anchor = item.ghost ?? item.fit;
-        tag.style.left = `${Math.max(4, Math.min(anchor.left, item.fit.left) - sx)}px`;
-        tag.style.top = `${Math.max(4, Math.min(anchor.top, item.fit.top) - sy - 34)}px`;
-        marks.append(tag);
+    const placed: Box[] = [];
+    for (const [info, box] of tags) {
+      const text = this.placeTag(marks, info, box, view, placed);
+      if (text !== null) drawn.tags.push(text);
+    }
+    this.drawn = drawn;
+  }
+
+  /**
+   * Above the box when there is 40 px of room, otherwise 6 px below, clamped
+   * to the viewport. A tag that would cover page text (or another tag) tries
+   * the other side, then is dropped. Returns the tag's text, or null.
+   */
+  private placeTag(
+    marks: HTMLElement,
+    info: NonNullable<OutlineGroup['tag']>,
+    box: Box,
+    view: Window,
+    placed: Box[],
+  ): string | null {
+    const tag = this.doc.createElement('div');
+    tag.className = 'wa-tag';
+    const label = this.doc.createElement('span');
+    label.className = 'wa-tag__label';
+    label.textContent = info.label;
+    tag.append(label, this.fitMark(info.before, info.after));
+    tag.style.left = '0px';
+    tag.style.top = '0px';
+    tag.style.visibility = 'hidden';
+    marks.append(tag);
+    const r = tag.getBoundingClientRect();
+    const w = r.width;
+    const h = r.height;
+    const left = Math.max(8, Math.min(box.left, view.innerWidth - w - 8));
+    const below = box.bottom + 6;
+    const tops = box.top >= 40 ? [box.top - h - 6, below] : [below];
+    for (const t of tops) {
+      const top = Math.max(8, Math.min(view.innerHeight - 40, t));
+      const rect = { left, top, right: left + w, bottom: top + h };
+      if (placed.some((p) => intersection(p, rect) > 0)) continue;
+      if (this.coversText(rect)) continue;
+      tag.style.left = `${left}px`;
+      tag.style.top = `${top}px`;
+      tag.style.visibility = '';
+      placed.push(rect);
+      return tag.textContent ?? '';
+    }
+    tag.remove();
+    return null;
+  }
+
+  /** True when page text lies under `r` (viewport coordinates). */
+  private coversText(r: Box): boolean {
+    const seen = new Set<Element>();
+    const range = this.doc.createRange();
+    const w = r.right - r.left;
+    for (const fx of [0.02, 0.25, 0.5, 0.75, 0.98]) {
+      for (const y of [r.top + 2, (r.top + r.bottom) / 2, r.bottom - 2]) {
+        const el = this.doc.elementFromPoint(r.left + w * fx, y);
+        if (!el || seen.has(el) || this.owns(el)) continue;
+        seen.add(el);
+        for (const n of el.childNodes) {
+          if (n.nodeType !== Node.TEXT_NODE || !n.textContent?.trim()) continue;
+          range.selectNodeContents(n);
+          for (const b of range.getClientRects()) {
+            if (
+              b.right > r.left &&
+              b.left < r.right &&
+              b.bottom > r.top &&
+              b.top < r.bottom
+            )
+              return true;
+          }
+        }
       }
     }
+    return false;
   }
 
   // ------------------------------------------------------------------ reading guide
@@ -484,7 +821,9 @@ export class InPageLayer implements OverlayPort {
       this.guideOff = null;
       this.guide?.remove();
       this.guide = null;
+      this.guideX = null;
       this.guideY = null;
+      this.guideBand = null;
       this.collapse();
       return;
     }
@@ -494,12 +833,7 @@ export class InPageLayer implements OverlayPort {
     const guide = this.doc.createElement('div');
     guide.className = 'wa-guide';
     guide.setAttribute('aria-hidden', 'true');
-    for (const cls of [
-      'wa-shade wa-shade--top',
-      'wa-shade wa-shade--bottom',
-      'wa-band-edge',
-      'wa-band-edge',
-    ]) {
+    for (const cls of ['wa-shade wa-shade--top', 'wa-shade wa-shade--bottom']) {
       const d = this.doc.createElement('div');
       d.className = cls;
       guide.append(d);
@@ -508,6 +842,7 @@ export class InPageLayer implements OverlayPort {
     this.guide = guide;
     if (view) {
       const onMove = (e: PointerEvent): void => {
+        this.guideX = e.clientX;
         this.guideY = e.clientY;
         this.schedule();
       };
@@ -517,26 +852,69 @@ export class InPageLayer implements OverlayPort {
       });
       this.guideOff = () =>
         view.removeEventListener('pointermove', onMove, true);
-      this.guideY = view.innerHeight / 3;
     }
     this.drawGuide();
+  }
+
+  /** The rendered line of text under a viewport point, or null. */
+  private lineAt(x: number, y: number): { top: number; height: number } | null {
+    const doc = this.doc as Document & {
+      caretPositionFromPoint?: (
+        x: number,
+        y: number,
+      ) => { offsetNode: Node } | null;
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    };
+    let node: Node | null = null;
+    if (typeof doc.caretPositionFromPoint === 'function')
+      node = doc.caretPositionFromPoint(x, y)?.offsetNode ?? null;
+    else if (typeof doc.caretRangeFromPoint === 'function')
+      node = doc.caretRangeFromPoint(x, y)?.startContainer ?? null;
+    if (!node || node.nodeType !== Node.TEXT_NODE) return null;
+    const range = this.doc.createRange();
+    range.selectNodeContents(node);
+    let best: DOMRect | null = null;
+    let dist = Infinity;
+    for (const r of range.getClientRects()) {
+      if (r.width <= 0 || r.height <= 0) continue;
+      const d = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+      if (d < dist) {
+        dist = d;
+        best = r;
+      }
+    }
+    // The nearest caret can be far from the pointer (margins, gaps): not a line under it.
+    if (!best || dist > best.height) return null;
+    return { top: best.top, height: best.height };
   }
 
   private drawGuide(): void {
     const guide = this.guide;
     const view = this.doc.defaultView;
     if (!guide || !view) return;
-    const band = Math.min(96, Math.max(28, Math.round(this.guideLh * 1.6)));
+    const x = this.guideX ?? view.innerWidth / 2;
     const y = this.guideY ?? view.innerHeight / 3;
-    const top = Math.max(0, y - band / 2);
-    const [shadeTop, shadeBottom, edgeTop, edgeBottom] = [
-      ...guide.children,
-    ] as HTMLElement[];
-    if (!shadeTop || !shadeBottom || !edgeTop || !edgeBottom) return;
-    shadeTop.style.height = `${top}px`;
-    shadeBottom.style.top = `${top + band}px`;
-    edgeTop.style.top = `${top - 1}px`;
-    edgeBottom.style.top = `${top + band - 1}px`;
+    const line = this.lineAt(x, y);
+    let band: { top: number; height: number };
+    if (line) band = { top: line.top - 4, height: line.height + 8 };
+    else if (this.guideBand)
+      return; // no line under the pointer: stay put
+    else {
+      const height = Math.min(96, Math.max(28, Math.round(this.guideLh * 1.6)));
+      band = { top: y - height / 2, height };
+    }
+    const prev = this.guideBand;
+    if (
+      prev &&
+      Math.round(prev.top) === Math.round(band.top) &&
+      Math.round(prev.height) === Math.round(band.height)
+    )
+      return; // same line: no redraw
+    this.guideBand = band;
+    const [shadeTop, shadeBottom] = [...guide.children] as HTMLElement[];
+    if (!shadeTop || !shadeBottom) return;
+    shadeTop.style.height = `${Math.max(0, band.top)}px`;
+    shadeBottom.style.top = `${band.top + band.height}px`;
   }
 
   get guideShown(): boolean {
@@ -617,21 +995,33 @@ export class InPageLayer implements OverlayPort {
     this.schedule();
   }
 
-  /** Test and diagnostics view of what the layer shows (text only, no page data). */
+  /** Test and diagnostics view of what the layer shows (text and geometry only, no page data). */
   inspect(): {
     mounted: boolean;
-    offer: { question: string; buttons: string[]; tabIndexes: number[] } | null;
+    offer: {
+      question: string;
+      source: string;
+      buttons: string[];
+      tabIndexes: number[];
+    } | null;
+    offerPending: OpId | null;
     toast: { text: string; buttons: string[] } | null;
     outlines: number;
+    ghosts: number;
+    tags: string[];
     guide: boolean;
+    guideBand: { top: number; height: number } | null;
     frozen: number;
     focusInside: boolean;
+    live: string;
+    motion: string | null;
   } {
     return {
       mounted: this.host?.isConnected ?? false,
       offer: this.chip
         ? {
             question: this.chip.querySelector('.wa-chip__q')?.textContent ?? '',
+            source: this.chip.querySelector('.wa-chip__src')?.textContent ?? '',
             buttons: [...this.chip.querySelectorAll('button')].map(
               (b) => b.textContent || b.getAttribute('aria-label') || '',
             ),
@@ -640,6 +1030,7 @@ export class InPageLayer implements OverlayPort {
             ),
           }
         : null,
+      offerPending: this.offerPending,
       toast: this.toast
         ? {
             text: this.toast.querySelector('.wa-toast__msg')?.textContent ?? '',
@@ -648,10 +1039,15 @@ export class InPageLayer implements OverlayPort {
             ),
           }
         : null,
-      outlines: this.outlines.length,
+      outlines: this.drawn.fits,
+      ghosts: this.drawn.ghosts,
+      tags: [...this.drawn.tags],
       guide: this.guide !== null,
+      guideBand: this.guide && this.guideBand ? { ...this.guideBand } : null,
       frozen: this.frozen.size,
       focusInside: this.root?.activeElement != null,
+      live: this.live?.textContent ?? '',
+      motion: this.host?.getAttribute('data-motion') ?? null,
     };
   }
 
@@ -669,12 +1065,19 @@ export class InPageLayer implements OverlayPort {
   destroy(): void {
     if (this.offerTimer) clearTimeout(this.offerTimer);
     this.offerTimer = null;
+    if (this.holdTimer) clearTimeout(this.holdTimer);
+    this.holdTimer = null;
+    this.pendingOffer = null;
+    this.activity?.dispose();
+    this.activity = null;
     this.chip = null;
     this.toast = null;
     this.marks = null;
     this.guide = null;
+    this.guideBand = null;
     this.frozen.clear();
     this.outlines = [];
+    this.drawn = { fits: 0, ghosts: 0, tags: [] };
     this.offerOp = null;
     this.teardownHost();
   }

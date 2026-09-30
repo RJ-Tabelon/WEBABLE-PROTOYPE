@@ -563,6 +563,8 @@ export interface TuneProgress {
   taskIndex: number;
   /** "Part 2 of 3 · Pointing · about 3 min left", or null on screens without one. */
   text: string | null;
+  /** What narrow screens show: "About 3 min left" (the full text stays the accessible source). */
+  short: string | null;
   /** Rounded up; at least 1 while a part is running. */
   minutesLeft: number;
 }
@@ -588,6 +590,7 @@ export function progressOf(state: TuneState, now: number): TuneProgress {
       section: done ? MODULES.length : 0,
       taskIndex: 0,
       text: done ? 'All 3 parts done' : null,
+      short: null,
       minutesLeft: left,
     };
   }
@@ -595,6 +598,7 @@ export function progressOf(state: TuneState, now: number): TuneProgress {
   return {
     section,
     taskIndex: STEP_INFO[state.step].taskIndex,
+    short: `About ${left} min left`,
     text: `Part ${section + 1} of ${MODULES.length} · ${MODULE_LABEL[module]} · about ${left} min left`,
     minutesLeft: left,
   };

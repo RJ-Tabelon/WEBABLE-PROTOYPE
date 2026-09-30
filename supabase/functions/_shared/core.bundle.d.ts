@@ -217,6 +217,13 @@ export declare function isVocabPhrase(phrase: string): boolean;
 export declare function unknownEvidenceWords(
   ev: Pick<RegionEvidence, 'class_words' | 'heading_words' | 'control_words'>,
 ): string[];
+/** Vocabulary words per phrase; dropped-word marks do not count. */
+export declare const MAX_HEADING_WORDS: 6;
+export declare const MAX_CONTROL_WORDS: 4;
+/** Vocabulary violations in one evidence object: unknown words plus over-long phrases. */
+export declare function vocabularyViolations(
+  ev: Pick<RegionEvidence, 'class_words' | 'heading_words' | 'control_words'>,
+): number;
 
 // ---------------------------------------------------------------------------
 // Jev (TypeSafe System One) API, jev/api.ts and jev/client.ts

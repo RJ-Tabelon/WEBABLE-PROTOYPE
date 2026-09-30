@@ -3,11 +3,19 @@ import {
   useEffect,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
   type Ref,
 } from 'react';
 import { browser } from 'wxt/browser';
-import { Button, CheckGlyph, IndexRule, Wordmark } from '@webable/ui';
+import {
+  Button,
+  CheckGlyph,
+  Disclosure,
+  IndexRule,
+  TextLink,
+  Wordmark,
+} from '@webable/ui';
 
 import { createClient, type UiClient } from '@/lib/popup/client';
 import { applyPrefs, readSystemSignals } from '@/lib/popup/theme';
@@ -15,9 +23,11 @@ import type { WelcomeState } from '@/lib/sw/ui';
 
 /**
  * The welcome page, opened once on install (design-final Task density: one
- * column, one decision per region). Step 1 asks for site access with a click,
- * and says plainly what that access means. Step 2 connects the person's fit
- * from the web app. Both steps can be done in any order, or skipped.
+ * column, one decision per region). Three numbered rows: allow site access
+ * with a click, tune WebAble (or sign in to an existing account), and pin the
+ * toolbar icon. Any order works, and every step can be skipped. What WebAble
+ * reads and sends is one meta line with the detail behind a disclosure.
+ * `#allow` (wa:open-welcome from the web app) focuses the Allow button.
  */
 
 const ALL_SITES = { origins: ['<all_urls>'] };
@@ -29,6 +39,10 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
   const [unresponsive, setUnresponsive] = useState(false);
   const [grant, setGrant] = useState<Grant>('idle');
   const accessDoneRef = useRef<HTMLParagraphElement>(null);
+  const allowRef = useRef<HTMLButtonElement>(null);
+  // Focus the Allow step once the page has its state (or on a later #allow).
+  const wantAllow = useRef(readHash() === '#allow');
+  const [hashTick, setHashTick] = useState(0);
 
   const load = useCallback(async () => {
     const next = await client.send({ type: 'ui:welcome' });
@@ -45,12 +59,19 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
     // Coming back from the web app (sign-in, Tune) or Chrome's settings.
     const onFocus = () => void load();
     window.addEventListener('focus', onFocus);
+    const onHash = () => {
+      if (readHash() !== '#allow') return;
+      wantAllow.current = true;
+      setHashTick((n) => n + 1);
+    };
+    window.addEventListener('hashchange', onHash);
     const onPermission = () => void load();
     browser.permissions.onAdded.addListener(onPermission);
     browser.permissions.onRemoved.addListener(onPermission);
     return () => {
       off();
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('hashchange', onHash);
       browser.permissions.onAdded.removeListener(onPermission);
       browser.permissions.onRemoved.removeListener(onPermission);
     };
@@ -59,6 +80,14 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
   useEffect(() => {
     if (state) applyPrefs(document.documentElement, state.prefs);
   }, [state]);
+
+  useEffect(() => {
+    if (!state || !wantAllow.current) return;
+    wantAllow.current = false;
+    (state.allSites ? accessDoneRef.current : allowRef.current)?.focus();
+    // Drop the hash so the next #allow from the web app is a hashchange again.
+    history.replaceState(null, '', location.pathname + location.search);
+  }, [state, hashTick]);
 
   const allow = () => {
     setGrant('asking');
@@ -82,6 +111,7 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
   const allSites = state?.allSites ?? false;
   const connected = state?.connected ?? false;
   const done = allSites && connected;
+  const webOrigin = state ? originOf(state.links.connect) : null;
 
   return (
     <div className="wl">
@@ -93,7 +123,7 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
 
       <main className="wl-main" id="main">
         <div className="wl-intro">
-          <p className="wl-eyebrow">Two steps · about a minute</p>
+          {done ? <p className="wl-eyebrow">All set</p> : null}
           <h1 className="wl-title">
             {done ? 'WebAble is ready' : 'Set up WebAble'}
           </h1>
@@ -110,113 +140,111 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
           </p>
         ) : null}
 
-        <Step
-          n={1}
-          label="Site access"
-          title="Let WebAble work on every site"
-          done={allSites}
-          doneText="WebAble can work on every site. Pages fit you as they load."
-          doneRef={accessDoneRef}
-        >
-          <p className="wl-body">
-            Pages then fit you as they load. Without this, WebAble works only on
-            the page where you open it from the toolbar.
-          </p>
-          <div className="wl-actions">
-            <Button
-              variant="primary"
-              size="lg"
-              busy={grant === 'asking'}
-              busyLabel="Waiting for Chrome…"
-              onClick={allow}
+        <div className="wl-region">
+          <IndexRule />
+          <ol className="wl-steps">
+            <Step
+              n={1}
+              title="Allow WebAble on sites"
+              body="Pages then fit you as they load, not only where you open WebAble."
+              done={allSites}
+              doneText="Allowed on all sites"
+              doneRef={accessDoneRef}
+              notes={
+                grant === 'declined' ? (
+                  <p className="wl-note" role="status">
+                    Nothing changed. You can allow it here any time, or open
+                    WebAble on a page to use it there.
+                  </p>
+                ) : grant === 'failed' ? (
+                  <p className="wl-note" role="status">
+                    Chrome didn’t show its prompt. Try again, or allow access in
+                    Chrome’s extension settings.
+                  </p>
+                ) : null
+              }
             >
-              Allow on all sites
-            </Button>
-          </div>
-          {grant === 'declined' ? (
-            <p className="wl-note" role="status">
-              Nothing changed. You can allow it here any time, or open WebAble
-              on a page to use it there.
-            </p>
-          ) : null}
-          {grant === 'failed' ? (
-            <p className="wl-note" role="status">
-              Chrome didn’t show its prompt. Try again, or allow access in
-              Chrome’s extension settings.
-            </p>
-          ) : null}
-          <dl className="wl-facts">
-            <div className="wl-fact">
-              <dt>What this allows</dt>
-              <dd>
-                WebAble reads the layout of each page on this device, then
-                adjusts text size, spacing, click targets and motion for you.
-              </dd>
-            </div>
-            <div className="wl-fact">
-              <dt>What never leaves this computer</dt>
-              <dd>
-                Page text, anything you type, and the list of sites you visit.
-                If you turn on page analysis, only page structure is sent, and
-                you can see exactly what.
-              </dd>
-            </div>
-            <div className="wl-fact">
-              <dt>What you keep</dt>
-              <dd>
-                Every change is listed in WebAble’s toolbar menu with an Undo.
-                You can pause any site, or remove access later in Chrome’s
-                settings.
-              </dd>
-            </div>
-          </dl>
-        </Step>
+              <Button
+                ref={allowRef}
+                variant="primary"
+                size="lg"
+                busy={grant === 'asking'}
+                busyLabel="Waiting for Chrome…"
+                onClick={allow}
+              >
+                Allow on all sites
+              </Button>
+            </Step>
 
-        <Step
-          n={2}
-          label="Your fit"
-          title="Connect your fit"
-          done={connected}
-          doneText={
-            state?.email
-              ? `Connected as ${state.email}.`
-              : 'Connected. Your fit is on this browser.'
-          }
-        >
-          <p className="wl-body">
-            Tune WebAble to you in three short tasks, or sign in if you already
-            have. Your fit then works in this browser. Until then, WebAble uses
-            your system settings.
-          </p>
-          <div className="wl-actions">
-            <Button
-              variant={allSites ? 'primary' : 'secondary'}
-              size="lg"
-              href={state?.links.connect ?? '#'}
-              arrow="external"
+            <Step
+              n={2}
+              title="Tune it to you"
+              body="Three short tasks set the text size, spacing and click targets that fit you."
+              done={connected}
+              doneText={
+                state?.email ? `Connected as ${state.email}` : 'Connected'
+              }
             >
-              Connect your fit
-            </Button>
-          </div>
-        </Step>
+              <Button
+                variant={allSites ? 'primary' : 'secondary'}
+                size="lg"
+                href={state?.links.tune ?? '#'}
+                arrow="external"
+              >
+                {'Tune WebAble · 6 min'}
+              </Button>
+              {webOrigin ? (
+                <TextLink
+                  href={`${webOrigin}/sign-in?next=/connect`}
+                  onClick={(e) => openOrFocusConnect(e, webOrigin)}
+                >
+                  I have an account
+                </TextLink>
+              ) : null}
+            </Step>
 
-        {done ? (
-          <section className="wl-done" aria-labelledby="wl-done-title">
-            <IndexRule />
-            <h2 id="wl-done-title" className="wl-step__title">
-              You’re set
-            </h2>
-            <p className="wl-body">
-              Open any site. WebAble’s toolbar icon shows how many changes it
-              made, and each one can be undone.
-            </p>
-          </section>
-        ) : null}
+            <Step
+              n={3}
+              title="Pin WebAble"
+              body="Pin it from Chrome’s extensions menu so its icon stays in the toolbar."
+            />
+          </ol>
+        </div>
 
-        <p className="wl-tip">
-          Tip: pin WebAble from Chrome’s extensions menu so its icon stays in
-          the toolbar.
-        </p>
+        <div className="wl-region">
+          <IndexRule />
+          <p className="wl-note">
+            WebAble reads page layout on this computer. Page text, anything you
+            type and the sites you visit stay here.
+          </p>
+          <Disclosure title="What WebAble reads and sends" headingLevel={2}>
+            <dl className="wl-facts">
+              <div className="wl-fact">
+                <dt>What this allows</dt>
+                <dd>
+                  WebAble reads the layout of each page on this computer, then
+                  adjusts text size, spacing, click targets and motion.
+                </dd>
+              </div>
+              <div className="wl-fact">
+                <dt>What never leaves this computer</dt>
+                <dd>
+                  Page text, anything you type, and the list of sites you visit.
+                  If you turn on page analysis, only page structure is sent, and
+                  you can see exactly what.
+                </dd>
+              </div>
+              <div className="wl-fact">
+                <dt>What you keep</dt>
+                <dd>
+                  Every change is listed in WebAble’s toolbar menu with an Undo.
+                  You can pause any site, or remove access later in Chrome’s
+                  settings.
+                </dd>
+              </div>
+            </dl>
+          </Disclosure>
+        </div>
       </main>
 
       <footer className="wl-footer">
@@ -233,6 +261,15 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
             >
               Help
             </a>
+            {webOrigin ? (
+              <a
+                href={`${webOrigin}/privacy#what-webable-sends`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                What WebAble sends
+              </a>
+            ) : null}
           </p>
         ) : null}
       </footer>
@@ -240,45 +277,104 @@ export function Welcome({ client = defaultClient() }: { client?: UiClient }) {
   );
 }
 
+/** One numbered 56 px row: numeral, title, one sentence, and its action. */
 function Step({
   n,
-  label,
   title,
-  done,
+  body,
+  done = false,
   doneText,
   doneRef,
+  notes,
   children,
 }: {
   n: number;
-  label: string;
   title: string;
-  done: boolean;
-  doneText: string;
+  body: string;
+  done?: boolean;
+  doneText?: string;
   doneRef?: Ref<HTMLParagraphElement>;
-  children: ReactNode;
+  notes?: ReactNode;
+  children?: ReactNode;
 }) {
   const id = `wl-step-${n}`;
   return (
-    <section
-      className="wl-step"
-      aria-labelledby={id}
-      data-done={done || undefined}
-    >
-      <IndexRule />
-      <p className="wl-eyebrow">{`Step ${n} of 2 · ${label}`}</p>
-      <h2 id={id} className="wl-step__title">
-        {title}
-      </h2>
+    <li className="wl-step" data-done={done || undefined}>
+      <span className="wl-step__n" aria-hidden="true">
+        {n}
+      </span>
+      <div className="wl-step__text">
+        <h2 id={id} className="wl-step__title">
+          {title}
+        </h2>
+        <p className="wl-step__body">{body}</p>
+        {done ? null : notes}
+      </div>
       {done ? (
-        <p ref={doneRef} tabIndex={-1} className="wl-step__done" role="status">
+        <p
+          ref={doneRef}
+          tabIndex={-1}
+          className="wl-step__action wl-step__done"
+          role="status"
+        >
           <CheckGlyph size={16} className="wl-step__check" />
           <span>{doneText}</span>
         </p>
-      ) : (
-        children
-      )}
-    </section>
+      ) : children ? (
+        <div className="wl-step__action">{children}</div>
+      ) : null}
+    </li>
   );
+}
+
+/**
+ * "I have an account": if the web app's connect page is already open (the
+ * person started there), bring that tab forward instead of opening another.
+ */
+function openOrFocusConnect(
+  e: MouseEvent<HTMLAnchorElement>,
+  origin: string,
+): void {
+  const href = e.currentTarget.href;
+  e.preventDefault();
+  void browser.tabs
+    .query({})
+    .then(async (tabs) => {
+      const open = tabs.find((t) => isConnectTab(t.url, origin));
+      if (open?.id === undefined) {
+        await browser.tabs.create({ url: href });
+        return;
+      }
+      await browser.tabs.update(open.id, { active: true });
+      if (open.windowId !== undefined)
+        await browser.windows.update(open.windowId, { focused: true });
+    })
+    .catch(() => window.open(href, '_blank', 'noopener'));
+}
+
+function isConnectTab(url: string | undefined, origin: string): boolean {
+  if (!url) return false;
+  try {
+    const u = new URL(url);
+    return (
+      u.origin === origin &&
+      (u.pathname === '/connect' || u.pathname.startsWith('/connect/'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+function originOf(url: string): string | null {
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
+function readHash(): string {
+  return typeof location === 'undefined' ? '' : location.hash;
 }
 
 let shared: UiClient | null = null;

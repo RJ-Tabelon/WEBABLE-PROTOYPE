@@ -1,6 +1,7 @@
 'use client';
 
-import type { FitProfile } from '@webable/core';
+import './row-editor.css';
+
 import type { FitRow } from '@webable/core/profile/describe';
 import { Actions, Button, ErrorPanel, Hint, Slider } from '@webable/ui';
 import { useEffect, useId, useRef, useState } from 'react';
@@ -8,10 +9,7 @@ import { useEffect, useId, useRef, useState } from 'react';
 import {
   type AdjustValue,
   choiceFromValue,
-  currentValue,
   editorFor,
-  measuredAlternative,
-  sameValue,
   valueFromChoice,
   valueFromSlider,
 } from './adjust';
@@ -25,39 +23,75 @@ const FOCUS_ORDER = [
   'button',
 ] as const;
 
+/** A slider's draft reaches the page once it has rested this long (design-final §7.6). */
+export const DRAFT_DELAY_MS = 150;
+
 export interface RowEditorProps {
-  id: string;
+  /** The row being edited (`@webable/core` describes it). */
   row: FitRow;
-  profile: FitProfile;
-  busy: boolean;
-  error: string | null;
-  onSave: (value: AdjustValue) => void;
-  onUseMeasured: () => void;
+  /** The value the editor opens with. */
+  value: AdjustValue;
+  /**
+   * The value while the person is choosing: at once for a choice, after the
+   * slider rests for 150 ms. Previews and the row's value follow it.
+   */
+  onDraft: (value: AdjustValue) => void;
+  /** [Save] (`save`) or [Done] (`live`) with the chosen value. */
+  onCommit: (value: AdjustValue) => void;
+  /** [Cancel] or Esc: put the value back and close. */
   onCancel: () => void;
+  /**
+   * `save`: nothing changes until Save (the app, where saving writes a new
+   * version). `live`: every draft already applies, and Done closes (Tune).
+   */
+  mode: 'save' | 'live';
+  /** Id for the editor, for `aria-controls` on the row's Adjust button. */
+  id?: string;
+  /**
+   * Id of the row's heading. Sliders use it as the group's name, since their
+   * own label already says what they change; choices get "Adjust …" instead.
+   */
+  labelledBy?: string;
+  /** Saving (save mode). Locks the controls and shows "Saving…". */
+  busy?: boolean;
+  /** Why saving failed, in plain words. */
+  error?: string | null;
+  /** The measured value in words when the person's value replaced it ("19 px"). */
+  measured?: string | null;
+  onUseMeasured?: () => void;
+  /** The device asks for less motion (the motion row can't be set to play). */
+  systemReducedMotion?: boolean;
 }
 
 /**
- * The inline editor under a fit row: a slider with steppers for ladders of
- * numbers, a segmented control for choices in words. Nothing changes until
- * Save; Cancel (or Esc) closes it and returns focus to Adjust.
+ * The inline editor under a fit row, shared by Tune and the app: a slider with
+ * steppers for ladders of numbers, a segmented control for choices in words.
+ * Esc cancels. Focus moves onto the control when it opens.
  */
 export function RowEditor({
-  id,
   row,
-  profile,
-  busy,
-  error,
-  onSave,
-  onUseMeasured,
+  value,
+  onDraft,
+  onCommit,
   onCancel,
+  mode,
+  id,
+  labelledBy,
+  busy = false,
+  error = null,
+  measured = null,
+  onUseMeasured,
+  systemReducedMotion = false,
 }: RowEditorProps) {
-  const spec = editorFor(profile, row.id);
-  const initial = currentValue(profile, row.id);
-  const [draft, setDraft] = useState<AdjustValue>(initial);
+  // The opening value fixes the steps: they must not move while dragging.
+  const [start] = useState(value);
+  const spec = editorFor(row.id, start, { systemReducedMotion });
+  const [draft, setDraft] = useState<AdjustValue>(start);
   const labelId = useId();
   const reasonId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
-  const measured = measuredAlternative(profile, row.id);
+  const onDraftRef = useRef(onDraft);
+  onDraftRef.current = onDraft;
 
   // Move focus into the editor, onto its control, when it opens. Selectors are
   // tried in order: the slider thumb (not its − stepper), then the chosen segment.
@@ -77,26 +111,33 @@ export function RowEditor({
           .filter((o) => o.disabledReason)
           .map((o) => o.disabledReason as string)
       : [];
+  const slider = spec.control === 'slider';
+  // A slider already names itself ("Text size 18 px"): the row's heading names
+  // the group. A choice gets its own "Adjust …" label.
+  const groupLabel = slider && labelledBy ? labelledBy : labelId;
 
   return (
     <div
       id={id}
       ref={rootRef}
       tabIndex={-1}
-      className="wa-fit-row__editor"
+      className="wa-fit-editor"
       role="group"
-      aria-labelledby={labelId}
+      aria-labelledby={groupLabel}
       aria-describedby={disabledReasons.length > 0 ? reasonId : undefined}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && !busy) {
           event.preventDefault();
+          event.stopPropagation();
           onCancel();
         }
       }}
     >
-      <p id={labelId} className="wa-fit-row__editor-label">
-        Adjust {row.label.toLowerCase()}
-      </p>
+      {slider && labelledBy ? null : (
+        <p id={labelId} className="wa-fit-editor__label">
+          Adjust {row.label.toLowerCase()}
+        </p>
+      )}
 
       {spec.control === 'slider' ? (
         <Slider
@@ -107,8 +148,14 @@ export function RowEditor({
             const next = valueFromSlider(row.id, n);
             if (next) setDraft(next);
           }}
+          onValueCommit={(n) => {
+            const next = valueFromSlider(row.id, n);
+            if (next) onDraftRef.current(next);
+          }}
+          commitDelay={DRAFT_DELAY_MS}
           format={spec.format}
           formatSpoken={spec.spoken}
+          disabled={busy}
           changesPage
         />
       ) : (
@@ -120,7 +167,9 @@ export function RowEditor({
             value={choiceFromValue(draft)}
             onValueChange={(choice) => {
               const next = valueFromChoice(row.id, choice);
-              if (next) setDraft(next);
+              if (!next) return;
+              setDraft(next);
+              onDraftRef.current(next);
             }}
           />
           {disabledReasons.length > 0 ? (
@@ -129,8 +178,8 @@ export function RowEditor({
         </div>
       )}
 
-      {measured ? (
-        <div className="wa-fit-row__measured">
+      {measured && onUseMeasured ? (
+        <div className="wa-fit-editor__measured">
           <p className="wa-app-meta">Tune measured {measured}.</p>
           <Button
             variant="ghost"
@@ -155,11 +204,9 @@ export function RowEditor({
           size="md"
           busy={busy}
           busyLabel="Saving…"
-          onClick={() =>
-            sameValue(draft, initial) ? onCancel() : onSave(draft)
-          }
+          onClick={() => onCommit(draft)}
         >
-          Save
+          {mode === 'save' ? 'Save' : 'Done'}
         </Button>
         <Button
           variant="secondary"

@@ -25,6 +25,7 @@ jobs:
         env:
           SUPABASE_URL: https://example.supabase.co
           SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+          CONTACT_EMAIL: ci@example.com
       - run: pnpm check
       - run: pnpm --filter @webable/web build
 

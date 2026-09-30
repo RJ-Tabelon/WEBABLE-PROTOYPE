@@ -1,6 +1,6 @@
 'use client';
 
-import { Actions, Button, CheckGlyph, ErrorPanel } from '@webable/ui';
+import { Actions, Button, ErrorPanel, TextLink } from '@webable/ui';
 import { useEffect, useId, useState } from 'react';
 
 import { requestPasswordReset, sendMagicLink } from '../../../lib/auth/actions';
@@ -9,6 +9,7 @@ import {
   callAuthAction,
   type CheckEmailKind,
   readSentTo,
+  withNext,
 } from '../../../components/app/forms/auth-forms';
 
 /** Seconds before another link can be requested (the mailer limits bursts). */
@@ -25,7 +26,7 @@ const COPY: Record<
   },
   'sign-up': {
     lead: (to) =>
-      `We sent a link to ${to}. Open it to confirm your address and finish signing up.`,
+      `We sent a link to ${to} to confirm your address. Open it on this computer so your fit can be saved.`,
     back: { href: '/sign-up', label: 'Use a different email' },
   },
   reset: {
@@ -35,11 +36,17 @@ const COPY: Record<
   },
 };
 
+export interface CheckEmailProps {
+  kind: CheckEmailKind;
+  /** Where the person was headed (already safe); kept on the way back. */
+  next?: string;
+}
+
 /**
  * "Check your email". The address comes from this tab's session storage (it is
  * never put in the URL); without it the copy stays general and there is no resend.
  */
-export function CheckEmail({ kind }: { kind: CheckEmailKind }) {
+export function CheckEmail({ kind, next }: CheckEmailProps) {
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [resent, setResent] = useState(false);
@@ -67,7 +74,7 @@ export function CheckEmail({ kind }: { kind: CheckEmailKind }) {
     const result = await callAuthAction(() =>
       kind === 'reset'
         ? requestPasswordReset({ email: sentTo })
-        : sendMagicLink({ email: sentTo }),
+        : sendMagicLink(next ? { email: sentTo, next } : { email: sentTo }),
     );
     setSending(false);
     if (!result.ok) {
@@ -86,17 +93,9 @@ export function CheckEmail({ kind }: { kind: CheckEmailKind }) {
       />
 
       <div className="wa-connect">
-        <ul role="list" className="wa-connect__facts">
-          <li>
-            <CheckGlyph size={16} />
-            <span>The link works once.</span>
-          </li>
-          <li>
-            <CheckGlyph size={16} />
-            <span>
-              It can take a minute to arrive. Check your spam folder too.
-            </span>
-          </li>
+        <ul role="list" className="wa-facts-list">
+          <li>The link works once.</li>
+          <li>It can take a minute to arrive. Check your spam folder too.</li>
         </ul>
 
         {problem ? (
@@ -110,31 +109,40 @@ export function CheckEmail({ kind }: { kind: CheckEmailKind }) {
             {resent ? 'Sent. Check your email again.' : ''}
           </p>
           {sentTo ? (
-            <p id={hintId} className="wa-auth-alt__hint">
-              {resent && !ready
-                ? 'Sent again. You can ask for another link after 30 seconds.'
-                : ready
-                  ? 'Didn’t get it? Ask for another link.'
-                  : 'Didn’t get it? You can ask for another link after 30 seconds.'}
-            </p>
+            <>
+              <p id={hintId} className="wa-auth-alt__hint">
+                {resent && !ready
+                  ? 'Sent again. You can ask for another link after 30 seconds.'
+                  : ready
+                    ? 'Didn’t get it? Ask for another link.'
+                    : 'Didn’t get it? You can ask for another link after 30 seconds.'}
+              </p>
+              <Actions>
+                <Button
+                  variant="secondary"
+                  onClick={resend}
+                  busy={sending}
+                  busyLabel="Sending…"
+                  disabled={!ready}
+                  aria-describedby={hintId}
+                >
+                  Send another link
+                </Button>
+              </Actions>
+            </>
           ) : null}
-          <Actions>
-            {sentTo ? (
-              <Button
-                variant="secondary"
-                onClick={resend}
-                busy={sending}
-                busyLabel="Sending…"
-                disabled={!ready}
-                aria-describedby={hintId}
-              >
-                Send another link
-              </Button>
-            ) : null}
-            <Button href={copy.back.href} variant="ghost">
+          <p className="wa-auth-alt__link">
+            <TextLink
+              href={
+                kind === 'reset'
+                  ? copy.back.href
+                  : withNext(copy.back.href, next)
+              }
+              kind="standalone"
+            >
               {copy.back.label}
-            </Button>
-          </Actions>
+            </TextLink>
+          </p>
         </div>
       </div>
     </>

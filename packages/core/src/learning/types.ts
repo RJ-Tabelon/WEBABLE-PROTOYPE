@@ -58,7 +58,15 @@ export interface UserLearningState {
   dims: Record<DimId, DimState>;
   /** Analysis-label applicability table: Beta per (op, label). */
   labels: Partial<Record<OpId, Record<AnalysisLabel, Counts>>>;
+  /**
+   * The newest delta ids merged into this state (at most RECENT_DELTA_IDS_MAX,
+   * oldest first), so a delta pushed again after a lost reply is not counted
+   * twice. Absent in states written before it existed.
+   */
+  recentDeltaIds?: string[];
 }
+
+export const RECENT_DELTA_IDS_MAX = 256;
 
 export interface DomainOp extends Counts {
   pin?: true;

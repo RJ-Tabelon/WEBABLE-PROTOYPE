@@ -40,6 +40,11 @@ import {
   unknownEvidenceWords,
   VOCAB_V1,
 } from '@webable/core/page/vocab';
+import {
+  MAX_CONTROL_WORDS,
+  MAX_HEADING_WORDS,
+  vocabularyViolations,
+} from '@webable/core/page/vocab-check';
 import { VERIFY_CODES } from '@webable/core/policy/types';
 import {
   CATALOG_VERSION,
@@ -60,6 +65,8 @@ export {
   JEV_ENDPOINT,
   JEV_PINNED_MODEL,
   JEV_REQUEST_ID_HEADER,
+  MAX_CONTROL_WORDS,
+  MAX_HEADING_WORDS,
   MAX_REGIONS_PER_CALL,
   MAX_REQUEST_TOKENS,
   mockJevAnswer,
@@ -70,6 +77,7 @@ export {
   unknownEvidenceWords,
   VERIFY_CODES,
   VOCAB_V1,
+  vocabularyViolations,
 };
 
 type DecideOk = Extract<DecideResponse, { ok: true }>;

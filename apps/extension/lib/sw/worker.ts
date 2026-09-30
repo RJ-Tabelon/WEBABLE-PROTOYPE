@@ -1,7 +1,9 @@
 import { levelValue, toDay } from '@webable/core/learning/learners';
-import { FRICTION_LR, K } from '@webable/core/learning/params';
+import { subtractCounts } from '@webable/core/learning/math';
+import { FRICTION_LR, K, W } from '@webable/core/learning/params';
 import type { SiteRule, UserLearningState } from '@webable/core/learning/types';
 import { OP_CATALOG, type OpId } from '@webable/core/ops/catalog';
+import { isExcludedSite } from '@webable/core/page/excluded';
 import type { PageSignals } from '@webable/core/page/types';
 import { buildPlan, type PolicyInput } from '@webable/core/policy/decide';
 import type {
@@ -11,6 +13,7 @@ import type {
   PlannedOp,
   RegionVerdict,
 } from '@webable/core/policy/types';
+import { fitUiVars } from '@webable/core/profile/describe';
 import { fitProfileSchema } from '@webable/core/profile/schema';
 import type { SystemSignals } from '@webable/core/profile/defaults';
 
@@ -77,7 +80,7 @@ import {
   TabRegistry,
 } from './tabs';
 import type { Prefs, TabDetail, WelcomeState } from './ui';
-import { UndoHold, type UndoReason } from './undo';
+import { neededKeys, UndoHold, type HeldUndo, type UndoReason } from './undo';
 import { KEYS } from '../storage/keys';
 
 /** Site-access and registration operations (lib/sw/permissions.ts in production). */
@@ -151,6 +154,27 @@ const UNAVAILABLE_BACKOFF_MS = 5 * 60_000;
 /** A tab is injected at most once in this window (several paths can ask at once). */
 const INJECT_DEDUPE_MS = 5_000;
 
+/** A back/forward commit waits this long for a restored engine's hello. */
+export const RESTORE_WAIT_MS = 2_000;
+
+/** The op behind each popup quick switch. */
+const QUICK_OP = {
+  text: 'text_floor',
+  targets: 'target_size',
+  calm: 'calm_motion',
+} as const satisfies Record<keyof typeof QUICK, OpId>;
+
+/** Levels "Use these on every site" can set (the Adjust sliders). */
+const GLOBAL_OVERRIDE_OPS = [
+  'text_floor',
+  'line_spacing',
+  'target_size',
+] as const;
+
+/** The measurement a page memo came from: an SPA route change measures again. */
+const memoId = (m: PageMemo): string | undefined =>
+  (m as PageMemo & { id?: string }).id;
+
 /** No in-page offer in the first 10 s of a page view (personalization.md 5.2). */
 export const OFFER_QUIET_MS = 10_000;
 /** Friction that means the person is in the middle of something: the offer waits in the popup. */
@@ -164,6 +188,26 @@ export function inPageOfferAllowed(
 ): boolean {
   if (now - pageStartedAt < OFFER_QUIET_MS) return false;
   return !MID_INTERACTION.has(signal);
+}
+
+/** chrome.commands, when this context has it (absent in unit tests). */
+interface CommandsApi {
+  getAll(): Promise<Array<{ name?: string; shortcut?: string }>>;
+}
+
+/** The two keyboard shortcuts as Chrome reports them now ('' when unset). */
+async function commandShortcuts(): Promise<HelloReply['shortcuts']> {
+  const api = (globalThis as { chrome?: { commands?: Partial<CommandsApi> } })
+    .chrome?.commands;
+  let all: Array<{ name?: string; shortcut?: string }> = [];
+  try {
+    if (typeof api?.getAll === 'function') all = await api.getAll();
+  } catch {
+    all = [];
+  }
+  const of = (name: string): string =>
+    all.find((c) => c.name === name)?.shortcut ?? '';
+  return { focusLayer: of('focus-layer'), undoAll: of('undo-all') };
 }
 
 export class Worker {
@@ -327,12 +371,14 @@ export class Worker {
     url: string | undefined,
   ): Promise<HelloReply> {
     const now = this.now;
+    const ui = await this.layerOptions();
     if (frameId !== 0)
       return {
         enabled: false,
         paused: true,
         prePaint: [],
         tabSession: randomId(12),
+        ...ui,
       };
     await this.flushUndos();
     await this.endPageView(tabId);
@@ -363,7 +409,27 @@ export class Worker {
       paused,
       prePaint,
       tabSession,
+      ...ui,
     };
+  }
+
+  /**
+   * How WebAble's own in-page layer behaves: still when the setting or the
+   * fit's motion need asks for it, and the shortcuts it announces as Chrome
+   * reports them ('' when unset).
+   */
+  private async layerOptions(): Promise<
+    Pick<HelloReply, 'reduceMotion' | 'shortcuts'>
+  > {
+    const [settings, profile, shortcuts] = await Promise.all([
+      this.d.stores.settings.read(),
+      loadProfile(this.d.stores, this.now),
+      commandShortcuts(),
+    ]);
+    const reduceMotion =
+      settings.reduceMotion ||
+      fitUiVars(profile.profile).attributes['data-wa-motion'] === 'reduce';
+    return { reduceMotion, shortcuts };
   }
 
   async signals(
@@ -491,6 +557,33 @@ export class Worker {
     await this.afterChange(tabId);
   }
 
+  /**
+   * The toast's Undo all (cs:undo-all). The engine already put the page back
+   * and sends no per-change undo events: every applied change here, the tab
+   * zoom included, becomes an undo held for the reason window, and nothing
+   * is echoed to the page.
+   */
+  async undoAllOnPage(tabId: number, frameId: number): Promise<void> {
+    if (frameId !== 0) return;
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.domain || !tab.tabSession) return;
+    const targets = appliedChanges(tab.changes);
+    if (targets.length === 0) return;
+    const events = targets.map((c) => this.undoEvent(tab, c));
+    if (tab.zoom) await this.resetZoom(tabId);
+    const undone = new Set(targets.map((c) => c.op));
+    await this.d.tabs.update(tabId, (t) => {
+      for (const o of undone)
+        if (!t.undoneByYou.includes(o)) t.undoneByYou.push(o);
+      t.changes = t.changes.filter(
+        (c) => !(undone.has(c.op) && c.status === 'applied'),
+      );
+    });
+    await this.holdUndos(tab, events);
+    await this.syncSiteCount(tabId);
+    await this.afterChange(tabId);
+  }
+
   async friction(
     tabId: number,
     signal: keyof typeof FRICTION_LR,
@@ -522,24 +615,29 @@ export class Worker {
         !appliedChanges(tab.changes).some((c2) => c2.op === p.op),
     );
     if (!offer) return { offer: null };
+    // Nothing was shown yet (offersShown is 0): the offer this behaviour is
+    // evidence for replaces a quieter one from the instant plan, so the
+    // answer finds the op the chip asked about.
     await this.d.tabs.update(tabId, (t) => {
-      t.offer ??= offer;
+      t.offer = offer;
     });
     this.d.port.broadcast({ type: 'ui:changed', tabId });
     // Never interrupt: no chip in the first 10 s of a page, and none while the
     // person is mid-scroll. The question waits in the popup instead.
     const since = tab.startedAt ?? tab.signalsAt ?? now;
     if (!inPageOfferAllowed(signal, since, now)) return { offer: null };
-    await this.markOfferShown(tabId);
+    await this.markOfferShown(tabId, offer);
     return { offer };
   }
 
-  /** An offer was put in front of the person (in-page chip or popup): count it once. */
-  async markOfferShown(tabId: number): Promise<void> {
+  /**
+   * An offer was put in front of the person (in-page chip or popup): count it
+   * once. `shown` is the offer that was returned to the page, when known.
+   */
+  async markOfferShown(tabId: number, shown?: PlannedOp): Promise<void> {
     const tab = await this.d.tabs.get(tabId);
-    if (!tab.offer || tab.offersShown > 0 || !tab.domain || !tab.tabSession)
-      return;
-    const offer = tab.offer;
+    const offer = shown ?? tab.offer;
+    if (!offer || tab.offersShown > 0 || !tab.domain || !tab.tabSession) return;
     const day = toDay(this.now);
     await this.d.tabs.update(tabId, (t) => {
       t.offersShown += 1;
@@ -586,6 +684,12 @@ export class Worker {
     await this.d.tabs.update(tabId, (t) => {
       t.offer = null;
     });
+    // Answered in the popup, or expired: the page hides a chip still asking.
+    // Nothing waits on the page for this.
+    if (via === 'popup' || answer === 'timeout')
+      void this.d.port
+        .sendToTab(tabId, { type: 'sw:offer-resolved', op })
+        .catch(() => undefined);
 
     if (answer === 'timeout') {
       await this.record(tab, [{ ...base, kind: 'offer_ignored' }]);
@@ -697,11 +801,38 @@ export class Worker {
         dop.sessionOff = tabSession;
       }
     });
+    // Region-scoped ops keep the keys they targeted, for "I needed that".
+    const regionsOf = (op: OpId): string[] => {
+      const scope = tab.plan?.ops.find((p) => p.op === op)?.scope;
+      return scope && scope !== 'page' ? [...scope.regions] : [];
+    };
     await this.d.undos.hold(
-      events.map((input) => ({ tabId: tab.tabId, domain, tabSession, input })),
+      events.map((input) => {
+        const regions = regionsOf(input.op);
+        return {
+          tabId: tab.tabId,
+          domain,
+          tabSession,
+          input,
+          ...(regions.length > 0 ? { regions } : {}),
+        };
+      }),
       this.now,
     );
     this.scheduleUndoFlush();
+  }
+
+  /**
+   * "I needed that" on a region-scoped op: every region it targeted becomes an
+   * exception on this site (the event carries the first; core caps the list).
+   */
+  private async noteExceptions(h: HeldUndo): Promise<void> {
+    const keys = neededKeys(h);
+    if (keys.length < 2) return;
+    await this.d.stores.sites.update(h.domain, (s) => {
+      const list = (s.state.exceptions ??= []);
+      for (const k of keys) if (!list.includes(k)) list.push(k);
+    });
   }
 
   private scheduleUndoFlush(): void {
@@ -726,7 +857,7 @@ export class Worker {
     const due = await this.d.undos.takeDue(this.now, endingSession);
     if (due.length > 0) {
       const profile = await loadProfile(this.d.stores, this.now);
-      for (const h of due)
+      for (const h of due) {
         await recordEvents(
           this.d.stores,
           profile,
@@ -735,6 +866,8 @@ export class Worker {
           [h.input],
           this.now,
         ).catch(() => undefined);
+        await this.noteExceptions(h).catch(() => undefined);
+      }
     }
     if ((await this.d.undos.nextDue()) !== null) this.scheduleUndoFlush();
   }
@@ -754,6 +887,7 @@ export class Worker {
         [outcome.event],
         this.now,
       );
+      await this.noteExceptions(outcome.entry);
     }
     this.d.port.broadcast({ type: 'ui:changed', tabId });
   }
@@ -936,23 +1070,56 @@ export class Worker {
     tabId: number,
     url: string | undefined,
     committedAt: number,
+    qualifiers: readonly string[] = [],
   ): Promise<void> {
     const tab = await this.d.tabs.peek(tabId);
     // The new page's engine already said hello: this commit is not news.
     if (
       tab?.engine &&
-      tab.checkingSince !== null &&
-      tab.checkingSince >= committedAt - 50
+      !tab.restoring &&
+      Math.max(tab.checkingSince ?? 0, tab.startedAt ?? 0) >= committedAt - 50
     )
       return;
-    await this.endPageView(tabId);
     const access = classifyUrl(url);
-    await this.d.tabs.update(tabId, (t) => {
-      Object.assign(t, freshTab(tabId), {
-        domain: access.kind === 'web' ? access.domain : null,
-        access: access.kind,
+    const domain = access.kind === 'web' ? access.domain : null;
+    if (qualifiers.includes('forward_back') && tab?.tabSession) {
+      // Back or forward: the document may come from the back/forward cache
+      // with its engine still running. The page view that was left ends when
+      // that engine says hello (it re-binds the tab), or when the wait runs out.
+      await this.d.tabs.update(tabId, (t) => {
+        t.restoring = { at: committedAt, domain, access: access.kind };
+        t.showing = false;
       });
+      setTimeout(() => {
+        void this.settleRestore(tabId, committedAt).catch(() => undefined);
+      }, RESTORE_WAIT_MS);
+      return;
+    }
+    await this.endPageView(tabId);
+    await this.d.tabs.update(tabId, (t) => {
+      Object.assign(t, freshTab(tabId), { domain, access: access.kind });
     });
+    await this.refreshBadge(tabId);
+    this.d.port.broadcast({ type: 'ui:changed', tabId });
+  }
+
+  /**
+   * No engine re-bound the tab after a back/forward commit (or the popup needs
+   * a view now): end the page view that was left. `at` limits this to one
+   * commit, so a later navigation is left alone.
+   */
+  private async settleRestore(tabId: number, at?: number): Promise<void> {
+    const r = (await this.d.tabs.peek(tabId))?.restoring;
+    if (!r || (at !== undefined && r.at !== at)) return;
+    await this.endPageView(tabId);
+    let settled = false;
+    await this.d.tabs.update(tabId, (t) => {
+      // A hello that arrived meanwhile owns the tab now.
+      if (t.restoring?.at !== r.at) return;
+      Object.assign(t, freshTab(tabId), { domain: r.domain, access: r.access });
+      settled = true;
+    });
+    if (!settled) return;
     await this.refreshBadge(tabId);
     this.d.port.broadcast({ type: 'ui:changed', tabId });
   }
@@ -983,7 +1150,7 @@ export class Worker {
       enabled: settings.enabled,
       paused,
       allSites: await this.allSites(),
-      firstRun: !account && !profile.calibrated,
+      firstRun: !profile.calibrated,
       now: this.now,
     });
     await this.d.port
@@ -1012,7 +1179,7 @@ export class Worker {
     tabSession: string,
     signals: PageSignals,
     evidence: PageEvidence,
-  ): Promise<PageMemo> {
+  ): Promise<PageMemo & { id: string }> {
     const install = await this.d.stores.install.get();
     const site = await siteKey(install.secret, domain);
     const candidates = evidence.mainCandidates ?? [];
@@ -1050,6 +1217,7 @@ export class Worker {
     if (p?.kind === 'page') answers.pageType = p.dist;
     void signals;
     return {
+      id: randomId(9),
       tabSession,
       signals,
       evidence,
@@ -1097,7 +1265,7 @@ export class Worker {
       needsReauth: c.account?.needsReauth ?? false,
       cloudAnalysis: c.account?.cloudAnalysis ?? false,
       consumesAnalysis: consumers.length > 0,
-      excludedSite: false,
+      excludedSite: isExcludedSite(domain),
       signals,
       ambiguousRegions: regionKeys.length,
       uncachedRegions: uncached.length,
@@ -1204,6 +1372,10 @@ export class Worker {
   ): Promise<void> {
     const tab = await this.d.tabs.get(tabId);
     if (tab.tabSession !== tabSession || !tab.plan || !tab.domain) return;
+    // An SPA route change measured the page again while analysis was out:
+    // these answers belong to a page that is gone.
+    const current = await this.d.pages.get(tabId, tabSession);
+    if (!current || memoId(current) !== memoId(memo)) return;
     await this.d.pages.set(tabId, memo);
     const answeredAt = this.now;
     const mode = refinementMode({
@@ -1273,28 +1445,45 @@ export class Worker {
     };
   }
 
-  async view(tabId: number): Promise<TabDetail> {
-    let tab = await this.d.tabs.get(tabId);
+  /**
+   * Start the engine in a tab that has none on record: unless the site is
+   * paused or WebAble is off. An engine that is already running (a page
+   * restored from the back/forward cache, or an injection whose hello is on
+   * its way) answers first, and a second one never starts. True when an
+   * engine runs there now.
+   */
+  private async startEngine(tabId: number): Promise<boolean> {
     const settings = await this.d.stores.settings.read();
+    const access = classifyUrl(await this.d.port.tabUrl(tabId));
+    const tab = await this.d.tabs.update(tabId, (t) => {
+      t.access = access.kind;
+      t.domain = access.kind === 'web' ? access.domain : null;
+    });
+    if (!settings.enabled || tab.access !== 'web' || !tab.domain) return false;
+    const site = await this.d.stores.sites.get(tab.domain);
+    if (site.rule.paused) return false;
+    const alive = await this.d.port.sendToTab(
+      tabId,
+      { type: 'sw:get-changes' },
+      500,
+    );
+    if (!alive && !(await this.injectOnce(tabId))) return false;
+    await this.d.tabs.update(tabId, (t) => {
+      t.engine = true;
+      t.phase = alive?.status === 'unreadable' ? 'unreadable' : 'checking';
+      t.checkingSince = t.phase === 'checking' ? this.now : null;
+      t.needsReload = false;
+    });
+    return true;
+  }
+
+  async view(tabId: number): Promise<TabDetail> {
+    await this.settleRestore(tabId);
+    let tab = await this.d.tabs.get(tabId);
     if (!tab.engine) {
-      const access = classifyUrl(await this.d.port.tabUrl(tabId));
-      tab = await this.d.tabs.update(tabId, (t) => {
-        t.access = access.kind;
-        t.domain = access.kind === 'web' ? access.domain : null;
-      });
       // Opening WebAble on a page grants activeTab: adapt this page now.
-      if (settings.enabled && tab.access === 'web' && tab.domain) {
-        const site = await this.d.stores.sites.get(tab.domain);
-        if (!site.rule.paused) {
-          const ok = await this.injectOnce(tabId);
-          if (ok)
-            tab = await this.d.tabs.update(tabId, (t) => {
-              t.engine = true;
-              t.phase = 'checking';
-              t.checkingSince = this.now;
-            });
-        }
-      }
+      await this.startEngine(tabId);
+      tab = await this.d.tabs.get(tabId);
     } else {
       const reply = await this.d.port.sendToTab(
         tabId,
@@ -1332,7 +1521,7 @@ export class Worker {
     const site = tab.domain ? await this.d.stores.sites.get(tab.domain) : null;
     const rule = site?.rule;
     const paused = rule?.paused ?? false;
-    const firstRun = !account && !profile.calibrated;
+    const firstRun = !profile.calibrated;
     const status = popupStatus(tab, {
       enabled: settings.enabled,
       paused,
@@ -1390,6 +1579,23 @@ export class Worker {
         targets: pins.includes('target_size'),
         calm: pins.includes('calm_motion'),
       },
+      quickUndone: (
+        Object.keys(QUICK_OP) as Array<keyof typeof QUICK_OP>
+      ).filter(
+        (k) =>
+          pins.includes(QUICK_OP[k]) &&
+          tab.changes.find((c) => c.op === QUICK_OP[k])?.status ===
+            'undone_by_checks',
+      ),
+      showing: tab.showing,
+      globalOverrides: Object.fromEntries(
+        GLOBAL_OVERRIDE_OPS.flatMap((op) => {
+          const l = settings.globalLevels[op];
+          return l === undefined ? [] : [[op, l]];
+        }),
+      ),
+      lastSyncAt: account && account.lastSyncAt > 0 ? account.lastSyncAt : null,
+      allSitesAskHidden: settings.hideAllSitesAsk,
       needsReload: tab.needsReload && !paused,
       onDeviceOnly:
         account === null || !account.cloudAnalysis || account.needsReauth,
@@ -1468,6 +1674,28 @@ export class Worker {
     return true;
   }
 
+  /**
+   * An explicit turn-on lifts this site's block: the rule's and the learned
+   * one ("Don't suggest this here"), in the caller's sites.update. The block's
+   * own evidence goes with it (site_disable counted W.siteBlockDomainF
+   * failures here, which would keep a pinned op below the auto threshold).
+   * Returns the ops that were blocked, for their 'site_enable' events.
+   */
+  private unblock(s: SiteRecord, ops: readonly OpId[]): OpId[] {
+    const day = toDay(this.now);
+    const was = ops.filter(
+      (op) => s.rule.blocks.includes(op) || s.state.ops[op]?.block === true,
+    );
+    s.rule.blocks = s.rule.blocks.filter((b) => !ops.includes(b));
+    for (const op of ops) {
+      const dop = s.state.ops[op];
+      if (!dop?.block) continue;
+      Object.assign(dop, subtractCounts(dop, 0, W.siteBlockDomainF, day));
+      delete dop.block;
+    }
+    return was;
+  }
+
   /** Clear "undone this session" so an explicit turn-on applies right away. */
   private async clearSessionOff(
     domain: string,
@@ -1508,10 +1736,11 @@ export class Worker {
       }));
     }
     if (tab.domain) {
+      let unblocked: OpId[] = [];
       await this.d.stores.sites.update(tab.domain, (s) => {
         if (scope === 'site') s.rule.levels = { ...s.rule.levels, [op]: next };
         if (!s.rule.pins.includes(op)) s.rule.pins = [...s.rule.pins, op];
-        s.rule.blocks = s.rule.blocks.filter((b) => b !== op);
+        unblocked = this.unblock(s, [op]);
         s.rule.updatedAt = this.now;
       });
       await this.clearSessionOff(tab.domain, [op]);
@@ -1534,6 +1763,13 @@ export class Worker {
           toLevel: next,
           dir: next >= current ? 1 : -1,
         },
+        ...unblocked.map((o): EventInput => ({
+          cat: tab.category,
+          op: o,
+          level: next,
+          src: 'manual',
+          kind: 'site_enable',
+        })),
       ]);
     }
     if (!(await this.replan(tabId)))
@@ -1573,11 +1809,12 @@ export class Worker {
       }
     }
     if (tab.domain) {
+      let unblocked: OpId[] = [];
       await this.d.stores.sites.update(tab.domain, (s) => {
         const set = new Set(ops);
         if (on) {
+          unblocked = this.unblock(s, ops);
           s.rule.pins = [...new Set([...s.rule.pins, ...ops])];
-          s.rule.blocks = s.rule.blocks.filter((b) => !set.has(b));
           for (const [op, l] of Object.entries(levels) as Array<[OpId, number]>)
             if (s.rule.levels[op] === undefined)
               s.rule.levels = { ...s.rule.levels, [op]: l };
@@ -1588,6 +1825,14 @@ export class Worker {
         }
         s.rule.updatedAt = this.now;
       });
+      for (const op of unblocked)
+        events.push({
+          cat: tab.category,
+          op,
+          level: levels[op] ?? 0,
+          src: 'manual',
+          kind: 'site_enable',
+        });
       if (on) await this.clearSessionOff(tab.domain, ops);
       await this.record(tab, events);
     }
@@ -1678,6 +1923,211 @@ export class Worker {
     await this.afterChange(tabId);
   }
 
+  /** Show on page (the popup's toggle); the tab remembers it until the next page view. */
+  async showOnPage(
+    tabId: number,
+    op: OpId | null,
+    on: boolean,
+  ): Promise<{ ok: boolean }> {
+    const reply = await this.d.port.sendToTab(tabId, {
+      type: 'sw:show-on-page',
+      op,
+      on,
+    });
+    if (!reply) return { ok: false };
+    await this.d.tabs.update(tabId, (t) => {
+      t.showing = on;
+    });
+    return reply;
+  }
+
+  /**
+   * Take this page view's held undos for `ops` off the hold, unrecorded. The
+   * page view's other held undos are recorded now. Returns the ops dropped.
+   */
+  private async dropHeldUndos(
+    tab: TabRecord,
+    ops: readonly OpId[],
+  ): Promise<Set<OpId>> {
+    const dropped = new Set<OpId>();
+    if (!tab.tabSession) return dropped;
+    const open = await this.d.undos.openFor(tab.tabId, this.now);
+    if (!open.some((h) => ops.includes(h.op))) return dropped;
+    const taken = await this.d.undos.takeDue(this.now, tab.tabSession);
+    const profile = await loadProfile(this.d.stores, this.now);
+    for (const h of taken) {
+      if (h.tabSession === tab.tabSession && ops.includes(h.input.op)) {
+        dropped.add(h.input.op);
+        continue;
+      }
+      await recordEvents(
+        this.d.stores,
+        profile,
+        h.domain,
+        h.tabSession,
+        [h.input],
+        this.now,
+      ).catch(() => undefined);
+    }
+    return dropped;
+  }
+
+  /**
+   * Put back what was undone on this page ('all' after Undo all). An undo
+   * still held for its reason window is dropped, as if it never happened; one
+   * already recorded is answered with manual_on. A learned block here is
+   * lifted (site_enable), and the page re-plans.
+   */
+  async redo(tabId: number, op: OpId | 'all'): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.domain || !tab.tabSession) return;
+    const ops = op === 'all' ? [...tab.undoneByYou] : [op];
+    if (ops.length === 0) return;
+    const dropped = await this.dropHeldUndos(tab, ops);
+    const base = (o: OpId) => ({
+      cat: tab.category,
+      op: o,
+      level: tab.plan?.ops.find((p) => p.op === o)?.level ?? 0,
+      src: 'manual' as const,
+    });
+    let enabled: OpId[] = [];
+    await this.d.stores.sites.update(tab.domain, (s) => {
+      for (const o of ops) delete s.state.ops[o]?.sessionOff;
+      enabled = this.unblock(s, ops);
+      s.rule.updatedAt = this.now;
+    });
+    await this.d.tabs.update(tabId, (t) => {
+      t.undoneByYou = t.undoneByYou.filter((o) => !ops.includes(o));
+    });
+    await this.record(tab, [
+      ...ops
+        .filter((o) => !dropped.has(o))
+        .map((o): EventInput => ({ ...base(o), kind: 'manual_on' })),
+      ...enabled.map((o): EventInput => ({
+        ...base(o),
+        kind: 'site_enable',
+      })),
+    ]);
+    if (!(await this.replan(tabId)) && tab.plan) {
+      const reply = await this.d.port.sendToTab(tabId, {
+        type: 'sw:plan',
+        plan: tab.plan,
+        reason: 'settings',
+      });
+      if (reply) await this.processChanges(tabId, reply.changes);
+    }
+    await this.syncSiteCount(tabId);
+    await this.afterChange(tabId);
+  }
+
+  /**
+   * The popup's own permission request for this site succeeded: register the
+   * engine for every granted origin, then adapt the tab.
+   */
+  async grantSite(tabId: number): Promise<void> {
+    await this.reconcileRegistration(true);
+    const tab = await this.d.tabs.get(tabId);
+    if (tab.engine) {
+      if (await this.replanLive(tabId)) return;
+    } else await this.startEngine(tabId);
+    await this.afterChange(tabId);
+  }
+
+  /** Clear the "Use these on every site" levels; open pages re-plan without them. */
+  async clearEverywhere(): Promise<void> {
+    await this.d.stores.settings.update((s) => ({ ...s, globalLevels: {} }));
+    for (const tab of await this.d.tabs.all())
+      if (tab.engine) await this.replanLive(tab.tabId);
+    await this.refreshAllBadges();
+    this.d.port.broadcast({ type: 'ui:changed', tabId: null });
+  }
+
+  /** Re-plan a page unless WebAble is off or its site is paused. */
+  private async replanLive(tabId: number): Promise<boolean> {
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.domain) return false;
+    const [settings, site] = await Promise.all([
+      this.d.stores.settings.read(),
+      this.d.stores.sites.get(tab.domain),
+    ]);
+    if (!settings.enabled || site.rule.paused) return false;
+    return this.replan(tabId);
+  }
+
+  /** Open tabs on a site (the web app's Sites page changes a rule there). */
+  private async domainTabs(domain: string): Promise<TabRecord[]> {
+    return (await this.d.tabs.all()).filter((t) => t.domain === domain);
+  }
+
+  /** The site was paused from the web app: its open pages go back to the original. */
+  async pauseDomain(domain: string): Promise<void> {
+    for (const tab of await this.domainTabs(domain)) {
+      await this.resetZoom(tab.tabId);
+      if (tab.engine)
+        await this.d.port.sendToTab(tab.tabId, { type: 'sw:pause' });
+      await this.d.tabs.update(tab.tabId, (t) => {
+        t.changes = [];
+        t.offer = null;
+      });
+      await this.afterChange(tab.tabId);
+    }
+  }
+
+  /** The site was unpaused from the web app: its open pages resume and re-plan. */
+  async resumeDomain(domain: string): Promise<void> {
+    const settings = await this.d.stores.settings.read();
+    if (!settings.enabled) return;
+    for (const tab of await this.domainTabs(domain)) {
+      if (!tab.engine) {
+        // The page loaded while paused: start it where WebAble may run.
+        if (!(await this.startEngine(tab.tabId)))
+          await this.d.tabs.update(tab.tabId, (t) => {
+            t.needsReload = true;
+          });
+      } else {
+        const reply = await this.d.port.sendToTab(tab.tabId, {
+          type: 'sw:resume',
+        });
+        if (await this.replan(tab.tabId)) continue;
+        if (reply && reply.changes.length > 0)
+          await this.processChanges(tab.tabId, reply.changes);
+        else
+          await this.d.tabs.update(tab.tabId, (t) => {
+            t.needsReload = true;
+          });
+      }
+      await this.afterChange(tab.tabId);
+    }
+  }
+
+  /** An op was blocked on the site from the web app: it comes off the site's open pages. */
+  async blockOnDomain(domain: string, op: OpId): Promise<void> {
+    for (const tab of await this.domainTabs(domain)) {
+      if (!tab.engine || !tab.tabSession) continue;
+      await this.d.tabs.update(tab.tabId, (t) => {
+        t.acceptedOps = t.acceptedOps.filter((o) => o !== op);
+        if (t.offer?.op === op) t.offer = null;
+      });
+      if (op === 'page_zoom') await this.resetZoom(tab.tabId);
+      else {
+        const reply = await this.d.port.sendToTab(tab.tabId, {
+          type: 'sw:undo',
+          op,
+        });
+        if (reply) await this.processChanges(tab.tabId, reply.changes);
+      }
+      if (!(await this.replanLive(tab.tabId)))
+        await this.afterChange(tab.tabId);
+    }
+  }
+
+  /** Another rule changed on the site (unblock, pin, reset): its open pages re-plan. */
+  async replanDomain(domain: string): Promise<void> {
+    for (const tab of await this.domainTabs(domain))
+      if (tab.engine && !(await this.replanLive(tab.tabId)))
+        await this.afterChange(tab.tabId);
+  }
+
   async setEnabled(enabled: boolean): Promise<void> {
     await this.d.stores.settings.update((s) => ({ ...s, enabled }));
     for (const tab of await this.d.tabs.all()) {
@@ -1724,12 +2174,16 @@ export class Worker {
   async setPrefs(p: {
     theme?: Settings['theme'];
     reduceMotion?: boolean;
+    hideAllSitesAsk?: boolean;
   }): Promise<Prefs> {
     await this.d.stores.settings.update((s) => ({
       ...s,
       ...(p.theme ? { theme: p.theme } : {}),
       ...(typeof p.reduceMotion === 'boolean'
         ? { reduceMotion: p.reduceMotion }
+        : {}),
+      ...(typeof p.hideAllSitesAsk === 'boolean'
+        ? { hideAllSitesAsk: p.hideAllSitesAsk }
         : {}),
     }));
     this.d.port.broadcast({ type: 'ui:changed', tabId: null });

@@ -93,6 +93,7 @@ export const BRIDGE_TIMEOUTS: Readonly<Record<BridgeRequestType, number>> =
     'wa:site-update': 5000,
     'wa:receipts': 5000,
     'wa:clear-local': 8000,
+    'wa:open-welcome': 5000,
   });
 
 /* ------------------------------------------------------------------------ */
@@ -134,6 +135,10 @@ const siteSchema = z.object({
   paused: z.boolean(),
   blocked: opListSchema,
   pinned: opListSchema,
+  /** Per-op levels set for this site (level index on the op's ladder). */
+  levels: z
+    .record(z.string().max(64), z.number().int().min(0).max(64))
+    .optional(),
   lastChanges: z.number().int().min(0),
   lastVisit: z.number().min(0),
 }) satisfies z.ZodType<LocalSite>;
@@ -159,6 +164,7 @@ const RESPONSE_SCHEMAS: { [K in BridgeRequestType]: z.ZodType<unknown> } = {
   'wa:site-update': sitesSchema,
   'wa:receipts': receiptsSchema,
   'wa:clear-local': statusSchema,
+  'wa:open-welcome': z.object({ ok: z.literal(true) }),
 };
 
 function isBridgeErrorCode(value: string): value is BridgeErrorCode {
@@ -345,8 +351,18 @@ export const extension = {
   ) => getBridge().send({ type: 'wa:site-update', domain, change }, options),
   receipts: (options?: SendOptions): Promise<BridgeResult<SentReceipt[]>> =>
     getBridge().send({ type: 'wa:receipts' }, options),
+  /**
+   * Wipe what WebAble keeps in this browser: site settings, receipts, and the
+   * copy of the fit, what it learned, its activity and unsent changes.
+   */
   clearLocal: (options?: SendOptions) =>
     getBridge().send({ type: 'wa:clear-local' }, options),
+  /**
+   * Focus WebAble's welcome page, or open it, at its "allow on all sites" step.
+   * Chrome only lets the extension's own page ask for that permission.
+   */
+  openWelcome: (options?: SendOptions) =>
+    getBridge().send({ type: 'wa:open-welcome', focus: 'allow' }, options),
 } as const;
 
 /**

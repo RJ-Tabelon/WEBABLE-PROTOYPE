@@ -23,7 +23,7 @@ import {
 import { MutationScheduler, type FlushRoots } from './runtime/mutations';
 import { RouteWatcher } from './runtime/route';
 import type { Extraction, PageFacts, VocabPort } from './types';
-import { InPageLayer, type OutlineItem } from './ui/layer';
+import { InPageLayer, type OutlineGroup } from './ui/layer';
 import { setColorParseFallback, type RGBA } from './util/color';
 import { shadowRootsWithin, SKIP_TAGS } from './util/dom';
 import type { Box } from './util/geometry';
@@ -69,6 +69,11 @@ export interface EngineOptions {
   openClosed?: (el: Element) => ShadowRoot | null;
   /** Ops whose pre-paint stylesheet is registered for this profile. */
   prePaint?: readonly OpId[];
+}
+
+export interface EngineConfig {
+  reduceMotion: boolean;
+  shortcuts: { focusLayer: string; undoAll: string };
 }
 
 export interface ApplyOptions {
@@ -133,6 +138,65 @@ const FALLBACK_QUESTION: Record<OpId, string> = {
   unpin_bars: 'Let bars stuck to the top scroll away here?',
   reading_guide: 'Show a reading guide on this page?',
 };
+
+/** "WebAble suggests ... here." for the status line when a chip appears. */
+const SUGGESTS: Record<OpId, string> = {
+  text_floor: 'larger text',
+  page_zoom: 'zooming this site',
+  line_spacing: 'more space between lines',
+  line_length: 'shorter lines of text',
+  contrast: 'darker faint text',
+  focus_outline: 'a clear focus outline',
+  target_size: 'bigger click targets',
+  target_spacing: 'more room between controls',
+  steady_clicks: 'steadier clicks',
+  menu_grace: 'menus that stay open longer',
+  calm_motion: 'stopping moving things',
+  pause_media: 'pausing videos that play on their own',
+  dim_distractions: 'fading busy areas',
+  focus_view: 'softening everything except the main content',
+  unpin_bars: 'letting stuck bars scroll away',
+  reading_guide: 'a reading guide',
+};
+
+const lead = (s: string, fallback: number): number => {
+  const m = /^\d+/.exec(s);
+  return m ? Number(m[0]) : fallback;
+};
+const many = (n: number, one: string, more: string): string =>
+  `${n}\u00a0${n === 1 ? one : more}`;
+
+/** The toast's one line, worded as WebAble's action (design-final.md 13). */
+const TOAST_LINE: Record<
+  OpId,
+  (fit: { before: string; after: string }, count: number) => string
+> = {
+  text_floor: (f) => `WebAble set text to ${f.after} here.`,
+  page_zoom: (f) => `WebAble zoomed this site to ${f.after}.`,
+  line_spacing: (f) => `WebAble set line spacing to ${f.after} here.`,
+  line_length: (f) => `WebAble kept lines to ${f.after} here.`,
+  contrast: (f) => `WebAble raised text contrast to ${f.after} here.`,
+  focus_outline: () => 'WebAble turned on a clear focus outline here.',
+  target_size: (f) => `WebAble enlarged click targets to ${f.after} here.`,
+  target_spacing: (f) => `WebAble set ${f.after} between controls here.`,
+  steady_clicks: () => 'WebAble steadied clicks on this page.',
+  menu_grace: (f) => `WebAble kept menus open ${f.after} longer here.`,
+  calm_motion: (f, n) =>
+    `WebAble paused ${many(lead(f.before, n), 'moving thing', 'moving things')}.`,
+  pause_media: (f, n) =>
+    `WebAble paused ${many(lead(f.before, n), 'autoplaying video', 'autoplaying videos')}.`,
+  dim_distractions: (f) => `WebAble faded busy areas to ${f.after} here.`,
+  focus_view: () => 'WebAble softened everything except the main content.',
+  unpin_bars: (_f, n) =>
+    `WebAble let ${many(n, 'stuck bar', 'stuck bars')} scroll away here.`,
+  reading_guide: () => 'WebAble turned on the reading guide.',
+};
+
+/** Targets show their original box (a dashed ghost) and a tinted fit box. */
+const TARGET_OPS: ReadonlySet<OpId> = new Set([
+  'target_size',
+  'target_spacing',
+]);
 
 const FRICTION_REASON: Record<FrictionSignal, string> = {
   misclick_burst: 'You clicked just next to small buttons a few times.',
@@ -211,6 +275,11 @@ export class Engine {
   private maintenance: ReturnType<typeof setInterval> | null = null;
   private cancelIdle: (() => void) | null = null;
   private offerShownOnce = false;
+  /** An offer waiting out the first-paint delay. */
+  private offerWait: { op: OpId; timer: ReturnType<typeof setTimeout> } | null =
+    null;
+  /** The change the toast headlines (its [Undo] undoes just that one). */
+  private toastOp: OpId | null = null;
   private readonly bornAt = performance.now();
   private escOff: (() => void) | null = null;
   readonly perf: EnginePerf = {
@@ -230,7 +299,7 @@ export class Engine {
     setColorParseFallback(canvasColorParser(this.doc));
     this.ui = new InPageLayer(this.doc, {
       offerAnswer: (op, answer) => this.opts.events.offerAnswer(op, answer),
-      toastUndo: () => void this.undoFromToast(),
+      toastUndo: (all) => void this.undoFromToast(all),
     });
   }
 
@@ -727,11 +796,14 @@ export class Engine {
     return this.changes();
   }
 
-  private async undoFromToast(): Promise<void> {
-    const undone = this.changes().filter(
-      (c) => c.status === 'applied' && c.mode === 'auto',
-    );
-    await this.undo('all');
+  /** [Undo] undoes the toast's change; [Undo all] every applied change on the page. */
+  private async undoFromToast(all: boolean): Promise<void> {
+    const op = this.toastOp;
+    this.toastOp = null;
+    const applied = this.changes().filter((c) => c.status === 'applied');
+    const undone = all ? applied : applied.filter((c) => c.op === op);
+    if (undone.length === 0) return;
+    await this.undo(all ? 'all' : (undone[0] as AppliedChange).op);
     this.opts.events.undone(undone, 'toast');
   }
 
@@ -791,42 +863,52 @@ export class Engine {
       this.escOff = null;
       return;
     }
-    const items: OutlineItem[] = [];
+    const groups: OutlineGroup[] = [];
     const ops = op ? [op] : [...this.applied.keys()];
     for (const id of ops) {
       const a = this.applied.get(id);
       if (!a) continue;
-      const shown = (a.prepared.show ?? [])
+      const target = TARGET_OPS.has(id);
+      // More candidates than are drawn: the layer outlines the first three in view.
+      const items = (a.prepared.show ?? [])
         .filter((el) => el.isConnected)
-        .slice(0, 8);
-      shown.forEach((el, i) => {
-        const now = docBox(el, this.view);
-        const fit = a.prepared.fitBox ? a.prepared.fitBox(el, now) : now;
-        const was = a.before.get(el);
-        // The ghost keeps the original size, anchored where the element is now,
-        // so "before" and "after" read as one measurement (design-final.md 8).
-        const ghost = was
-          ? {
-              left: now.left,
-              top: now.top,
-              right: now.left + (was.right - was.left),
-              bottom: now.top + (was.bottom - was.top),
-            }
-          : null;
-        const same =
-          ghost !== null &&
-          Math.abs(ghost.left - fit.left) < 1 &&
-          Math.abs(ghost.top - fit.top) < 1 &&
-          Math.abs(ghost.right - fit.right) < 1 &&
-          Math.abs(ghost.bottom - fit.bottom) < 1;
-        const item: OutlineItem = { ghost: same ? null : ghost, fit };
-        const report = this.reports.get(id);
-        if (i === 0 && report?.fit)
-          item.tag = { label: OP_CATALOG[id].label, ...report.fit };
-        items.push(item);
+        .slice(0, 24)
+        .map((el) => {
+          const now = docBox(el, this.view);
+          const fit = a.prepared.fitBox ? a.prepared.fitBox(el, now) : now;
+          const was = target ? a.before.get(el) : undefined;
+          // Targets only: the original size, anchored where the element is now,
+          // kept when the adapted box contains it (design-final.md 8). Text
+          // changes never get a ghost; their "before" lives in the tag.
+          const ghost = was
+            ? {
+                left: now.left,
+                top: now.top,
+                right: now.left + (was.right - was.left),
+                bottom: now.top + (was.bottom - was.top),
+              }
+            : null;
+          const keep =
+            ghost !== null &&
+            contains(fit, ghost) &&
+            !(
+              Math.abs(ghost.right - fit.right) < 1 &&
+              Math.abs(ghost.bottom - fit.bottom) < 1 &&
+              Math.abs(ghost.left - fit.left) < 1 &&
+              Math.abs(ghost.top - fit.top) < 1
+            );
+          return { ghost: keep ? ghost : null, fit };
+        });
+      const report = this.reports.get(id);
+      groups.push({
+        items,
+        fill: target,
+        tag: report?.fit
+          ? { label: OP_CATALOG[id].label, ...report.fit }
+          : undefined,
       });
     }
-    this.ui.showOutlines(items);
+    this.ui.showOutlines(groups);
     if (!this.escOff) {
       // Passive observer: the page's own key handling is untouched.
       const onKey = (e: KeyboardEvent): void => {
@@ -866,22 +948,51 @@ export class Engine {
     return this.apply(plan);
   }
 
-  /** A behaviour-triggered offer: shown at most once per page, never on first paint. */
+  /**
+   * The offer for `op` was answered in the popup or expired (sw:offer-resolved):
+   * hide the chip if it shows that op. Sends nothing back.
+   */
+  resolveOffer(op: OpId): void {
+    if (this.offerWait?.op === op) {
+      clearTimeout(this.offerWait.timer);
+      this.offerWait = null;
+    }
+    if (this.ui.offerShown === op || this.ui.offerPending === op)
+      this.ui.hideOffer();
+  }
+
+  /**
+   * From the hello reply: WebAble's own reduce-motion setting (the layer host
+   * gets data-motion='reduce') and the keyboard shortcuts the layer announces.
+   */
+  configure(opts: EngineConfig): void {
+    this.ui.configure(opts);
+  }
+
+  /**
+   * A behaviour-triggered offer: shown at most once per page, never on first
+   * paint, and held by the layer while the person is typing, dragging or scrolling.
+   */
   offer(planned: PlannedOp): boolean {
     if (this.paused || this.destroyed || this.offerShownOnce) return false;
     if (this.applied.has(planned.op)) return false;
     const copy = offerCopy(planned);
     const show = (): void => {
+      this.offerWait = null;
       if (this.paused || this.destroyed) return;
       this.offerShownOnce = true;
       this.ui.showOffer({
         op: planned.op,
         question: copy.question,
         reason: copy.reason,
+        spoken: `WebAble suggests ${SUGGESTS[planned.op]} here.`,
       });
     };
     const age = performance.now() - this.bornAt;
-    if (age < 1500) setTimeout(show, 1500 - age);
+    if (this.offerWait) clearTimeout(this.offerWait.timer);
+    this.offerWait = null;
+    if (age < 1500)
+      this.offerWait = { op: planned.op, timer: setTimeout(show, 1500 - age) };
     else show();
     return true;
   }
@@ -899,11 +1010,11 @@ export class Engine {
       auto.find((c) => c.op === op && c.fit),
     ).find(Boolean);
     if (!headline?.fit) return;
+    const applied = this.changes().filter((c) => c.status === 'applied');
+    this.toastOp = headline.op;
     this.ui.showToast({
-      label: OP_CATALOG[headline.op].label,
-      before: headline.fit.before,
-      after: headline.fit.after,
-      more: auto.length - 1,
+      message: TOAST_LINE[headline.op](headline.fit, headline.count),
+      undo: applied.length > 1 ? 'all' : 'one',
     });
   }
 
@@ -1054,6 +1165,16 @@ export class Engine {
   }
 }
 
+/** `outer` contains `inner`, with half a pixel of rounding. */
+function contains(outer: Box, inner: Box): boolean {
+  return (
+    inner.left >= outer.left - 0.5 &&
+    inner.top >= outer.top - 0.5 &&
+    inner.right <= outer.right + 0.5 &&
+    inner.bottom <= outer.bottom + 0.5
+  );
+}
+
 function sameScope(a: PlannedOp['scope'], b: PlannedOp['scope']): boolean {
   if (a === 'page' || b === 'page') return a === b;
   return (
@@ -1072,4 +1193,4 @@ export function mergePlans(
   return { ...next, ops: [...ops.values()] };
 }
 
-export const __test = { offerCopy, sameScope };
+export const __test = { offerCopy, sameScope, TOAST_LINE };

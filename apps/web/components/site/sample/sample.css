@@ -133,6 +133,8 @@
 
 .ws-sample__carousel {
   display: inline-block;
+  min-inline-size: 0;
+  max-inline-size: 100%;
   block-size: 1.4em;
   overflow: hidden;
   font-weight: 700;
@@ -143,23 +145,20 @@
   flex-direction: column;
 }
 
+/* On a narrow page a slide ends in an ellipsis, as the site's own CSS would. */
 .ws-sample__slides > span {
   display: block;
   block-size: 1.4em;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .ws-sample__countdown {
-  display: none;
+  display: inline-flex;
   align-items: flex-end;
   margin-inline-start: auto;
   font-variant-numeric: tabular-nums;
-}
-
-@container ws-sample (min-width: 440px) {
-  .ws-sample__countdown {
-    display: inline-flex;
-  }
 }
 
 .ws-sample__digit {
@@ -256,11 +255,6 @@
   padding-block-start: 22px;
 }
 
-/* Room for the fit marks, only while they are drawn on the page. */
-.ws-sample[data-annotated] .ws-sample__main {
-  padding-block-start: 48px;
-}
-
 .ws-sample__kicker {
   color: var(--s-brand);
   font-size: max(11px, var(--s-floor));
@@ -350,10 +344,6 @@
   position: relative;
   margin-block-start: 24px;
   max-inline-size: 38em;
-}
-
-.ws-sample[data-annotated] .ws-sample__copy {
-  margin-block-start: 60px;
 }
 
 .ws-sample__copy p {
@@ -461,32 +451,113 @@
   opacity: min(var(--s-rail), 0.5);
 }
 
-/* ---------- Fit marks on the sample ---------- */
+/* ---------- Crop: the top of the article (the fits row) ---------- */
 
-.ws-sample__mark {
+/*
+ * A crop of the article column: the masthead, headline, icon row and the first
+ * lines of the first paragraph. The nav and the Subscribe button sit over the side
+ * column on the real page, so they are outside the crop. The paragraph is cut on a
+ * line boundary (whole lines only) and the page's own bottom padding follows, so
+ * the crop always ends on whitespace, never through a glyph.
+ */
+.ws-sample[data-crop] .ws-sample__body {
+  grid-template-columns: minmax(0, 1fr);
+}
+.ws-sample[data-crop] :is(.ws-sample__nav, .ws-sample__subscribe) {
+  display: none;
+}
+.ws-sample[data-crop] .ws-sample__copy p {
+  max-block-size: calc(3 * 1lh);
+  margin-block-end: 0;
+  overflow: hidden;
+}
+
+/* ---------- Fit marks: an overlay drawn from measured rects ---------- */
+
+/*
+ * The marks never take part in the page's layout: the overlay covers the sample,
+ * ignores the pointer and is hidden from assistive technology (the sample's own
+ * description carries the values). Positions come from SampleMarks.
+ */
+.ws-sample__marks {
   position: absolute;
+  inset: 0;
   z-index: 2;
+  pointer-events: none;
 }
 
-.ws-sample__mark--motion {
-  --ws-mark-delay: 0ms;
-  inset-block-start: calc(100% + 6px);
-  inset-inline: 20px;
+.ws-marks__rule,
+.ws-marks__plate {
+  position: absolute;
 }
 
-.ws-sample__mark--targets {
-  --ws-mark-delay: 120ms;
-  inset-block-start: 50%;
-  inset-inline-start: calc(100% + (var(--s-hit) - 24px) / 2 + 10px);
-  block-size: var(--s-hit);
-  translate: 0 -50%;
+.ws-marks__rule {
+  display: block;
+  overflow: visible;
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
 }
 
-.ws-sample .ws-sample__mark--text {
+/* Draw order: motion, then targets, then text. SampleMarks places each plate from
+   its measured size, so none needs a transform. */
+.ws-marks__plate--text {
   --ws-mark-delay: 240ms;
-  justify-items: end;
-  inset-block-end: calc(100% + 8px);
-  inset-inline: 0;
+}
+.ws-marks__plate--targets {
+  --ws-mark-delay: 120ms;
+}
+.ws-marks__plate--motion {
+  --ws-mark-delay: 0ms;
+}
+.ws-marks__rule--text {
+  --ws-mark-delay: 240ms;
+}
+.ws-marks__rule--motion {
+  --ws-mark-delay: 0ms;
+}
+
+/* The one showpiece: a 600 ms draw, once per session, never under reduced motion.
+   Lines draw first, then their plates fade in over 100 ms. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-wa-motion='reduce'])
+    .ws-sample__marks[data-mode='draw']
+    .ws-marks__rule
+    line {
+    stroke-dasharray: 1 1;
+    animation: ws-draw calc(var(--dur-draw) * 0.7) var(--ease)
+      calc(var(--ws-mark-delay, 0ms) + var(--dur-draw) * 0.15) both;
+  }
+  :root:not([data-wa-motion='reduce'])
+    .ws-sample__marks[data-mode='draw']
+    .ws-marks__rule
+    line.ws-marks__tick--a {
+    animation-duration: calc(var(--dur-draw) * 0.15);
+    animation-delay: var(--ws-mark-delay, 0ms);
+  }
+  :root:not([data-wa-motion='reduce'])
+    .ws-sample__marks[data-mode='draw']
+    .ws-marks__rule
+    line.ws-marks__tick--b {
+    animation-duration: calc(var(--dur-draw) * 0.15);
+    animation-delay: calc(var(--ws-mark-delay, 0ms) + var(--dur-draw) * 0.85);
+  }
+  :root:not([data-wa-motion='reduce'])
+    .ws-sample__marks[data-mode='draw']
+    .ws-marks__plate {
+    animation: wa-fade-in 100ms linear
+      calc(var(--ws-mark-delay, 0ms) + var(--dur-draw)) both;
+  }
+}
+
+@keyframes ws-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 /* ---------- Forced colours: keep the picture legible ---------- */
@@ -499,8 +570,15 @@
 
 /* ---------- Product card (the verifier story) ---------- */
 
+/*
+ * A crop of a shop's product card: title, description and price row. White, as
+ * the shop made it, with a 1 px hairline where it meets WebAble's canvas. Its width
+ * is capped so the description wraps to three lines, as it does on the shop.
+ */
 .ws-card {
-  border: 1px solid #e3e1dc;
+  inline-size: 100%;
+  max-inline-size: 17.5rem;
+  border: var(--bw-hair) solid var(--line);
   border-radius: 8px;
   background: #ffffff;
   color: #555555;
@@ -510,24 +588,6 @@
 
 :where(.ws-card) :where(p) {
   margin: 0;
-}
-
-/* A flat product photo area: tone only, no picture of text. */
-.ws-card__photo {
-  display: grid;
-  place-items: center;
-  aspect-ratio: 16 / 9;
-  border-radius: 7px 7px 0 0;
-  background: #ede6da;
-}
-
-.ws-card__photo::before {
-  content: '';
-  inline-size: 38%;
-  aspect-ratio: 5 / 3;
-  border-radius: 10px 10px 14px 14px;
-  background: #c9b79c;
-  box-shadow: inset 0 10px 0 #b8a386;
 }
 
 .ws-card__info {
@@ -594,18 +654,10 @@
   pointer-events: none;
 }
 
+/* Its label is a fit-mark plate on WebAble's canvas, just below the card. */
 .ws-card__overlap-label {
   position: absolute;
-  inset-block-start: calc(100% + 6px);
+  /* The box's bottom edge, through the card's 16 px padding and edge, then 8 px. */
+  inset-block-start: calc(100% + 16px + 1px - 6px + var(--space-2));
   inset-inline-start: -1px;
-  padding: 2px 8px;
-  border: 1px solid #e0dfd8;
-  border-radius: 4px;
-  background: #fafaf7;
-  color: #1a1a17;
-  font-family: var(--font-sans);
-  font-size: 15px;
-  font-weight: 540;
-  line-height: 1.3;
-  white-space: nowrap;
 }

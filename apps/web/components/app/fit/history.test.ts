@@ -60,6 +60,21 @@ describe('describeHistory', () => {
     });
   });
 
+  it('says what using an earlier version would change, from the current fit', () => {
+    const items = describeHistory(entries, true);
+    expect(items[0]?.restore).toBeNull();
+    expect(items[2]?.restore?.map((c) => [c.id, c.before, c.after])).toEqual([
+      ['textSize', '21\u00a0px', '16\u00a0px'],
+      ['targets', '56\u00a0px', '24\u00a0px'],
+    ]);
+    expect(items[2]?.restore?.[0]?.value).toMatchObject({
+      kind: 'change',
+      before: '21',
+      after: '16',
+      unit: 'px',
+    });
+  });
+
   it('does not call a truncated oldest entry the first fit', () => {
     const items = describeHistory(entries.slice(0, 2), false);
     expect(items[1]?.first).toBe(false);
@@ -77,5 +92,6 @@ describe('describeHistory', () => {
     expect(sourceLabel('recalibration')).toBe('Tuned again');
     expect(sourceLabel('learned')).toBe('Learned as you browse');
     expect(sourceLabel('import')).toBe('Imported');
+    expect(sourceLabel('restore')).toBe('An earlier version, used again');
   });
 });

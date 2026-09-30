@@ -58,6 +58,8 @@ function applied(p: PlannedOp): AppliedChange {
   };
 }
 
+const NO_ENGINE_TAB = 77;
+
 class FakeEngine {
   /** What the page currently has applied. */
   changes: AppliedChange[] = [];
@@ -138,7 +140,9 @@ function setup(opts: SetupOptions = {}) {
   const badges = new Map<number, BadgeState>();
   const broadcasts: unknown[] = [];
   const port: ChromePort = {
-    async sendToTab(_tabId, msg) {
+    async sendToTab(tabId, msg) {
+      // Tab 77 has no engine (a page opened before WebAble had access).
+      if (tabId === NO_ENGINE_TAB) return undefined as never;
       return engine.handle(msg as WorkerToContent) as never;
     },
     async setBadge(tabId, state) {
@@ -465,8 +469,8 @@ describe('settings from the popup', () => {
   });
 
   it('opening the popup on a page without the engine starts it there (activeTab)', async () => {
-    const view = await env.worker.view(77);
-    expect(env.injected).toContain(77);
+    const view = await env.worker.view(NO_ENGINE_TAB);
+    expect(env.injected).toContain(NO_ENGINE_TAB);
     expect(view.status).toBe('checking');
   });
 });

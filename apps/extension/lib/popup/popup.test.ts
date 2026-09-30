@@ -67,6 +67,11 @@ function view(status: PopupStatus, patch: Partial<TabDetail> = {}): TabDetail {
     site: { paused: false, pins: [], blocks: [], levels: {} },
     levels: { text_floor: 2, line_spacing: 0, target_size: 2 },
     quick: { text: false, targets: false, calm: false },
+    quickUndone: [],
+    showing: false,
+    globalOverrides: {},
+    lastSyncAt: null,
+    allSitesAskHidden: false,
     needsReload: false,
     onDeviceOnly: true,
     prefs: { theme: 'system', reduceMotion: false, profile: null },
@@ -89,7 +94,7 @@ describe('every popup state (design-final 10.2)', () => {
     expect(m.quick).toBe(true);
     expect(m.showAdjust).toBe(false);
     expect(m.footer).toEqual(['sent', 'sign_in']);
-    expect(m.notes).toContain(COPY.signedOut);
+    expect(m.notes).not.toContain(COPY.signedOut);
   });
 
   it('checking and still checking keep the page quiet', () => {
@@ -141,10 +146,10 @@ describe('every popup state (design-final 10.2)', () => {
       }),
     );
     expect(all.copy.title).toBe('WebAble undid its changes here');
-    expect(all.footer).toEqual(['sent', 'fit']);
+    expect(all.footer).toEqual(['sent', 'sign_in']);
   });
 
-  it('an offer folds What changed into one row, and never shows on a paused site', () => {
+  it('an offer leaves What changed open, and never shows on a paused site', () => {
     const offer = {
       op: 'target_size',
       level: 2,
@@ -156,7 +161,7 @@ describe('every popup state (design-final 10.2)', () => {
       view('adapted', { changes: [change('text_floor')], offer }),
     );
     expect(m.offer?.question).toMatch(/\?$/);
-    expect(m.collapseChanges).toBe(true);
+    expect(m.collapseChanges).toBe(false);
     expect(popupModel(view('paused', { offer })).offer).toBeNull();
   });
 
@@ -174,15 +179,15 @@ describe('every popup state (design-final 10.2)', () => {
     expect(off.copy.title).toBe('WebAble is off');
     expect(off.primary?.kind).toBe('turn_on');
     expect(off.siteSwitch).toBeNull();
-    expect(off.footer).toEqual(['fit']);
+    expect(off.footer).toEqual([null, 'sign_in']);
     expect(off.notes).toEqual([]);
   });
 
   it("can't run, couldn't read, and needs site access", () => {
     const cant = popupModel(view('cant_run', { domain: null }));
     expect(cant.copy.sentence).toMatch(/Chrome doesn’t let extensions/);
-    expect(cant.primary?.kind).toBe('fit');
-    expect(cant.footer).toEqual(['sent']);
+    expect(cant.primary?.kind).toBe('tune');
+    expect(cant.footer).toEqual(['sent', null]);
     expect(cant.domainLine).toBeNull();
     const unread = popupModel(view('unreadable'));
     expect(unread.copy.glyph).toBe('attention');
@@ -204,7 +209,7 @@ describe('every popup state (design-final 10.2)', () => {
     );
   });
 
-  it('sign in again sits above the underlying state; on-device only is said plainly', () => {
+  it('sign in again sits above the underlying state; on-device only stays out of the main view', () => {
     const reauth = popupModel(
       view('adapted', {
         changes: [change('text_floor')],
@@ -234,7 +239,7 @@ describe('every popup state (design-final 10.2)', () => {
         },
       }),
     );
-    expect(onDevice.notes).toContain(COPY.onDevice);
+    expect(onDevice.notes).not.toContain(COPY.onDevice);
   });
 
   it('offers only the reasons that make sense for an op', () => {
@@ -320,7 +325,8 @@ describe('fit values', () => {
         }),
       ),
     ).toEqual({
-      to: '2\u00a0paused',
+      to: '2',
+      unit: 'paused',
     });
     expect(fitValue(change('text_floor', 'applied', { level: 2 }))).toEqual({
       to: '18',

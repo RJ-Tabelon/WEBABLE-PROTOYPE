@@ -5,6 +5,7 @@ import {
   OP_IDS,
   type OpId,
 } from '@webable/core';
+import type { FitValue } from '@webable/ui';
 import { z } from 'zod';
 
 import { NBSP } from '../format';
@@ -20,6 +21,8 @@ export interface LearnedOp {
   op: OpId;
   label: string;
   sentence: string;
+  /** The person turned this change off everywhere ([Turn back on]). */
+  blocked: boolean;
 }
 
 export interface LearnedDim {
@@ -30,6 +33,10 @@ export interface LearnedDim {
   /** Where it has settled, formatted ("21 px"). */
   to: string;
   srText: string;
+  /** The settled value as a number, in the dimension's unit (21). */
+  toValue: number;
+  /** The fit value for the page: Tune's value → the settled one. */
+  value: FitValue;
 }
 
 export interface LearnedSummary {
@@ -74,6 +81,9 @@ interface DimFormat {
   label: string;
   show: (v: number) => string;
   say: (from: number, to: number) => string;
+  /** The number a fit value shows, and its unit ("18", "px"). */
+  amount: (v: number) => number;
+  unit?: string;
 }
 
 const round = (v: number) => Math.round(v);
@@ -84,36 +94,49 @@ const softer = (v: number) => Math.round((1 - v) * 100);
 const DIM_FORMAT: Readonly<Record<DimId, DimFormat>> = {
   textPx: {
     label: 'Text size',
+    amount: round,
+    unit: 'px',
     show: (v) => `${round(v)}${NBSP}px`,
     say: (a, b) => `${round(a)} to ${round(b)} pixels`,
   },
   zoom: {
     label: 'Page zoom',
+    amount: percent,
+    unit: '%',
     show: (v) => `${percent(v)}%`,
     say: (a, b) => `${percent(a)} to ${percent(b)} percent`,
   },
   lineHeight: {
     label: 'Line spacing',
+    amount: tenth,
     show: (v) => String(tenth(v)),
     say: (a, b) => `line spacing ${tenth(a)} to ${tenth(b)}`,
   },
   lineCh: {
     label: 'Line length',
+    amount: round,
+    unit: 'characters',
     show: (v) => `${round(v)}${NBSP}characters`,
     say: (a, b) => `${round(a)} to ${round(b)} characters`,
   },
   targetPx: {
     label: 'Click targets',
+    amount: round,
+    unit: 'px',
     show: (v) => `${round(v)}${NBSP}px`,
     say: (a, b) => `${round(a)} to ${round(b)} pixels`,
   },
   clickWindowMs: {
     label: 'Steady clicks',
+    amount: round,
+    unit: 'ms',
     show: (v) => `${round(v)}${NBSP}ms`,
     say: (a, b) => `${round(a)} to ${round(b)} milliseconds`,
   },
   dimOpacity: {
     label: 'Busy areas',
+    amount: softer,
+    unit: '% softer',
     show: (v) => `${softer(v)}% softer`,
     say: (a, b) => `${softer(a)} to ${softer(b)} percent softer`,
   },
@@ -123,13 +146,14 @@ function opSentence(
   op: z.infer<typeof opSchema>,
   today: number,
 ): string | null {
-  if (op.blocked) return 'You turned this off everywhere.';
+  if (op.blocked) return 'You turned this change off everywhere.';
   if (op.src === 'pinned') return 'You asked for this on every site.';
   const { s, f } = decayed(op.c, today);
   if (s + f < MIN_EVIDENCE) return null;
   const kept = s / (s + f);
   if (kept >= 0.7) return 'You usually keep this change.';
-  if (kept <= 0.3) return 'You usually undo this change.';
+  // Learner A's policy moves a change it expects you to undo to an offer.
+  if (kept <= 0.3) return 'You usually undo this, so WebAble asks first.';
   return 'You keep this change about as often as you undo it.';
 }
 
@@ -145,7 +169,13 @@ export function learnedSummary(state: unknown, today: number): LearnedSummary {
     const op = opSchema.safeParse(raw);
     if (!op.success) continue;
     const sentence = opSentence(op.data, today);
-    if (sentence) ops.push({ op: id, label: OP_CATALOG[id].label, sentence });
+    if (sentence)
+      ops.push({
+        op: id,
+        label: OP_CATALOG[id].label,
+        sentence,
+        blocked: op.data.blocked === true,
+      });
   }
 
   const dims: LearnedDim[] = [];
@@ -162,12 +192,21 @@ export function learnedSummary(state: unknown, today: number): LearnedSummary {
     const shownFrom = format.show(from);
     const shownTo = format.show(to);
     if (shownFrom === shownTo) continue;
+    const srText = format.say(from, to);
     dims.push({
       dim: id,
       label: format.label,
       from: shownFrom,
       to: shownTo,
-      srText: format.say(from, to),
+      srText,
+      toValue: format.amount(to),
+      value: {
+        kind: 'change',
+        before: format.amount(from),
+        after: format.amount(to),
+        ...(format.unit ? { unit: format.unit } : {}),
+        srText,
+      },
     });
   }
   dims.sort((a, b) => DIM_IDS.indexOf(a.dim) - DIM_IDS.indexOf(b.dim));
@@ -180,6 +219,18 @@ export interface LearnedRow {
   label: string;
   dim?: LearnedDim;
   sentence?: string;
+  /** The op behind the sentence, when there is one. */
+  op?: OpId;
+  /** The person turned the change off everywhere. */
+  blocked?: boolean;
+}
+
+/** What a row's [Reset] or [Turn back on] clears: its dimension and its change. */
+export function learnedKeys(row: LearnedRow): Array<DimId | OpId> {
+  const keys: Array<DimId | OpId> = [];
+  if (row.dim) keys.push(row.dim.dim);
+  if (row.op) keys.push(row.op);
+  return keys;
 }
 
 /**
@@ -197,9 +248,18 @@ export function learnedRows(summary: LearnedSummary): LearnedRow[] {
     const shared = rows.find(
       (row) => row.label === op.label && row.sentence === undefined,
     );
-    if (shared) shared.sentence = op.sentence;
-    else
-      rows.push({ key: `op-${op.op}`, label: op.label, sentence: op.sentence });
+    if (shared) {
+      shared.sentence = op.sentence;
+      shared.op = op.op;
+      shared.blocked = op.blocked;
+    } else
+      rows.push({
+        key: `op-${op.op}`,
+        label: op.label,
+        sentence: op.sentence,
+        op: op.op,
+        blocked: op.blocked,
+      });
   }
   return rows;
 }

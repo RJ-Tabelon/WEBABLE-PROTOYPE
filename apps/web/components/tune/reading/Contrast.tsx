@@ -13,13 +13,14 @@ import {
 } from '@webable/core/calibration/stimuli';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-import { useContentWidth, useTaskKeys } from '../shared/hooks';
+import { useContentBox, useTaskKeys } from '../shared/hooks';
 import {
   Deck,
   ResponseButton,
   Responses,
   Stage,
   TaskHeading,
+  useStimulusFontReady,
 } from '../shared/primitives';
 import { maxFitPx, MIN_CHARS, STIMULUS_FAMILY } from './geometry';
 
@@ -52,10 +53,13 @@ export function Contrast({
   onDone,
 }: ContrastProps) {
   const stageRef = useRef<HTMLDivElement>(null);
-  const width = useContentWidth(stageRef, 560);
+  const stage = useContentBox(stageRef, { width: 560, height: 0 });
+  const fontReady = useStimulusFontReady();
+  // One line of type, never taller than the stage (the answers stay in view).
+  const heightFit = stage.height > 0 ? stage.height * 0.8 : Infinity;
   const wordPx = Math.max(
     12,
-    Math.min(targetPx, maxFitPx(width, advanceEm, MIN_CHARS)),
+    Math.min(targetPx, maxFitPx(stage.width, advanceEm, MIN_CHARS), heightFit),
   );
   const staircase = useRef<ContrastStaircase | null>(null);
   if (staircase.current === null)
@@ -92,7 +96,8 @@ export function Contrast({
 
   const answer = (choice: string | null) => {
     const stair = staircase.current;
-    if (!round || !stair || done || answered.current === trials.length) return;
+    if (!round || !stair || done || !fontReady) return;
+    if (answered.current === trials.length) return;
     answered.current = trials.length;
     const cantSee = choice === null;
     const correct = !cantSee && choice === round.word;
@@ -104,20 +109,21 @@ export function Contrast({
   round?.options.forEach((option, i) => {
     keys[String(i + 1)] = () => answer(option);
   });
-  useTaskKeys(keys, active && !!round && !done);
+  useTaskKeys(keys, active && !!round && !done && fontReady);
 
   return (
     <>
       <TaskHeading>Which word is it?</TaskHeading>
-      <Deck>
-        Pick the word you see. Some are very faint. If you can&rsquo;t see a
-        word, say so.
-      </Deck>
-      <Stage ref={stageRef} label="Word" className="tn-stage--center">
-        {round && !done ? (
+      <Deck>Pick the word you see. Some are very faint.</Deck>
+      <Stage
+        ref={stageRef}
+        label="Word"
+        className="tn-stage--center tn-stage--word"
+      >
+        {round && !done && fontReady ? (
           <p
             key={trials.length}
-            className="tn-stimulus-word"
+            className="tn-stimulus tn-stimulus-word"
             style={{
               fontFamily: STIMULUS_FAMILY,
               fontSize: `${wordPx}px`,
@@ -129,22 +135,26 @@ export function Contrast({
           </p>
         ) : null}
       </Stage>
-      <Responses label="The word" layout="grid">
-        {(round?.options ?? ['', '', '', '']).map((option, i) => (
-          <ResponseButton
-            key={`${trials.length}-${i}`}
-            hotkey={String(i + 1)}
-            onPress={() => answer(option)}
-            disabled={!round}
-          >
-            {option}
+      {/* The four words and "I can't see a word" are one block of answers. */}
+      <div className="tn-answers">
+        <Responses label="The word" layout="grid">
+          {(round?.options ?? ['', '', '', '']).map((option, i) => (
+            <ResponseButton
+              // Keyed by place, so the button with focus keeps it between trials.
+              key={i}
+              hotkey={String(i + 1)}
+              onPress={() => answer(option)}
+              disabled={!round}
+            >
+              {option}
+            </ResponseButton>
+          ))}
+        </Responses>
+        <div className="tn-controls">
+          <ResponseButton hotkey="c" onPress={() => answer(null)}>
+            I can&rsquo;t see a word
           </ResponseButton>
-        ))}
-      </Responses>
-      <div className="tn-controls tn-controls--single">
-        <ResponseButton hotkey="c" onPress={() => answer(null)}>
-          I can&rsquo;t see a word
-        </ResponseButton>
+        </div>
       </div>
     </>
   );

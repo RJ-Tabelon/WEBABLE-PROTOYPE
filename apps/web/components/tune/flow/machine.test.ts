@@ -439,6 +439,9 @@ describe('progress', () => {
     expect(p.taskIndex).toBe(0);
     expect(p.text).toMatch(/^Part 1 of 3 · Reading · about \d+\u00a0min left$/);
     expect(p.text).not.toMatch(/%|:\d\d/);
+    // Narrow screens show the time alone; the full line stays the accessible source.
+    expect(p.short).toMatch(/^About \d+ min left$/);
+    expect(progressOf(initialTuneState(), 0).short).toBeNull();
   });
 
   it('counts down as screens pass and never drops below 1', () => {

@@ -17,6 +17,8 @@ export * from './ops/catalog';
 
 export * from './page/types';
 export * from './page/vocab';
+export * from './page/vocab-check';
+export * from './page/excluded';
 
 export * from './policy/types';
 export * from './policy/decide';
@@ -32,6 +34,7 @@ export * from './decide/catalog';
 export * from './jev/api';
 export * from './jev/client';
 
+export * from './explain/glossary';
 export * from './explain/templates';
 
 export * from './bridge/protocol';

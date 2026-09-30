@@ -3,7 +3,7 @@ import type { SentReceipt } from '@webable/core/bridge/protocol';
 import type { SystemSignals } from '@webable/core/profile/defaults';
 import type { FitProfile } from '@webable/core/profile/schema';
 
-import type { TabView, UiToWorker } from '../protocol';
+import type { QuickKey, TabView, UiToWorker } from '../protocol';
 import type { Theme } from '../storage/settings';
 import type { UndoReason } from './undo';
 
@@ -28,6 +28,22 @@ export interface TabDetail extends TabView {
   levels: { text_floor: number; line_spacing: number; target_size: number };
   /** First-run quick switches for this site. */
   quick: { text: boolean; targets: boolean; calm: boolean };
+  /**
+   * Quick switches that are pinned but whose op WebAble's checks undid on this
+   * page (the change's `vcode` says why). The popup shows them Off with the
+   * reason and leaves the pin alone.
+   */
+  quickUndone: QuickKey[];
+  /** Show on page is on for this tab (cleared on navigation). */
+  showing: boolean;
+  /** Levels set with "Use these on every site" (settings.globalLevels). */
+  globalOverrides: Partial<
+    Record<'text_floor' | 'line_spacing' | 'target_size', number>
+  >;
+  /** Last successful sync with the account, ms since epoch. */
+  lastSyncAt: number | null;
+  /** The person hid the "Allow on all sites" line in the main view. */
+  allSitesAskHidden: boolean;
   /** The page was paused when it loaded; it adapts after a reload. */
   needsReload: boolean;
   /** Suggestions run on this device only (signed out, no consent, or analysis unavailable). */
@@ -62,7 +78,13 @@ export interface WelcomeState {
 
 export type UiExtra =
   | { type: 'ui:prefs' }
-  | { type: 'ui:set-prefs'; theme?: Theme; reduceMotion?: boolean }
+  | {
+      type: 'ui:set-prefs';
+      theme?: Theme;
+      reduceMotion?: boolean;
+      /** Hide the "Allow on all sites" line in the main view (it stays in Settings). */
+      hideAllSitesAsk?: boolean;
+    }
   /** matchMedia results from an extension page (the worker has no window). */
   | { type: 'ui:system'; signals: SystemSignals }
   | { type: 'ui:welcome' }
@@ -72,7 +94,7 @@ export type UiExtra =
   | {
       type: 'ui:quick';
       tabId: number;
-      key: 'text' | 'targets' | 'calm';
+      key: QuickKey;
       on: boolean;
     }
   /** "Use these on every site": this site's levels and switches become the default. */

@@ -24,7 +24,9 @@ import { notNeeded, type OpEnv, type OpImpl } from './types';
  * Pressing on a frozen image lets that image play again.
  */
 
-const moving = (n: number): string => `${n} moving`;
+/** Fit marks count what is in motion: '2 moving' -> '0 moving', '2 playing' -> '0 playing'. */
+const moving = (n: number): string => `${n}\u00a0moving`;
+const playing = (n: number): string => `${n}\u00a0playing`;
 
 type CssAnimCtor = new (...args: never[]) => Animation;
 
@@ -258,7 +260,7 @@ export const pauseMedia: OpImpl = {
       css: { doc: `${tok('pm')} { opacity: 0 !important; }` },
       marks: gifs.map((g) => [g, 'pm'] as [Element, string]),
       count: n,
-      fit: { before: `${n} playing`, after: `${n} paused` },
+      fit: { before: playing(n), after: playing(0) },
       show: [...videos, ...gifs],
       run: () => {
         const intent = new IntentTracker(env.view);

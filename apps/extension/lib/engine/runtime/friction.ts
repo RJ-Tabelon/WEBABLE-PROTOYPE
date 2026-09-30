@@ -185,32 +185,38 @@ export function installFriction(
   let scale = win.visualViewport?.scale ?? 1;
   const now = (): number => performance.now();
 
+  // Page scripts can dispatch synthetic events; only the person's input counts.
   const onDown = (e: PointerEvent): void => {
+    if (!e.isTrusted) return;
     if (!e.isPrimary || e.button !== 0) return;
     if (isNearMiss(doc, e)) detector.misclick(now());
   };
   const onClick = (e: MouseEvent): void => {
+    if (!e.isTrusted) return;
     if (e.detail === 0) return; // keyboard-generated activation: not a pointer signal
     detector.click(e.clientX, e.clientY, now());
   };
   const onWheel = (e: WheelEvent): void => {
+    if (!e.isTrusted) return;
     // Ctrl+wheel and trackpad pinch both arrive as ctrlKey wheel events.
     if (e.ctrlKey && e.deltaY < 0 && now() > zoomQuietUntil)
       detector.zoomIn(now());
   };
-  const onResize = (): void => {
+  const onResize = (e: Event): void => {
+    if (!e.isTrusted) return;
     const d = win.devicePixelRatio || 1;
     if (d > dpr * 1.05 && now() > zoomQuietUntil) detector.zoomIn(now());
     dpr = d;
   };
-  const onViewport = (): void => {
+  const onViewport = (e: Event): void => {
+    if (!e.isTrusted) return;
     const s = win.visualViewport?.scale ?? 1;
     if (s > scale * 1.15 && now() > zoomQuietUntil) detector.zoomIn(now());
     scale = s;
   };
   let raf = 0;
-  const onScroll = (): void => {
-    if (raf) return;
+  const onScroll = (e: Event): void => {
+    if (!e.isTrusted || raf) return;
     raf = win.requestAnimationFrame(() => {
       raf = 0;
       detector.scroll(win.scrollY, win.innerHeight, now());

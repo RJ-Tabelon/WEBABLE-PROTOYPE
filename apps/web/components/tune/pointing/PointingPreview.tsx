@@ -1,10 +1,11 @@
 'use client';
 
 import { TARGET_LADDER } from '@webable/core';
-import { Button, SegmentedControl } from '@webable/ui';
+import { Button } from '@webable/ui';
 import { useState, type CSSProperties } from 'react';
 
-import { Deck, TaskHeading } from '../shared/primitives';
+import { changeValue, FitLine, PlainLine } from '../shared/fit';
+import { Deck, OptionGroup, TaskHeading } from '../shared/primitives';
 
 export interface PointingPreviewProps {
   /** S* from the ring, or null when nothing was measured. */
@@ -13,7 +14,9 @@ export interface PointingPreviewProps {
   onDone: (chosenPx: number) => void;
 }
 
-const NBSP = ' ';
+const NBSP = '\u00a0';
+/** What sites give a click area when nothing changes it (the fit rows' "before"). */
+export const SITE_TARGET_PX = 24;
 
 /** S* and one ladder level either side (cal-motor S6). */
 export function previewSizes(recommended: number, touch: boolean): number[] {
@@ -34,17 +37,16 @@ export function previewSizes(recommended: number, touch: boolean): number[] {
   return ladder.slice(start, start + 3);
 }
 
-/** Sample controls at one target size: a toolbar, a list of links and a small form. */
+/** Sample controls at one target size: a row of actions, a list of links and a small form. */
 export function SampleControls({ sizePx }: { sizePx: number }) {
   const style = { '--tn-t': `${sizePx}px` } as CSSProperties;
   return (
     <div className="tn-sample-ui" style={style} aria-hidden="true">
       <div className="tn-sample-ui__toolbar">
-        {['bold', 'list', 'link', 'image', 'more'].map((name) => (
-          <span
-            key={name}
-            className={`tn-sample-ui__tool tn-sample-ui__tool--${name}`}
-          />
+        {['Reply', 'Share', 'Save'].map((label) => (
+          <span key={label} className="tn-sample-ui__tool">
+            {label}
+          </span>
         ))}
       </div>
       <ul className="tn-sample-ui__links">
@@ -74,24 +76,39 @@ export function PointingPreview({
   const [size, setSize] = useState(
     String(sizes.includes(recommended) ? recommended : (sizes[1] ?? sizes[0])),
   );
+  const px = Number(size);
   return (
     <>
       <TaskHeading>Choose a comfortable size.</TaskHeading>
       <Deck>Pick the size that looks easiest to click on this device.</Deck>
+      <OptionGroup
+        legend="Click area size"
+        hideLegend
+        options={sizes.map((n) => ({
+          value: String(n),
+          label: `${n}${NBSP}px`,
+        }))}
+        value={size}
+        onChange={setSize}
+      />
       <div className="tn-preview">
-        <div className="tn-preview__bar">
-          <SegmentedControl
-            label="Click area size"
-            value={size}
-            onValueChange={setSize}
-            options={sizes.map((px) => ({
-              value: String(px),
-              label: `${px}${NBSP}px`,
-            }))}
-          />
-        </div>
+        <p className="tn-preview__value" aria-live="polite">
+          {px === SITE_TARGET_PX ? (
+            <PlainLine
+              label="Click targets"
+              value={px}
+              unit="px"
+              spoken={`${px} pixels`}
+            />
+          ) : (
+            <FitLine
+              label="Click targets"
+              value={changeValue(SITE_TARGET_PX, px, 'px')}
+            />
+          )}
+        </p>
         <div className="tn-preview__frame tn-preview__frame--page">
-          <SampleControls sizePx={Number(size)} />
+          <SampleControls sizePx={px} />
         </div>
       </div>
       <div className="tn-controls">
@@ -99,7 +116,7 @@ export function PointingPreview({
           variant="primary"
           size="task"
           arrow="forward"
-          onClick={() => onDone(Number(size))}
+          onClick={() => onDone(px)}
         >
           Use this size
         </Button>

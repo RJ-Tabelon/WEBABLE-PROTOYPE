@@ -207,6 +207,13 @@ td {
   font-variant-numeric: tabular-nums;
 }
 
+/* Code, payloads and sample output are values: Mono, like the fit marks. */
+code,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
 kbd {
   font-family: var(--font-mono);
   font-size: var(--text-mono);

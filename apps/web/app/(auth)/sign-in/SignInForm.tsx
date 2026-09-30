@@ -2,7 +2,7 @@
 
 import { Actions, Button, ErrorPanel, TextField, TextLink } from '@webable/ui';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useId, useRef, useState } from 'react';
 
 import { sendMagicLink, signInWithPassword } from '../../../lib/auth/actions';
 import {
@@ -12,6 +12,7 @@ import {
   type FieldErrors,
   placeError,
   rememberSentTo,
+  withNext,
 } from '../../../components/app/forms/auth-forms';
 import { PasswordField } from '../../../components/app/forms/PasswordField';
 
@@ -27,8 +28,8 @@ export interface SignInFormProps {
 
 /**
  * Sign in with email and password, or ask for an email link instead (no
- * password to type). Errors sit next to the field they belong to; the values
- * the person typed are kept.
+ * password to type): both actions sit in one row under the fields. Errors sit
+ * next to the field they belong to; the values the person typed are kept.
  */
 export function SignInForm({ next }: SignInFormProps) {
   const router = useRouter();
@@ -39,6 +40,7 @@ export function SignInForm({ next }: SignInFormProps) {
   const [pending, setPending] = useState<'password' | 'link' | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const linkHintId = useId();
 
   function showFieldErrors(errors: FieldErrors) {
     setFields(errors);
@@ -96,7 +98,7 @@ export function SignInForm({ next }: SignInFormProps) {
       return;
     }
     rememberSentTo(result.sentTo);
-    router.push('/check-email?kind=sign-in');
+    router.push(withNext('/check-email?kind=sign-in', next));
   }
 
   return (
@@ -133,39 +135,37 @@ export function SignInForm({ next }: SignInFormProps) {
           value={password}
           onValueChange={setPassword}
           error={fields.password}
+          labelAside={
+            <TextLink href="/forgot-password" className="wa-auth-meta-link">
+              Forgot your password?
+            </TextLink>
+          }
         />
-        <div className="wa-auth-form__row">
-          <TextLink href="/forgot-password">Forgot your password?</TextLink>
+        <div className="wa-auth-form__actions">
+          <Actions>
+            <Button
+              type="submit"
+              variant="primary"
+              busy={pending === 'password'}
+              busyLabel="Signing in…"
+            >
+              Sign in
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={onEmailLink}
+              busy={pending === 'link'}
+              busyLabel="Sending…"
+              aria-describedby={linkHintId}
+            >
+              Email me a link
+            </Button>
+          </Actions>
+          <p id={linkHintId} className="wa-auth-form__hint">
+            A link signs you in without a password.
+          </p>
         </div>
-        <Actions className="wa-auth-form__submit">
-          <Button
-            type="submit"
-            variant="primary"
-            busy={pending === 'password'}
-            busyLabel="Signing in…"
-          >
-            Sign in
-          </Button>
-        </Actions>
       </form>
-
-      <p className="wa-auth-divider">or</p>
-
-      <div className="wa-auth-alt">
-        <p className="wa-auth-alt__hint">
-          Skip the password. We’ll email you a link that signs you in.
-        </p>
-        <Actions>
-          <Button
-            variant="secondary"
-            onClick={onEmailLink}
-            busy={pending === 'link'}
-            busyLabel="Sending…"
-          >
-            Email me a sign-in link
-          </Button>
-        </Actions>
-      </div>
     </>
   );
 }

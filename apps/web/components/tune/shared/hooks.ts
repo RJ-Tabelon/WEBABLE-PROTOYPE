@@ -1,6 +1,8 @@
 'use client';
 
 import {
+  createContext,
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -100,52 +102,87 @@ function isTypingTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Single-key answers for a task screen ("t", "f", "c", "1"...). Ignored while
- * typing, with modifiers, while a dialog is open, or when `active` is false.
- * Keys are matched in lower case; Space and Enter are never taken, so buttons
- * keep their native behaviour.
+ * The current screen's element (`.tn-screen`). Task keys listen on it, not on
+ * the window, so they work only while focus is inside the screen (WCAG 2.1.4):
+ * the heading takes focus when a screen opens, so keys work at once, and they
+ * never fire while focus is in the action bar or a dialog.
+ */
+export const ScreenContext =
+  createContext<RefObject<HTMLElement | null> | null>(null);
+
+/**
+ * Single-key answers for a task screen ("t", "f", "c", "1"...), scoped to the
+ * screen element. Ignored while typing, with modifiers, while a dialog is open,
+ * or when `active` is false. Keys are matched in lower case; Space, Enter and
+ * the arrows are never taken, so buttons, radios and scrolling keep their
+ * native behaviour.
  */
 export function useTaskKeys(
   handlers: Readonly<Record<string, () => void>>,
   active: boolean,
 ): void {
   const latest = useLatest(handlers);
+  const screen = useContext(ScreenContext);
   useEffect(() => {
-    if (!active) return;
+    const el = screen?.current;
+    if (!active || !el) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.repeat) return;
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (isTypingTarget(event.target)) return;
       if (document.querySelector('dialog[open]')) return;
-      const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
-      const handler = latest.current[key];
+      if (event.key.length !== 1) return;
+      const handler = latest.current[event.key.toLowerCase()];
       if (!handler) return;
       event.preventDefault();
       handler();
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [active, latest]);
+    el.addEventListener('keydown', onKeyDown);
+    return () => el.removeEventListener('keydown', onKeyDown);
+  }, [active, latest, screen]);
 }
 
-/** Width of an element's content box, kept up to date. */
-export function useContentWidth(
+export interface ContentBox {
+  width: number;
+  height: number;
+}
+
+function contentBoxOf(el: HTMLElement): ContentBox | null {
+  const style = getComputedStyle(el);
+  const width =
+    el.clientWidth -
+    Number.parseFloat(style.paddingLeft) -
+    Number.parseFloat(style.paddingRight);
+  const height =
+    el.clientHeight -
+    Number.parseFloat(style.paddingTop) -
+    Number.parseFloat(style.paddingBottom);
+  if (!Number.isFinite(width) || width <= 0) return null;
+  return { width, height: Number.isFinite(height) ? Math.max(0, height) : 0 };
+}
+
+/**
+ * An element's content box (width and height), kept up to date. The stage's
+ * height comes from the screen around it (it flexes between 160 and 360 px), so
+ * stimuli sized from it always fit above the answers.
+ */
+export function useContentBox(
   ref: RefObject<HTMLElement | null>,
-  fallback: number,
-): number {
-  const [width, setWidth] = useState(fallback);
+  fallback: ContentBox,
+): ContentBox {
+  const [box, setBox] = useState(fallback);
   useIsoLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     const measure = () => {
-      const style = getComputedStyle(el);
-      const w =
-        el.clientWidth -
-        Number.parseFloat(style.paddingLeft) -
-        Number.parseFloat(style.paddingRight);
-      if (Number.isFinite(w) && w > 0) {
-        setWidth((prev) => (Math.abs(prev - w) >= 1 ? w : prev));
-      }
+      const next = contentBoxOf(el);
+      if (!next) return;
+      setBox((prev) =>
+        Math.abs(prev.width - next.width) >= 1 ||
+        Math.abs(prev.height - next.height) >= 1
+          ? next
+          : prev,
+      );
     };
     measure();
     if (typeof ResizeObserver === 'undefined') return;
@@ -153,5 +190,18 @@ export function useContentWidth(
     observer.observe(el);
     return () => observer.disconnect();
   }, [ref]);
-  return width;
+  return box;
+}
+
+/** Width of an element's content box, kept up to date. */
+export function useContentWidth(
+  ref: RefObject<HTMLElement | null>,
+  fallback: number,
+): number {
+  return useContentBox(ref, { width: fallback, height: 0 }).width;
+}
+
+/** Measure an element's content box once, now (layout effects only). */
+export function measureContentBox(el: HTMLElement): ContentBox | null {
+  return contentBoxOf(el);
 }

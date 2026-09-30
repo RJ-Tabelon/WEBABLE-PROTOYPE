@@ -25,6 +25,10 @@ export interface HelloReply {
   prePaint: OpId[];
   /** Per-tab random id; learning events use it instead of anything linkable. */
   tabSession: string;
+  /** WebAble's own UI should not animate (settings.reduceMotion, or the fit's motion need). */
+  reduceMotion: boolean;
+  /** The keyboard shortcuts as Chrome reports them (chrome.commands.getAll), '' when unset. */
+  shortcuts: { focusLayer: string; undoAll: string };
 }
 
 /** Page-analysis evidence, built with vocabFilter(); the only structure that can leave the device. */
@@ -37,7 +41,12 @@ export interface PageEvidence {
 }
 
 export type ContentToWorker =
-  | { type: 'cs:hello' }
+  /**
+   * `restored`: this document already has a running engine (a bfcache restore,
+   * or a second injection found the per-document guard). cs:applied with the
+   * current plan and changes follows.
+   */
+  | { type: 'cs:hello'; restored?: true }
   | { type: 'cs:signals'; signals: PageSignals; evidence: PageEvidence }
   | { type: 'cs:applied'; planId: string; changes: AppliedChange[] }
   | {
@@ -57,7 +66,13 @@ export type ContentToWorker =
       type: 'cs:offer-answer';
       op: OpId;
       answer: 'accept' | 'dismiss' | 'never_here' | 'timeout';
-    };
+    }
+  /**
+   * The toast's Undo all. The engine has already undone every change in the
+   * page; it sends no per-change undo events for this action. The worker
+   * records them, resets zoom and marks the changes undone (no sw:undo echo).
+   */
+  | { type: 'cs:undo-all'; source: 'toast' };
 
 export interface ContentReplies {
   'cs:hello': HelloReply;
@@ -67,6 +82,7 @@ export interface ContentReplies {
   'cs:event': { ok: true };
   'cs:friction': { offer: AdaptationPlan['ops'][number] | null };
   'cs:offer-answer': { plan: AdaptationPlan | null };
+  'cs:undo-all': { ok: true };
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +110,12 @@ export type WorkerToContent =
   | { type: 'sw:offer'; offer: AdaptationPlan['ops'][number] }
   | { type: 'sw:get-changes' }
   /** The focus-layer command: move keyboard focus into WebAble's in-page message, if one is showing. */
-  | { type: 'sw:focus-layer' };
+  | { type: 'sw:focus-layer' }
+  /**
+   * An offer for this op was answered in the popup, or expired. The engine
+   * hides its chip if it shows this op, and sends nothing back.
+   */
+  | { type: 'sw:offer-resolved'; op: OpId };
 
 export interface WorkerReplies {
   'sw:plan': { changes: AppliedChange[] };
@@ -107,6 +128,7 @@ export interface WorkerReplies {
   'sw:offer': { ok: true };
   'sw:get-changes': { changes: AppliedChange[]; status: EngineStatus };
   'sw:focus-layer': { ok: boolean };
+  'sw:offer-resolved': { ok: true };
 }
 
 export type EngineStatus = 'idle' | 'checking' | 'ready' | 'unreadable';
@@ -150,6 +172,9 @@ export interface TabView {
   lastSentAt: number | null;
 }
 
+/** The popup's quick switches: text (text_floor), targets (target_size), calm (calm_motion). */
+export type QuickKey = 'text' | 'targets' | 'calm';
+
 export type UiToWorker =
   | { type: 'ui:view'; tabId: number }
   | { type: 'ui:undo'; tabId: number; op: OpId | 'all' }
@@ -184,5 +209,11 @@ export type UiToWorker =
   | { type: 'ui:show-on-page'; tabId: number; op: OpId | null; on: boolean }
   | { type: 'ui:reading-guide'; tabId: number; on: boolean }
   | { type: 'ui:grant-all-sites' }
+  /** Re-apply what the person undid on this page ('all' after Undo all). */
+  | { type: 'ui:redo'; tabId: number; op: OpId | 'all' }
+  /** Clear the "Use these on every site" levels and replan open tabs. */
+  | { type: 'ui:clear-everywhere' }
+  /** Sent after the popup's own chrome.permissions.request for one origin succeeds. */
+  | { type: 'ui:grant-site'; tabId: number; origin: string }
   | { type: 'ui:receipts' }
   | { type: 'ui:sign-out' };

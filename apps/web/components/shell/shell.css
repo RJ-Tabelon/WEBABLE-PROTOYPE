@@ -32,9 +32,20 @@ main[tabindex='-1']:focus {
   outline: none;
 }
 
+/* A page's h1 (or a linked fragment) receives focus after a route change
+   (RouteFocus) or a toast; it is a starting point, not a control, so it
+   draws no ring. */
+main h1[tabindex='-1']:focus,
+[data-route-focus]:focus {
+  outline: none;
+}
+
 /* ---------- Shared page container ---------- */
 
-.wa-container {
+/* The one content edge: site header, footer, site pages and the calm frame
+   (sign-in, connect) all use it, so the chrome never jumps between them. */
+.wa-container,
+.wa-shell-container {
   inline-size: 100%;
   max-inline-size: calc(var(--w-content) + 2 * var(--gutter));
   margin-inline: auto;
@@ -54,6 +65,12 @@ main[tabindex='-1']:focus {
 }
 
 /* ---------- Site header (§7.8) ---------- */
+
+/*
+ * Exported for other headers (the app's calm frame): .wa-shell-container for
+ * the content edge, .wa-nav-link for header links (16 / medium, secondary ink,
+ * no underline, 44 px hit), and useScrolledAttr() for [data-scrolled].
+ */
 
 .wa-site-header {
   /* Breakpoints are container queries in em, so they follow the person's text
@@ -82,12 +99,13 @@ main[tabindex='-1']:focus {
 
 .wa-site-header__inner {
   display: flex;
+  /* At a large text scale the row wraps instead of scrolling sideways. The
+     actions sit at the end (auto margin), so the gap is only a minimum; the
+     brand's own padding already keeps it clear of them. */
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: 0 var(--space-1);
   min-block-size: var(--header-h);
-  max-inline-size: calc(var(--w-content) + 2 * var(--gutter));
-  margin-inline: auto;
-  padding-inline: var(--gutter);
 }
 
 .wa-site-header__brand,
@@ -162,6 +180,41 @@ main[tabindex='-1']:focus {
 .wa-site-header__menu {
   --_px: var(--space-3);
   margin-inline-end: calc(-1 * var(--space-3));
+}
+
+/* Below 64em the word stands alone: the mark's bars would sit beside the
+   Menu glyph and read as a second menu. */
+@container wa-header (max-width: 63.99em) {
+  .wa-site-header__brand .wa-wordmark__mark {
+    display: none;
+  }
+}
+
+/* Below 30em: a 48 px icon-only Menu. Its word stays as the accessible name.
+   Its padding hangs into the gutter (the glyph, 20, ends near the text edge)
+   so the word and Menu share one row even at 2x text on 320 px, but never so
+   far that the focus ring would leave the window. */
+@container wa-header (max-width: 29.99em) {
+  .wa-site-header__menu {
+    inline-size: max(var(--control-lg), var(--target-min));
+    padding: 0;
+    margin-inline-end: calc(
+      -1 *
+        min(
+          (max(var(--control-lg), var(--target-min)) - 1.25rem) / 2,
+          var(--gutter) - var(--focus-width) - var(--focus-offset) - 1px
+        )
+    );
+  }
+  .wa-site-header__menu .wa-btn__label {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
 }
 
 @container wa-header (min-width: 30em) {
@@ -270,6 +323,9 @@ main[tabindex='-1']:focus {
 }
 
 .wa-site-footer__column ul {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
 }
@@ -340,6 +396,31 @@ main[tabindex='-1']:focus {
   background: var(--canvas);
 }
 
+/* ThemeControl: three segments, or its native select where they cannot fit. */
+.wa-theme-control {
+  display: inline-flex;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+.wa-theme-control__select {
+  display: none;
+}
+
+/* A footer narrower than the three segments (320 px at 2x text): the select. */
+@container wa-footer (max-width: 16.75em) {
+  .wa-site-footer__theme,
+  .wa-site-footer .wa-theme-control {
+    flex: 1 1 100%;
+  }
+  .wa-site-footer .wa-theme-control .wa-segmented {
+    display: none;
+  }
+  .wa-site-footer .wa-theme-control__select {
+    display: block;
+    inline-size: 100%;
+  }
+}
+
 @container wa-footer (min-width: 48em) {
   .wa-site-footer__inner {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -375,6 +456,8 @@ main[tabindex='-1']:focus {
 .wa-app__bar {
   z-index: var(--z-header);
   display: flex;
+  /* At a large text scale the row wraps instead of scrolling sideways. */
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
@@ -413,12 +496,13 @@ main[tabindex='-1']:focus {
 
 .wa-app-nav__list {
   display: grid;
-  gap: var(--space-0-5);
+  gap: var(--space-2);
   margin: 0;
   padding: 0;
 }
 
 .wa-app-nav__link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -447,8 +531,18 @@ main[tabindex='-1']:focus {
 }
 .wa-app-nav__link[aria-current='page'] {
   background: var(--surface-tonal);
-  box-shadow: inset 3px 0 0 var(--ink);
   color: var(--ink);
+}
+/* The current page's bar: 3 px of ink, inset from the pill's ends so it
+   reads as a mark, not as a border. */
+.wa-app-nav__link[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  inset-block: 12px;
+  inset-inline-start: 0;
+  inline-size: 3px;
+  border-radius: 2px;
+  background: var(--ink);
 }
 
 .wa-app__rail-footer {
@@ -488,9 +582,13 @@ main[tabindex='-1']:focus {
     padding: 0 var(--space-3) var(--space-4);
     border-inline-end: var(--bw-hair) solid var(--line);
   }
+  /* As tall as the site header, so the wordmark keeps its height from the
+     site into the app. */
   .wa-app__brand--rail {
     align-self: flex-start;
-    min-block-size: var(--header-h);
+    flex: none;
+    block-size: var(--header-h);
+    min-block-size: 0;
     margin-inline-start: 0;
     padding-inline: var(--space-3);
   }
@@ -519,6 +617,14 @@ main[tabindex='-1']:focus {
 
 /* ---------- Task frame (§9.1) ---------- */
 
+/*
+ * Two modes, chosen by TaskShell from measured heights (so the person's text
+ * scale counts, which a height media query in em would not see):
+ * - Normal flow (default, and whenever the bars would take more than 30% of
+ *   the window): nothing is pinned; the action bar follows the content.
+ * - Fixed bars ([data-task-fixed]): a 100dvh grid; only the main column
+ *   scrolls, between the bars, so nothing focused can sit under them.
+ */
 .wa-task {
   container: wa-task / inline-size;
   display: flex;
@@ -527,18 +633,49 @@ main[tabindex='-1']:focus {
   background: var(--canvas);
 }
 
+.wa-task[data-task-fixed] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'bar'
+    'main'
+    'actions';
+  block-size: 100dvh;
+  min-block-size: 0;
+}
+.wa-task[data-task-fixed] > .wa-task__bar {
+  grid-area: bar;
+}
+.wa-task[data-task-fixed] > .wa-task__main {
+  grid-area: main;
+  align-items: flex-start;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-padding-block: var(--space-4);
+}
+.wa-task[data-task-fixed] > .wa-task__actions {
+  grid-area: actions;
+}
+
 .wa-task__bar {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  grid-template-areas:
-    'brand progress'
-    'ruler ruler';
+  grid-template-areas: 'brand progress';
   align-items: center;
   column-gap: var(--space-4);
-  min-block-size: 5.5rem;
+  min-block-size: var(--task-bar-h);
   padding-inline: var(--gutter);
   border-block-end: var(--bw-hair) solid var(--line);
   background: var(--canvas);
+}
+/* Below 48em the ruler takes its own row: 88 (wordmark row 40, ruler row 48). */
+.wa-task__bar[data-ruler] {
+  grid-template-areas:
+    'brand progress'
+    'ruler ruler';
+  min-block-size: 5.5rem;
 }
 
 .wa-task__brand {
@@ -550,6 +687,7 @@ main[tabindex='-1']:focus {
 
 .wa-task__progress {
   grid-area: progress;
+  position: relative;
   margin: 0;
   text-wrap: balance;
   padding-block: var(--space-2);
@@ -560,6 +698,11 @@ main[tabindex='-1']:focus {
   text-align: end;
 }
 
+/* The short line is for narrow screens only. */
+.wa-task__progress-short {
+  display: none;
+}
+
 .wa-task__ruler {
   grid-area: ruler;
   display: flex;
@@ -568,8 +711,25 @@ main[tabindex='-1']:focus {
   min-block-size: 3rem;
 }
 
+@container wa-task (max-width: 47.99em) {
+  /* The full line stays the accessible source; the short one is what shows. */
+  .wa-task__progress-full[data-has-short] {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .wa-task__progress-short {
+    display: inline;
+  }
+}
+
 @container wa-task (min-width: 48em) {
-  .wa-task__bar {
+  .wa-task__bar,
+  .wa-task__bar[data-ruler] {
     grid-template-columns: minmax(0, 1fr) minmax(0, 30rem) minmax(0, 1fr);
     grid-template-areas: 'brand ruler progress';
     min-block-size: var(--task-bar-h);
@@ -585,7 +745,13 @@ main[tabindex='-1']:focus {
   display: flex;
   flex: 1 0 auto;
   justify-content: center;
-  padding: var(--space-12) var(--gutter) var(--space-16);
+  padding: var(--space-6) var(--gutter) var(--space-16);
+}
+
+@container wa-task (min-width: 48em) {
+  .wa-task__main {
+    padding-block-start: var(--space-8);
+  }
 }
 
 .wa-task__column {
@@ -595,17 +761,10 @@ main[tabindex='-1']:focus {
   line-height: var(--leading-body);
 }
 
+/* A group, not a footer: it holds Tune's controls, not site information. */
 .wa-task__actions {
   border-block-start: var(--bw-hair) solid var(--line);
   background: var(--canvas);
-}
-
-@media (min-height: 37.5em) {
-  .wa-task__actions {
-    position: sticky;
-    inset-block-end: 0;
-    z-index: var(--z-sticky);
-  }
 }
 
 .wa-task__actions-inner {
@@ -619,6 +778,11 @@ main[tabindex='-1']:focus {
   padding: var(--space-4) var(--gutter);
 }
 
+/* Words stay whole: "Skip this part" never breaks inside its pill. */
+.wa-task__actions-inner > .wa-btn {
+  white-space: nowrap;
+}
+
 .wa-task__idle {
   margin: 0 0 0 auto;
   font-size: var(--text-meta);
@@ -626,26 +790,40 @@ main[tabindex='-1']:focus {
   letter-spacing: var(--track-meta);
   color: var(--ink-2);
 }
+/* Empty until the idle note shows: kept in the tree (it is a live region) but
+   out of the layout, so it never adds a row. */
+.wa-task__idle:not([data-visible]) {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .wa-task__idle[data-visible] {
   animation: wa-fade-in var(--dur-1) linear;
 }
 
 @container wa-task (max-width: 47.99em) {
-  .wa-task__actions-inner {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: 0;
-    column-gap: var(--space-4);
-  }
+  /* Pause and Skip (or the step's own actions) share the row at equal width,
+     64 tall. If the text scale leaves no room for both labels whole, the
+     second wraps to a row of its own at full width instead of truncating. */
   .wa-task__actions-inner > .wa-btn {
-    inline-size: 100%;
+    flex: 1 1 0;
+    min-inline-size: max-content;
   }
   .wa-task__idle {
-    grid-column: 1 / -1;
+    flex: 1 0 100%;
     margin: 0;
   }
-  .wa-task__idle[data-visible] {
-    margin-block-start: var(--space-3);
+}
+
+/* Only when one label is wider than the whole row (about 2x text on a phone)
+   may its words wrap, so the row never scrolls sideways. */
+@container wa-task (max-width: 12em) {
+  .wa-task__actions-inner > .wa-btn {
+    flex-basis: 100%;
+    min-inline-size: 0;
+    white-space: normal;
   }
 }
 
@@ -654,6 +832,9 @@ main[tabindex='-1']:focus {
 @media (forced-colors: active) {
   .wa-app-nav__link[aria-current='page'] {
     border-inline-start: 3px solid CanvasText;
+  }
+  .wa-app-nav__link[aria-current='page']::before {
+    display: none;
   }
   .wa-skip {
     border: 1px solid ButtonText;

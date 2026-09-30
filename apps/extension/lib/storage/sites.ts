@@ -202,21 +202,36 @@ export function toLocalSite(domain: string, rec: SiteRecord): LocalSite {
     paused: rec.rule.paused,
     blocked: [...blocked].sort(),
     pinned: [...pinned].sort(),
+    levels: { ...rec.rule.levels },
     lastChanges: rec.lastChanges,
     lastVisit: rec.lastVisit,
   };
 }
 
-/** Sites the person has visited or configured, most recent first. */
+/** Whether a site has a rule to show: paused, or an op pinned, blocked or set to a level. */
+export function hasRule(site: LocalSite): boolean {
+  return (
+    site.paused ||
+    site.pinned.length > 0 ||
+    site.blocked.length > 0 ||
+    Object.keys(site.levels ?? {}).length > 0
+  );
+}
+
+/** Sites with a rule, most recent first (a visit alone lists nothing). */
 export function listLocalSites(all: SiteMap): LocalSite[] {
   return Object.entries(all)
-    .filter(
-      ([, r]) =>
-        r.lastVisit > 0 ||
-        r.rule.paused ||
-        r.rule.pins.length > 0 ||
-        r.rule.blocks.length > 0,
-    )
     .sort(([, a], [, b]) => b.lastVisit - a.lastVisit || b.at - a.at)
-    .map(([d, r]) => toLocalSite(d, r));
+    .map(([d, r]) => toLocalSite(d, r))
+    .filter(hasRule);
+}
+
+/** Drop every rule for a site: pause, pins, blocks and levels, set or learned. */
+export function resetRule(rec: SiteRecord, now: number): void {
+  rec.rule = emptyRule(now);
+  for (const dop of Object.values(rec.state.ops)) {
+    if (!dop) continue;
+    delete dop.block;
+    delete dop.pin;
+  }
 }

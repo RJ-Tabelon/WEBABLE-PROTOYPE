@@ -2,8 +2,10 @@
  * How to reach the WebAble team. Help and contact are never hidden (WCAG 3.2.6),
  * so every document page links here.
  *
- * Set NEXT_PUBLIC_CONTACT_EMAIL to the team's support address. Until it is set,
- * contact goes to the project's issue tracker, which the team reads.
+ * Contact is the team's support address, NEXT_PUBLIC_CONTACT_EMAIL, as a mailto
+ * link. Only in development and tests, when no address is set, does it fall back
+ * to the project's issue tracker. A production build without a valid address
+ * fails loudly instead of shipping a page with no way to reach anyone.
  */
 
 const EMAIL = /^[^\s@<>()"']+@[^\s@<>()"']+\.[a-z]{2,}$/i;
@@ -20,12 +22,30 @@ export interface Contact {
   label: string;
 }
 
-/** Resolve the contact channel from a configured address (validated), else the tracker. */
-export function resolveContact(configured: string | undefined): Contact {
+export class ContactConfigError extends Error {
+  constructor() {
+    super(
+      'NEXT_PUBLIC_CONTACT_EMAIL must be set to a valid address in production. ' +
+        'The site links to it from Help, Privacy and the accessibility statement.',
+    );
+    this.name = 'ContactConfigError';
+  }
+}
+
+/**
+ * Resolve the contact channel from a configured address (validated). Outside
+ * production, a missing or invalid address falls back to the issue tracker; in
+ * production it throws.
+ */
+export function resolveContact(
+  configured: string | undefined,
+  nodeEnv: string | undefined = process.env.NODE_ENV,
+): Contact {
   const email = configured?.trim();
   if (email && EMAIL.test(email)) {
     return { kind: 'email', href: `mailto:${email}`, label: email };
   }
+  if (nodeEnv === 'production') throw new ContactConfigError();
   return {
     kind: 'issues',
     href: ISSUES_URL,

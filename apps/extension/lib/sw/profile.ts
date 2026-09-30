@@ -12,13 +12,12 @@ import type {
 } from '@webable/core/learning/types';
 import {
   DEFAULT_SYSTEM_SIGNALS,
-  defaultFitProfile,
   type SystemSignals,
 } from '@webable/core/profile/defaults';
 import { needLevels } from '@webable/core/profile/needs';
 import type { FitProfile, NeedLevels } from '@webable/core/profile/schema';
 
-import type { ProfileRecord } from '../storage/account';
+import { defaultProfileRecord, type ProfileRecord } from '../storage/account';
 import { addActivity, type ActivityField } from '../storage/activity';
 import { randomId } from '../storage/crypto';
 import type { LocalStores } from '../storage';
@@ -60,12 +59,7 @@ export function defaultRecord(
   system: SystemSignals,
   now: number,
 ): ProfileRecord {
-  return {
-    profile: defaultFitProfile(system, new Date(now)),
-    source: 'default',
-    version: null,
-    fetchedAt: now,
-  };
+  return defaultProfileRecord(system, now);
 }
 
 export function contextFor(rec: ProfileRecord): ProfileContext {
@@ -118,7 +112,10 @@ export async function noteSystemSignals(
   let changed = false;
   await stores.profile.update((cur) => {
     if (cur && cur.source === 'account') return cur;
-    const next = defaultRecord(signals, now);
+    const next: ProfileRecord = {
+      ...defaultRecord(signals, now),
+      ...(cur?.ownerUserId ? { ownerUserId: cur.ownerUserId } : {}),
+    };
     changed = !cur || profileIdentity(cur) !== profileIdentity(next);
     return changed ? next : cur!;
   });

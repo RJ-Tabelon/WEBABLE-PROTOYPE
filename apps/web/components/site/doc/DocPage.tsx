@@ -1,10 +1,8 @@
 import { SectionHeader } from '@webable/ui';
 import type { ReactNode } from 'react';
+import { DocToc, type TocEntry } from './DocToc';
 
-export interface TocEntry {
-  id: string;
-  title: string;
-}
+export type { TocEntry };
 
 export interface DocPageProps {
   /** A fact above the title, for example the date the page was last changed. */
@@ -13,41 +11,44 @@ export interface DocPageProps {
   deck?: ReactNode;
   /** Sections for the "On this page" list, in order. Each needs a `DocSection` with the same id. */
   toc: readonly TocEntry[];
+  /**
+   * Keep a note column right of the text at ≥80em, for sources beside their
+   * block (the research page). Section rules and tables span it; running text
+   * keeps the reading measure.
+   */
+  notes?: boolean;
   children: ReactNode;
 }
 
 /**
- * A document page in Reading density (design-final §14): h1 and deck, an
- * "On this page" list, then sections with index-rule headers at the reading
- * measure. Nothing is collapsed, so find-in-page and help always reach the text.
+ * A document page in Reading density (design-final §14). One text edge: at ≥64em
+ * the header (eyebrow, h1, deck) and every section sit in the second column, and
+ * "On this page" sits in the first, sticky, marking the section being read. Below
+ * 64em the list folds into one closed row above the text. Nothing in the text is
+ * collapsed, so find-in-page and help always reach it.
  */
-export function DocPage({ eyebrow, title, deck, toc, children }: DocPageProps) {
+export function DocPage({
+  eyebrow,
+  title,
+  deck,
+  toc,
+  notes = false,
+  children,
+}: DocPageProps) {
   return (
-    <article aria-labelledby="doc-title">
-      <header className="wa-container ws-doc-head">
+    <article
+      aria-labelledby="doc-title"
+      className={`wa-container ws-doc${notes ? ' ws-doc--notes' : ''}`}
+    >
+      <header className="ws-doc-head">
         {eyebrow ? <p className="ws-doc-head__eyebrow">{eyebrow}</p> : null}
         <h1 id="doc-title" className="ws-doc-head__title">
           {title}
         </h1>
         {deck ? <p className="ws-doc-head__deck">{deck}</p> : null}
       </header>
-      <div className="wa-container ws-doc">
-        <nav className="ws-toc" aria-labelledby="doc-toc">
-          <p id="doc-toc" className="ws-toc__head">
-            On this page
-          </p>
-          <ul role="list" className="ws-toc__list">
-            {toc.map((entry) => (
-              <li key={entry.id}>
-                <a className="ws-toc__link" href={`#${entry.id}`}>
-                  {entry.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <div className="ws-doc__content">{children}</div>
-      </div>
+      <DocToc entries={toc} />
+      <div className="ws-doc__content">{children}</div>
     </article>
   );
 }

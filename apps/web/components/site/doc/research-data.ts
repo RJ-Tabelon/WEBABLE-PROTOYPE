@@ -14,10 +14,20 @@ export interface Source {
 
 export type Strength = 'Strong' | 'Moderate' | 'Mixed' | 'Consensus only';
 
+/**
+ * Which way the evidence points. `for`: it supports what WebAble does. `against`:
+ * it shows the idea doesn't help, which is why WebAble leaves it out.
+ */
+export type Polarity = 'for' | 'against';
+
 export interface EvidenceItem {
   id: string;
   title: string;
   strength: Strength;
+  /** Default `for`. */
+  polarity?: Polarity;
+  /** What WebAble does, in a few words, for the summary table (changes only). */
+  summary?: string;
   /** What the studies found, in plain words. */
   finding: string;
   /** What WebAble does because of it. */
@@ -260,6 +270,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'text-size',
     title: 'Text size',
     strength: 'Strong',
+    summary: 'Raises small text to your size',
     finding:
       'Reading gets faster as print grows, up to a size where it levels off. That size differs a lot between people and rises with age.',
     practice:
@@ -271,6 +282,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'spacing',
     title: 'Line and word spacing',
     strength: 'Moderate',
+    summary: 'Offers line spacing from 1.5 to 2.0',
     finding:
       'More space between lines and words raised reading speed by 26% and 46% for some readers in one study, and made no difference in another. Extra space between letters helped children who find reading hard in one study, but not most readers.',
     practice:
@@ -282,6 +294,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'contrast',
     title: 'Contrast and light or dark pages',
     strength: 'Strong',
+    summary: 'Darkens faint text to your contrast floor',
     finding:
       'Most people read dark text on a light page more accurately, and the advantage grows as text gets smaller. People whose eyes scatter light often read faster with light text on a dark page.',
     practice:
@@ -293,6 +306,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'targets',
     title: 'Click targets',
     strength: 'Strong',
+    summary: 'Enlarges small click areas',
     finding:
       'Small targets cause most missed taps and clicks. In one study, touch errors fell from 42% at 6 mm to 7% at 18 mm for people with less precise pointing.',
     practice:
@@ -304,6 +318,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'steady-clicks',
     title: 'Steady clicks',
     strength: 'Moderate',
+    summary: 'Offers a 200 to 400 ms click window',
     finding:
       'More than 1 in 4 clicks by people with less precise pointing included movement during the click. Holding the click on the pressed target helped, and 200 to 400 ms worked best for older adults, while 800 ms made dragging harder.',
     practice:
@@ -315,6 +330,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'motion',
     title: 'Moving things',
     strength: 'Moderate',
+    summary: 'Stops decorative animation',
     finding:
       'Animated ads and backgrounds slowed reading and search in lab and online studies, and animated banners raised the effort people reported.',
     practice:
@@ -326,6 +342,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'busy',
     title: 'Busy areas',
     strength: 'Mixed',
+    summary: 'Softens ads and widgets',
     finding:
       'Cluttered pages slowed search from about 4 to 7 seconds on average, more so for people who prefer simple pages. Older readers are also drawn to eye-catching parts of a page, so hiding the wrong part could do harm.',
     practice:
@@ -337,6 +354,7 @@ export const ADAPTATIONS: readonly EvidenceItem[] = [
     id: 'line-length',
     title: 'Line length',
     strength: 'Moderate',
+    summary: 'Keeps lines to 62 to 80 characters',
     finding:
       'Lines of about 55 characters gave the best understanding at typical and fast reading speeds. Lines of 80 or more made readers lose their place.',
     practice:
@@ -413,6 +431,7 @@ export const NOT_OFFERED: readonly EvidenceItem[] = [
     id: 'special-fonts',
     title: 'Special reading fonts',
     strength: 'Strong',
+    polarity: 'against',
     finding:
       'Fonts sold as easier to read gave no gain in speed or accuracy over common fonts, and one study found readers did not prefer them.',
     practice: 'WebAble does not offer them.',
@@ -422,6 +441,7 @@ export const NOT_OFFERED: readonly EvidenceItem[] = [
     id: 'bolding',
     title: 'Bold word beginnings',
     strength: 'Strong',
+    polarity: 'against',
     finding:
       'Across more than 2,000 readers, bolding the start of each word made reading slightly slower.',
     practice: 'WebAble does not offer it.',
@@ -431,6 +451,7 @@ export const NOT_OFFERED: readonly EvidenceItem[] = [
     id: 'tints',
     title: 'Coloured tints',
     strength: 'Moderate',
+    polarity: 'against',
     finding: 'Coloured overlays showed no reliable reading benefit.',
     practice: 'WebAble does not offer them.',
     sources: ['henderson2013'],
@@ -439,6 +460,7 @@ export const NOT_OFFERED: readonly EvidenceItem[] = [
     id: 'preference',
     title: 'Trusting preference alone',
     strength: 'Moderate',
+    polarity: 'against',
     finding:
       'Reading speed differed by 35% between a person’s fastest and slowest font, and the font people said they liked did not predict the fastest one.',
     practice:

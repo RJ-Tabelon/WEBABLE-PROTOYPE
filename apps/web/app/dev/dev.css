@@ -534,8 +534,17 @@
   grid-template-columns: 8rem minmax(0, 1fr);
 }
 
-.g-fit-row .wa-btn {
-  margin-inline-end: calc(-1 * var(--space-4));
+/* The Undo buttons are flush="end": their labels end on the hairline's end. */
+
+.g-fit-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  align-items: baseline;
+  gap: var(--space-6) var(--space-8);
+}
+
+.g-fitrows {
+  inline-size: 100%;
 }
 
 .g-capture {
@@ -591,46 +600,6 @@
 .g-doc {
   display: grid;
   gap: var(--space-12);
-}
-
-.g-doc__rows {
-  margin: 0;
-  padding: 0;
-  border-block-start: var(--bw-hair) solid var(--line);
-}
-
-.g-doc__row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2) var(--space-8);
-  align-items: center;
-  min-block-size: 4.5rem;
-  padding-block: var(--space-5);
-  border-block-end: var(--bw-hair) solid var(--line);
-}
-
-@container wa-app (min-width: 48em) {
-  .g-doc__row {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-  }
-}
-
-.g-doc__label {
-  margin: 0;
-  font-size: var(--text-body);
-  font-weight: var(--weight-medium);
-}
-
-.g-doc__line {
-  margin: var(--space-1) 0 0;
-  color: var(--ink-2);
-}
-
-.g-doc__source {
-  margin: var(--space-1) 0 0;
-  font-size: var(--text-meta);
-  letter-spacing: var(--track-meta);
-  color: var(--ink-3);
 }
 
 .g-stage {

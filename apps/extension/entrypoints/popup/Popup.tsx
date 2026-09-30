@@ -100,7 +100,7 @@ export function Popup() {
             </Button>
           ) : (
             <>
-              <Wordmark markSize={20} className="pp-wordmark" />
+              <Wordmark className="pp-wordmark" />
               <IconButton
                 icon="settings"
                 label={COPY.settings}
@@ -180,9 +180,11 @@ function Footer({
   api: PopupApi;
   onOpenSent: () => void;
 }) {
-  const actions = popupModel(view).footer;
-  const render = (a: FooterAction) => {
+  const [start, end] = popupModel(view).footer;
+  const render = (a: FooterAction | null) => {
     switch (a) {
+      case null:
+        return null;
       case 'sent':
         return (
           <Button key={a} variant="ghost" size="md" onClick={onOpenSent}>
@@ -199,6 +201,18 @@ function Footer({
             onClick={() => void api.act({ type: 'ui:undo', op: 'all' })}
           >
             {COPY.undoAll}
+          </Button>
+        );
+      case 'redo_all':
+        return (
+          <Button
+            key={a}
+            variant="ghost"
+            size="md"
+            iconStart="rotate-cw"
+            onClick={() => void api.act({ type: 'ui:redo', op: 'all' })}
+          >
+            {COPY.redoAll}
           </Button>
         );
       case 'fit':
@@ -229,12 +243,8 @@ function Footer({
   };
   return (
     <footer className="pp-footer">
-      <div className="pp-footer__start">
-        {actions[0] ? render(actions[0]) : null}
-      </div>
-      <div className="pp-footer__end">
-        {actions[1] ? render(actions[1]) : null}
-      </div>
+      <div className="pp-footer__start">{render(start)}</div>
+      <div className="pp-footer__end">{render(end)}</div>
     </footer>
   );
 }

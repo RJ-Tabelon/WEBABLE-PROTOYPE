@@ -44,6 +44,11 @@ export interface AppSectionProps {
   eyebrow?: ReactNode;
   deck?: ReactNode;
   link?: { href: string; label: ReactNode };
+  /**
+   * One section-wide action (a ghost button such as [Forget what WebAble
+   * learned]). At the end of the header on wide pages, under it otherwise.
+   */
+  action?: ReactNode;
   children: ReactNode;
 }
 
@@ -54,20 +59,31 @@ export function AppSection({
   eyebrow,
   deck,
   link,
+  action,
   children,
 }: AppSectionProps) {
   const titleId = `${id}-title`;
+  const header = (
+    <SectionHeader
+      as="h2"
+      titleId={titleId}
+      title={title}
+      eyebrow={eyebrow}
+      deck={deck}
+      link={link}
+      className="wa-app-section-head"
+    />
+  );
   return (
     <section id={id} aria-labelledby={titleId} className="wa-app-section">
-      <SectionHeader
-        as="h2"
-        titleId={titleId}
-        title={title}
-        eyebrow={eyebrow}
-        deck={deck}
-        link={link}
-        className="wa-app-section-head"
-      />
+      {action ? (
+        <div className="wa-app-section__head">
+          {header}
+          <div className="wa-app-section__action">{action}</div>
+        </div>
+      ) : (
+        header
+      )}
       <div className="wa-app-section__body">{children}</div>
     </section>
   );

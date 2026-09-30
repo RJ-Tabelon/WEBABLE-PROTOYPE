@@ -2,14 +2,11 @@
 
 import type { SentReceipt } from '@webable/core';
 import {
-  Actions,
   Button,
-  Dialog,
   Disclosure,
   ErrorPanel,
   StatusGlyph,
   TextLink,
-  useToast,
 } from '@webable/ui';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -24,6 +21,9 @@ type Load =
   | { phase: 'failed'; error: BridgeFailure };
 
 const PAGE = 20;
+
+/** Sent on this window when "Clear this browser's WebAble data" finishes. */
+export const LOCAL_CLEARED_EVENT = 'wa-local-cleared';
 
 /** The exact request body, pretty-printed. Never throws. */
 export function payloadText(body: unknown): string {
@@ -44,10 +44,6 @@ export function Receipts({ cloudAnalysis }: { cloudAnalysis: boolean }) {
   const { state, recheck } = useExtension();
   const [load, setLoad] = useState<Load>({ phase: 'idle' });
   const [limit, setLimit] = useState(PAGE);
-  const [clearing, setClearing] = useState(false);
-  const [clearBusy, setClearBusy] = useState(false);
-  const [clearError, setClearError] = useState<string | null>(null);
-  const toast = useToast();
 
   const read = useCallback(async () => {
     setLoad((current) =>
@@ -69,19 +65,12 @@ export function Receipts({ cloudAnalysis }: { cloudAnalysis: boolean }) {
     if (installed) void read();
   }, [installed, read]);
 
-  async function clearLocal() {
-    setClearBusy(true);
-    setClearError(null);
-    const result = await extension.clearLocal();
-    setClearBusy(false);
-    if (!result.ok) {
-      setClearError(result.error.message);
-      return;
-    }
-    setClearing(false);
-    setLoad({ phase: 'ready', receipts: [] });
-    toast.show({ message: 'Cleared what WebAble kept in this browser.' });
-  }
+  // "Clear this browser's WebAble data" (in Your data) empties this list too.
+  useEffect(() => {
+    const onCleared = () => setLoad({ phase: 'ready', receipts: [] });
+    window.addEventListener(LOCAL_CLEARED_EVENT, onCleared);
+    return () => window.removeEventListener(LOCAL_CLEARED_EVENT, onCleared);
+  }, []);
 
   if (
     state.phase === 'checking' ||
@@ -198,55 +187,6 @@ export function Receipts({ cloudAnalysis }: { cloudAnalysis: boolean }) {
           ) : null}
         </>
       )}
-
-      <div className="wa-danger-row">
-        <div>
-          <p className="wa-row__label">Clear this browser’s WebAble data</p>
-          <p className="wa-row__detail">
-            Removes site settings, recent changes and this list from this
-            browser. Your fit and account stay.
-          </p>
-        </div>
-        <div>
-          <Button variant="danger" onClick={() => setClearing(true)}>
-            Clear this browser
-          </Button>
-        </div>
-      </div>
-
-      <Dialog
-        open={clearing}
-        onOpenChange={(open) => {
-          if (!open && !clearBusy) setClearing(false);
-        }}
-        title="Clear this browser’s WebAble data?"
-        description="WebAble removes its site settings, recent changes and this list from this browser. This can’t be undone. Your fit and account stay."
-        actions={
-          <Actions>
-            <Button
-              variant="danger-filled"
-              busy={clearBusy}
-              busyLabel="Clearing…"
-              onClick={() => void clearLocal()}
-            >
-              Clear this browser
-            </Button>
-            <Button
-              variant="secondary"
-              disabled={clearBusy}
-              onClick={() => setClearing(false)}
-            >
-              Keep it
-            </Button>
-          </Actions>
-        }
-      >
-        {clearError ? (
-          <ErrorPanel title="Nothing was cleared" live as="p">
-            <p>{clearError}</p>
-          </ErrorPanel>
-        ) : null}
-      </Dialog>
     </>
   );
 }

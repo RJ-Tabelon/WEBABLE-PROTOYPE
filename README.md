@@ -40,22 +40,26 @@ pnpm dev                      # web app on http://localhost:3000
 pnpm dev:extension            # extension in a disposable Chrome profile
 ```
 
-To load the production build in your normal Chrome: `pnpm extension:enable`, then
-**Load unpacked** with `apps/extension/.output/chrome-mv3`. The development build has a
-fixed id (`bbnblnlbgcccbbbbihngngbecbobedie`) so the web app can reach it.
+To load WebAble in your normal Chrome: `pnpm extension:enable`, then **Load unpacked** with
+`apps/extension/.output/chrome-mv3-dev`. This development build has a fixed id
+(`bbnblnlbgcccbbbbihngngbecbobedie`) and trusts the local web app, so the two can talk.
+
+A release build (`pnpm extension:release`) needs `WXT_WEB_ORIGINS` set to the deployed https
+origin (e.g. `https://webable.app/*`) and `WXT_WEB_ORIGIN`. It never trusts localhost and
+carries no development key; the package check fails the build otherwise.
 
 ## Commands
 
-| Command                                  | What it does                                                                                                                    |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm check`                             | Format, lint, typecheck, unit tests, Edge Function tests, bundle drift check, contrast gate, extension build and manifest check |
-| `pnpm test`                              | Unit tests in every package                                                                                                     |
-| `pnpm db:test`                           | RLS and SQL function tests against the database (each test rolls back)                                                          |
-| `pnpm test:functions`                    | Type-checks and tests the Edge Functions with Deno                                                                              |
-| `pnpm build:functions`                   | Rebuilds the core bundle the Edge Functions import (`--check` to verify)                                                        |
-| `pnpm test:e2e`                          | Playwright: engine on fixture pages, the extension end to end, and the web app                                                  |
-| `pnpm --filter @webable/tokens contrast` | Verifies every colour pair in both themes                                                                                       |
-| `node scripts/gen-db-types.mjs`          | Regenerates `packages/core/src/db/types.ts` from the live schema                                                                |
+| Command                                  | What it does                                                                                                                            |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`                             | Format, lint, typecheck, unit tests, Edge Function tests, bundle drift check, contrast gate, release extension build and manifest check |
+| `pnpm test`                              | Unit tests in every package                                                                                                             |
+| `pnpm db:test`                           | RLS and SQL function tests against the database (each test rolls back)                                                                  |
+| `pnpm test:functions`                    | Type-checks and tests the Edge Functions with Deno                                                                                      |
+| `pnpm build:functions`                   | Rebuilds the core bundle the Edge Functions import (`--check` to verify)                                                                |
+| `pnpm test:e2e`                          | Playwright: engine on fixture pages, the extension end to end, and the web app                                                          |
+| `pnpm --filter @webable/tokens contrast` | Verifies every colour pair in both themes                                                                                               |
+| `node scripts/gen-db-types.mjs`          | Regenerates `packages/core/src/db/types.ts` from the live schema                                                                        |
 
 ## Edge Functions
 

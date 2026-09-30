@@ -3,24 +3,9 @@ import { connection } from 'next/server';
 
 import { ConnectFlow } from '../../components/app/connect/ConnectFlow';
 import { signInPath } from '../../lib/auth/routes';
-import { getPublicEnv } from '../../lib/env';
 import { getCurrentFit } from '../../lib/data/fit';
 import { getUser } from '../../lib/data/session';
-
-/** The Chrome Web Store listing for an extension id. */
-function storeUrlFor(extensionId: string | null): string | null {
-  return extensionId
-    ? `https://chromewebstore.google.com/detail/${extensionId}`
-    : null;
-}
-
-function configuredExtensionId(): string | null {
-  try {
-    return getPublicEnv().extensionId;
-  } catch {
-    return null;
-  }
-}
+import { chromeStoreUrl } from '../../lib/extension/store';
 
 /**
  * /connect: add the extension and connect this browser to the account. The
@@ -38,7 +23,7 @@ export default async function ConnectPage() {
     <ConnectFlow
       email={user.email}
       hasFit={fit.ok && fit.data !== null}
-      storeUrl={storeUrlFor(configuredExtensionId())}
+      storeUrl={chromeStoreUrl()}
       showDevSteps={development}
     />
   );

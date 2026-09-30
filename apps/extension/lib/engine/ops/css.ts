@@ -1,4 +1,4 @@
-import { OFF_ATTR } from './marks';
+import { OFF_ATTR, sel } from './marks';
 
 /**
  * Shared CSS. The profile-level blocks here are also shipped as static files
@@ -60,5 +60,5 @@ export const PREPAINT_FILES = {
   'calm-motion.css': () => calmMotionCss('doc'),
 } as const;
 
-/** `[data-wa~="tok"]` with the specificity boost. */
-export const tok = (t: string): string => `[data-wa~="${t}"]${BOOST}`;
+/** The mark selector for an internal token, with the specificity boost. */
+export const tok = (t: string): string => `${sel(t)}${BOOST}`;

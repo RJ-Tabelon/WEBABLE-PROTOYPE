@@ -491,15 +491,32 @@ export type EditorSpec =
     }
   | { control: 'choice'; options: ChoiceOption<string>[] };
 
-/** How each row is edited. Sliders for ladders of numbers, choices for words. */
-export function editorFor(p: FitProfile, row: FitRowId): EditorSpec {
+export interface EditorOptions {
+  /** The device asks for less motion: "Plays" can't be chosen for moving things. */
+  systemReducedMotion?: boolean;
+}
+
+/**
+ * How each row is edited. Sliders for ladders of numbers, choices for words.
+ * `start` is the value the editor opened with: it is always one of the steps,
+ * and the steps don't move while the person drags.
+ */
+export function editorFor(
+  row: FitRowId,
+  start: AdjustValue,
+  options: EditorOptions = {},
+): EditorSpec {
   const px = (v: number) => `${trimNumber(v)}${NBSP}px`;
   const pxSpoken = (v: number) => `${trimNumber(v)} pixels`;
+  const startNumber =
+    start.row === row && typeof start.value === 'number' ? start.value : null;
+  const withStart = (ladder: readonly number[]) =>
+    startNumber === null ? [...ladder] : stepsWith(ladder, startNumber);
   switch (row) {
     case 'textSize':
       return {
         control: 'slider',
-        steps: stepsWith(TEXT_STEPS, p.vision.textMinPx.value),
+        steps: withStart(TEXT_STEPS),
         format: px,
         spoken: pxSpoken,
       };
@@ -513,14 +530,14 @@ export function editorFor(p: FitProfile, row: FitRowId): EditorSpec {
     case 'lineSpacing':
       return {
         control: 'slider',
-        steps: stepsWith(LINE_SPACING_STEPS, p.vision.lineHeight.value),
+        steps: withStart(LINE_SPACING_STEPS),
         format: trimNumber,
         spoken: (v) => `line spacing ${trimNumber(v)}`,
       };
     case 'lineLength':
       return {
         control: 'slider',
-        steps: stepsWith(LINE_LENGTH_STEPS, p.vision.maxLineCh.value),
+        steps: withStart(LINE_LENGTH_STEPS),
         format: (v) => `${v}${NBSP}characters`,
         spoken: (v) => `${v} characters`,
       };
@@ -564,7 +581,7 @@ export function editorFor(p: FitProfile, row: FitRowId): EditorSpec {
           {
             value: 'plays',
             label: 'Plays',
-            ...(p.attention.systemReducedMotion
+            ...(options.systemReducedMotion
               ? {
                   disabledReason:
                     'Your device asks for less motion. Change that in your system settings.',

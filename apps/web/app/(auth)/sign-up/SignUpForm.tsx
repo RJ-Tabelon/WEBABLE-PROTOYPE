@@ -2,7 +2,7 @@
 
 import { Actions, Button, ErrorPanel, TextField } from '@webable/ui';
 import { useRouter } from 'next/navigation';
-import { type FormEvent, useRef, useState } from 'react';
+import { type FormEvent, useId, useRef, useState } from 'react';
 
 import { sendMagicLink, signUpWithPassword } from '../../../lib/auth/actions';
 import { PASSWORD_MIN } from '../../../lib/auth/schemas';
@@ -13,6 +13,7 @@ import {
   type FieldErrors,
   placeError,
   rememberSentTo,
+  withNext,
 } from '../../../components/app/forms/auth-forms';
 import { PasswordField } from '../../../components/app/forms/PasswordField';
 
@@ -23,7 +24,8 @@ interface FormProblem {
 
 /**
  * Create an account with email and password, or with an email link and no
- * password at all. Nothing is pre-ticked and nothing else is signed up for.
+ * password at all: both actions sit in one row under the fields. Nothing is
+ * pre-ticked and nothing else is signed up for.
  */
 export function SignUpForm({ next }: { next: string }) {
   const router = useRouter();
@@ -34,6 +36,7 @@ export function SignUpForm({ next }: { next: string }) {
   const [pending, setPending] = useState<'password' | 'link' | null>(null);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const linkHintId = useId();
 
   function showFieldErrors(errors: FieldErrors) {
     setFields(errors);
@@ -72,7 +75,7 @@ export function SignUpForm({ next }: { next: string }) {
     }
     if (result.needsConfirmation) {
       rememberSentTo(email.trim().toLowerCase());
-      router.push('/check-email?kind=sign-up');
+      router.push(withNext('/check-email?kind=sign-up', next));
       return;
     }
     router.replace(result.redirectTo);
@@ -99,7 +102,7 @@ export function SignUpForm({ next }: { next: string }) {
       return;
     }
     rememberSentTo(result.sentTo);
-    router.push('/check-email?kind=sign-in');
+    router.push(withNext('/check-email?kind=sign-in', next));
   }
 
   return (
@@ -139,36 +142,31 @@ export function SignUpForm({ next }: { next: string }) {
           error={fields.password}
           hint={`At least ${PASSWORD_MIN} characters. A short phrase works well.`}
         />
-        <Actions className="wa-auth-form__submit">
-          <Button
-            type="submit"
-            variant="primary"
-            busy={pending === 'password'}
-            busyLabel="Creating…"
-          >
-            Create account
-          </Button>
-        </Actions>
+        <div className="wa-auth-form__actions">
+          <Actions>
+            <Button
+              type="submit"
+              variant="primary"
+              busy={pending === 'password'}
+              busyLabel="Creating…"
+            >
+              Create account
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={onEmailLink}
+              busy={pending === 'link'}
+              busyLabel="Sending…"
+              aria-describedby={linkHintId}
+            >
+              Email me a link instead
+            </Button>
+          </Actions>
+          <p id={linkHintId} className="wa-auth-form__hint">
+            A link signs you in without a password.
+          </p>
+        </div>
       </form>
-
-      <p className="wa-auth-divider">or</p>
-
-      <div className="wa-auth-alt">
-        <p className="wa-auth-alt__hint">
-          No password needed. We’ll email you a link, and it creates your
-          account.
-        </p>
-        <Actions>
-          <Button
-            variant="secondary"
-            onClick={onEmailLink}
-            busy={pending === 'link'}
-            busyLabel="Sending…"
-          >
-            Email me a link instead
-          </Button>
-        </Actions>
-      </div>
     </>
   );
 }

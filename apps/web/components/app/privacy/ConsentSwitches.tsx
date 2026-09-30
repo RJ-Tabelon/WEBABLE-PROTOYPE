@@ -57,8 +57,13 @@ export const CONSENT_FACTS: Record<
         'The kind of change, the kind of page, and a coarse level (none, some or strong) of how well it fits you.',
     },
     {
+      term: 'Your account',
+      detail:
+        'Your account is used to check you turned this on and to allow one report every 4 weeks. It isn’t stored with the counts.',
+    },
+    {
       term: 'Never sent',
-      detail: 'Your account, the site, the page, or your fit itself.',
+      detail: 'The site, the page, or your fit.',
     },
     {
       term: 'Kept',

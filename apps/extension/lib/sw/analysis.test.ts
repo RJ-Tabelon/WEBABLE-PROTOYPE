@@ -1,3 +1,8 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+import { isExcludedSite } from '@webable/core/page/excluded';
 import { REGION_ROLES } from '@webable/core/page/types';
 import {
   articleSignals,
@@ -99,6 +104,35 @@ describe('the request that leaves the device', () => {
     };
     expect(
       buildDecideRequest(bad, { regionKeys: ['k'], askPageType: false }),
+    ).toBeNull();
+  });
+
+  it('sends nothing when a word is outside the vocabulary or a phrase is too long', () => {
+    const ask = (ev: PageEvidence['regions'][string]) =>
+      buildDecideRequest(
+        { page: workedExamplePage(), regions: { k: ev } },
+        { regionKeys: ['k'], askPageType: false },
+      );
+    expect(ask(evidence())).not.toBeNull();
+    expect(ask(evidence({ class_words: ['zzqx'] }))).toBeNull();
+    expect(ask(evidence({ heading_words: 'welcome back caden' }))).toBeNull();
+    const menu = (n: number) =>
+      Array.from({ length: n }, () => 'menu').join(' ');
+    expect(ask(evidence({ heading_words: menu(6) }))).not.toBeNull();
+    expect(ask(evidence({ heading_words: menu(7) }))).toBeNull();
+    expect(ask(evidence({ control_words: [menu(5)] }))).toBeNull();
+    // A main candidate is checked the same way.
+    expect(
+      buildDecideRequest(
+        {
+          page: workedExamplePage(),
+          regions: {
+            a: evidence(),
+            b: evidence({ class_words: ['zzqx'] }),
+          },
+        },
+        { regionKeys: [], mainCandidates: ['a', 'b'], askPageType: false },
+      ),
     ).toBeNull();
   });
 });
@@ -269,5 +303,18 @@ describe('answers into verdicts and the cache', () => {
     expect(view.verdicts['k-rail']?.source).toBe('page_analysis');
     expect(view.main?.key).toBe('k-a');
     expect(view.signals.main.key).toBe('k-a');
+  });
+});
+
+describe('excluded sites', () => {
+  it('the worker asks the default exclusion list, never a constant', () => {
+    // G3 (ai-architecture.md 3.1): a hardcoded `excludedSite: false` would send
+    // banking and health pages for analysis.
+    const here = dirname(fileURLToPath(import.meta.url));
+    const worker = readFileSync(join(here, 'worker.ts'), 'utf8');
+    const uses = worker.match(/excludedSite:\s*([^,\n]+)/g) ?? [];
+    expect(uses).toEqual(['excludedSite: isExcludedSite(domain)']);
+    expect(isExcludedSite('chase.com')).toBe(true);
+    expect(isExcludedSite('example.com')).toBe(false);
   });
 });

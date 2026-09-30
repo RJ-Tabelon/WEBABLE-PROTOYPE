@@ -4,15 +4,47 @@ import { remSize } from './internal/size';
 
 type GlyphProps = Omit<SVGProps<SVGSVGElement>, 'ref'>;
 
+export interface FitArrowProps extends GlyphProps {
+  /**
+   * Icon size in px (for example 20 in the app rail, design-final §11.3). The
+   * arrow is then drawn on the 24 icon grid like the Lucide set, with an
+   * absolute 1.75 px stroke. Omit it inside values: the arrow follows the
+   * surrounding font size (0.8em wide).
+   */
+  size?: number;
+}
+
 /**
  * The fit arrow (12 x 8): a horizontal line with a 45° open head. It replaces the
  * typed "→" everywhere, because the brand fonts do not contain U+2192. It scales
  * with the surrounding font size (0.8em wide) and keeps a 1.75 px stroke.
  */
-export function FitArrow({ className, ...rest }: GlyphProps) {
+export function FitArrow({ size, className, style, ...rest }: FitArrowProps) {
+  if (size !== undefined) {
+    return (
+      <svg
+        className={cx('wa-fit-arrow', 'wa-fit-arrow--icon', className)}
+        width={size}
+        height={size}
+        style={remSize(size, style)}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={(1.75 * 24) / size}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+        focusable="false"
+        {...rest}
+      >
+        <path d="M4.5 12h15M15 7.5l4.5 4.5-4.5 4.5" />
+      </svg>
+    );
+  }
   return (
     <svg
       className={cx('wa-fit-arrow', className)}
+      style={style}
       viewBox="0 0 12 8"
       fill="none"
       stroke="currentColor"
@@ -29,34 +61,51 @@ export function FitArrow({ className, ...rest }: GlyphProps) {
 }
 
 export interface MarkProps extends GlyphProps {
-  /** Rendered size in px. Stroke is 1.5 px at 16 and below, 2 px above. Default 24. */
+  /**
+   * Rendered size in px. On the 24 grid (default) it is the box; with `tight`
+   * it is the glyph's height. Stroke is 1.5 px at 16 and below, 2 px above.
+   * Default 24 (16 with `tight`).
+   */
   size?: number;
+  /**
+   * Crop the box to the glyph (viewBox `5 4 14 15`), so the drawing fills its
+   * box and lines up with the wordmark's cap height. The lockup uses this.
+   */
+  tight?: boolean;
   /** Accessible name. Omit when the mark sits beside the wordmark. */
   title?: string;
 }
+
+/** The glyph's own bounds on the 24 grid, stroke included (x 5-19, y 4-19). */
+const MARK_TIGHT = { x: 5, y: 4, w: 14, h: 15 } as const;
 
 /**
  * The interim WebAble mark (design-final §11.3): a dimension line with end ticks
  * above two text bars. It reads as "a page, measured".
  */
 export function Mark({
-  size = 24,
+  size,
+  tight = false,
   title,
   className,
   style,
   ...rest
 }: MarkProps) {
-  const stroke = size <= 16 ? 1.5 : 2;
+  const px = size ?? (tight ? 16 : 24);
+  const stroke = px <= 16 ? 1.5 : 2;
+  const box = tight ? MARK_TIGHT : { x: 0, y: 0, w: 24, h: 24 };
+  // Height is the size; width follows the box's aspect ratio.
+  const width = (px * box.w) / box.h;
   return (
     <svg
-      className={cx('wa-mark', className)}
-      width={size}
-      height={size}
-      style={remSize(size, style)}
-      viewBox="0 0 24 24"
+      className={cx('wa-mark', tight && 'wa-mark--tight', className)}
+      width={width}
+      height={px}
+      style={{ width: `${width / 16}rem`, height: `${px / 16}rem`, ...style }}
+      viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`}
       fill="none"
       stroke="currentColor"
-      strokeWidth={(stroke * 24) / size}
+      strokeWidth={(stroke * box.h) / px}
       strokeLinecap="round"
       strokeLinejoin="round"
       focusable="false"

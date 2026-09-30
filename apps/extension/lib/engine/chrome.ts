@@ -1,8 +1,7 @@
 import { browser } from 'wxt/browser';
 
 import type { ContentReplies, ContentToWorker } from '../protocol';
-import type { AnnounceStore, Transport } from './adapter';
-import { cyrb53 } from './util/hash';
+import type { Transport } from './adapter';
 
 /**
  * chrome.* bindings for the adapter. Only this file (and the entrypoint)
@@ -46,34 +45,6 @@ export function chromeTransport(): Transport {
       };
       browser.runtime.onMessage.addListener(listener);
       return () => browser.runtime.onMessage.removeListener(listener);
-    },
-  };
-}
-
-const ANNOUNCED_KEY = 'engine.announcedSites';
-const ANNOUNCED_MAX = 1000;
-
-/**
- * Local-only memory of sites that already showed the first-time toast.
- * Stored as short hashes of the hostname in chrome.storage.local; never synced.
- * (Superseded as soon as the service worker sends `announce` with the plan.)
- */
-export function chromeAnnounceStore(host: string): AnnounceStore {
-  return {
-    async firstTime() {
-      const id = cyrb53(host).toString(36);
-      try {
-        const got = await browser.storage.local.get(ANNOUNCED_KEY);
-        const list = Array.isArray(got[ANNOUNCED_KEY])
-          ? (got[ANNOUNCED_KEY] as string[])
-          : [];
-        if (list.includes(id)) return false;
-        const next = [...list, id].slice(-ANNOUNCED_MAX);
-        await browser.storage.local.set({ [ANNOUNCED_KEY]: next });
-        return true;
-      } catch {
-        return false; // storage unavailable: stay quiet rather than repeat the toast
-      }
     },
   };
 }

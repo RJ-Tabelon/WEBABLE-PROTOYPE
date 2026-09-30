@@ -111,7 +111,7 @@ export function Search({
       <Deck>
         {practice
           ? 'First, a practice page. Click the link named at the top.'
-          : 'Click the link named at the top. Some pages are busy, and that is expected.'}
+          : 'Some pages are busy. That’s fine.'}
       </Deck>
       <Stage label="Page" bleed className="tn-stage--page">
         <div className="tn-findbar">
@@ -134,7 +134,6 @@ export function Search({
             <Button
               variant="secondary"
               size="task"
-              iconStart="pause"
               className="tn-findbar__stop"
               onClick={() => {
                 setStopped(true);

@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from 'react';
-import { SiteFitMark } from '../SiteFitMark';
 import {
   SAMPLE_ORIGINAL,
   describeSample,
@@ -8,15 +7,26 @@ import {
   type SampleFit,
   type SampleMark,
 } from './model';
+import { SampleMarks } from './SampleMarks';
 
 export interface SamplePageProps {
   fit: SampleFit;
-  /** Block fit marks drawn on the page (the hero shows text, targets and motion). */
+  /** Fit marks drawn over the page (the hero shows text, targets and motion). */
   marks?: readonly MarkId[];
   /** `draw` runs the one-time draw; `static` shows the marks already drawn. */
   markMode?: 'draw' | 'static';
   /** Show the ghost-and-fit pair around small controls when their hit area grows. */
   showHitAreas?: boolean;
+  /** Told when the marks' plates don't fit on the page (see `SampleMarks`). */
+  onMarksCompact?: (compact: boolean) => void;
+  /**
+   * `page` draws the whole page. `article` is a crop of the article column's top:
+   * the masthead, the headline, the icon row and the first lines of the first
+   * paragraph, ending on whitespace.
+   */
+  crop?: 'page' | 'article';
+  /** Accessible name for the picture. Default: the page and every change, in words. */
+  label?: string;
   /** Id for the element holding the spoken description. */
   descriptionId?: string;
   className?: string;
@@ -47,6 +57,9 @@ export function SamplePage({
   marks = [],
   markMode = 'static',
   showHitAreas = false,
+  onMarksCompact,
+  crop = 'page',
+  label,
   descriptionId,
   className,
 }: SamplePageProps) {
@@ -60,19 +73,20 @@ export function SamplePage({
   const textMark = shown('text');
   const targetMark = shown('targets');
   const motionMark = shown('motion');
+  const whole = crop === 'page';
 
   return (
     <div
       className={['ws-sample', className].filter(Boolean).join(' ')}
       role="img"
-      aria-label={describeSample(fit)}
+      aria-label={label ?? describeSample(fit)}
       aria-describedby={descriptionId}
+      data-crop={whole ? undefined : crop}
       data-floor={fit.textFloorPx !== null ? '' : undefined}
       data-calm={fit.calmMotion ? '' : undefined}
       data-rail={fit.railOpacity !== null ? '' : undefined}
       data-focus={fit.focusView ? '' : undefined}
       data-hits={showHitAreas && hitsGrow ? '' : undefined}
-      data-annotated={textMark || targetMark || motionMark ? '' : undefined}
       style={sampleStyle(fit)}
     >
       <div className="ws-sample__page">
@@ -88,114 +102,106 @@ export function SamplePage({
           <span className="ws-sample__subscribe">Subscribe</span>
         </div>
 
-        <div className="ws-sample__promo">
-          <div className="ws-sample__promo-inner">
-            <span className="ws-sample__badge">
-              <span className="ws-sample__badge-dot" />
-              Sale
-            </span>
-            <span className="ws-sample__carousel">
-              <span className="ws-sample__slides">
-                <span>Print edition 40% off this week</span>
-                <span>Free delivery on weekend papers</span>
-                <span>Try the new crossword app</span>
-                <span>Print edition 40% off this week</span>
+        {whole ? (
+          <div className="ws-sample__promo">
+            <div className="ws-sample__promo-inner">
+              <span className="ws-sample__badge">
+                <span className="ws-sample__badge-dot" />
+                Sale
               </span>
-            </span>
-            <span className="ws-sample__countdown">
-              Ends in 02:14:0
-              <span className="ws-sample__digit">
-                <span className="ws-sample__digits">9876543210</span>
+              <span className="ws-sample__carousel">
+                <span className="ws-sample__slides">
+                  <span>Print edition 40% off this week</span>
+                  <span>Free delivery on weekend papers</span>
+                  <span>Try the new crossword app</span>
+                  <span>Print edition 40% off this week</span>
+                </span>
               </span>
-            </span>
-            {motionMark ? (
-              <SiteFitMark
-                {...markProps(motionMark)}
-                side="below"
-                mode={markMode}
-                className="ws-sample__mark ws-sample__mark--motion"
-              />
-            ) : null}
+              <span className="ws-sample__countdown" data-anchor="countdown">
+                Ends in 02:14:0
+                <span className="ws-sample__digit">
+                  <span className="ws-sample__digits">9876543210</span>
+                </span>
+              </span>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         <div className="ws-sample__body">
           <div className="ws-sample__main">
-            <p className="ws-sample__kicker">Local</p>
+            {whole ? <p className="ws-sample__kicker">Local</p> : null}
             <p className="ws-sample__headline">
               The library adds Sunday hours this winter
             </p>
-            <p className="ws-sample__byline">By Ana Ruiz · 6 min read</p>
-            <div className="ws-sample__tools">
+            {whole ? (
+              <p className="ws-sample__byline">By Ana Ruiz · 6 min read</p>
+            ) : null}
+            <div className="ws-sample__tools" data-anchor="tools">
               <SampleIcon kind="share" />
               <SampleIcon kind="save" />
               <SampleIcon kind="print" />
-              {targetMark ? (
-                <SiteFitMark
-                  {...markProps(targetMark)}
-                  orientation="v"
-                  side="end"
-                  mode={markMode}
-                  className="ws-sample__mark ws-sample__mark--targets"
-                />
-              ) : null}
             </div>
             <div className="ws-sample__copy">
-              {textMark ? (
-                <SiteFitMark
-                  {...markProps(textMark)}
-                  mode={markMode}
-                  className="ws-sample__mark ws-sample__mark--text"
-                />
-              ) : null}
-              <p>
+              <p data-anchor="first-line">
                 From next month, the central library will open from noon to five
                 on Sundays until the end of March. The change follows a year of
                 requests from readers who work during the week.
               </p>
-              <p>
-                The extra hours cover the reading room, the children’s floor and
-                the computer lab. Returns go to the front desk, and the café
-                stays closed.
-              </p>
-              <p>
-                Card holders can book study rooms online up to a week ahead. The
-                library still needs volunteers for Sunday shifts, and training
-                starts in two weeks.
-              </p>
-              <p>
-                The library board will look at the Sunday hours again in April.
-                Readers can leave comments at the front desk or on the library’s
-                website.
-              </p>
+              {whole ? (
+                <>
+                  <p>
+                    The extra hours cover the reading room, the children’s floor
+                    and the computer lab. Returns go to the front desk, and the
+                    café stays closed.
+                  </p>
+                  <p>
+                    Card holders can book study rooms online up to a week ahead.
+                    The library still needs volunteers for Sunday shifts, and
+                    training starts in two weeks.
+                  </p>
+                  <p>
+                    The library board will look at the Sunday hours again in
+                    April. Readers can leave comments at the front desk or on
+                    the library’s website.
+                  </p>
+                </>
+              ) : null}
             </div>
           </div>
 
-          <div className="ws-sample__rail">
-            <p className="ws-sample__rail-head">Most read</p>
-            <ol className="ws-sample__list">
-              <li>Ferry timetable changes for the holidays</li>
-              <li>Where to find the best winter soup in town</li>
-              <li>New bike lanes open on Harbour Road</li>
-              <li>Weekend weather: clear skies, cold nights</li>
-            </ol>
-            <div className="ws-sample__ad">
-              <span>Advertisement</span>
+          {whole ? (
+            <div className="ws-sample__rail">
+              <p className="ws-sample__rail-head">Most read</p>
+              <ol className="ws-sample__list">
+                <li>Ferry timetable changes for the holidays</li>
+                <li>Where to find the best winter soup in town</li>
+                <li>New bike lanes open on Harbour Road</li>
+                <li>Weekend weather: clear skies, cold nights</li>
+              </ol>
+              <div className="ws-sample__ad">
+                <span>Advertisement</span>
+              </div>
+              <p className="ws-sample__rail-head">Get the morning briefing</p>
+              <div className="ws-sample__signup">
+                <span className="ws-sample__input">Email address</span>
+                <span className="ws-sample__go">Sign up</span>
+              </div>
             </div>
-            <p className="ws-sample__rail-head">Get the morning briefing</p>
-            <div className="ws-sample__signup">
-              <span className="ws-sample__input">Email address</span>
-              <span className="ws-sample__go">Sign up</span>
-            </div>
-          </div>
+          ) : null}
         </div>
       </div>
+      {textMark || targetMark || motionMark ? (
+        <SampleMarks
+          text={textMark}
+          targets={targetMark}
+          motion={motionMark}
+          hitPx={Math.max(fit.targetPx ?? 0, SAMPLE_ORIGINAL.targetPx)}
+          mode={markMode}
+          onCompactChange={onMarksCompact}
+        />
+      ) : null}
     </div>
   );
-}
-
-function markProps(m: SampleMark) {
-  return { label: m.label, from: m.from, to: m.to, unit: m.unit };
 }
 
 function SampleIcon({ kind }: { kind: 'share' | 'save' | 'print' }): ReactNode {

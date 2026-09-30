@@ -299,12 +299,7 @@ export function Hold({
                   insetBlockStart: `${center.y - ringR - 2}px`,
                 }}
               >
-                <circle
-                  cx={ringR + 2}
-                  cy={ringR + 2}
-                  r={ringR}
-                  className="tn-hold-ring__track"
-                />
+                {/* No track: a 2 px arc closes clockwise from 12 o'clock. */}
                 <circle
                   cx={ringR + 2}
                   cy={ringR + 2}
@@ -312,6 +307,7 @@ export function Hold({
                   className="tn-hold-ring__fill"
                   strokeDasharray={circumference}
                   strokeDashoffset={circumference * (1 - progress)}
+                  visibility={progress > 0 ? undefined : 'hidden'}
                   transform={`rotate(-90 ${ringR + 2} ${ringR + 2})`}
                 />
               </svg>

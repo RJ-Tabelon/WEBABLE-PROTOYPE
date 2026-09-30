@@ -80,3 +80,11 @@ export const str = (v: unknown, fallback: string): string =>
 
 export const strOrNull = (v: unknown): string | null =>
   typeof v === 'string' ? v : null;
+
+/** `{ ownerUserId }` when a stored record carries one (records written before owners existed do not). */
+export const ownerField = (
+  raw: Record<string, unknown>,
+): { ownerUserId?: string } =>
+  typeof raw.ownerUserId === 'string' && raw.ownerUserId !== ''
+    ? { ownerUserId: raw.ownerUserId }
+    : {};

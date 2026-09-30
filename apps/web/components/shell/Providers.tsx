@@ -10,8 +10,25 @@ import { usePathname } from 'next/navigation';
 import { useEffect, type ReactNode } from 'react';
 import { applyFitUi, readFitUi, subscribeFitUi } from './fit-ui';
 
-/** Next.js client-side navigation for every WebAble link and link-button. */
+/** "/" and "" both mean the site root; a trailing slash never matters. */
+function samePath(path: string, pathname: string | null): boolean {
+  const clean = (p: string) => p.replace(/\/+$/, '') || '/';
+  return path === '' || (pathname !== null && clean(path) === clean(pathname));
+}
+
+/**
+ * Next.js client-side navigation for every WebAble link and link-button. A
+ * link to a fragment of the page already open ("/#how" on "/") stays a native
+ * anchor, so the browser moves the sequential focus starting point to the
+ * target as well as scrolling to it.
+ */
 function RouterLink({ href, ref, ...rest }: LinkComponentProps) {
+  const pathname = usePathname();
+  const hash = href.indexOf('#');
+  if (hash >= 0 && !href.slice(0, hash).includes('?')) {
+    if (samePath(href.slice(0, hash), pathname))
+      return <a href={href} ref={ref} {...rest} />;
+  }
   return <NextLink href={href} ref={ref} {...rest} />;
 }
 

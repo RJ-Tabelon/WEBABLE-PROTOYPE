@@ -2,7 +2,7 @@ import { OP_IDS, type OpId } from '@webable/core/ops/catalog';
 
 import type { KvArea } from './area';
 import { KEYS } from './keys';
-import { isRecord, JsonStore } from './store';
+import { isRecord, JsonStore, ownerField } from './store';
 
 /**
  * Weekly per-op counts for the person's own "Changes" view
@@ -23,6 +23,8 @@ export type WeeklyCounts = Record<ActivityField, number>;
 export interface ActivityRecord {
   /** ISO Monday (YYYY-MM-DD, UTC) -> op -> counts not yet flushed. */
   weeks: Record<string, Partial<Record<OpId, WeeklyCounts>>>;
+  /** The account these counts belong to (absent: none yet). */
+  ownerUserId?: string;
 }
 
 export const ACTIVITY_WEEKS_MAX = 26;
@@ -49,8 +51,9 @@ export const zeroCounts = (): WeeklyCounts => ({
 });
 
 export function normalizeActivity(raw: unknown): ActivityRecord {
-  const out: ActivityRecord = { weeks: {} };
-  if (!isRecord(raw) || !isRecord(raw.weeks)) return out;
+  if (!isRecord(raw)) return { weeks: {} };
+  const out: ActivityRecord = { weeks: {}, ...ownerField(raw) };
+  if (!isRecord(raw.weeks)) return out;
   for (const [week, ops] of Object.entries(raw.weeks)) {
     if (!WEEK.test(week) || !isRecord(ops)) continue;
     const clean: Partial<Record<OpId, WeeklyCounts>> = {};
@@ -82,7 +85,10 @@ export function addActivity(
   const counts = (ops[op] ??= zeroCounts());
   counts[field] = Math.min(10_000, counts[field] + Math.max(0, Math.round(n)));
   const kept = Object.keys(weeks).sort().slice(-ACTIVITY_WEEKS_MAX);
-  return { weeks: Object.fromEntries(kept.map((w) => [w, weeks[w]!])) };
+  return {
+    ...rec,
+    weeks: Object.fromEntries(kept.map((w) => [w, weeks[w]!])),
+  };
 }
 
 /** Remove counts that were flushed (subtracting, so concurrent adds survive). */
@@ -101,7 +107,7 @@ export function subtractFlushed(
     if (ACTIVITY_FIELDS.every((f) => cur[f] === 0)) delete ops[op as OpId];
   }
   if (Object.keys(ops).length === 0) delete weeks[week];
-  return { weeks };
+  return { ...rec, weeks };
 }
 
 export function activityStore(area: KvArea): JsonStore<ActivityRecord> {

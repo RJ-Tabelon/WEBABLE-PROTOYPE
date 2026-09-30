@@ -4,6 +4,8 @@ import {
   boxWidthPx,
   comfortStartPx,
   ladderStartPx,
+  linesAt,
+  maxFitHeightPx,
   maxFitPx,
   MIN_CHARS_LARGE_PRINT,
   stepComfort,
@@ -47,6 +49,48 @@ describe('reading geometry', () => {
     expect(tuneChromeScale(120, 16)).toBe(2);
     expect(tuneChromeScale(36, 24)).toBe(1);
     expect(tuneChromeScale(Number.NaN, 16)).toBe(1);
+  });
+
+  it('sets a 55-60 character sentence in 3 lines of the 22-character box', () => {
+    const box = boxWidthPx(24, 0.5, 800);
+    expect(linesAt(24, 0.5, box)).toBe(3);
+    // A narrow stage takes more lines.
+    expect(linesAt(24, 0.5, 150)).toBeGreaterThan(3);
+  });
+
+  it('keeps a sentence inside the stage it is given, so the answers stay in view', () => {
+    const fit = (heightPx: number, widthPx: number) =>
+      maxFitHeightPx({
+        heightPx,
+        widthPx,
+        advanceEm: 0.5,
+        lineHeight: 1.3,
+        maxPx: 120,
+      });
+    for (const [h, w] of [
+      [296, 656],
+      [96, 1062],
+      [128, 326],
+    ] as const) {
+      const px = fit(h, w);
+      const lines = linesAt(px, 0.5, boxWidthPx(px, 0.5, w));
+      expect(lines * px * 1.3).toBeLessThanOrEqual(h);
+    }
+    // More room never gives a smaller size; no room at all changes nothing.
+    expect(fit(296, 656)).toBeGreaterThanOrEqual(fit(96, 656));
+    expect(fit(0, 656)).toBe(120);
+    // Padding around the text (the light and dark boxes) counts against the room.
+    expect(
+      maxFitHeightPx({
+        heightPx: 200,
+        widthPx: 600,
+        advanceEm: 0.5,
+        lineHeight: 1.3,
+        maxPx: 120,
+        insetBlockPx: 32,
+        insetInlinePx: 40,
+      }),
+    ).toBeLessThan(fit(200, 600));
   });
 
   it('counts words', () => {

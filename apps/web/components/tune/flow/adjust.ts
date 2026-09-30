@@ -205,7 +205,7 @@ export function adjustSpec(
     case 'busyPages':
       return {
         kind: 'choice',
-        label: 'Busy pages',
+        label: 'Busy areas',
         options: BUSY_OPTIONS,
         current: busyCurrent(profile),
       };
@@ -411,4 +411,25 @@ export function keepOldRows(
     }
   }
   return fitProfileSchema.parse(out);
+}
+
+/**
+ * A value from the shared row editor (app/fit RowEditor, in 'live' mode):
+ * `{ row, value }` as the app's adjust schema types it. Converted to this
+ * module's raw values, so Tune keeps its own override rules.
+ */
+export interface EditorValue {
+  row: FitRowId;
+  value: string | number | boolean;
+}
+
+export function applyEditorValue(
+  profile: FitProfile,
+  change: EditorValue,
+): FitProfile {
+  const { row, value } = change;
+  if (row === 'steadyClicks' && typeof value === 'boolean')
+    return applyAdjustment(profile, row, value ? 'on' : 'off');
+  if (typeof value === 'boolean') return profile;
+  return applyAdjustment(profile, row, value);
 }

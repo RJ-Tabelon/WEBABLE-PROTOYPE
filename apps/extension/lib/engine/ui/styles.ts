@@ -128,10 +128,19 @@ export function layerCss(): string {
   grid-template-columns: 1fr 44px;
   column-gap: 8px;
   row-gap: 4px;
+  box-shadow: inset 3px 0 0 var(--inpage-accent), var(--elev-inpage);
 }
-.wa-chip__q { grid-column: 1; margin: 0; padding-top: 10px; font-size: 16px; font-weight: var(--weight-medium); line-height: 1.4; }
+/* Source line: the mark and "WebAble", 4 px above the question. */
+.wa-chip__src {
+  grid-column: 1; grid-row: 1; margin: 0;
+  display: flex; align-items: center; gap: 6px;
+  font-size: 15px; line-height: 1.45; font-weight: var(--weight-medium); color: var(--ink-2);
+}
+.wa-chip__src svg { flex: none; }
+.wa-chip__q { grid-column: 1; grid-row: 2; margin: 0; font-size: 16px; font-weight: var(--weight-medium); line-height: 1.4; }
 .wa-chip__why { grid-column: 1 / -1; margin: 0; font-size: 15px; line-height: 1.45; color: var(--ink-2); }
-.wa-chip__close { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; }
+/* Centred on the source line. */
+.wa-chip__close { grid-column: 2; grid-row: 1 / span 2; justify-self: end; align-self: start; margin-top: -11px; }
 .wa-chip__actions {
   grid-column: 1 / -1; margin-top: 12px;
   display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
@@ -148,7 +157,6 @@ export function layerCss(): string {
 }
 .wa-toast__check { flex: none; color: var(--on-inverse-accent); }
 .wa-toast__msg { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 16px; line-height: 1.45; }
-.wa-toast__more { display: block; font-size: 15px; color: var(--on-inverse-2); }
 
 /* ---------- Buttons (md: 44 px, pill) ---------- */
 .wa-btn {
@@ -178,7 +186,8 @@ export function layerCss(): string {
 .wa-btn--primary:active { background: var(--action-press); }
 .wa-btn--secondary:active { background: var(--surface-press); }
 @media (prefers-reduced-motion: no-preference) {
-  .wa-btn:active, .wa-icon-btn:active { transform: translateY(1px); }
+  :host(:not([data-motion="reduce"])) .wa-btn:active,
+  :host(:not([data-motion="reduce"])) .wa-icon-btn:active { transform: translateY(1px); }
 }
 :focus-visible {
   outline: 3px solid var(--focus);
@@ -187,7 +196,9 @@ export function layerCss(): string {
 }
 .wa-toast :focus-visible { box-shadow: 0 0 0 7px var(--surface-inverse); }
 
-/* ---------- Show on page: ghost and fit outlines (design-final.md 8) ---------- */
+/* ---------- Show on page: ghost and fit outlines (design-final.md 8) ----------
+   Fit outlines are drawn 4 px outside the element, so strokes never cross its
+   text. Only targets get a ghost and a tint; text blocks get the outline. */
 .wa-marks { position: fixed; inset: 0; pointer-events: none; z-index: 1; }
 .wa-ghost, .wa-fit {
   position: fixed; pointer-events: none; border-radius: 0;
@@ -198,9 +209,9 @@ export function layerCss(): string {
 }
 .wa-fit {
   border: 2px solid var(--inpage-accent);
-  background: var(--fit-fill);
   box-shadow: 0 0 0 1px var(--inpage-casing), inset 0 0 0 1px var(--inpage-casing);
 }
+.wa-fit--fill { background: var(--fit-fill); }
 .wa-tag {
   position: fixed; pointer-events: none;
   display: inline-flex; align-items: center; gap: 6px;
@@ -214,16 +225,12 @@ export function layerCss(): string {
 .wa-fitmark__before { color: var(--ink-2); }
 .wa-fitmark__after { color: var(--accent); font-weight: var(--weight-medium); }
 .wa-fitmark svg { color: var(--ink-2); }
-.wa-toast .wa-fitmark__before { color: var(--on-inverse-2); }
-.wa-toast .wa-fitmark__after { color: var(--on-inverse-accent); }
-.wa-toast .wa-fitmark svg { color: var(--on-inverse-2); }
 
 /* ---------- Reading guide ---------- */
 .wa-guide { position: fixed; inset: 0; pointer-events: none; }
-.wa-shade { position: fixed; left: 0; right: 0; background: rgb(26 26 23 / 0.42); }
+.wa-shade { position: fixed; left: 0; right: 0; background: rgb(26 26 23 / 0.28); }
 .wa-shade--top { top: 0; }
 .wa-shade--bottom { bottom: 0; }
-.wa-band-edge { position: fixed; left: 0; right: 0; height: 2px; background: var(--inpage-casing); opacity: 0.9; }
 
 /* ---------- Frozen animated images ---------- */
 .wa-frozen { position: fixed; pointer-events: none; }
@@ -232,10 +239,13 @@ export function layerCss(): string {
   from { opacity: 0; transform: translateY(var(--shift-2)); }
   to { opacity: 1; transform: none; }
 }
+/* Reduced motion: the OS setting, or WebAble's own (data-motion on the host). */
 @media (prefers-reduced-motion: reduce) {
   .wa-chip, .wa-toast { animation: wa-fade 100ms linear both; }
   .wa-btn, .wa-icon-btn { transition: none; }
 }
+:host([data-motion="reduce"]) .wa-chip, :host([data-motion="reduce"]) .wa-toast { animation: wa-fade 100ms linear both; }
+:host([data-motion="reduce"]) .wa-btn, :host([data-motion="reduce"]) .wa-icon-btn { transition: none; }
 @keyframes wa-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (forced-colors: active) {
   .wa-chip, .wa-toast, .wa-tag { border: 1px solid CanvasText; }

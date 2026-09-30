@@ -26,6 +26,7 @@ export {
   Mark,
   StatusShape,
   type CheckGlyphProps,
+  type FitArrowProps,
   type MarkProps,
   type StatusShapeProps,
   type StatusState,
@@ -109,13 +110,23 @@ export {
   type StatusPillProps,
 } from './Status';
 export {
+  FitDigits,
   FitMark,
   FitMarkBlock,
+  FitUnit,
   spokenUnit,
   type FitMarkBlockProps,
   type FitMarkProps,
-  type FitValue,
+  type FitMarkValue,
 } from './FitMark';
+// `FitValue` is both the value type (from @webable/core's fit rows) and its view.
+export {
+  FitValue,
+  type FitAmount,
+  type FitValueProps,
+  type FitValueSize,
+} from './FitValue';
+export { FitRow, type FitRowProps } from './FitRow';
 export {
   IndexRule,
   SectionHeader,

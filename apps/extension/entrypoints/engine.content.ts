@@ -1,12 +1,8 @@
 import { vocabFilter } from '@webable/core/page/vocab';
 import { defineContentScript } from 'wxt/utils/define-content-script';
 
-import { ContentAdapter } from '@/lib/engine/adapter';
-import {
-  chromeAnnounceStore,
-  chromeTransport,
-  closedShadowRootOpener,
-} from '@/lib/engine/chrome';
+import { ContentAdapter, startOnce } from '@/lib/engine/adapter';
+import { chromeTransport, closedShadowRootOpener } from '@/lib/engine/chrome';
 
 /**
  * The in-page engine content script. Registered at runtime by the service
@@ -17,7 +13,8 @@ import {
  * Flow: cs:hello at document_start -> DOMContentLoaded -> extract ->
  * cs:signals -> apply the plan in one write -> verify -> cs:applied, then
  * keep changes applied as the page changes. Pausing or invalidation
- * (extension reload) restores the page exactly.
+ * (extension reload) restores the page exactly. One engine per document: a
+ * second injection reports the running one (cs:hello {restored}) instead.
  */
 export default defineContentScript({
   registration: 'runtime',
@@ -26,13 +23,16 @@ export default defineContentScript({
   main(ctx) {
     if (!(document instanceof HTMLDocument) || !document.documentElement)
       return;
-    const adapter = new ContentAdapter({
-      transport: chromeTransport(),
-      vocab: { vocabFilter },
-      announce: chromeAnnounceStore(location.hostname),
-      openClosed: closedShadowRootOpener(),
-    });
-    ctx.onInvalidated(() => adapter.stop());
-    void adapter.start().catch(() => adapter.stop());
+    const { adapter, created } = startOnce(
+      window,
+      () =>
+        new ContentAdapter({
+          transport: chromeTransport(),
+          vocab: { vocabFilter },
+          openClosed: closedShadowRootOpener(),
+          alive: () => ctx.isValid,
+        }),
+    );
+    if (created) ctx.onInvalidated(() => adapter.stop());
   },
 });

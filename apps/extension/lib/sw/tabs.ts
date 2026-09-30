@@ -60,6 +60,18 @@ export interface TabRecord {
   levelEdits: Partial<Record<OpId, { from: number; to: number; at: number }>>;
   /** The page loaded while paused; it adapts after a reload. */
   needsReload: boolean;
+  /** Show on page is on (the popup's toggle); a new page view starts with it off. */
+  showing: boolean;
+  /**
+   * A back/forward commit whose document may come from the back/forward cache:
+   * the current page view is kept until the page's engine says hello (a
+   * restored engine re-binds the tab) or the wait runs out.
+   */
+  restoring: {
+    at: number;
+    domain: string | null;
+    access: TabRecord['access'];
+  } | null;
 }
 
 export function freshTab(tabId: number): TabRecord {
@@ -87,6 +99,8 @@ export function freshTab(tabId: number): TabRecord {
     interactedAt: null,
     levelEdits: {},
     needsReload: false,
+    showing: false,
+    restoring: null,
   };
 }
 
@@ -97,7 +111,7 @@ export interface StatusContext {
   paused: boolean;
   /** WebAble may run on every site (optional host permission granted). */
   allSites: boolean;
-  /** No account and no calibrated profile. */
+  /** No calibrated profile yet (with or without an account). */
   firstRun: boolean;
   now: number;
 }

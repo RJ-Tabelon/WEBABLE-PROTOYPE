@@ -19,6 +19,8 @@ export interface Settings {
   globalLevels: Partial<Record<OpId, number>>;
   /** The welcome page was opened once. */
   welcomed: boolean;
+  /** The popup's "Allow on all sites" line is hidden in the main view (Settings keeps it). */
+  hideAllSitesAsk: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -28,6 +30,7 @@ export const DEFAULT_SETTINGS: Settings = {
   reduceMotion: false,
   globalLevels: {},
   welcomed: false,
+  hideAllSitesAsk: false,
 };
 
 const OP_SET: ReadonlySet<string> = new Set(OP_IDS);
@@ -58,6 +61,7 @@ export function normalizeSettings(raw: unknown): Settings {
     reduceMotion: bool(raw.reduceMotion, DEFAULT_SETTINGS.reduceMotion),
     globalLevels: normalizeLevels(raw.globalLevels),
     welcomed: bool(raw.welcomed, false),
+    hideAllSitesAsk: bool(raw.hideAllSitesAsk, false),
   };
 }
 

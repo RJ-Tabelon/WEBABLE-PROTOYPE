@@ -130,6 +130,7 @@ export function MockPage({
   return (
     <div
       className={cx('tn-mock', busy ? 'tn-mock--busy' : 'tn-mock--clean')}
+      data-template={template.id}
       data-mirror={mirror || undefined}
       style={{ fontSize: `${basePx}px` }}
     >
@@ -373,7 +374,14 @@ export function TextPage({
   );
 }
 
-/** A scaled, inert picture of a page for the preference pairs. */
+/** Thumbnails show pages at 64 %, cropped from the top. */
+const THUMB_SCALE = 0.64;
+
+/**
+ * A scaled, inert picture of a page for the preference pairs. A transform does
+ * not change layout, so the frame takes the picture's scaled height (up to
+ * 15rem, cropped from the top) from a measurement.
+ */
 export function Thumbnail({
   children,
   label,
@@ -381,10 +389,33 @@ export function Thumbnail({
   children: ReactNode;
   label: string;
 }) {
+  const inner = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = inner.current;
+    if (!el) return;
+    const measure = () => setHeight(Math.round(el.offsetHeight * THUMB_SCALE));
+    measure();
+    if (typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
   return (
     <figure className="tn-thumb">
-      <div className="tn-thumb__frame" aria-hidden="true" inert>
-        <div className="tn-thumb__scale">{children}</div>
+      <div
+        className="tn-thumb__frame"
+        aria-hidden="true"
+        inert
+        style={
+          height === null
+            ? undefined
+            : ({ '--tn-thumb-h': `${height}px` } as CSSProperties)
+        }
+      >
+        <div ref={inner} className="tn-thumb__scale">
+          {children}
+        </div>
       </div>
       <figcaption className="tn-thumb__label">{label}</figcaption>
     </figure>

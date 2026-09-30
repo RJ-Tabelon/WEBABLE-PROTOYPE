@@ -1,3 +1,4 @@
+import { OP_LABELS } from '../explain/glossary';
 import type { NeedArea } from '../profile/schema';
 
 /**
@@ -70,7 +71,7 @@ export interface OpDefinition {
 export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   text_floor: {
     id: 'text_floor',
-    label: 'Text size',
+    label: OP_LABELS.text_floor,
     description:
       'Raises small text to your comfortable size. Text that is already large stays as it is.',
     areas: ['text'],
@@ -85,7 +86,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   page_zoom: {
     id: 'page_zoom',
-    label: 'Page zoom',
+    label: OP_LABELS.page_zoom,
     description: 'Zooms this tab so the whole layout grows together.',
     areas: ['text'],
     dim: 'zoom',
@@ -99,7 +100,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   line_spacing: {
     id: 'line_spacing',
-    label: 'Line spacing',
+    label: OP_LABELS.line_spacing,
     description: 'Adds space between lines and words of running text.',
     areas: ['spacing'],
     dim: 'lineHeight',
@@ -113,7 +114,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   line_length: {
     id: 'line_length',
-    label: 'Line length',
+    label: OP_LABELS.line_length,
     description: 'Keeps long lines of text to a comfortable width.',
     areas: ['lineLength'],
     dim: 'lineCh',
@@ -127,7 +128,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   contrast: {
     id: 'contrast',
-    label: 'Contrast',
+    label: OP_LABELS.contrast,
     description:
       'Darkens faint text against its background. Colours and layout stay the same.',
     areas: ['contrast'],
@@ -142,7 +143,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   focus_outline: {
     id: 'focus_outline',
-    label: 'Focus outline',
+    label: OP_LABELS.focus_outline,
     description: 'Shows a clear outline around whatever the keyboard is on.',
     areas: ['targets', 'contrast'],
     dim: null,
@@ -156,9 +157,9 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   target_size: {
     id: 'target_size',
-    label: 'Click targets',
+    label: OP_LABELS.target_size,
     description:
-      'Makes the clickable area around small links and buttons larger, without moving them.',
+      'Makes the clickable area around small links and buttons larger where there’s room, without moving them.',
     areas: ['targets'],
     dim: 'targetPx',
     levels: [24, 32, 44, 56, 72],
@@ -171,7 +172,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   target_spacing: {
     id: 'target_spacing',
-    label: 'Space between controls',
+    label: OP_LABELS.target_spacing,
     description:
       'Adds room between links and buttons that sit very close together.',
     areas: ['targets'],
@@ -186,7 +187,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   steady_clicks: {
     id: 'steady_clicks',
-    label: 'Steady clicks',
+    label: OP_LABELS.steady_clicks,
     description:
       'Counts a click on the button you pressed, even if the pointer slips a little before you let go.',
     areas: ['clicks'],
@@ -201,7 +202,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   menu_grace: {
     id: 'menu_grace',
-    label: 'Menus stay open',
+    label: OP_LABELS.menu_grace,
     description:
       'Keeps menus that open on hover from closing the moment the pointer drifts off.',
     areas: ['clicks'],
@@ -216,7 +217,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   calm_motion: {
     id: 'calm_motion',
-    label: 'Moving things',
+    label: OP_LABELS.calm_motion,
     description: 'Stops decorative animation and makes transitions instant.',
     areas: ['motion'],
     dim: null,
@@ -230,7 +231,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   pause_media: {
     id: 'pause_media',
-    label: 'Autoplay',
+    label: OP_LABELS.pause_media,
     description:
       'Pauses videos and animated images that start on their own. You can play them again.',
     areas: ['motion', 'distraction'],
@@ -245,7 +246,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   dim_distractions: {
     id: 'dim_distractions',
-    label: 'Busy areas',
+    label: OP_LABELS.dim_distractions,
     description:
       'Fades ads and side rails so the main content stands out. Hover or tab into them to bring them back.',
     areas: ['distraction'],
@@ -260,7 +261,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   focus_view: {
     id: 'focus_view',
-    label: 'Focus view',
+    label: OP_LABELS.focus_view,
     description: 'Softens everything except the main content.',
     areas: ['distraction'],
     dim: null,
@@ -274,7 +275,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   unpin_bars: {
     id: 'unpin_bars',
-    label: 'Sticky bars',
+    label: OP_LABELS.unpin_bars,
     description:
       'Lets bars that stick to the top of the screen scroll away with the page.',
     areas: ['text', 'distraction'],
@@ -289,7 +290,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   },
   reading_guide: {
     id: 'reading_guide',
-    label: 'Reading guide',
+    label: OP_LABELS.reading_guide,
     description: 'Shades the page above and below the line you are reading.',
     areas: ['spacing', 'distraction'],
     dim: null,
@@ -305,7 +306,7 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
 
 export const opDefinition = (id: OpId): OpDefinition => OP_CATALOG[id];
 
-/** Human-readable value for an op level, e.g. "18 px", "1.8", "70 ch", "300 ms". */
+/** Human-readable value for an op level, e.g. "18 px", "1.8", "70 characters", "300 ms" (no-break space before the unit). */
 export function formatOpValue(id: OpId, level: number): string {
   const def = OP_CATALOG[id];
   const value =
@@ -322,11 +323,11 @@ export function formatOpValue(id: OpId, level: number): string {
           : `${value}:1`
         : String(value);
     case 'ch':
-      return `${value} characters`;
+      return `${value}\u00a0characters`;
     case 'ms':
       return `${value} ms`;
     case 'opacity':
-      return `${Math.round((1 - value) * 100)}% softer`;
+      return `${Math.round((1 - value) * 100)}%\u00a0softer`;
     case 'none':
       return 'On';
   }

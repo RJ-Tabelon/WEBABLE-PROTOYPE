@@ -10,6 +10,7 @@ import {
   type DecisionTrace,
   type TraceEvidence,
 } from '../policy/types';
+import { OP_LABELS } from './glossary';
 import {
   explainChange,
   explainUndone,
@@ -122,6 +123,44 @@ describe('the design voice examples', () => {
     expect(offerQuestion(nudged).reason).toBe(
       'You clicked just next to a few buttons in the last minute.',
     );
+    // With the measured median, the reason says how big the buttons are.
+    const measured = trace(
+      'target_size',
+      [
+        {
+          kind: 'target_failures',
+          count: 18,
+          targetPx: 44,
+          medianPx: 20,
+        } as TraceEvidence,
+      ],
+      { mode: 'offer' },
+    );
+    expect(offerQuestion(measured).reason).toBe(
+      `Most buttons here are 20${NBSP}px.`,
+    );
+    expect(
+      explainChange(change(trace('target_size', [], { level: 2 }))).detail,
+    ).toBe(
+      `3 links and buttons here were smaller than 44${NBSP}px. WebAble grew clickable areas up to 44${NBSP}px where there’s room. Nothing moved.`,
+    );
+  });
+
+  it('asks about long lines with the fit as a ceiling', () => {
+    const t = trace(
+      'line_length',
+      [{ kind: 'long_lines', lineCh: 110, maxCh: 70 }],
+      { mode: 'offer' },
+    );
+    expect(offerQuestion(t)).toEqual({
+      question: 'Keep lines shorter here?',
+      reason: `They run to 110${NBSP}characters. Your fit is 70 or fewer.`,
+    });
+  });
+
+  it('takes every title from the glossary', () => {
+    for (const op of OP_IDS) expect(OP_CATALOG[op].label).toBe(OP_LABELS[op]);
+    expect(OP_LABELS.dim_distractions).toBe('Busy areas');
   });
 
   it('explains a change the checks undid', () => {

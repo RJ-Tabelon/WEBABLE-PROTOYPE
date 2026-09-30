@@ -34,12 +34,14 @@ export interface Account {
   /** Consent to contribute randomized, anonymous outcome counts. Off by default. */
   productLearning: boolean;
   theme: ThemePreference;
+  /** When the person last chose a theme explicitly (the most recent choice wins). */
+  themeSetAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 const ACCOUNT_COLUMNS =
-  'onboarding_step, cloud_analysis, product_learning, theme, created_at, updated_at' as const;
+  'onboarding_step, cloud_analysis, product_learning, theme, theme_set_at, created_at, updated_at' as const;
 
 type AccountRow = Pick<
   Tables<'accounts'>,
@@ -47,6 +49,7 @@ type AccountRow = Pick<
   | 'cloud_analysis'
   | 'product_learning'
   | 'theme'
+  | 'theme_set_at'
   | 'created_at'
   | 'updated_at'
 >;
@@ -61,6 +64,7 @@ export function toAccount(row: AccountRow): Account {
     cloudAnalysis: row.cloud_analysis,
     productLearning: row.product_learning,
     theme: isTheme(row.theme) ? row.theme : 'system',
+    themeSetAt: row.theme_set_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -115,12 +119,16 @@ export async function updateAccount(
       cloud_analysis?: boolean;
       product_learning?: boolean;
       theme?: ThemePreference;
+      theme_set_at?: string;
     } = {};
     if (parsed.data.cloudAnalysis !== undefined)
       update.cloud_analysis = parsed.data.cloudAnalysis;
     if (parsed.data.productLearning !== undefined)
       update.product_learning = parsed.data.productLearning;
-    if (parsed.data.theme !== undefined) update.theme = parsed.data.theme;
+    if (parsed.data.theme !== undefined) {
+      update.theme = parsed.data.theme;
+      update.theme_set_at = new Date().toISOString();
+    }
 
     const { data, error } = await supabase
       .from('accounts')

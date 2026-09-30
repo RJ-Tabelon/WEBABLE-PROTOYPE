@@ -28,6 +28,8 @@ export interface BridgeHandlers {
   ): Promise<BridgeResponses['wa:site-update']>;
   receipts(): Promise<BridgeResponses['wa:receipts']>;
   clearLocal(): Promise<void>;
+  /** Focus the welcome page, or open it; `allow` focuses its Allow button. */
+  openWelcome(focus: 'allow' | undefined): Promise<void>;
 }
 
 export interface BridgeSender {
@@ -110,6 +112,9 @@ export async function handleBridge(
       case 'wa:clear-local':
         await h.clearLocal();
         return { ok: true, data: await h.status() };
+      case 'wa:open-welcome':
+        await h.openWelcome(req.focus);
+        return { ok: true, data: { ok: true } };
     }
   } catch {
     return fail('internal', 'Something went wrong in the extension.');

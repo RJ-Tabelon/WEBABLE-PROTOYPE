@@ -47,7 +47,7 @@
   --selection: #cfe2d3;
   --focus: #1a1a17;
   --focus-inverse: #f3f2ec; /* applied inside .wa-inverse */
-  --scrim: rgb(26 26 23 / 0.48);
+  --scrim: rgb(26 26 23 / 0.28);
   --header-bg: rgb(250 250 247 / 0.92);
   --fit-fill: rgb(45 106 62 / 0.06);
   --font-smoothing: auto;
@@ -403,7 +403,7 @@
   --selection: #cfe2d3;
   --focus: #1a1a17;
   --focus-inverse: #f3f2ec; /* applied inside .wa-inverse */
-  --scrim: rgb(26 26 23 / 0.48);
+  --scrim: rgb(26 26 23 / 0.28);
   --header-bg: rgb(250 250 247 / 0.92);
   --fit-fill: rgb(45 106 62 / 0.06);
   --font-smoothing: auto;

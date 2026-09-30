@@ -1,0 +1,57 @@
+/*
+ * Popup Settings (design-final 10.3), Compact density. Groups are split by
+ * one hairline inside the popup padding, with 16 px above (the section gap)
+ * and 16 px below. Tokens only.
+ */
+
+.pp-set > .pp-set__group + .pp-set__group {
+  padding-block-start: var(--space-4);
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.pp-set__group {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.pp-set__block {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-2);
+}
+
+/* 56 px link rows with a hairline between them and the arrow at the right edge. */
+.pp-set__rows {
+  display: grid;
+}
+.pp-set__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: var(--row-min);
+  margin-inline: calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-2);
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  text-decoration: none;
+  transition: background-color var(--dur-1) var(--ease);
+}
+.pp-set__row + .pp-set__row {
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+@media (hover: hover) and (pointer: fine) {
+  .pp-set__row:hover {
+    background: var(--surface-hover);
+  }
+}
+.pp-set__row:active {
+  background: var(--surface-press);
+}
+.pp-set__arrow {
+  flex: none;
+  color: var(--ink);
+}

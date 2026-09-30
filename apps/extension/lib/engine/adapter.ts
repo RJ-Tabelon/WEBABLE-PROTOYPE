@@ -27,11 +27,6 @@ export interface Transport {
   listen(handler: (msg: unknown) => Promise<unknown> | undefined): () => void;
 }
 
-/** Remembers which sites have seen the first-time toast (on device only). */
-export interface AnnounceStore {
-  firstTime(): Promise<boolean>;
-}
-
 /**
  * Not in the shared protocol yet: the focus-layer command (chrome.commands
  * 'focus-layer') forwarded by the service worker. Handled defensively.
@@ -50,6 +45,7 @@ const WORKER_TYPES = new Set<string>([
   'sw:offer',
   'sw:get-changes',
   'sw:focus-layer',
+  'sw:offer-resolved',
 ]);
 
 export function isWorkerMessage(msg: unknown): msg is Incoming {
@@ -65,8 +61,35 @@ export interface AdapterOptions {
   doc?: Document;
   transport: Transport;
   vocab: VocabPort;
-  announce?: AnnounceStore;
   openClosed?: (el: Element) => ShadowRoot | null;
+  /** False once this script's extension context is gone (extension reloaded). */
+  alive?: () => boolean;
+}
+
+/** Per-document guard on the isolated-world window: the running adapter. */
+const RUNNING = Symbol.for('webable.engine');
+type Guarded = { [RUNNING]?: ContentAdapter };
+
+/**
+ * One engine per document. A second injection into the same document finds
+ * the running adapter under the guard, has it report what is applied
+ * (cs:hello {restored} then cs:applied) and starts nothing. An adapter whose
+ * extension context is gone is stopped and replaced.
+ */
+export function startOnce(
+  view: Window,
+  create: () => ContentAdapter,
+): { adapter: ContentAdapter; created: boolean; ready: Promise<void> } {
+  const slot = view as unknown as Guarded;
+  const running = slot[RUNNING];
+  if (running?.isLive) {
+    return { adapter: running, created: false, ready: running.restored() };
+  }
+  running?.stop();
+  const adapter = create();
+  slot[RUNNING] = adapter;
+  const ready = adapter.start().catch(() => adapter.stop());
+  return { adapter, created: true, ready };
 }
 
 function domReady(doc: Document): Promise<void> {
@@ -92,8 +115,10 @@ export class ContentAdapter {
   private engine: Engine | null = null;
   private unlisten: (() => void) | null = null;
   private hello: HelloReply | null = null;
-  private category: AdaptationPlan['category'] = 'other';
+  /** The last plan applied here, reported again on a restore. */
+  private planId: string | null = null;
   private stopped = false;
+  private offPageShow: (() => void) | null = null;
   private readonly doc: Document;
 
   constructor(private readonly opts: AdapterOptions) {
@@ -113,6 +138,14 @@ export class ContentAdapter {
     this.unlisten = this.opts.transport.listen((msg) =>
       isWorkerMessage(msg) ? this.handle(msg) : undefined,
     );
+    if (view) {
+      // Back/forward cache: the page comes back with the engine still applied.
+      const onShow = (e: PageTransitionEvent): void => {
+        if (e.persisted) void this.restored();
+      };
+      view.addEventListener('pageshow', onShow);
+      this.offPageShow = () => view.removeEventListener('pageshow', onShow);
+    }
     let hello: HelloReply;
     try {
       hello = await this.opts.transport.send({ type: 'cs:hello' });
@@ -134,6 +167,7 @@ export class ContentAdapter {
       openClosed: this.opts.openClosed,
       prePaint: hello.prePaint,
     });
+    this.configure(hello);
     if (hello.paused) {
       await this.engine.pause();
       return;
@@ -158,21 +192,55 @@ export class ContentAdapter {
       evidence: x.evidence,
     });
     if (!reply?.plan || this.stopped) return;
-    this.category = reply.plan.category;
     const changes = await this.applyAndReport(reply.plan, { replace: true });
-    // The toast is for the first automatic changes on a site. The service
-    // worker may decide (`announce` on the reply); otherwise the local store does,
-    // and it is only consulted when something was actually changed.
-    const flag = (reply as { announce?: unknown }).announce;
-    const visible = changes.some(
-      (c) => c.status === 'applied' && c.mode === 'auto' && c.fit,
-    );
-    if (!first || !visible) return;
-    const announce =
-      typeof flag === 'boolean'
-        ? flag
-        : (await this.opts.announce?.firstTime()) === true;
-    if (announce) engine.announce(changes);
+    // The toast is for the first automatic changes on a site; the service
+    // worker decides (`announce` on the reply) and remembers where it has.
+    if (first && reply.announce === true) engine.announce(changes);
+  }
+
+  /** WebAble's own motion setting and shortcuts; older replies lack them. */
+  private configure(hello: Partial<HelloReply>): void {
+    this.engine?.configure({
+      reduceMotion: hello.reduceMotion === true,
+      shortcuts: {
+        focusLayer: hello.shortcuts?.focusLayer ?? '',
+        undoAll: hello.shortcuts?.undoAll ?? '',
+      },
+    });
+  }
+
+  /**
+   * This document already has a running engine (a bfcache restore, or a
+   * second injection found the guard): say so, then report the current plan
+   * and changes. Before the first hello has been answered, start() reports.
+   */
+  async restored(): Promise<void> {
+    if (this.stopped || !this.hello) return;
+    let hello: HelloReply;
+    try {
+      hello = await this.opts.transport.send({
+        type: 'cs:hello',
+        restored: true,
+      });
+    } catch {
+      return;
+    }
+    if (this.stopped) return;
+    this.configure(hello ?? {});
+    const engine = this.engine;
+    if (!engine || this.planId === null) return;
+    await this.opts.transport
+      .send({
+        type: 'cs:applied',
+        planId: this.planId,
+        changes: engine.changes(),
+      })
+      .catch(() => undefined);
+  }
+
+  /** Running, and its extension context is still valid. */
+  get isLive(): boolean {
+    return !this.stopped && (this.opts.alive?.() ?? true);
   }
 
   private async applyAndReport(
@@ -184,6 +252,7 @@ export class ContentAdapter {
     if (plan.ops.some((p) => p.op === 'page_zoom'))
       engine.suppressZoomFriction();
     const changes = await engine.apply(plan, options);
+    this.planId = plan.id;
     await this.opts.transport
       .send({ type: 'cs:applied', planId: plan.id, changes })
       .catch(() => undefined);
@@ -209,26 +278,14 @@ export class ContentAdapter {
           })
           .catch(() => undefined);
       },
-      undone: (changes) => {
-        for (const c of changes) this.sendUndoEvent(c);
+      // The toast's Undo all: one message; the worker records the undo events.
+      undone: () => {
+        void this.opts.transport
+          .send({ type: 'cs:undo-all', source: 'toast' })
+          .catch(() => undefined);
       },
       routeChanged: () => void this.plan(false).catch(() => undefined),
     };
-  }
-
-  private sendUndoEvent(c: AppliedChange): void {
-    void this.opts.transport
-      .send({
-        type: 'cs:event',
-        event: {
-          cat: this.category,
-          op: c.op,
-          level: c.level,
-          src: c.mode === 'offer' ? 'offer' : c.trace.source,
-          kind: 'undo',
-        },
-      })
-      .catch(() => undefined);
   }
 
   /** Every WorkerToContent message, answered with its WorkerReplies shape. */
@@ -247,7 +304,8 @@ export class ContentAdapter {
         msg.type === 'sw:show-on-page' ||
         msg.type === 'sw:reading-guide' ||
         msg.type === 'sw:offer' ||
-        msg.type === 'sw:focus-layer'
+        msg.type === 'sw:focus-layer' ||
+        msg.type === 'sw:offer-resolved'
         ? { ok: true }
         : { changes: [] };
     }
@@ -259,6 +317,7 @@ export class ContentAdapter {
           acceptOffers: msg.reason === 'offer_accepted',
           replace: msg.reason === 'settings',
         });
+        this.planId = msg.plan.id;
         return { changes } satisfies WorkerReplies['sw:plan'];
       }
       case 'sw:undo':
@@ -287,6 +346,9 @@ export class ContentAdapter {
         return { ok: true } satisfies WorkerReplies['sw:offer'];
       case 'sw:focus-layer':
         return { ok: engine.focusLayer() };
+      case 'sw:offer-resolved':
+        engine.resolveOffer(msg.op);
+        return { ok: true } satisfies WorkerReplies['sw:offer-resolved'];
     }
   }
 
@@ -294,6 +356,10 @@ export class ContentAdapter {
     this.stopped = true;
     this.unlisten?.();
     this.unlisten = null;
+    this.offPageShow?.();
+    this.offPageShow = null;
+    const slot = this.doc.defaultView as unknown as Guarded | null;
+    if (slot?.[RUNNING] === this) delete slot[RUNNING];
     this.engine?.destroy();
     this.engine = null;
   }

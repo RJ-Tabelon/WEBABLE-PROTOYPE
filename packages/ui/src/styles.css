@@ -64,6 +64,12 @@
   .wa-actions:not(.wa-actions--equal) > .wa-btn {
     inline-size: 100%;
   }
+  /* A ghost has no edge, so a full-width ghost would float its label in the
+     middle of nothing. It keeps its natural width on the text edge. */
+  .wa-actions:not(.wa-actions--equal) > .wa-btn--ghost {
+    inline-size: auto;
+    align-self: flex-start;
+  }
 }
 
 /* =========================================================================
@@ -96,11 +102,11 @@
   cursor: pointer;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
+  /* Colour only; the press translate is added under no-preference (below). */
   transition:
     background-color var(--dur-1) var(--ease),
     border-color var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease),
-    translate var(--dur-1) var(--ease);
+    color var(--dur-1) var(--ease);
 }
 
 .wa-btn__label {
@@ -144,6 +150,16 @@
   inline-size: 100%;
 }
 
+/* Flush: the label (not the pill) sits on the text edge, within the 1 px of
+   the pill's transparent border. The padding hangs outside the column (never
+   more than the 16 px gutter of an md button); hover and press still show it. */
+.wa-btn--flush-start {
+  margin-inline-start: calc(-1 * var(--_px));
+}
+.wa-btn--flush-end {
+  margin-inline-end: calc(-1 * var(--_px));
+}
+
 /* Primary: the one ink button per region. */
 .wa-btn--primary {
   background: var(--action);
@@ -185,12 +201,6 @@
   }
 }
 
-.wa-btn:is(:active, [data-pressed]):not(
-    [aria-disabled='true'],
-    [aria-busy='true']
-  ) {
-  translate: 0 var(--press-shift);
-}
 .wa-btn--primary:is(:active, [data-pressed]):not([aria-disabled='true']) {
   background: var(--action-press);
 }
@@ -245,8 +255,7 @@
   transition:
     background-color var(--dur-1) var(--ease),
     border-color var(--dur-1) var(--ease),
-    color var(--dur-1) var(--ease),
-    translate var(--dur-1) var(--ease);
+    color var(--dur-1) var(--ease);
 }
 
 .wa-icon-btn--lg {
@@ -275,7 +284,6 @@
 
 .wa-icon-btn:is(:active, [data-pressed]):not([aria-disabled='true']) {
   background: var(--surface-press);
-  translate: 0 var(--press-shift);
 }
 .wa-icon-btn--inverse:is(:active, [data-pressed]):not([aria-disabled='true']) {
   background: var(--surface-inverse-hover);
@@ -287,6 +295,31 @@
 }
 .wa-icon-btn--secondary[aria-disabled='true'] {
   border-style: dashed;
+}
+
+/* Press motion (§12): background plus a 1 px drop. Under reduced motion, from
+   the OS or from the WebAble profile, a press is colour only: the translate and
+   its transition are never declared, so no transform animation can start. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-wa-motion='reduce'])
+    :is(.wa-btn, .wa-icon-btn, .wa-toast__action) {
+    transition:
+      background-color var(--dur-1) var(--ease),
+      border-color var(--dur-1) var(--ease),
+      color var(--dur-1) var(--ease),
+      translate var(--dur-1) var(--ease);
+  }
+  :root:not([data-wa-motion='reduce'])
+    .wa-btn:is(:active, [data-pressed]):not(
+      [aria-disabled='true'],
+      [aria-busy='true']
+    ),
+  :root:not([data-wa-motion='reduce'])
+    .wa-icon-btn:is(:active, [data-pressed]):not([aria-disabled='true']),
+  :root:not([data-wa-motion='reduce'])
+    .wa-toast__action:is(:active, [data-pressed]) {
+    translate: 0 var(--press-shift);
+  }
 }
 
 /* =========================================================================
@@ -317,7 +350,11 @@
   margin-inline-start: 0.1875em;
 }
 
+/* A link that stands on its own line (not in running text) is a 44 px target. */
 .wa-link--standalone {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
   font-weight: var(--weight-medium);
 }
 
@@ -1161,6 +1198,10 @@
   color: var(--on-inverse-accent);
 }
 
+.wa-toast__alert {
+  color: var(--on-inverse);
+}
+
 .wa-toast__message {
   flex: 1 1 auto;
   min-inline-size: 0;
@@ -1183,9 +1224,7 @@
   font-weight: var(--weight-medium);
   line-height: var(--leading-label);
   cursor: pointer;
-  transition:
-    background-color var(--dur-1) var(--ease),
-    translate var(--dur-1) var(--ease);
+  transition: background-color var(--dur-1) var(--ease);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1195,7 +1234,6 @@
 }
 .wa-toast__action:is(:active, [data-pressed]) {
   background: var(--surface-inverse-hover);
-  translate: 0 var(--press-shift);
 }
 
 .wa-toast__close {
@@ -1239,17 +1277,14 @@
   overflow: auto;
   overscroll-behavior: contain;
   opacity: 0;
-  translate: 0 var(--shift-2);
   transition:
     opacity var(--dur-4-exit) var(--ease-exit),
-    translate var(--dur-4-exit) var(--ease-exit),
     overlay var(--dur-4-exit) allow-discrete,
     display var(--dur-4-exit) allow-discrete;
 }
 
 .wa-dialog[open] {
   opacity: 1;
-  translate: 0 0;
   transition-duration: var(--dur-4);
   transition-timing-function: var(--ease);
 }
@@ -1257,7 +1292,29 @@
 @starting-style {
   .wa-dialog[open] {
     opacity: 0;
+  }
+}
+
+/* The 8 px rise exists only when motion is welcome (OS and WebAble profile);
+   under reduced motion a dialog fades in 100 ms and nothing moves. */
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-wa-motion='reduce']) .wa-dialog {
     translate: 0 var(--shift-2);
+    transition:
+      opacity var(--dur-4-exit) var(--ease-exit),
+      translate var(--dur-4-exit) var(--ease-exit),
+      overlay var(--dur-4-exit) allow-discrete,
+      display var(--dur-4-exit) allow-discrete;
+  }
+  :root:not([data-wa-motion='reduce']) .wa-dialog[open] {
+    translate: 0 0;
+    transition-duration: var(--dur-4);
+    transition-timing-function: var(--ease);
+  }
+  @starting-style {
+    :root:not([data-wa-motion='reduce']) .wa-dialog[open] {
+      translate: 0 var(--shift-2);
+    }
   }
 }
 
@@ -1536,18 +1593,262 @@ html:has(.wa-dialog[open]) {
   color: var(--ink-2);
   overflow: visible;
 }
+/* The 24-grid icon form (app rail): sized by its width/height attributes. */
+.wa-fit-arrow--icon {
+  inline-size: auto;
+  block-size: auto;
+  overflow: hidden;
+}
 
 .wa-fit-mark--readout .wa-fit-mark__value {
   font-size: var(--text-readout);
   line-height: var(--leading-readout);
   letter-spacing: var(--track-readout);
 }
-.wa-fit-mark--readout .wa-fit-mark__unit {
-  font-size: 0.64em;
-}
 .wa-fit-mark--readout .wa-fit-arrow {
   inline-size: 0.6em;
   block-size: 0.4em;
+}
+
+/* Mono gives "." and ":" a full cell; pull them in so "4.5:1" reads as one value. */
+.wa-fit-punct {
+  margin-inline: -0.16em;
+}
+
+/* The unit: WebAble Sans, 0.6em of the value (never under the 15 px floor),
+   0.15em after the number. No no-break-space glyph, so no double gap in Mono. */
+.wa-fit-unit {
+  margin-inline-start: 0.15em;
+  font-family: var(--font-sans);
+  font-size: max(0.6em, var(--text-meta));
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--track-text);
+  color: var(--ink-2);
+}
+
+/* ---------- Fit value (the value column of "Your fit", §9.4) ---------- */
+
+.wa-fit-value {
+  display: inline-block;
+  max-inline-size: 100%;
+  vertical-align: baseline;
+}
+
+.wa-fit-value__visual {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 0.3em;
+  max-inline-size: 100%;
+}
+
+.wa-fit-value__before {
+  color: var(--ink-2);
+}
+
+.wa-fit-value__after {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+.wa-fit-value__arrow {
+  display: inline-flex;
+  align-self: center;
+  color: var(--ink-2);
+}
+
+/* change and floor values are Mono */
+.wa-fit-value--change .wa-fit-value__visual,
+.wa-fit-value--floor .wa-fit-value__after {
+  font-family: var(--font-mono);
+  font-weight: var(--weight-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.wa-fit-value--change .wa-fit-value__after,
+.wa-fit-value--floor .wa-fit-value__after {
+  font-weight: var(--weight-medium);
+}
+.wa-fit-value__num {
+  color: var(--accent);
+}
+
+.wa-fit-value--change.wa-fit-value--inline,
+.wa-fit-value--floor.wa-fit-value--inline {
+  font-size: var(--text-mono);
+  line-height: var(--leading-mono);
+}
+.wa-fit-value--change.wa-fit-value--readout,
+.wa-fit-value--floor.wa-fit-value--readout {
+  font-size: var(--text-readout);
+  line-height: var(--leading-readout);
+  letter-spacing: var(--track-readout);
+}
+.wa-fit-value--readout .wa-fit-arrow {
+  inline-size: 0.6em;
+  block-size: 0.4em;
+}
+
+/* The readout is a grid: before (right-aligned) | arrow | after with its unit
+   (left-aligned). The first two columns have the same width in every row, so
+   the arrows line up down a list of rows. */
+.wa-fit-value--change.wa-fit-value--readout .wa-fit-value__visual {
+  display: inline-grid;
+  grid-template-columns: var(
+    --wa-fit-columns,
+    minmax(6ch, max-content) 1.5em minmax(6ch, max-content)
+  );
+  align-items: baseline;
+  column-gap: 0;
+}
+.wa-fit-value--change.wa-fit-value--readout .wa-fit-value__before {
+  justify-self: end;
+}
+.wa-fit-value--change.wa-fit-value--readout .wa-fit-value__arrow {
+  justify-self: center;
+}
+.wa-fit-value--change.wa-fit-value--readout .wa-fit-value__after {
+  justify-self: start;
+}
+
+/* floor: "At least" in Sans 16, secondary ink, then the value */
+.wa-fit-value__lead {
+  font-family: var(--font-sans);
+  font-size: var(--text-ui);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-label);
+  letter-spacing: var(--track-text);
+  color: var(--ink-2);
+}
+.wa-fit-value--floor .wa-fit-value__visual {
+  column-gap: var(--space-2);
+}
+
+/* word: Sans 20 / 540 (16 inline) */
+.wa-fit-value--word {
+  font-size: var(--text-title);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-title);
+  letter-spacing: var(--track-text);
+}
+.wa-fit-value--word.wa-fit-value--inline {
+  font-size: var(--text-label);
+  line-height: var(--leading-label);
+}
+.wa-fit-value--word .wa-fit-value__visual {
+  column-gap: 0.4em;
+}
+
+/* same: "As the site made it", Sans 16 / 400, secondary ink */
+.wa-fit-value__same {
+  font-size: var(--text-ui);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-label);
+  letter-spacing: var(--track-text);
+  color: var(--ink-2);
+}
+
+/* ---------- Fit row (§9.4): Tune's and the app's "Your fit" ---------- */
+
+/* A list of fit rows with hairlines between them. */
+.wa-fitrows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+.wa-fitrows > * {
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.wa-fitrow {
+  --_value-w: 17rem;
+  container: wa-fitrow / inline-size;
+}
+
+.wa-fitrow__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'text text'
+    'value action';
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  min-block-size: 4.5rem;
+  padding-block: var(--space-6);
+}
+.wa-fitrow--working .wa-fitrow__main {
+  padding-block: var(--space-5);
+}
+/* Unchanged rows are compact: 56 minimum, 16 padding, no source line. */
+.wa-fitrow--same .wa-fitrow__main {
+  min-block-size: var(--row-min);
+  padding-block: var(--space-4);
+}
+
+.wa-fitrow__text {
+  grid-area: text;
+  min-inline-size: 0;
+}
+
+.wa-fitrow__label {
+  margin: 0;
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: 1.35;
+  letter-spacing: var(--track-text);
+  text-wrap: pretty;
+}
+
+.wa-fitrow__sentence {
+  max-inline-size: var(--w-prose);
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
+
+.wa-fitrow__source {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-3);
+}
+
+.wa-fitrow__value {
+  grid-area: value;
+  min-inline-size: 0;
+}
+
+.wa-fitrow__action {
+  grid-area: action;
+  justify-self: end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.wa-fitrow__editor {
+  padding-block-end: var(--space-6);
+}
+
+/* Stacked (narrow): the value starts on the text edge, so the before value
+   is not padded out to 6ch. */
+.wa-fitrow__main {
+  --wa-fit-columns: max-content 1.5em max-content;
+}
+
+/* Wide enough for three columns: text | value | action. The value column has
+   one width in every row, so values start on one edge and arrows line up. */
+@container wa-fitrow (min-width: 40em) {
+  .wa-fitrow__main {
+    --wa-fit-columns: minmax(6ch, max-content) 1.5em minmax(6ch, max-content);
+    grid-template-columns: minmax(0, 1fr) var(--_value-w) auto;
+    grid-template-areas: 'text value action';
+  }
 }
 
 .wa-fit-block {
@@ -1603,12 +1904,29 @@ html:has(.wa-dialog[open]) {
 
 .wa-section-head {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    'rule'
+    'eyebrow'
+    'title'
+    'deck'
+    'link';
   justify-items: start;
   margin-block-end: var(--space-8);
 }
 @media (min-width: 48em) {
   .wa-section-head {
     margin-block-end: var(--section-head-gap);
+  }
+  /* The link sits on the eyebrow's baseline, aligned right. */
+  .wa-section-head--link {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'rule rule'
+      'eyebrow link'
+      'title title'
+      'deck deck';
+    column-gap: var(--space-4);
   }
 }
 
@@ -1628,22 +1946,24 @@ html:has(.wa-dialog[open]) {
   border-block-start: var(--bw-strong) solid var(--ink);
 }
 
+/* Grid items may shrink below a long word (a URL in a deck), which then
+   breaks instead of pushing the page sideways. */
+.wa-section-head > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  overflow-wrap: anywhere;
+}
+
 .wa-section-head > .wa-index-rule {
+  grid-area: rule;
+  justify-self: stretch;
   margin-block-end: var(--space-4);
 }
 
-.wa-section-head__top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-1) var(--space-4);
-  inline-size: 100%;
-  margin-block-end: var(--space-2);
-}
-
 .wa-section-head__eyebrow {
-  margin: 0;
+  grid-area: eyebrow;
+  align-self: baseline;
+  margin: 0 0 var(--space-2);
   font-size: var(--text-meta);
   font-weight: var(--weight-medium);
   line-height: var(--leading-meta);
@@ -1651,12 +1971,23 @@ html:has(.wa-dialog[open]) {
   color: var(--ink-2);
 }
 
+/* Below 48em the link is the last row, after the deck. */
 .wa-section-head__link {
+  grid-area: link;
+  margin-block-start: var(--space-4);
   font-size: var(--text-meta);
   letter-spacing: var(--track-meta);
 }
+@media (min-width: 48em) {
+  .wa-section-head__link {
+    align-self: baseline;
+    justify-self: end;
+    margin-block: 0 var(--space-2);
+  }
+}
 
 .wa-section-head__title {
+  grid-area: title;
   max-inline-size: 44rem;
   font-size: var(--text-h2);
   font-weight: var(--weight-medium);
@@ -1675,6 +2006,7 @@ html:has(.wa-dialog[open]) {
 }
 
 .wa-section-head__deck {
+  grid-area: deck;
   max-inline-size: var(--w-prose);
   margin: var(--space-4) 0 0;
   font-size: var(--text-body);
@@ -1889,8 +2221,8 @@ html:has(.wa-dialog[open]) {
 }
 
 .wa-offer__never {
+  /* flush="start": the label sits on the offer's text edge. */
   margin-block-start: var(--space-2);
-  margin-inline-start: calc(-1 * var(--space-2));
 }
 
 @container (max-width: 21.24rem) {
@@ -1903,20 +2235,19 @@ html:has(.wa-dialog[open]) {
    19. Wordmark
    ========================================================================= */
 
+/* The lockup: the mark cropped to its bounds (16 px tall), 8 px before the
+   20 px word. The glyph's height matches the word's cap height plus descent of
+   the tailed l, so the two read as one unit. */
 .wa-wordmark {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-2);
   color: var(--ink);
   font-size: var(--text-title);
   font-weight: var(--weight-medium);
   line-height: 1;
   letter-spacing: -0.01em;
   white-space: nowrap;
-}
-
-.wa-wordmark__mark {
-  margin-inline-start: -0.25rem;
 }
 
 /* =========================================================================
@@ -1977,11 +2308,15 @@ html:has(.wa-dialog[open]) {
   .wa-segmented__indicator {
     display: none;
   }
+  /* Selected: a Highlight fill and a 3 px edge, so it reads by shape and
+     by system colour. Padding gives back the extra 2 px so nothing shifts. */
   .wa-segmented[data-ready] .wa-segmented__item[aria-checked='true'],
   .wa-segmented__item[aria-checked='true'] {
-    border-color: Highlight;
-    outline: 2px solid Highlight;
-    outline-offset: -2px;
+    forced-color-adjust: none;
+    padding-inline: calc(var(--space-4) - 2px);
+    border: 3px solid ButtonText;
+    background: Highlight;
+    color: HighlightText;
   }
 
   .wa-slider__track {

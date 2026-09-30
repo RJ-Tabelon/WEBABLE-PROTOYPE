@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dayOf, learnedRows, learnedSummary } from './learned';
+import { dayOf, learnedKeys, learnedRows, learnedSummary } from './learned';
 
 const TODAY = dayOf(new Date('2026-09-29T00:00:00Z'));
 
@@ -25,26 +25,31 @@ describe('learnedSummary', () => {
         op: 'text_floor',
         label: 'Text size',
         sentence: 'You usually keep this change.',
+        blocked: false,
       },
       {
         op: 'line_spacing',
         label: 'Line spacing',
-        sentence: 'You usually undo this change.',
+        sentence: 'You usually undo this, so WebAble asks first.',
+        blocked: false,
       },
       {
         op: 'contrast',
         label: 'Contrast',
         sentence: 'You keep this change about as often as you undo it.',
+        blocked: false,
       },
       {
         op: 'dim_distractions',
         label: 'Busy areas',
-        sentence: 'You turned this off everywhere.',
+        sentence: 'You turned this change off everywhere.',
+        blocked: true,
       },
       {
         op: 'reading_guide',
         label: 'Reading guide',
         sentence: 'You asked for this on every site.',
+        blocked: false,
       },
     ]);
   });
@@ -87,6 +92,14 @@ describe('learnedSummary', () => {
         from: '18\u00a0px',
         to: '21\u00a0px',
         srText: '18 to 21 pixels',
+        toValue: 21,
+        value: {
+          kind: 'change',
+          before: 18,
+          after: 21,
+          unit: 'px',
+          srText: '18 to 21 pixels',
+        },
       },
     ]);
   });
@@ -123,9 +136,11 @@ describe('learnedRows', () => {
       rows.map((r) => [r.label, Boolean(r.dim), r.sentence ?? null]),
     ).toEqual([
       ['Text size', true, 'You usually keep this change.'],
-      ['Click targets', false, 'You usually undo this change.'],
+      ['Click targets', false, 'You usually undo this, so WebAble asks first.'],
     ]);
     expect(rows[0]?.dim?.srText).toBe('18 to 21 pixels');
+    expect(rows[0] && learnedKeys(rows[0])).toEqual(['textPx', 'text_floor']);
+    expect(rows[1] && learnedKeys(rows[1])).toEqual(['target_size']);
   });
 
   it('is empty when nothing has been learned', () => {

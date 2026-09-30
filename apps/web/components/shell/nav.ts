@@ -16,7 +16,10 @@ export const SITE_NAV: readonly NavLink[] = [
 ];
 
 export const SIGN_IN: NavLink = { href: '/sign-in', label: 'Sign in' };
-export const GET_STARTED: NavLink = { href: '/tune', label: 'Get started' };
+/** The site's one primary action (§7.8, §14): install first, then tune. */
+export const GET_STARTED: NavLink = { href: '/get', label: 'Add to Chrome' };
+/** The primary action for a signed-in visitor: back to their fit. */
+export const YOUR_FIT: NavLink = { href: '/app', label: 'Your fit' };
 
 export interface FooterColumn {
   heading: string;

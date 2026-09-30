@@ -12,8 +12,13 @@ import type {
   PlannedOp,
 } from '@webable/core/policy/types';
 
-import { ContentAdapter, type Transport } from '../../../lib/engine/adapter';
+import {
+  ContentAdapter,
+  startOnce,
+  type Transport,
+} from '../../../lib/engine/adapter';
 import { Engine, type ApplyOptions } from '../../../lib/engine/engine';
+import { sel } from '../../../lib/engine/ops/marks';
 import type { ContentToWorker, HelloReply } from '../../../lib/protocol';
 import type { VocabPort } from '../../../lib/engine/types';
 import { fallbackVocab } from './vocab-fallback';
@@ -63,6 +68,7 @@ function ensure(prePaint: OpId[] = []): Engine {
 }
 
 let adapter: ContentAdapter | null = null;
+let adaptersCreated = 0;
 let workerHandler: ((msg: unknown) => Promise<unknown> | undefined) | null =
   null;
 const sent: ContentToWorker[] = [];
@@ -76,7 +82,7 @@ function fakeWorker(plan: AdaptationPlan, hello: HelloReply): Transport {
         case 'cs:hello':
           return hello;
         case 'cs:signals':
-          return { plan };
+          return { plan, announce: true };
         case 'cs:friction':
           return { offer: null };
         case 'cs:offer-answer':
@@ -96,6 +102,10 @@ function fakeWorker(plan: AdaptationPlan, hello: HelloReply): Transport {
 
 const api = {
   vocabSource: port.source,
+  /** The page-view selector for an internal mark token (the attribute and token are random). */
+  markSelector(token: string) {
+    return sel(token);
+  },
   /** The content-script flow end to end, with a fake service worker. */
   async runAdapter(plan: AdaptationPlan, hello: HelloReply) {
     adapter?.stop();
@@ -103,10 +113,28 @@ const api = {
     adapter = new ContentAdapter({
       transport: fakeWorker(plan, hello),
       vocab: port,
-      announce: { firstTime: async () => true },
     });
     await adapter.start();
     return sent.slice();
+  },
+  /** The entrypoint's path: startOnce on this window; a second call finds the guard. */
+  async injectAdapter(plan: AdaptationPlan, hello: HelloReply) {
+    const from = sent.length;
+    const r = startOnce(window, () => {
+      adaptersCreated++;
+      return new ContentAdapter({
+        transport: fakeWorker(plan, hello),
+        vocab: port,
+      });
+    });
+    adapter = r.adapter;
+    await r.ready;
+    return { created: r.created, adaptersCreated, sent: sent.slice(from) };
+  },
+  /** The adapter's engine: press a label in its layer (e.g. the toast's Undo). */
+  adapterPress(label: string) {
+    const e = (adapter as unknown as { engine: Engine | null } | null)?.engine;
+    return e ? e.layer.press(label) : false;
   },
   async workerMessage(msg: unknown) {
     return workerHandler ? workerHandler(msg) : undefined;

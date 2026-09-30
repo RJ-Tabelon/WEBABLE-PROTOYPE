@@ -1,8 +1,8 @@
-import type { FitProfile } from '@webable/core';
 import type { Metadata } from 'next';
 
 import { TuneFlow } from '../../components/tune/TuneFlow';
 import type { TuneServerActions } from '../../components/tune/flow/persist';
+import { previousFitFor } from '../../components/tune/flow/previous';
 import {
   abandonCalibrationSessionAction,
   completeCalibrationSessionAction,
@@ -14,8 +14,6 @@ import { getUser } from '../../lib/data/session';
 
 export const metadata: Metadata = { title: 'Tune' };
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
 const SERVER_ACTIONS: TuneServerActions = {
   startCalibrationSession: startCalibrationSessionAction,
   completeCalibrationSession: completeCalibrationSessionAction,
@@ -23,34 +21,16 @@ const SERVER_ACTIONS: TuneServerActions = {
   abandonCalibrationSession: abandonCalibrationSessionAction,
 };
 
-function first(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
 /**
  * /tune: the calibration tasks. Open to everyone: signed in, the fit is saved
  * to the account; signed out, it waits in this browser until /tune/save.
- * /tune?recalibrate=1 compares against the current fit (Keep new / Keep old).
+ * Signed in with a current fit, Tune always compares against it (Keep new /
+ * Keep old) and keeps what the person set, whatever the entry point
+ * (/tune?recalibrate=1 still works; it is no longer needed).
  */
-export default async function TunePage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
-  const params = await searchParams;
+export default async function TunePage() {
   const user = await getUser();
-  const wantsRecalibration = first(params.recalibrate) === '1';
-
-  let previous: { profile: FitProfile; createdAt: string } | null = null;
-  if (user && wantsRecalibration) {
-    const current = await getCurrentFit();
-    if (current.ok && current.data) {
-      previous = {
-        profile: current.data.profile,
-        createdAt: current.data.createdAt,
-      };
-    }
-  }
+  const previous = await previousFitFor(user !== null, getCurrentFit);
 
   return (
     <TuneFlow

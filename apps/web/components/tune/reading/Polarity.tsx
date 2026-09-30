@@ -13,7 +13,7 @@ import { useMemo, useRef, useState } from 'react';
 
 import {
   elapsedSince,
-  useContentWidth,
+  useContentBox,
   useDisturbance,
   useStimulusOnset,
   useTaskKeys,
@@ -24,9 +24,11 @@ import {
   Responses,
   Stage,
   TaskHeading,
+  useStimulusFontReady,
 } from '../shared/primitives';
 import {
   boxWidthPx,
+  maxFitHeightPx,
   maxFitPx,
   MIN_CHARS,
   MIN_CHARS_LARGE_PRINT,
@@ -35,6 +37,11 @@ import {
 } from './geometry';
 
 type Stated = NonNullable<ReadingSession['statedPolarity']>;
+
+const LINE_HEIGHT = 1.3;
+/** The light and dark boxes' padding around the text (tune.css). */
+const BOX_INSET_INLINE = 40;
+const BOX_INSET_BLOCK = 32;
 
 export interface PolarityProps {
   /** S_p = the critical print size + 0.1 log (font px); capped here to S_fit. */
@@ -75,31 +82,43 @@ export function Polarity({
     return [...all.slice(usedCount), ...all.slice(0, usedCount)];
   }, [seed, usedCount]);
   const stageRef = useRef<HTMLDivElement>(null);
-  const stageWidthPx = useContentWidth(stageRef, 560);
+  const stage = useContentBox(stageRef, { width: 560, height: 0 });
+  const stageWidthPx = stage.width;
+  const fontReady = useStimulusFontReady();
+  const widthFitPx = Math.min(
+    targetPx,
+    maxFitPx(
+      stageWidthPx,
+      advanceEm,
+      largePrint ? MIN_CHARS_LARGE_PRINT : MIN_CHARS,
+    ),
+  );
+  // The light and dark boxes fit the stage, so the answers stay in view.
   const sentencePx = Math.max(
     12,
-    Math.min(
-      targetPx,
-      maxFitPx(
-        stageWidthPx,
-        advanceEm,
-        largePrint ? MIN_CHARS_LARGE_PRINT : MIN_CHARS,
-      ),
-    ),
+    maxFitHeightPx({
+      heightPx: stage.height,
+      widthPx: stageWidthPx,
+      advanceEm,
+      lineHeight: LINE_HEIGHT,
+      maxPx: widthFitPx,
+      insetInlinePx: BOX_INSET_INLINE,
+      insetBlockPx: BOX_INSET_BLOCK,
+    }),
   );
   const [trials, setTrials] = useState<PolarityTrial[]>([]);
   const index = trials.length;
   const reading = index < order.length;
   const polarity = order[index];
   const sentence = sentences[index % sentences.length];
-  const onset = useStimulusOnset(reading ? index : null);
-  const disturbed = useDisturbance(reading ? index : null);
+  const shown = reading && fontReady;
+  const onset = useStimulusOnset(shown ? index : null);
+  const disturbed = useDisturbance(shown ? index : null);
   const answered = useRef(-1);
   const sent = useRef(false);
 
   const respond = (value: boolean | null) => {
-    if (!reading || !sentence || !polarity || answered.current === index)
-      return;
+    if (!shown || !sentence || !polarity || answered.current === index) return;
     answered.current = index;
     const rtMs = elapsedSince(onset.current);
     setTrials((prev) => [
@@ -123,7 +142,7 @@ export function Polarity({
 
   useTaskKeys(
     { t: () => respond(true), f: () => respond(false), c: () => respond(null) },
-    active && reading,
+    active && shown,
   );
 
   if (!reading) {
@@ -152,22 +171,24 @@ export function Polarity({
     );
   }
 
-  const box = boxWidthPx(sentencePx, advanceEm, stageWidthPx);
+  const box = boxWidthPx(
+    sentencePx,
+    advanceEm,
+    stageWidthPx - BOX_INSET_INLINE,
+  );
   return (
     <>
       <TaskHeading key="read">Is it true?</TaskHeading>
-      <Deck>
-        Some of these are light text on dark. Read at your normal pace.
-      </Deck>
+      <Deck>Some are light text on dark. Read at your usual pace.</Deck>
       <Stage ref={stageRef} label="Sentence" className="tn-stage--center">
-        {sentence ? (
+        {sentence && fontReady ? (
           <p
             key={index}
-            className={`tn-polarity-box tn-polarity-box--${polarity}`}
+            className={`tn-stimulus tn-polarity-box tn-polarity-box--${polarity}`}
             style={{
               fontFamily: STIMULUS_FAMILY,
               fontSize: `${sentencePx}px`,
-              lineHeight: 1.3,
+              lineHeight: LINE_HEIGHT,
               inlineSize: `${box}px`,
             }}
           >

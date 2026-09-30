@@ -73,6 +73,17 @@ export function isCheckEmailKind(value: unknown): value is CheckEmailKind {
   return value === 'sign-in' || value === 'sign-up' || value === 'reset';
 }
 
+/**
+ * An auth path that carries `next` along, unless `next` is the default
+ * destination (then the URL stays short). `next` must already be safe
+ * (safeNextPath).
+ */
+export function withNext(path: string, next: string | undefined): string {
+  if (!next || next === '/app') return path;
+  const joiner = path.includes('?') ? '&' : '?';
+  return `${path}${joiner}next=${encodeURIComponent(next)}`;
+}
+
 /** First value of a search param. */
 export function firstParam(
   value: string | string[] | undefined,

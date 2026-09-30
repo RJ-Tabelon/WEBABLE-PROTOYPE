@@ -24,6 +24,16 @@ const MAX_NEXT_LENGTH = 2048;
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
 const PROBE_ORIGIN = 'http://next.invalid';
 
+/** A "." or ".." segment, literal or percent-encoded, anywhere in the path part. */
+function hasDotSegment(value: string): boolean {
+  const path = value.split(/[?#]/, 1)[0] ?? '';
+  return path
+    .split('/')
+    .some(
+      (segment) => segment === '.' || segment === '..' || /%2e/i.test(segment),
+    );
+}
+
 function underPrefix(pathname: string, prefix: string): boolean {
   return pathname === prefix || pathname.startsWith(`${prefix}/`);
 }
@@ -34,8 +44,10 @@ export function isProtectedPath(pathname: string): boolean {
 
 /**
  * Accept only same-origin relative paths ("/app/fit?tab=1"). Absolute URLs,
- * protocol-relative "//host", backslash tricks, control characters, and auth
- * plumbing paths all return `fallback`. The result is normalized by the URL parser.
+ * protocol-relative "//host", backslash tricks, dot segments ("/./", "/../",
+ * "%2e"), control characters, and auth plumbing paths all return `fallback`.
+ * The result is normalized by the URL parser and checked again after, since
+ * normalizing "/.//host" yields "//host".
  */
 export function safeNextPath(
   input: unknown,
@@ -46,6 +58,7 @@ export function safeNextPath(
   if (!value || value.length > MAX_NEXT_LENGTH) return fallback;
   if (!value.startsWith('/') || value.startsWith('//')) return fallback;
   if (value.includes('\\') || CONTROL_CHARS.test(value)) return fallback;
+  if (hasDotSegment(value)) return fallback;
 
   let url: URL;
   try {
@@ -56,7 +69,9 @@ export function safeNextPath(
   if (url.origin !== PROBE_ORIGIN) return fallback;
   if (NON_DESTINATIONS.some((prefix) => underPrefix(url.pathname, prefix)))
     return fallback;
-  return `${url.pathname}${url.search}${url.hash}`;
+  const out = `${url.pathname}${url.search}${url.hash}`;
+  if (out.startsWith('//') || out.startsWith('/\\')) return fallback;
+  return out;
 }
 
 /** "/sign-in?next=%2Fapp%2Ffit" plus optional extra params (e.g. an error code). */

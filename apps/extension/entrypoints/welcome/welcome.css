@@ -1,6 +1,7 @@
 /*
  * Welcome page (Task density, design-final 9.1 and 14): one centred column,
- * one decision per region, index rules between steps. Tokens only.
+ * one decision per region, index rules (at most prose width) between
+ * regions, numbered hairline rows for the steps. Tokens only.
  */
 
 .wl {
@@ -66,37 +67,12 @@
   color: var(--ink-2);
 }
 
-.wl-step,
-.wl-done {
+.wl-region {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
-.wl-step > .wa-index-rule,
-.wl-done > .wa-index-rule {
-  margin-block-end: var(--space-1);
-}
-
-.wl-step__title {
-  font-size: var(--text-h2);
-  line-height: var(--leading-h2);
-  letter-spacing: var(--track-h2);
-}
-
-.wl-step__done {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
+.wl-region > .wa-index-rule {
   max-inline-size: var(--w-prose);
-  font-size: var(--text-body);
-  line-height: var(--leading-body);
-  color: var(--ink);
-}
-.wl-step__done:focus {
-  outline: none;
-}
-.wl-step__check {
-  margin-block-start: 0.3em;
-  color: var(--ink);
 }
 
 .wl-body {
@@ -104,18 +80,6 @@
   font-size: var(--text-body);
   line-height: var(--leading-body);
   color: var(--ink-2);
-}
-
-.wl-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-  margin-block: var(--space-2) var(--space-1);
-}
-@media (max-width: 29.99em) {
-  .wl-actions > .wa-btn {
-    inline-size: 100%;
-  }
 }
 
 .wl-note {
@@ -126,19 +90,115 @@
   color: var(--ink-2);
 }
 
+/* Numbered steps: 56 px rows split by hairlines. The action sits under the
+   text on narrow windows and at the right edge from 48em. */
+.wl-steps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.wl-step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  align-items: start;
+  column-gap: var(--space-4);
+  row-gap: var(--space-3);
+  min-block-size: var(--row-min);
+  padding-block: var(--space-4);
+}
+.wl-step + .wl-step {
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+.wl-step__n {
+  font-family: var(--font-mono);
+  font-size: var(--text-title);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-title);
+  color: var(--ink-2);
+}
+.wl-step__text {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+.wl-step__title {
+  font-size: var(--text-title);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-title);
+  letter-spacing: var(--track-text);
+}
+.wl-step__body {
+  max-inline-size: var(--w-prose);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
+.wl-step__text > .wl-note {
+  margin-block-start: var(--space-1);
+}
+.wl-step__action {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-inline-size: 0;
+}
+.wl-step__action .wa-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  font-size: var(--text-ui);
+}
+@media (min-width: 48em) {
+  .wl-step {
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+  }
+  .wl-step__action {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-content: flex-end;
+    max-inline-size: 22rem;
+  }
+}
+@media (max-width: 29.99em) {
+  .wl-step__action > .wa-btn {
+    inline-size: 100%;
+  }
+}
+
+.wl-step__done {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-2);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.wl-step__done:focus {
+  outline: none;
+}
+.wl-step__check {
+  flex: none;
+  margin-block-start: 0.25em;
+  color: var(--ink);
+}
+
 .wl-facts {
   display: grid;
-  margin: var(--space-4) 0 0;
+  margin: 0;
   max-inline-size: var(--w-prose);
 }
 .wl-fact {
   display: grid;
   gap: var(--space-1);
-  padding-block: var(--space-4);
-  border-block-start: var(--bw-hair) solid var(--line);
+  padding-block: var(--space-3);
 }
-.wl-fact:last-child {
-  border-block-end: var(--bw-hair) solid var(--line);
+.wl-fact + .wl-fact {
+  border-block-start: var(--bw-hair) solid var(--line);
 }
 .wl-fact dt {
   font-size: var(--text-label);
@@ -150,13 +210,6 @@
   margin: 0;
   font-size: var(--text-ui);
   line-height: var(--leading-ui);
-  color: var(--ink-2);
-}
-
-.wl-tip {
-  font-size: var(--text-meta);
-  line-height: var(--leading-meta);
-  letter-spacing: var(--track-meta);
   color: var(--ink-2);
 }
 
@@ -178,10 +231,14 @@
   color: var(--ink-2);
 }
 .wl-links {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--space-6);
   font-size: var(--text-ui);
 }
 .wl-links a {
   display: inline-flex;
   align-items: center;
   min-block-size: var(--target-min);
+  min-inline-size: var(--target-min);
 }

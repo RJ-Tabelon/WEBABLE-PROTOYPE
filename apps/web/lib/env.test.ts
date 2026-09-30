@@ -16,7 +16,21 @@ describe('parsePublicEnv', () => {
       supabaseKey: 'sb_publishable_0123456789abcdef',
       webOrigin: 'http://localhost:3000',
       extensionId: 'bbnblnlbgcccbbbbihngngbecbobedie',
+      contactEmail: null,
     });
+  });
+
+  it('requires the contact address in production only', () => {
+    expect(() => parsePublicEnv(valid, 'production')).toThrow(
+      /NEXT_PUBLIC_CONTACT_EMAIL/,
+    );
+    expect(parsePublicEnv(valid, 'development').contactEmail).toBeNull();
+    expect(
+      parsePublicEnv(
+        { ...valid, NEXT_PUBLIC_CONTACT_EMAIL: 'help@webable.example' },
+        'production',
+      ).contactEmail,
+    ).toBe('help@webable.example');
   });
 
   it('treats the extension id as optional', () => {

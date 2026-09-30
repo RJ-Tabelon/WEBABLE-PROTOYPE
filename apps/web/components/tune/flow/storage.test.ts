@@ -6,6 +6,7 @@ import {
   clearPendingFit,
   clearProgress,
   PENDING_FIT_KEY,
+  pendingSavedAt,
   PROGRESS_KEY,
   readPendingFit,
   readProgress,
@@ -54,7 +55,10 @@ describe('pending fit', () => {
     const read = readPendingFit(NOW, store);
     expect(read?.profile).toEqual(profile);
     expect(read?.source).toBe('calibration');
+    // Only the date is read to remind the person it is waiting.
+    expect(pendingSavedAt(NOW, store)).toBe(NOW.getTime());
     clearPendingFit(store);
+    expect(pendingSavedAt(NOW, store)).toBeNull();
     expect(store.data.has(PENDING_FIT_KEY)).toBe(false);
   });
 

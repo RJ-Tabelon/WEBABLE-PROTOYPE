@@ -1,9 +1,18 @@
-import type { LocalSite } from '@webable/core';
 import { describe, expect, it } from 'vitest';
 
-import { applyLocally, filterSites, opLabels, sortSites } from './sites';
+import {
+  appliesAgain,
+  applyLocally,
+  filterSites,
+  hasRules,
+  inverse,
+  opLabels,
+  type SiteView,
+  sitePreferences,
+  sortSites,
+} from './sites';
 
-function site(domain: string, extra: Partial<LocalSite> = {}): LocalSite {
+function site(domain: string, extra: Partial<SiteView> = {}): SiteView {
   return {
     domain,
     paused: false,
@@ -42,7 +51,11 @@ describe('applyLocally', () => {
   });
 
   it('turns a change off and back on without duplicates', () => {
-    const off = applyLocally(sites, 'a.example.com', {
+    const withPause = applyLocally(sites, 'a.example.com', {
+      kind: 'pause',
+      paused: true,
+    });
+    const off = applyLocally(withPause, 'a.example.com', {
       kind: 'block',
       op: 'line_spacing',
       blocked: true,
@@ -58,6 +71,31 @@ describe('applyLocally', () => {
     expect(on.find((s) => s.domain === 'a.example.com')?.blocked).toEqual([]);
   });
 
+  it('drops a site once it keeps nothing of its own', () => {
+    const next = applyLocally(sites, 'a.example.com', {
+      kind: 'block',
+      op: 'line_spacing',
+      blocked: false,
+    });
+    expect(next.map((s) => s.domain)).not.toContain('a.example.com');
+  });
+
+  it('turns an always-on change off, and resets a site', () => {
+    const pinned = [site('p.example.com', { pinned: ['target_size'] })];
+    expect(
+      applyLocally(pinned, 'p.example.com', {
+        kind: 'pin',
+        op: 'target_size',
+        on: false,
+      }),
+    ).toEqual([]);
+    expect(
+      applyLocally(sites, 'c.example.org', { kind: 'reset' }).map(
+        (s) => s.domain,
+      ),
+    ).not.toContain('c.example.org');
+  });
+
   it('forgets a site', () => {
     expect(
       applyLocally(sites, 'c.example.org', { kind: 'forget' }),
@@ -68,6 +106,80 @@ describe('applyLocally', () => {
     const copy = structuredClone(sites);
     applyLocally(sites, 'a.example.com', { kind: 'pause', paused: true });
     expect(sites).toEqual(copy);
+  });
+});
+
+describe('sitePreferences', () => {
+  it('lists each thing a site keeps with the action that undoes it', () => {
+    const prefs = sitePreferences(
+      site('x.example.com', {
+        paused: true,
+        pinned: ['target_size'],
+        blocked: ['line_spacing'],
+        levels: { text_floor: 3 },
+      }),
+    );
+    expect(prefs.map((p) => [p.label, p.action])).toEqual([
+      ['Paused', 'Resume'],
+      ['Always on: Click targets', 'Turn off here'],
+      [expect.stringMatching(/^Text size \d+\spx$/), 'Reset'],
+      ['Turned off: Line spacing', 'Turn back on'],
+    ]);
+    expect(prefs[0]?.change).toEqual({ kind: 'pause', paused: false });
+    expect(prefs[1]?.change).toEqual({
+      kind: 'pin',
+      op: 'target_size',
+      on: false,
+    });
+    // A size isn't one change in the bridge: Reset site clears it with the rest.
+    expect(prefs[2]?.change).toBeNull();
+    expect(prefs[3]?.change).toEqual({
+      kind: 'block',
+      op: 'line_spacing',
+      blocked: false,
+    });
+  });
+
+  it('resets the site when a size is all it keeps', () => {
+    const [only] = sitePreferences(
+      site('y.example.com', { levels: { text_floor: 3 } }),
+    );
+    expect(only?.change).toEqual({ kind: 'reset' });
+  });
+
+  it('knows which sites keep something', () => {
+    expect(hasRules(site('z.example.com'))).toBe(false);
+    expect(hasRules(site('z.example.com', { levels: { text_floor: 1 } }))).toBe(
+      true,
+    );
+  });
+});
+
+describe('inverse and appliesAgain', () => {
+  it('undoes pause, block and pin; reset and forget have no undo', () => {
+    expect(inverse({ kind: 'pause', paused: true })).toEqual({
+      kind: 'pause',
+      paused: false,
+    });
+    expect(inverse({ kind: 'pin', op: 'target_size', on: false })).toEqual({
+      kind: 'pin',
+      op: 'target_size',
+      on: true,
+    });
+    expect(inverse({ kind: 'reset' })).toBeNull();
+    expect(inverse({ kind: 'forget' })).toBeNull();
+  });
+
+  it('shows the applied glyph only when WebAble changes the page again', () => {
+    expect(appliesAgain({ kind: 'pause', paused: false })).toBe(true);
+    expect(appliesAgain({ kind: 'pause', paused: true })).toBe(false);
+    expect(
+      appliesAgain({ kind: 'block', op: 'line_spacing', blocked: false }),
+    ).toBe(true);
+    expect(
+      appliesAgain({ kind: 'block', op: 'line_spacing', blocked: true }),
+    ).toBe(false);
+    expect(appliesAgain({ kind: 'reset' })).toBe(false);
   });
 });
 

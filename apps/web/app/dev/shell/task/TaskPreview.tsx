@@ -19,7 +19,8 @@ export function TaskPreview() {
         ruler={
           <ProgressRuler sections={SECTIONS} current={1} taskIndex={task} />
         }
-        progressText="Part 2 of 3 · Pointing · about 1 min left"
+        progress="Part 2 of 3 · Pointing · about 1 min left"
+        progressShort="About 1 min left"
         onPause={() => setPaused(true)}
         onSkip={() => setTask(0)}
       >

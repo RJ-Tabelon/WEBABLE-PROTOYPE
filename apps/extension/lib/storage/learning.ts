@@ -5,7 +5,7 @@ import type {
 
 import type { KvArea } from './area';
 import { KEYS } from './keys';
-import { isRecord, JsonStore, num, strOrNull } from './store';
+import { isRecord, JsonStore, num, ownerField, strOrNull } from './store';
 
 /**
  * Personal learning state on this device (personalization.md 12): the
@@ -24,6 +24,8 @@ export interface LearningRecord {
   /** The profile changed after the last push: reseed before the next push. */
   reseed: boolean;
   lastSyncAt: number;
+  /** The account this state and its pending deltas belong to (absent: none yet). */
+  ownerUserId?: string;
 }
 
 export const PENDING_MAX = 2000;
@@ -69,6 +71,7 @@ export function normalizeLearning(raw: unknown): LearningRecord {
     seededFor: strOrNull(raw.seededFor),
     reseed: raw.reseed === true,
     lastSyncAt: num(raw.lastSyncAt, 0),
+    ...ownerField(raw),
   };
 }
 

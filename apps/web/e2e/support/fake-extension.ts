@@ -10,9 +10,19 @@ import type { Page } from '@playwright/test';
  * states (Connect, Sites, What was sent) without a built extension.
  */
 
+/**
+ * The install id the extension reports: the same id the capture harness's
+ * Supabase stand-in seeds in extension_installs, so Settings can mark
+ * "This browser".
+ */
+export const SEEDED_INSTALL_ID = 'b7d1e2f3-0a4b-4c5d-8e9f-a0b1c2d3e4f5';
+
+/** A site as the extension reports it, with its per-op levels (level index). */
+export type FakeSite = LocalSite & { levels?: Partial<Record<string, number>> };
+
 export interface FakeExtensionState {
   status: BridgeStatus;
-  sites: LocalSite[];
+  sites: FakeSite[];
   receipts: SentReceipt[];
 }
 
@@ -25,7 +35,7 @@ export function fakeState(overrides: FakeOverrides = {}): FakeExtensionState {
   return {
     status: {
       version: '0.1.0',
-      installId: 'e2e-install',
+      installId: SEEDED_INSTALL_ID,
       connected: false,
       email: null,
       allSites: false,
@@ -38,6 +48,8 @@ export function fakeState(overrides: FakeOverrides = {}): FakeExtensionState {
         paused: false,
         blocked: ['line_spacing'],
         pinned: [],
+        // Text size set to 21 px here (text_floor ladder index 3).
+        levels: { text_floor: 3 },
         lastChanges: 3,
         lastVisit: now - 60_000,
       },
@@ -70,6 +82,15 @@ export async function installFakeExtension(
   await page.addInitScript((initial: FakeExtensionState) => {
     type Msg = { type: string; [key: string]: unknown };
     const s: FakeExtensionState = JSON.parse(JSON.stringify(initial));
+    // Like the service worker, wa:sites lists only sites that keep something.
+    const kept = () =>
+      s.sites.filter(
+        (x) =>
+          x.paused ||
+          x.blocked.length > 0 ||
+          x.pinned.length > 0 ||
+          Object.keys(x.levels ?? {}).length > 0,
+      );
     const log: Msg[] = [];
     (window as unknown as { __waBridge: unknown }).__waBridge = {
       log,
@@ -90,13 +111,14 @@ export async function installFakeExtension(
           s.status.email = null;
           return ok(s.status);
         case 'wa:sites':
-          return ok(s.sites);
+          return ok(kept());
         case 'wa:site-update': {
           const change = msg.change as {
             kind: string;
             paused?: boolean;
             op?: string;
             blocked?: boolean;
+            on?: boolean;
           };
           if (change.kind === 'forget')
             s.sites = s.sites.filter((x) => x.domain !== msg.domain);
@@ -108,15 +130,30 @@ export async function installFakeExtension(
                 ? [...new Set([...site.blocked, change.op])]
                 : site.blocked.filter((op) => op !== change.op);
             }
+            if (change.kind === 'pin' && change.op) {
+              site.pinned = change.on
+                ? [...new Set([...site.pinned, change.op])]
+                : site.pinned.filter((op) => op !== change.op);
+            }
+            if (change.kind === 'reset') {
+              site.paused = false;
+              site.blocked = [];
+              site.pinned = [];
+              site.levels = {};
+            }
           }
-          return ok(s.sites);
+          return ok(kept());
         }
         case 'wa:receipts':
           return ok(s.receipts);
         case 'wa:clear-local':
+          // Everything WebAble keeps here: sites, receipts, and its copy of the fit.
           s.sites = [];
           s.receipts = [];
           return ok(s.status);
+        case 'wa:open-welcome':
+          // The service worker focuses or opens welcome.html#allow.
+          return ok({ ok: true });
         default:
           return {
             ok: false,

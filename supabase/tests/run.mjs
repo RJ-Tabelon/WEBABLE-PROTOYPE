@@ -16,9 +16,10 @@ import { connect, inRollback, resolveDbUrl } from './lib/db.mjs';
 import * as constraints from './suites/constraints.mjs';
 import * as functions from './suites/functions.mjs';
 import * as rls from './suites/rls.mjs';
+import * as round1 from './suites/round1.mjs';
 import * as structure from './suites/structure.mjs';
 
-const SUITES = [structure, rls, functions, constraints];
+const SUITES = [structure, rls, functions, constraints, round1];
 
 function parseArgs(argv) {
   const args = { grep: null, bail: false };

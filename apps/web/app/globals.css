@@ -18,9 +18,18 @@
     U+2215, U+FEFF, U+FFFD;
 }
 
-html {
-  /* In-page anchors land below the sticky header. */
-  scroll-padding-block-start: calc(var(--header-h) + var(--space-4));
+/* In-page anchors land below the site and app header, which is sticky only
+   when the window is at least 37.5em tall. */
+@media (min-height: 37.5em) {
+  html {
+    scroll-padding-block-start: calc(var(--header-h) + var(--space-4));
+  }
+}
+
+/* Tune pins nothing over the page: with fixed bars only its main column
+   scrolls (it has its own scroll padding), and in normal flow nothing is sticky. */
+html:has(.wa-task) {
+  scroll-padding-block: var(--space-4);
 }
 
 body {
@@ -66,6 +75,10 @@ body {
 .wa-status-page__title:focus {
   outline: none;
 }
+/* Without an eyebrow the title keeps the eyebrow's room below the rule. */
+.wa-status-page > .wa-index-rule + .wa-status-page__title {
+  margin-block-start: var(--space-4);
+}
 
 .wa-status-page__deck {
   max-inline-size: var(--w-prose);
@@ -76,6 +89,8 @@ body {
 }
 
 .wa-status-page__actions {
+  justify-self: stretch;
+  max-inline-size: var(--w-prose);
   margin-block-start: var(--space-8);
 }
 

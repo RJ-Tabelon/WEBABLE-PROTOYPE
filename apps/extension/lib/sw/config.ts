@@ -32,8 +32,14 @@ export function readConfig(env: ImportMetaEnv = import.meta.env): SwConfig {
   const supabaseUrl = e2e
     ? E2E_SUPABASE_ORIGIN
     : trimSlash(env.WXT_SUPABASE_URL ?? '');
-  const webOrigin = trimSlash(env.WXT_WEB_ORIGIN ?? 'http://localhost:3000');
-  const patterns = (env.WXT_WEB_ORIGINS ?? `${webOrigin}/*`)
+  // Only development and e2e builds fall back to the local web app. A production
+  // build without configured origins trusts no page (wxt.config.ts refuses to
+  // build one anyway).
+  const local = mode === 'development' || e2e;
+  const webOrigin = trimSlash(
+    env.WXT_WEB_ORIGIN ?? (local ? 'http://localhost:3000' : ''),
+  );
+  const patterns = (env.WXT_WEB_ORIGINS ?? (webOrigin ? `${webOrigin}/*` : ''))
     .split(',')
     .map((p) => p.trim())
     .filter(Boolean);

@@ -1,7 +1,7 @@
 'use client';
 
-import { Checkbox, TextField } from '@webable/ui';
-import { useId, useState, type Ref } from 'react';
+import { Checkbox, cx, TextField } from '@webable/ui';
+import { type ReactNode, useId, useState, type Ref } from 'react';
 
 export interface PasswordFieldProps {
   label?: string;
@@ -13,6 +13,17 @@ export interface PasswordFieldProps {
   hint?: string;
   name?: string;
   inputRef?: Ref<HTMLInputElement>;
+  /**
+   * A meta link at the right end of the label row ("Forgot your password?").
+   * It comes before the input in the DOM, so reading and focus order follow
+   * what the eye sees: label, link, field.
+   */
+  labelAside?: ReactNode;
+  /**
+   * Screen-reader words after "Show password" when a form has two password
+   * fields ("current", "new"), so the two checkboxes have different names.
+   */
+  toggleContext?: string;
 }
 
 /**
@@ -28,11 +39,18 @@ export function PasswordField({
   hint,
   name = 'password',
   inputRef,
+  labelAside,
+  toggleContext,
 }: PasswordFieldProps) {
   const [shown, setShown] = useState(false);
   const id = useId();
   return (
-    <div className="wa-password">
+    <div
+      className={cx('wa-password', labelAside ? 'wa-password--aside' : null)}
+    >
+      {labelAside ? (
+        <div className="wa-password__aside">{labelAside}</div>
+      ) : null}
       <TextField
         ref={inputRef}
         id={`${id}-password`}
@@ -54,6 +72,9 @@ export function PasswordField({
         className="wa-inline-toggle"
       >
         Show password
+        {toggleContext ? (
+          <span className="sr-only"> ({toggleContext})</span>
+        ) : null}
       </Checkbox>
     </div>
   );

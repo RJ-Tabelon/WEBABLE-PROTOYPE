@@ -2,6 +2,7 @@ import { addCounts, kalmanPoint, predictDim, probitUpdate } from './math';
 import { cloneJson, ensureOp, isDimId, isOpId } from './state';
 import {
   learnDeltaSchema,
+  RECENT_DELTA_IDS_MAX,
   type LearnDelta,
   type UserLearningState,
 } from './types';
@@ -13,8 +14,10 @@ import {
  *   decayed to a common date, so the result does not depend on arrival order;
  * - accepts add; `src` and `blocked` are last-writer-wins in day order;
  * - Kalman observations are replayed in (day, deltaId) order;
- * - deltas already applied (by deltaId), duplicated in the input, or failing
- *   the schema are ignored, so merging is idempotent.
+ * - deltas already applied (by deltaId: `applied`, or the base's own
+ *   `recentDeltaIds`), duplicated in the input, or failing the schema are
+ *   ignored, so merging is idempotent. The ids merged here are appended to
+ *   `recentDeltaIds` (newest RECENT_DELTA_IDS_MAX kept).
  *
  * `local` (optional) is this device's own state: its non-additive bookkeeping
  * (offer cooldowns, promotion ask dates, dismissal streaks, op versions) is
@@ -29,7 +32,7 @@ export function mergeLearningDeltas(
   const u = cloneJson(base);
   u.labels ??= {};
 
-  const seen = new Set<string>();
+  const seen = new Set<string>(base.recentDeltaIds ?? []);
   const fresh: LearnDelta[] = [];
   for (const raw of deltas) {
     const parsed = learnDeltaSchema.safeParse(raw);
@@ -85,6 +88,12 @@ export function mergeLearningDeltas(
       );
     }
   }
+
+  if (fresh.length > 0)
+    u.recentDeltaIds = [
+      ...(base.recentDeltaIds ?? []),
+      ...fresh.map((d) => d.deltaId),
+    ].slice(-RECENT_DELTA_IDS_MAX);
 
   if (local) {
     for (const [op, mine] of Object.entries(local.ops)) {

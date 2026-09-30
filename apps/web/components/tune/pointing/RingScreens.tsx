@@ -91,9 +91,11 @@ export function Warmup({
 }: FieldScreenProps & { onDone: () => void }) {
   const wrap = useRef<HTMLDivElement>(null);
   const width = useContentWidth(wrap, 640);
+  const viewport = useViewport();
   const [keyboard, setKeyboard] = useState(false);
   const size = input === 'touch' ? 72 : 56;
-  const height = 200;
+  // The same field as the ring that follows, so nothing jumps between screens.
+  const height = fieldLayout(width, viewport, input).heightPx;
   return (
     <FieldFrame
       title="Click each circle as it appears."

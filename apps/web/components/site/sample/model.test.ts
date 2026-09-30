@@ -5,6 +5,7 @@ import {
   ORIGINAL_FIT,
   PROFILE_FITS,
   SAMPLE_ORIGINAL,
+  adaptedStatus,
   changeCount,
   describeSample,
   ladderIndex,
@@ -91,14 +92,15 @@ describe('sample page fits', () => {
     }
   });
 
-  it('keeps the hero within three fit marks per viewport', () => {
-    const drawn = marksFor(HERO_FIT).filter((m) =>
-      ['text', 'targets', 'motion'].includes(m.id),
-    );
-    expect(drawn).toHaveLength(3);
+  it('makes exactly the three hero changes, each with its own fit mark', () => {
+    expect(marksFor(HERO_FIT).map((m) => m.id)).toEqual([
+      'text',
+      'motion',
+      'targets',
+    ]);
   });
 
-  it('gives three distinct functional fits, named for pages not people', () => {
+  it('gives three distinct fits, headed by where they came from', () => {
     expect(PROFILE_FITS.map((p) => p.id)).toEqual([
       'reading',
       'pointing',
@@ -110,11 +112,24 @@ describe('sample page fits', () => {
         .join(),
     );
     expect(new Set(signatures).size).toBe(3);
+    expect(PROFILE_FITS.map((p) => p.head)).toEqual([
+      'Fit from a reading-heavy Tune',
+      'Fit from a pointing-heavy Tune',
+      'Fit from a focus-heavy Tune',
+    ]);
     for (const p of PROFILE_FITS) {
-      expect(`${p.title} ${p.summary}`).not.toMatch(
-        /\b(people with|users with|disab|impair|patient|normal)\b/i,
+      expect(p.head).not.toMatch(
+        /\b(people with|users with|disab|impair|patient|normal|preset)\b/i,
       );
+      // Two or three inline fit marks under each crop.
+      expect(marksFor(p.fit).length).toBeGreaterThanOrEqual(2);
+      expect(marksFor(p.fit).length).toBeLessThanOrEqual(3);
     }
+  });
+
+  it('keeps the focus fit softening the page around the article', () => {
+    const focus = PROFILE_FITS.find((p) => p.id === 'focus')!;
+    expect(marksFor(focus.fit).map((m) => m.op)).toContain('focus_view');
   });
 
   it('makes no change for the original page', () => {
@@ -124,7 +139,8 @@ describe('sample page fits', () => {
 
   it('counts each change once', () => {
     expect(changeCount(HERO_FIT)).toBe(marksFor(HERO_FIT).length);
-    expect(changeCount(HERO_FIT)).toBe(4);
+    expect(changeCount(HERO_FIT)).toBe(3);
+    expect(adaptedStatus(HERO_FIT)).toBe('Adapted · 3 changes');
   });
 
   it('describes the sample in words for screen readers', () => {

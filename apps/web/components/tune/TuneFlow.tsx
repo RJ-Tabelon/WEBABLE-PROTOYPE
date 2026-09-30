@@ -4,14 +4,17 @@ import {
   analyzeLadder,
   isLargePrint,
   ringInputOf,
+  type DeviceClass,
   type DeviceContext,
   type FitProfile,
 } from '@webable/core';
-import { fitUiVars } from '@webable/core/profile/describe';
+import { fitRows, fitUiVars } from '@webable/core/profile/describe';
+import type { FitRowId } from '@webable/core/profile/describe';
 import { Actions, Button, ProgressRuler, Sheet } from '@webable/ui';
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useReducer,
   useRef,
@@ -19,6 +22,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { nudgeExtension } from '../../lib/extension/bridge';
 import { TaskShell } from '../shell/TaskShell';
 import {
   applyFitUi,
@@ -26,9 +30,10 @@ import {
   writeFitUi,
   type FitUiState,
 } from '../shell/fit-ui';
-import { YourFit, type SaveState } from './fit/YourFit';
+import { YourFit, type SaveState, type YourFitControl } from './fit/YourFit';
 import {
   browserDefaultFontPx,
+  deviceClassOf,
   deviceContextFrom,
   guessInput,
   probeEnvironment,
@@ -57,6 +62,7 @@ import {
   MODULES,
   STEP_INFO,
   isStepActive,
+  moduleOf,
   stepsOfModule,
   type ModuleId,
   type Setup,
@@ -101,14 +107,20 @@ import {
   ScreenReaderRoute,
   SIGN_IN_TO_SAVE,
 } from './screens';
-import { Deck, Rest } from './shared/primitives';
+import { FitLine, rowValue } from './shared/fit';
+import { ScreenContext } from './shared/hooks';
+import { Deck, loadStimulusFont, Rest } from './shared/primitives';
 
 export type { TuneServerActions } from './flow/persist';
 
 export interface TuneFlowProps {
   /** Present when signed in; the fit is then saved to the account. */
   actions: TuneServerActions | null;
-  /** /tune?recalibrate=1 and a current fit exists. */
+  /**
+   * The account's current fit, whenever there is one (signed in). Tune then
+   * keeps what the person set, shows Keep new / Keep old, and saves the result
+   * as a recalibration, whatever the entry point.
+   */
   previous: FitProfile | null;
   previousDate: string | null;
   /** Seed for tests; defaults to a random value per Tune. */
@@ -120,6 +132,18 @@ const RULER_SECTIONS = MODULES.map((id) => ({
   label: MODULE_LABEL[id],
   tasks: MODULE_TASKS[id],
 }));
+
+const SKIP_LABEL: Readonly<Record<ModuleId, string>> = {
+  reading: 'Skip reading',
+  pointing: 'Skip pointing',
+  focus: 'Skip focus',
+};
+
+/**
+ * Skip and Continue are ignored this long after a screen changes, so a double
+ * press on "Skip pointing" never also skips Focus.
+ */
+export const SCREEN_SETTLE_MS = 300;
 
 function randomSeed(): number {
   try {
@@ -176,6 +200,7 @@ export function TuneFlow({
   );
   const [rootFontPx, setRootFontPx] = useState(16);
   const [defaultInput, setDefaultInput] = useState<Setup['input']>('mouse');
+  const [deviceClass, setDeviceClass] = useState<DeviceClass | null>(null);
   const [stash, setStash] = useState<
     (TuneStash & { savedOn: string | null }) | null
   >(null);
@@ -193,6 +218,8 @@ export function TuneFlow({
   const session = useRef<Promise<string | null> | null>(null);
   const actionsRef = useRef(actions);
   actionsRef.current = actions;
+  const screenRef = useRef<HTMLDivElement>(null);
+  const fitControl = useRef<YourFitControl>(null);
   const recalibrating = previous !== null;
 
   // Browser-only facts, read after the first render so server and client agree.
@@ -200,6 +227,7 @@ export function TuneFlow({
     const probe = probeEnvironment();
     setRootFontPx(browserDefaultFontPx());
     setDefaultInput(guessInput(probe));
+    setDeviceClass(deviceClassOf(probe));
     storedUi.current = readFitUi();
     if (seedProp === undefined) seedRef.current = randomSeed();
     const saved = readProgress();
@@ -207,6 +235,10 @@ export function TuneFlow({
       setStash({ ...saved, savedOn: dateLabel(saved.startedAt) });
       dispatch({ type: 'stashFound' });
     }
+    // Load the stimulus face now; its metrics are measured once it is in.
+    void loadStimulusFont().then(() => {
+      metrics.current = measureStimulusFont();
+    });
     return () => {
       // Leaving Tune without choosing a fit puts WebAble's own look back.
       if (!committedUi.current) applyFitUi(readFitUi());
@@ -223,6 +255,23 @@ export function TuneFlow({
   const setup = state.setup;
   const active = !state.paused;
   const epoch = state.pauseEpoch;
+  const screenKey = leftForLater ? 'later' : step;
+
+  // Skip and Continue wait out a short settle after every screen change.
+  const screenAt = useRef(0);
+  useLayoutEffect(() => {
+    screenAt.current = performance.now();
+    // A new screen starts at the top, like a new page (the bars pinned or not).
+    const main = screenRef.current?.closest('main');
+    if (main) main.scrollTop = 0;
+    if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
+  }, [screenKey]);
+  const settled = () =>
+    performance.now() - screenAt.current >= SCREEN_SETTLE_MS;
+  const next = () => {
+    if (!settled()) return;
+    send({ type: 'continue', step, now: now() });
+  };
 
   // The chrome wears the chosen reading size from the first screen on (design-final §9.2).
   const comfortPx =
@@ -279,7 +328,10 @@ export function TuneFlow({
     openSession();
     send({
       type: 'restore',
-      stash: { ...stash, setup: { ...stash.setup, ...env } },
+      stash: {
+        ...stash,
+        setup: { ...stash.setup, ...env, recalibrate: recalibrating },
+      },
       rootFontPx,
       now: now(),
     });
@@ -352,6 +404,35 @@ export function TuneFlow({
     return nearest.medianMoveMs;
   }, [state.summaries.pointing]);
 
+  /**
+   * The rest screens' one real value from the part that just finished: the
+   * fit so far, against what sites do on their own ("Text size 16 → 20 px").
+   */
+  const partSoFar = useMemo(() => {
+    const rest =
+      step === 'before.pointing' ||
+      step === 'before.focus' ||
+      step === 'pointing.keyboard';
+    if (!rest || !device.current || !state.startedAt) return null;
+    const { profile } = deriveProfile({
+      device: device.current,
+      modules: state.summaries,
+      startedAt: state.startedAt,
+      completedAt: state.startedAt,
+    });
+    return fitRows(profile, undefined, { browserDefaultPx: rootFontPx });
+  }, [step, state.summaries, state.startedAt, rootFontPx]);
+
+  const restFit = (module: ModuleId, id: FitRowId): ReactNode => {
+    if (!moduleMeasured(state, module)) return null;
+    const row = partSoFar?.find((r) => r.id === id);
+    if (!row || !row.changesPages) return null;
+    const value = rowValue(row);
+    return value.kind === 'same' ? null : (
+      <FitLine label={row.label} value={value} />
+    );
+  };
+
   /* ---------- Your fit ---------- */
 
   const [finished, setFinished] = useState<{
@@ -373,8 +454,10 @@ export function TuneFlow({
     );
   }, [step, finished, state.summaries, state.startedAt, previous]);
 
+  const [chosen, setChosen] = useState<FitProfile | null>(null);
   const chooseFit = async (profile: FitProfile) => {
     if (!finished || save.kind === 'saving') return;
+    setChosen(profile);
     // WebAble's own UI wears the fit at once (design-final §2.3).
     const ui = fitUiVars(profile);
     writeFitUi({
@@ -414,9 +497,21 @@ export function TuneFlow({
     }
     session.current = null;
     clearProgress();
+    // The extension in this browser picks the new fit up now, not at its next sync.
+    void nudgeExtension();
     setSave({ kind: 'idle' });
     send({ type: 'saved' });
   };
+
+  /** The chosen fit's rows, for the end screen's list of values. */
+  const keptProfile = chosen ?? finished?.profile ?? null;
+  const doneRows = useMemo(
+    () =>
+      keptProfile
+        ? fitRows(keptProfile, undefined, { browserDefaultPx: rootFontPx })
+        : [],
+    [keptProfile, rootFontPx],
+  );
 
   /* ---------- Pause and skip ---------- */
 
@@ -431,7 +526,10 @@ export function TuneFlow({
     send({ type: 'unpause' });
     window.setTimeout(() => setLeftForLater(true), 0);
   };
-  const skip = () => send({ type: 'skipPart', step, now: now() });
+  const skip = () => {
+    if (!settled()) return;
+    send({ type: 'skipPart', step, now: now() });
+  };
 
   /* ---------- Screens ---------- */
 
@@ -447,6 +545,7 @@ export function TuneFlow({
           key={defaultInput}
           defaultInput={defaultInput}
           recalibrate={recalibrating}
+          deviceClass={deviceClass}
           onBegin={begin}
         />
       );
@@ -462,11 +561,7 @@ export function TuneFlow({
       ) : null;
       break;
     case 'sr-route':
-      screen = (
-        <ScreenReaderRoute
-          onContinue={() => send({ type: 'continue', step, now: now() })}
-        />
-      );
+      screen = <ScreenReaderRoute onContinue={next} />;
       break;
     case 'reading.comfort':
       screen = (
@@ -551,13 +646,14 @@ export function TuneFlow({
       screen = (
         <Rest
           done={moduleMeasured(state, 'reading') ? 'Reading is done.' : null}
+          fit={restFit('reading', 'textSize')}
           title="Next, pointing."
           action={
             <Button
               variant="primary"
               size="task"
               arrow="forward"
-              onClick={() => send({ type: 'continue', step, now: now() })}
+              onClick={next}
             >
               Continue
             </Button>
@@ -580,7 +676,8 @@ export function TuneFlow({
       screen = (
         <KeyboardPointing
           readingDone={moduleMeasured(state, 'reading')}
-          onContinue={() => send({ type: 'continue', step, now: now() })}
+          fit={restFit('reading', 'textSize')}
+          onContinue={next}
         />
       );
       break;
@@ -663,6 +760,7 @@ export function TuneFlow({
       screen = (
         <Rest
           done={moduleMeasured(state, 'pointing') ? 'Pointing is done.' : null}
+          fit={restFit('pointing', 'targets')}
           title={
             screenReader ? 'One last question.' : 'Next, a few everyday pages.'
           }
@@ -671,7 +769,7 @@ export function TuneFlow({
               variant="primary"
               size="task"
               arrow="forward"
-              onClick={() => send({ type: 'continue', step, now: now() })}
+              onClick={next}
             >
               {screenReader ? 'Continue' : 'Start'}
             </Button>
@@ -758,9 +856,10 @@ export function TuneFlow({
       screen = (
         <Chips
           screenReader={setup?.assistive === 'screen-reader'}
-          onDone={(chips) =>
-            send({ type: 'focus/chips', step, chips, now: now() })
-          }
+          onDone={(chips) => {
+            if (!settled()) return;
+            send({ type: 'focus/chips', step, chips, now: now() });
+          }}
         />
       );
       break;
@@ -774,25 +873,76 @@ export function TuneFlow({
           signedIn={actions !== null}
           save={save}
           onUse={(p) => void chooseFit(p)}
+          controlRef={fitControl}
         />
       ) : null;
       break;
     case 'done':
-      screen = actions ? (
-        <SavedSignedIn recalibration={recalibrating} />
-      ) : (
-        <SavedLocally />
-      );
+      screen = actions ? <SavedSignedIn /> : <SavedLocally rows={doneRows} />;
       break;
   }
 
   if (leftForLater) screen = <SavedForLater />;
 
-  const hideActions = leftForLater || !STEP_INFO[step].actions;
-  const progressText =
-    step === 'intro' || step === 'resume'
-      ? `3 parts · about 6 min`
-      : (progress.text ?? undefined);
+  /* ---------- The frame: ruler, progress line, action bar ---------- */
+
+  const module = moduleOf(step);
+  const taskScreen = !leftForLater && STEP_INFO[step].actions;
+  const fitStep = !leftForLater && step === 'fit' && finished !== null;
+
+  let ruler: ReactNode | false = (
+    <ProgressRuler
+      sections={RULER_SECTIONS}
+      current={progress.section}
+      taskIndex={progress.taskIndex}
+    />
+  );
+  let progressFull: string | undefined = progress.text ?? undefined;
+  let progressShort: string | undefined = progress.short ?? undefined;
+  if (leftForLater || step === 'intro' || step === 'sr-route') {
+    // The intro's list of parts is its ruler; the other two are not in a part.
+    ruler = false;
+    progressFull = undefined;
+    progressShort = undefined;
+  } else if (step === 'resume') {
+    // The part the saved Tune picks up at.
+    ruler = stash ? (
+      <ProgressRuler
+        sections={RULER_SECTIONS}
+        current={MODULES.indexOf(stash.resumeModule)}
+        taskIndex={0}
+      />
+    ) : (
+      false
+    );
+    progressFull = undefined;
+    progressShort = undefined;
+  }
+
+  const saving = save.kind === 'saving';
+  const fitActions = fitStep ? (
+    <>
+      <Button
+        variant="primary"
+        size="task"
+        arrow="forward"
+        busy={saving}
+        busyLabel="Saving…"
+        onClick={() => fitControl.current?.use()}
+      >
+        {recalibrating ? 'Save my fit' : 'Use this fit'}
+      </Button>
+      <Button
+        variant="secondary"
+        size="task"
+        disabled={saving}
+        onClick={() => fitControl.current?.adjustFirst()}
+      >
+        Adjust first
+      </Button>
+    </>
+  ) : undefined;
+
   const announcement =
     step === 'fit'
       ? 'All 3 parts done. Your fit is ready.'
@@ -803,23 +953,30 @@ export function TuneFlow({
   return (
     <>
       <TaskShell
-        ruler={
-          <ProgressRuler
-            sections={RULER_SECTIONS}
-            current={progress.section}
-            taskIndex={progress.taskIndex}
-          />
-        }
-        progressText={leftForLater ? undefined : progressText}
-        onPause={hideActions ? undefined : pause}
-        onSkip={hideActions ? undefined : skip}
-        hideActions={hideActions}
+        ruler={ruler}
+        progress={progressFull}
+        progressShort={progressShort}
+        skipLabel={module ? SKIP_LABEL[module] : undefined}
+        onPause={taskScreen ? pause : undefined}
+        onSkip={taskScreen ? skip : undefined}
+        actions={fitActions}
+        hideActions={!taskScreen && !fitStep}
         idleKey={`${step}-${epoch}`}
         announcement={announcement}
       >
-        <div className="tn-screen" data-step={step}>
-          {screen}
-        </div>
+        <ScreenContext.Provider value={screenRef}>
+          <div
+            key={screenKey}
+            ref={screenRef}
+            className="tn-screen"
+            data-step={step}
+            // Clicking inside the screen keeps focus in it, so the task keys
+            // still work; they never fire from the action bar (WCAG 2.1.4).
+            tabIndex={-1}
+          >
+            {screen}
+          </div>
+        </ScreenContext.Provider>
       </TaskShell>
       <Sheet
         open={state.paused}
@@ -828,7 +985,8 @@ export function TuneFlow({
         }}
         title="Paused"
         description="Your answers so far are saved."
-        closeLabel="Resume"
+        // Resume and Esc close the sheet; it has no close button of its own.
+        className="tn-pause"
         actions={
           <Actions>
             <Button

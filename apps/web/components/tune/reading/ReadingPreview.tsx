@@ -4,7 +4,13 @@ import type { Polarity, ReadingSession, VisionFit } from '@webable/core';
 import { Button, SegmentedControl, SwitchRow } from '@webable/ui';
 import { useState, type CSSProperties } from 'react';
 
-import { Deck, TaskHeading } from '../shared/primitives';
+import { changeValue, FitLine, PlainLine } from '../shared/fit';
+import {
+  Deck,
+  OptionGroup,
+  TaskHeading,
+  type ChoiceOption,
+} from '../shared/primitives';
 import { stepComfort } from './geometry';
 
 export interface ReadingPreviewProps {
@@ -14,7 +20,11 @@ export interface ReadingPreviewProps {
   onDone: (overrides: ReadingSession['overrides']) => void;
 }
 
-const NBSP = ' ';
+const COLORS: ReadonlyArray<ChoiceOption<Polarity>> = [
+  { value: 'none', label: 'Site' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+];
 
 /** Page colours for the preview frame: a page, not WebAble's own surface. */
 export function polarityColors(polarity: Polarity): CSSProperties {
@@ -86,15 +96,28 @@ export function ReadingPreview({
     onDone(overrides);
   };
 
+  const shownPx = Math.round(textPx);
   return (
     <>
       <TaskHeading>Here&rsquo;s your text.</TaskHeading>
-      <Deck>
-        This is how running text will read on pages. Change anything that
-        doesn&rsquo;t feel right.
-      </Deck>
+      <Deck>This is how running text will read on pages.</Deck>
       <div className="tn-preview">
         <div className="tn-preview__bar">
+          <p className="tn-preview__value" aria-live="polite">
+            {fitted && shownPx !== rootFontPx ? (
+              <FitLine
+                label="Text size"
+                value={changeValue(rootFontPx, shownPx, 'px')}
+              />
+            ) : (
+              <PlainLine
+                label="Text size"
+                value={fitted ? shownPx : rootFontPx}
+                unit="px"
+                spoken={`${fitted ? shownPx : rootFontPx} pixels`}
+              />
+            )}
+          </p>
           <SegmentedControl<'original' | 'fitted'>
             label="Show"
             value={view}
@@ -104,11 +127,6 @@ export function ReadingPreview({
               { value: 'fitted', label: 'Fitted' },
             ]}
           />
-          <p className="tn-readout" aria-live="polite">
-            <span className="sr-only">Text size </span>
-            {fitted ? Math.round(textPx) : rootFontPx}
-            {NBSP}px
-          </p>
         </div>
         <div className="tn-preview__frame">
           <SampleArticle style={style} />
@@ -141,29 +159,27 @@ export function ReadingPreview({
             Larger
           </Button>
         </div>
-        <SegmentedControl<Polarity>
-          label="Colors"
+        <OptionGroup<Polarity>
+          legend="Colors"
+          options={COLORS}
           value={polarity}
-          onValueChange={(v) => {
+          onChange={(v) => {
             setView('fitted');
             setPolarity(v);
           }}
-          options={[
-            { value: 'none', label: 'Site colors' },
-            { value: 'light', label: 'Light' },
-            { value: 'dark', label: 'Dark' },
-          ]}
         />
-        <SwitchRow
-          label="More spacing"
-          description="More room between lines and words."
-          checked={moreSpacing}
-          onCheckedChange={(v) => {
-            setView('fitted');
-            setMoreSpacing(v);
-          }}
-          changesPage
-        />
+        <div className="tn-adjust-grid__row">
+          <SwitchRow
+            label="More spacing"
+            description="More room between lines and words."
+            checked={moreSpacing}
+            onCheckedChange={(v) => {
+              setView('fitted');
+              setMoreSpacing(v);
+            }}
+            changesPage
+          />
+        </div>
       </div>
       <div className="tn-controls">
         <Button variant="primary" size="task" arrow="forward" onClick={finish}>
