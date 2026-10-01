@@ -5,7 +5,13 @@ import {
 } from '@webable/core/policy/fixtures';
 import type { Page } from '@playwright/test';
 
-import { computed, expect, test, type Extension } from './extension';
+import {
+  computed,
+  expect,
+  FIXTURE_ORIGIN,
+  test,
+  type Extension,
+} from './extension';
 import { fakeSession, startDecideStub } from './supabase-stub';
 
 /**
@@ -506,6 +512,187 @@ test.describe('keyboard and targets', () => {
     const welcome = await ext.context.newPage();
     await welcome.goto(`chrome-extension://${ext.id}/welcome.html`);
     expect(await smallTargets(welcome)).toEqual([]);
+  });
+});
+
+test.describe('turning WebAble off and on', () => {
+  const fontOf = (page: Page) => computed(page, STORY, 'font-size');
+
+  test('an open page goes back to the original, then adapts again without a reload', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    const { page, tabId } = await ext.openFixture('article');
+    await expect.poll(() => fontOf(page)).not.toBe('13px');
+    const fitted = await fontOf(page);
+
+    await ext.send({ type: 'ui:enabled', enabled: false });
+    await expect.poll(() => fontOf(page)).toBe('13px');
+
+    await ext.send({ type: 'ui:enabled', enabled: true });
+    await expect.poll(() => fontOf(page)).toBe(fitted);
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.phase)
+      .toBe('ready');
+  });
+
+  test('a page that loaded while WebAble was off adapts when it is turned on', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    await ext.send({ type: 'ui:enabled', enabled: false });
+    const { page, tabId } = await ext.openFixture('article', { settle: false });
+    await page.waitForTimeout(800);
+    expect(await fontOf(page)).toBe('13px');
+
+    await ext.send({ type: 'ui:enabled', enabled: true });
+    await expect.poll(() => fontOf(page)).not.toBe('13px');
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.phase)
+      .toBe('ready');
+    const popup = await ext.openPopup(tabId);
+    await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
+      /^Adapted/,
+    );
+  });
+
+  test('pausing and resuming a site on an open page re-applies its changes', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    const { page, tabId } = await ext.openFixture('article');
+    await expect.poll(() => fontOf(page)).not.toBe('13px');
+    const fitted = await fontOf(page);
+    const popup = await ext.openPopup(tabId);
+    const siteSwitch = popup.getByRole('switch', {
+      name: 'WebAble on this site',
+    });
+    await siteSwitch.click();
+    await expect.poll(() => fontOf(page)).toBe('13px');
+    await siteSwitch.click();
+    await expect.poll(() => fontOf(page)).toBe(fitted);
+    await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
+      /^Adapted/,
+    );
+  });
+
+  test('every page reached by following links in the same tab adapts', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    const { page, tabId } = await ext.openFixture('store');
+    // The commit and the new page's hello race; repeat to catch an interleaving.
+    for (let i = 0; i < 5; i += 1) {
+      const next =
+        i % 2 === 0
+          ? `${FIXTURE_ORIGIN}/engine/article.html?hop=${i}`
+          : `${FIXTURE_ORIGIN}/engine/store.html?hop=${i}`;
+      await page.evaluate((url) => {
+        const a = document.createElement('a');
+        a.href = url;
+        a.id = 'next';
+        a.textContent = 'Next';
+        document.body.prepend(a);
+      }, next);
+      const before = (await ext.tabState(tabId))?.tabSession;
+      await page.click('#next');
+      await page.waitForURL(next);
+      // A new page view, adapted: its own session, the engine on record, ready.
+      await expect
+        .poll(
+          async () => {
+            const t = await ext.tabState(tabId);
+            return Boolean(
+              t?.engine &&
+              t.phase === 'ready' &&
+              t.tabSession &&
+              t.tabSession !== before,
+            );
+          },
+          { timeout: 10_000 },
+        )
+        .toBe(true);
+      if (i % 2 === 0)
+        await expect
+          .poll(() => computed(page, STORY, 'font-size'))
+          .not.toBe('13px');
+    }
+  });
+
+  test('a prerendered page leaves the current page alone, and adapts once it is shown', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    const { page, tabId } = await ext.openFixture('store');
+    const before = await ext.tabState(tabId);
+    expect(before?.phase).toBe('ready');
+
+    // Chrome preloads the article in the background, as it does for search results.
+    const target = `${FIXTURE_ORIGIN}/engine/article.html?prerender=1`;
+    await page.evaluate((url) => {
+      const rules = document.createElement('script');
+      rules.type = 'speculationrules';
+      rules.textContent = JSON.stringify({
+        prerender: [{ source: 'list', urls: [url] }],
+      });
+      document.head.append(rules);
+      const a = document.createElement('a');
+      a.href = url;
+      a.id = 'go';
+      a.textContent = 'Article';
+      document.body.prepend(a);
+    }, target);
+    await page.waitForTimeout(1500);
+    // The tab still shows the store, and its record is untouched.
+    const during = await ext.tabState(tabId);
+    expect(during?.phase).toBe('ready');
+    expect(during?.changes).toEqual(before?.changes);
+
+    await page.click('#go');
+    await page.waitForURL(target);
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .not.toBe('13px');
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.phase)
+      .toBe('ready');
+    const prerendered = await page.evaluate(
+      () =>
+        (
+          performance.getEntriesByType(
+            'navigation',
+          )[0] as PerformanceNavigationTiming & { activationStart?: number }
+        ).activationStart ?? 0,
+    );
+    test.info().annotations.push({
+      type: 'prerender',
+      description:
+        prerendered > 0 ? 'activated from prerender' : 'not prerendered',
+    });
+  });
+
+  test('a page that loaded while its site was paused adapts on resume, without a reload', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    const first = await ext.openFixture('article');
+    await expect.poll(() => fontOf(first.page)).not.toBe('13px');
+    const fitted = await fontOf(first.page);
+    await ext.send({
+      type: 'ui:pause-site',
+      tabId: first.tabId,
+      paused: true,
+    });
+    await first.page.close();
+
+    const { page, tabId } = await ext.openFixture('article', { settle: false });
+    await page.waitForTimeout(800);
+    expect(await fontOf(page)).toBe('13px');
+    await ext.send({ type: 'ui:pause-site', tabId, paused: false });
+    await expect.poll(() => fontOf(page)).toBe(fitted);
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.phase)
+      .toBe('ready');
   });
 });
 

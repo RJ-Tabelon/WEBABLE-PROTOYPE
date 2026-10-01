@@ -99,6 +99,21 @@ function domReady(doc: Document): Promise<void> {
   );
 }
 
+/**
+ * A prerendered page (Chrome preloads search results and address-bar
+ * suggestions) speaks only once it is shown: until then the tab still shows
+ * the page the person is on, and that page's record must stay as it is.
+ */
+function activated(doc: Document): Promise<void> {
+  if (!(doc as Document & { prerendering?: boolean }).prerendering)
+    return Promise.resolve();
+  return new Promise((resolve) =>
+    doc.addEventListener('prerenderingchange', () => resolve(), {
+      once: true,
+    }),
+  );
+}
+
 function visible(doc: Document): Promise<void> {
   if (!doc.hidden) return Promise.resolve();
   return new Promise((resolve) => {
@@ -118,6 +133,9 @@ export class ContentAdapter {
   /** The last plan applied here, reported again on a restore. */
   private planId: string | null = null;
   private stopped = false;
+  /** A start in flight (first load, or waking after WebAble was off). */
+  private booting: Promise<void> | null = null;
+  private planning: Promise<void> | null = null;
   private offPageShow: (() => void) | null = null;
   private readonly doc: Document;
 
@@ -146,20 +164,39 @@ export class ContentAdapter {
       view.addEventListener('pageshow', onShow);
       this.offPageShow = () => view.removeEventListener('pageshow', onShow);
     }
+    await activated(this.doc);
+    await this.boot();
+  }
+
+  /**
+   * Hello, then (when WebAble may run here) create the engine and adapt. Also
+   * how a dormant adapter wakes: a page that loaded while WebAble was off has
+   * no engine until the worker resumes it or injects again.
+   */
+  private boot(): Promise<void> {
+    if (this.engine || this.stopped) return Promise.resolve();
+    this.booting ??= this.bootNow().finally(() => {
+      this.booting = null;
+    });
+    return this.booting;
+  }
+
+  private async bootNow(): Promise<void> {
     let hello: HelloReply;
     try {
       hello = await this.opts.transport.send({ type: 'cs:hello' });
     } catch {
       return; // no service worker (extension reloading): leave the page untouched
     }
+    if (this.stopped || !hello) return;
     this.hello = hello;
     if (!hello.enabled) {
       setOffGate(this.doc, 'all', true);
       return;
     }
-    if (hello.paused) setOffGate(this.doc, 'all', true);
+    setOffGate(this.doc, 'all', hello.paused);
     await domReady(this.doc);
-    if (this.stopped) return;
+    if (this.stopped || this.engine) return;
     this.engine = new Engine({
       doc: this.doc,
       vocab: this.opts.vocab,
@@ -176,8 +213,15 @@ export class ContentAdapter {
     await this.plan(true);
   }
 
-  /** Extract, ask for a plan, apply it as a fresh decision, report. */
-  private async plan(first: boolean): Promise<void> {
+  /** Extract, ask for a plan, apply it as a fresh decision, report. One at a time. */
+  private plan(first: boolean): Promise<void> {
+    this.planning ??= this.planNow(first).finally(() => {
+      this.planning = null;
+    });
+    return this.planning;
+  }
+
+  private async planNow(first: boolean): Promise<void> {
     const engine = this.engine;
     if (!engine || this.stopped || engine.isPaused) return;
     let x;
@@ -186,11 +230,21 @@ export class ContentAdapter {
     } catch {
       return; // unreadable page: status says so; nothing applied
     }
-    const reply = await this.opts.transport.send({
-      type: 'cs:signals',
-      signals: x.signals,
-      evidence: x.evidence,
-    });
+    const ask = () =>
+      this.opts.transport
+        .send({
+          type: 'cs:signals',
+          signals: x.signals,
+          evidence: x.evidence,
+        })
+        .catch(() => undefined);
+    // No answer usually means Chrome restarted the service worker mid-request:
+    // ask once more rather than leave the page waiting.
+    let reply = await ask();
+    if (!reply?.plan && !this.stopped) {
+      await new Promise((r) => setTimeout(r, 1000));
+      reply = await ask();
+    }
     if (!reply?.plan || this.stopped) return;
     const changes = await this.applyAndReport(reply.plan, { replace: true });
     // The toast is for the first automatic changes on a site; the service
@@ -215,7 +269,10 @@ export class ContentAdapter {
    * and changes. Before the first hello has been answered, start() reports.
    */
   async restored(): Promise<void> {
-    if (this.stopped || !this.hello) return;
+    if (this.stopped) return;
+    // Dormant (it loaded while WebAble was off): start properly instead.
+    if (!this.engine) return this.boot();
+    if (!this.hello) return;
     let hello: HelloReply;
     try {
       hello = await this.opts.transport.send({
@@ -299,6 +356,16 @@ export class ContentAdapter {
       return reply;
     }
     if (!engine) {
+      // Dormant: WebAble was off when this page loaded. Wake on resume or a plan.
+      if (msg.type === 'sw:resume' || msg.type === 'sw:plan') {
+        void this.boot().catch(() => undefined);
+        return msg.type === 'sw:resume'
+          ? ({
+              changes: [],
+              restarting: true,
+            } satisfies WorkerReplies['sw:resume'])
+          : { changes: [] };
+      }
       if (msg.type === 'sw:pause') setOffGate(this.doc, 'all', true);
       return msg.type === 'sw:pause' ||
         msg.type === 'sw:show-on-page' ||
@@ -331,10 +398,18 @@ export class ContentAdapter {
       case 'sw:pause':
         await engine.pause();
         return { ok: true } satisfies WorkerReplies['sw:pause'];
-      case 'sw:resume':
-        return {
-          changes: await engine.resume(),
-        } satisfies WorkerReplies['sw:resume'];
+      case 'sw:resume': {
+        const changes = await engine.resume();
+        // Paused since it loaded, so nothing was ever planned here: plan now.
+        if (this.planId === null) {
+          void this.plan(true).catch(() => undefined);
+          return {
+            changes,
+            restarting: true,
+          } satisfies WorkerReplies['sw:resume'];
+        }
+        return { changes } satisfies WorkerReplies['sw:resume'];
+      }
       case 'sw:show-on-page':
         engine.showOnPage(msg.op, msg.on);
         return { ok: true } satisfies WorkerReplies['sw:show-on-page'];

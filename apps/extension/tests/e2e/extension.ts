@@ -38,6 +38,7 @@ export type Fixture = 'article' | 'store' | 'app' | 'clip' | 'shadow' | 'spa';
 export interface TabState {
   tabId: number;
   domain: string | null;
+  tabSession?: string | null;
   phase: string;
   engine: boolean;
   changes: Array<{ op: string; status: string; level: number }>;

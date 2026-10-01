@@ -442,6 +442,13 @@ export function startServiceWorker(): void {
   });
   browser.webNavigation.onCommitted.addListener((details) => {
     if (details.frameId !== 0) return;
+    // A prerendered page commits in the background while the tab still shows
+    // the current page; its engine says hello when it is shown.
+    if (
+      (details as { documentLifecycle?: string }).documentLifecycle ===
+      'prerender'
+    )
+      return;
     void worker
       .navigated(
         details.tabId,

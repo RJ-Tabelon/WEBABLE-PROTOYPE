@@ -214,6 +214,26 @@ export class Worker {
   private lastRegistration = '';
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly injectedAt = new Map<number, number>();
+  /**
+   * Per-tab queue for page-view boundaries. A navigation commit and the new
+   * page's hello arrive close together; run concurrently, the commit's reset
+   * could land after the hello and erase the new page view, which then never
+   * adapts.
+   */
+  private readonly tabQueues = new Map<number, Promise<unknown>>();
+
+  private serial<T>(tabId: number, run: () => Promise<T>): Promise<T> {
+    const next = (this.tabQueues.get(tabId) ?? Promise.resolve())
+      .catch(() => undefined)
+      .then(run);
+    this.tabQueues.set(tabId, next);
+    void next
+      .catch(() => undefined)
+      .then(() => {
+        if (this.tabQueues.get(tabId) === next) this.tabQueues.delete(tabId);
+      });
+    return next;
+  }
   private granting: Promise<void> | null = null;
 
   constructor(private readonly d: WorkerDeps) {
@@ -364,6 +384,14 @@ export class Worker {
   // =========================================================================
 
   async hello(
+    tabId: number,
+    frameId: number,
+    url: string | undefined,
+  ): Promise<HelloReply> {
+    return this.serial(tabId, () => this.helloNow(tabId, frameId, url));
+  }
+
+  private async helloNow(
     tabId: number,
     frameId: number,
     url: string | undefined,
@@ -1027,6 +1055,17 @@ export class Worker {
     committedAt: number,
     qualifiers: readonly string[] = [],
   ): Promise<void> {
+    return this.serial(tabId, () =>
+      this.navigatedNow(tabId, url, committedAt, qualifiers),
+    );
+  }
+
+  private async navigatedNow(
+    tabId: number,
+    url: string | undefined,
+    committedAt: number,
+    qualifiers: readonly string[],
+  ): Promise<void> {
     const tab = await this.d.tabs.peek(tabId);
     // The new page's engine already said hello: this commit is not news.
     if (
@@ -1063,7 +1102,11 @@ export class Worker {
    * a view now): end the page view that was left. `at` limits this to one
    * commit, so a later navigation is left alone.
    */
-  private async settleRestore(tabId: number, at?: number): Promise<void> {
+  private settleRestore(tabId: number, at?: number): Promise<void> {
+    return this.serial(tabId, () => this.settleRestoreNow(tabId, at));
+  }
+
+  private async settleRestoreNow(tabId: number, at?: number): Promise<void> {
     const r = (await this.d.tabs.peek(tabId))?.restoring;
     if (!r || (at !== undefined && r.at !== at)) return;
     await this.endPageView(tabId);
@@ -1423,6 +1466,10 @@ export class Worker {
       500,
     );
     if (!alive && !(await this.injectOnce(tabId))) return false;
+    // An engine that answers but never planned here (the page loaded while
+    // WebAble was off, or paused): wake it; it reports like a fresh load.
+    if (alive && alive.status === 'idle' && alive.changes.length === 0)
+      await this.d.port.sendToTab(tabId, { type: 'sw:resume' });
     await this.d.tabs.update(tabId, (t) => {
       t.engine = true;
       t.phase = alive?.status === 'unreadable' ? 'unreadable' : 'checking';
@@ -1859,19 +1906,35 @@ export class Worker {
         } else t.needsReload = true;
       });
     } else {
-      const reply = await this.d.port.sendToTab(tabId, { type: 'sw:resume' });
-      const replanned = await this.replan(tabId);
-      if (!replanned) {
-        if (reply && reply.changes.length > 0)
-          await this.processChanges(tabId, reply.changes);
-        else
-          await this.d.tabs.update(tabId, (t) => {
-            t.needsReload = true;
-          });
-      }
+      await this.resumeTab(tabId);
     }
     await this.reconcileRegistration();
     await this.afterChange(tabId);
+  }
+
+  /**
+   * Resume a tab's engine after a pause or WebAble being off. An engine that
+   * never planned on this page plans now (`restarting`) and reports like a
+   * fresh load; otherwise the page re-plans from its last reading.
+   */
+  private async resumeTab(tabId: number): Promise<void> {
+    const reply = await this.d.port.sendToTab(tabId, { type: 'sw:resume' });
+    if (reply?.restarting) {
+      await this.d.tabs.update(tabId, (t) => {
+        t.phase = 'checking';
+        t.checkingSince = this.now;
+        t.needsReload = false;
+      });
+      return;
+    }
+    if (await this.replan(tabId)) return;
+    if (reply && reply.changes.length > 0)
+      await this.processChanges(tabId, reply.changes);
+    else if (!reply && (await this.startEngine(tabId))) return;
+    else
+      await this.d.tabs.update(tabId, (t) => {
+        t.needsReload = true;
+      });
   }
 
   /** Show on page (the popup's toggle); the tab remembers it until the next page view. */
@@ -2036,16 +2099,7 @@ export class Worker {
             t.needsReload = true;
           });
       } else {
-        const reply = await this.d.port.sendToTab(tab.tabId, {
-          type: 'sw:resume',
-        });
-        if (await this.replan(tab.tabId)) continue;
-        if (reply && reply.changes.length > 0)
-          await this.processChanges(tab.tabId, reply.changes);
-        else
-          await this.d.tabs.update(tab.tabId, (t) => {
-            t.needsReload = true;
-          });
+        await this.resumeTab(tab.tabId);
       }
       await this.afterChange(tab.tabId);
     }
@@ -2081,22 +2135,26 @@ export class Worker {
 
   async setEnabled(enabled: boolean): Promise<void> {
     await this.d.stores.settings.update((s) => ({ ...s, enabled }));
+    // Turning on registers the engine first, so tabs without one can start it.
+    if (enabled) await this.reconcileRegistration();
     for (const tab of await this.d.tabs.all()) {
-      if (!tab.engine) continue;
       if (!enabled) {
+        if (!tab.engine) continue;
         await this.resetZoom(tab.tabId);
         await this.d.port.sendToTab(tab.tabId, { type: 'sw:pause' });
         await this.d.tabs.update(tab.tabId, (t) => {
           t.changes = [];
           t.offer = null;
         });
-      } else {
-        await this.d.port.sendToTab(tab.tabId, { type: 'sw:resume' });
-        if (!(await this.replan(tab.tabId)))
-          await this.d.tabs.update(tab.tabId, (t) => {
-            t.needsReload = true;
-          });
+        continue;
       }
+      if (tab.access !== 'web' || !tab.domain) continue;
+      const site = await this.d.stores.sites.get(tab.domain);
+      if (site.rule.paused) continue;
+      // Pages that loaded while WebAble was off adapt now, without a reload.
+      if (!tab.engine) await this.startEngine(tab.tabId);
+      else await this.resumeTab(tab.tabId);
+      await this.refreshBadge(tab.tabId);
     }
     await this.reconcileRegistration();
     await this.refreshAllBadges();

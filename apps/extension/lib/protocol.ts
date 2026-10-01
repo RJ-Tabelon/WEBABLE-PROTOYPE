@@ -122,7 +122,12 @@ export interface WorkerReplies {
   'sw:undo': { changes: AppliedChange[] };
   'sw:set-level': { changes: AppliedChange[] };
   'sw:pause': { ok: true };
-  'sw:resume': { changes: AppliedChange[] };
+  /**
+   * `restarting`: nothing was planned on this page yet (it loaded while
+   * WebAble was off or the site was paused). The engine is planning now and
+   * reports with cs:signals and cs:applied like a fresh load.
+   */
+  'sw:resume': { changes: AppliedChange[]; restarting?: true };
   'sw:show-on-page': { ok: true };
   'sw:reading-guide': { ok: true };
   'sw:offer': { ok: true };
