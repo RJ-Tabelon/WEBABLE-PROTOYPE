@@ -1,0 +1,5 @@
+/* AI-generated. Tier 0 sample adaptation: bump body text size + line height. */
+p, li, button, a {
+  font-size: 1.25em !important;
+  line-height: 1.6 !important;
+}

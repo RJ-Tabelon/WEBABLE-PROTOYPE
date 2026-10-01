@@ -86,6 +86,16 @@ test('reads the active page and displays its content', async () => {
           .evaluate((element) => getComputedStyle(element).fontSize),
       )
       .toBe('16px');
+
+    await popup.getByRole('button', { name: 'Reset all' }).click();
+    await expect
+      .poll(() =>
+        page
+          .locator('#tiny')
+          .evaluate((element) => getComputedStyle(element).fontSize),
+      )
+      .toBe('10px');
+    await expect(popup.getByLabel('Minimum 16px text')).not.toBeChecked();
   } finally {
     await context.close();
   }

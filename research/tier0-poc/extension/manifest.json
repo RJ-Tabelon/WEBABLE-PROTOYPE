@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "WebAble Tier 0 Renderer PoC",
+  "version": "0.1.0",
+  "description": "Research PoC: user-origin CSS -> adopted stylesheets -> DOM fallback.",
+  "permissions": ["scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ]
+}

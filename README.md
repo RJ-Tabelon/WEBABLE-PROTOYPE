@@ -45,6 +45,7 @@ The unpacked production extension is written to `apps/extension/.output/chrome-m
 
 ```text
 apps/extension/     WXT Manifest V3 extension and React popup
+apps/website/       Static landing page with a live demo (open index.html)
 packages/shared/    Zod schemas and shared TypeScript types
 docs/               Research and product decisions
 ```
