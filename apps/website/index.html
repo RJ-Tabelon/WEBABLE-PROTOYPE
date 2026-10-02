@@ -11,26 +11,40 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,600&display=swap"
       rel="stylesheet"
     />
     <style>
       :root {
-        --bg: #f6f8f5;
-        --surface: #ffffff;
-        --surface-sunk: #e9efe9;
-        --text: #13201a;
-        --text-muted: #3f5248;
-        --border: #c9d6cc;
-        --brand: #176b46;
-        --brand-hover: #105638;
-        --on-brand: #ffffff;
-        --brand-soft: #e1f0e6;
-        --bad: #8f2a1f;
-        --focus: #f0a629;
-        --shadow: 0 1px 2px rgb(19 32 26 / 6%), 0 12px 32px rgb(19 32 26 / 8%);
-        --radius: 18px;
+        /* Cream is the primary surface; moss and clay are earthy accents. */
+        --bg: #f4ecdc;
+        --bg-deep: #eadfc8;
+        --surface: #fbf6ec;
+        --surface-sunk: #efe4cf;
+        --text: #2a2118;
+        --text-muted: #5c4d3c;
+        --border: #d9cbb0;
+        --brand: #3d6b45;
+        --brand-hover: #2f5636;
+        --on-brand: #fbf6ec;
+        --brand-soft: #dce6cf;
+        --clay: #9c4f2a;
+        --clay-soft: #f1d9c4;
+        --bad: #9a3412;
+        --focus: #b4461b;
+        --shadow:
+          0 2px 4px rgb(76 56 30 / 6%), 0 18px 40px -12px rgb(76 56 30 / 18%);
+        --blob: 63% 37% 54% 46% / 55% 48% 52% 45%;
+        --blob-alt: 42% 58% 38% 62% / 48% 36% 64% 52%;
+        --pebble: 36px 56px 40px 64px;
+        --pebble-alt: 56px 36px 64px 40px;
         --max: 1120px;
+        --blob-sage: #d7e1c6;
+        --blob-moss: #c5d6b8;
+        --blob-clay: #efd2bb;
+        --blob-peach: #f4dcc6;
+        --blob-butter: #efe2bf;
+        --blob-sand: #e6d8bd;
 
         color: var(--text);
         background: var(--bg);
@@ -48,18 +62,28 @@
 
       @media (prefers-color-scheme: dark) {
         :root:not([data-theme='light']) {
-          --bg: #0f1512;
-          --surface: #18211c;
-          --surface-sunk: #212c26;
-          --text: #eef4ef;
-          --text-muted: #b3c4b9;
-          --border: #33433a;
-          --brand: #5fd39a;
-          --brand-hover: #7fe0b0;
-          --on-brand: #0b1a12;
-          --brand-soft: #1d3428;
-          --bad: #ffb4ab;
+          --bg: #1e1913;
+          --bg-deep: #262017;
+          --surface: #2b241b;
+          --surface-sunk: #352d22;
+          --text: #f4ecdc;
+          --text-muted: #cdbfa8;
+          --border: #4a3f31;
+          --brand: #a9cf9b;
+          --brand-hover: #c0deb4;
+          --on-brand: #1e1913;
+          --brand-soft: #2f3a28;
+          --clay: #e8a57f;
+          --clay-soft: #3d2a1e;
+          --bad: #f4a582;
+          --focus: #f0a86b;
           --shadow: none;
+          --blob-sage: #2a3324;
+          --blob-moss: #2f3d29;
+          --blob-clay: #3b2a1f;
+          --blob-peach: #3a2d22;
+          --blob-butter: #352e1f;
+          --blob-sand: #2c251c;
         }
       }
 
@@ -69,7 +93,20 @@
 
       body {
         margin: 0;
+        overflow-x: clip;
         background: var(--bg);
+      }
+
+      /* Subtle paper grain for a natural texture. */
+      body::before {
+        position: fixed;
+        z-index: 100;
+        inset: 0;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        content: '';
+        mix-blend-mode: multiply;
+        opacity: 0.06;
+        pointer-events: none;
       }
 
       img,
@@ -85,7 +122,10 @@
       h2,
       h3 {
         margin: 0;
-        line-height: 1.15;
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 600;
+        line-height: 1.12;
+        letter-spacing: -0.01em;
         text-wrap: balance;
       }
 
@@ -96,10 +136,11 @@
       :focus-visible {
         outline: 3px solid var(--focus);
         outline-offset: 3px;
-        border-radius: 4px;
+        border-radius: 6px;
       }
 
       .wrap {
+        position: relative;
         width: min(100% - 32px, var(--max));
         margin-inline: auto;
       }
@@ -109,8 +150,8 @@
         top: -100px;
         left: 16px;
         z-index: 10;
-        padding: 10px 16px;
-        border-radius: 10px;
+        padding: 10px 18px;
+        border-radius: 999px;
         color: var(--on-brand);
         background: var(--brand);
         font-weight: 700;
@@ -131,14 +172,13 @@
         position: sticky;
         top: 0;
         z-index: 5;
-        border-bottom: 1px solid var(--border);
-        background: color-mix(in srgb, var(--bg) 88%, transparent);
-        backdrop-filter: blur(10px);
+        background: color-mix(in srgb, var(--bg) 86%, transparent);
+        backdrop-filter: blur(12px);
       }
 
       .site-nav .wrap {
         display: flex;
-        min-height: 68px;
+        min-height: 72px;
         align-items: center;
         gap: 24px;
       }
@@ -148,19 +188,21 @@
         align-items: center;
         gap: 10px;
         color: var(--text);
-        font-size: 20px;
-        font-weight: 700;
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 22px;
+        font-weight: 600;
         text-decoration: none;
       }
 
       .logo-mark {
         display: grid;
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         place-items: center;
-        border-radius: 10px;
+        border-radius: var(--blob);
         color: var(--on-brand);
         background: var(--brand);
+        font-size: 20px;
       }
 
       .nav-links {
@@ -174,11 +216,12 @@
 
       .nav-links a {
         display: block;
-        padding: 10px 12px;
-        border-radius: 10px;
+        padding: 10px 14px;
+        border-radius: 999px;
         color: var(--text-muted);
         font-size: 16px;
         text-decoration: none;
+        transition: background-color 200ms ease;
       }
 
       .nav-links a:hover {
@@ -188,28 +231,31 @@
 
       .button {
         display: inline-flex;
-        min-height: 48px;
+        min-height: 50px;
         align-items: center;
         justify-content: center;
         gap: 8px;
-        padding: 0 22px;
+        padding: 0 26px;
         border: 2px solid var(--brand);
-        border-radius: 12px;
+        border-radius: 999px;
         color: var(--on-brand);
         background: var(--brand);
         font: inherit;
         font-size: 17px;
         font-weight: 700;
         text-decoration: none;
+        white-space: nowrap;
         cursor: pointer;
         transition:
-          background-color 150ms ease,
-          border-color 150ms ease;
+          background-color 200ms ease,
+          border-color 200ms ease,
+          transform 200ms ease;
       }
 
       .button:hover {
         border-color: var(--brand-hover);
         background: var(--brand-hover);
+        transform: translateY(-1px);
       }
 
       .button.secondary {
@@ -225,16 +271,18 @@
       .button:disabled {
         cursor: not-allowed;
         opacity: 0.55;
+        transform: none;
       }
 
       /* Sections */
       section {
-        padding: 96px 0;
+        position: relative;
+        padding: 104px 0;
       }
 
       .eyebrow {
         margin-bottom: 12px;
-        color: var(--brand);
+        color: var(--clay);
         font-size: 15px;
         font-weight: 700;
         letter-spacing: 0.08em;
@@ -243,11 +291,11 @@
 
       .section-head {
         max-width: 720px;
-        margin-bottom: 48px;
+        margin-bottom: 52px;
       }
 
       .section-head h2 {
-        font-size: clamp(30px, 4vw, 44px);
+        font-size: clamp(32px, 4.4vw, 48px);
       }
 
       .section-head p:not(.eyebrow) {
@@ -256,27 +304,134 @@
         font-size: 20px;
       }
 
+      /* Wavy edges on sand-colored sections. */
+      .alt-bg {
+        background: color-mix(in srgb, var(--bg-deep) 82%, transparent);
+      }
+
+      .alt-bg::before,
+      .alt-bg::after {
+        position: absolute;
+        right: 0;
+        left: 0;
+        height: 56px;
+        background: color-mix(in srgb, var(--bg-deep) 82%, transparent);
+        content: '';
+        -webkit-mask: var(--wave) center / 100% 100% no-repeat;
+        mask: var(--wave) center / 100% 100% no-repeat;
+        --wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 56' preserveAspectRatio='none'%3E%3Cpath d='M0 56V30C180 6 360 0 560 18s420 38 620 24 200-30 260-36v50z'/%3E%3C/svg%3E");
+      }
+
+      .alt-bg::before {
+        top: -55px;
+      }
+
+      .alt-bg::after {
+        bottom: -55px;
+        transform: scale(-1, -1);
+      }
+
+      /* Scroll-linked parallax blobs. The layer spans the whole document;
+         each .pb moves down by scrollY * --f, so it drifts up slower than the
+         page (lower --f reads as further back). Outer element = scroll
+         transform, inner span = idle breathing, so they never conflict. */
+      body {
+        position: relative;
+      }
+
+      .site-nav,
+      main,
+      footer {
+        position: relative;
+        z-index: 1;
+      }
+
+      .site-nav {
+        position: sticky;
+        z-index: 5;
+      }
+
+      .bg-blobs {
+        position: absolute;
+        z-index: 0;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
+
+      .pb {
+        position: absolute;
+        width: var(--w);
+        aspect-ratio: var(--ar, 1.1);
+        opacity: var(--o, 0.85);
+      }
+
+      .pb > span {
+        position: absolute;
+        inset: 0;
+        border-radius: var(--r);
+        background: linear-gradient(var(--angle, 135deg), var(--c1), var(--c2));
+      }
+
+      @keyframes drift {
+        to {
+          transform: translate3d(
+              var(--dx, 0px),
+              calc(var(--scroll-max, 0) * var(--f) * 1px),
+              0
+            )
+            rotate(var(--rot, 0deg));
+        }
+      }
+
+      @keyframes breathe {
+        to {
+          transform: translate3d(var(--bx, 10px), var(--by, -8px), 0)
+            scale(var(--bs, 1.06)) rotate(var(--br, 3deg));
+        }
+      }
+
+      @media (prefers-reduced-motion: no-preference) {
+        .pb,
+        .pb > span {
+          will-change: transform;
+        }
+
+        .pb > span {
+          animation: breathe var(--idle, 26s) ease-in-out var(--delay, 0s)
+            infinite alternate;
+        }
+
+        @supports (animation-timeline: scroll()) {
+          .pb {
+            animation: drift linear both;
+            animation-timeline: scroll(root block);
+          }
+        }
+      }
+
       /* Hero */
       .hero {
-        padding: 96px 0 56px;
+        overflow: clip;
+        padding: 112px 0 72px;
         text-align: center;
       }
 
       .hero h1 {
-        max-width: 900px;
+        max-width: 920px;
         margin: 0 auto;
-        font-size: clamp(40px, 6.4vw, 72px);
+        font-size: clamp(42px, 6.6vw, 78px);
         letter-spacing: -0.02em;
       }
 
       .hero h1 em {
         color: var(--brand);
-        font-style: normal;
+        font-style: italic;
       }
 
       .hero .lede {
         max-width: 680px;
-        margin: 24px auto 0;
+        margin: 26px auto 0;
         color: var(--text-muted);
         font-size: clamp(19px, 2.2vw, 22px);
       }
@@ -286,15 +441,15 @@
         flex-wrap: wrap;
         justify-content: center;
         gap: 12px;
-        margin-top: 36px;
+        margin-top: 38px;
       }
 
       .trust-row {
         display: flex;
         flex-wrap: wrap;
         justify-content: center;
-        gap: 12px 28px;
-        margin: 32px 0 0;
+        gap: 12px;
+        margin: 36px 0 0;
         padding: 0;
         color: var(--text-muted);
         font-size: 16px;
@@ -305,6 +460,9 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--surface) 75%, transparent);
       }
 
       .trust-row .icon {
@@ -322,8 +480,7 @@
         display: grid;
         grid-template-columns: 340px 1fr;
         overflow: hidden;
-        border: 1px solid var(--border);
-        border-radius: 24px;
+        border-radius: 48px 64px 44px 72px;
         background: var(--surface);
         box-shadow: var(--shadow);
       }
@@ -332,13 +489,12 @@
         display: grid;
         align-content: start;
         gap: 4px;
-        padding: 24px;
-        border-right: 1px solid var(--border);
+        padding: 32px 26px;
       }
 
       .demo-panel h3 {
         margin-bottom: 4px;
-        font-size: 20px;
+        font-size: 24px;
       }
 
       .demo-panel > p {
@@ -353,9 +509,10 @@
         min-height: 56px;
         align-items: center;
         gap: 12px;
-        padding: 8px 10px;
-        border-radius: 12px;
+        padding: 8px 12px;
+        border-radius: 20px;
         cursor: pointer;
+        transition: background-color 200ms ease;
       }
 
       .switch-row:hover {
@@ -378,8 +535,8 @@
 
       input[role='switch'] {
         position: relative;
-        width: 48px;
-        height: 28px;
+        width: 50px;
+        height: 30px;
         flex: 0 0 auto;
         margin: 0;
         border: 2px solid var(--text-muted);
@@ -387,19 +544,19 @@
         background: var(--surface-sunk);
         appearance: none;
         cursor: pointer;
-        transition: background-color 150ms ease;
+        transition: background-color 200ms ease;
       }
 
       input[role='switch']::before {
         position: absolute;
-        top: 3px;
-        left: 3px;
+        top: 4px;
+        left: 4px;
         width: 18px;
         height: 18px;
         border-radius: 999px;
         background: var(--text-muted);
         content: '';
-        transition: transform 150ms ease;
+        transition: transform 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
       }
 
       input[role='switch']:checked {
@@ -414,7 +571,7 @@
 
       .contrast-group {
         margin: 8px 0 0;
-        padding: 8px 10px 0;
+        padding: 8px 12px 0;
         border: 0;
       }
 
@@ -429,7 +586,7 @@
         grid-template-columns: repeat(3, 1fr);
         margin-top: 8px;
         padding: 4px;
-        border-radius: 12px;
+        border-radius: 999px;
         background: var(--surface-sunk);
       }
 
@@ -449,10 +606,11 @@
         display: grid;
         min-height: 44px;
         place-items: center;
-        border-radius: 9px;
+        border-radius: 999px;
         color: var(--text-muted);
         font-size: 16px;
         font-weight: 700;
+        transition: background-color 200ms ease;
       }
 
       .segmented input:checked + span {
@@ -469,7 +627,7 @@
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 8px;
-        margin-top: 16px;
+        margin-top: 18px;
       }
 
       .demo-actions .button {
@@ -481,15 +639,17 @@
         display: grid;
         grid-template-rows: auto 1fr;
         min-width: 0;
-        background: var(--surface-sunk);
+        margin: 12px;
+        overflow: hidden;
+        border-radius: 32px 44px 28px 40px;
+        background: var(--bg-deep);
       }
 
       .browser-bar {
         display: flex;
         align-items: center;
         gap: 10px;
-        padding: 12px 16px;
-        border-bottom: 1px solid var(--border);
+        padding: 14px 18px;
       }
 
       .dots {
@@ -507,8 +667,8 @@
       .url {
         flex: 1;
         overflow: hidden;
-        padding: 6px 12px;
-        border-radius: 8px;
+        padding: 6px 14px;
+        border-radius: 999px;
         color: var(--text-muted);
         background: var(--surface);
         font-size: 14px;
@@ -525,7 +685,7 @@
       .demo-viewport {
         overflow: auto;
         max-height: 620px;
-        padding: 20px;
+        padding: 4px 18px 18px;
       }
 
       /* The sample site: deliberately small, cramped, low contrast, and moving. */
@@ -715,16 +875,16 @@
       }
 
       .demo-hint {
-        margin-top: 12px;
+        margin-top: 16px;
         color: var(--text-muted);
         font-size: 15px;
         text-align: center;
       }
 
       kbd {
-        padding: 1px 6px;
+        padding: 1px 8px;
         border: 1px solid var(--border);
-        border-radius: 6px;
+        border-radius: 8px;
         background: var(--surface);
         font: inherit;
         font-size: 14px;
@@ -734,32 +894,42 @@
       .feature-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 20px;
+        gap: 22px;
         margin: 0;
         padding: 0;
         list-style: none;
       }
 
       .feature {
-        padding: 28px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        padding: 32px;
+        border-radius: var(--pebble);
         background: var(--surface);
+        box-shadow: var(--shadow);
+      }
+
+      .feature:nth-child(even) {
+        border-radius: var(--pebble-alt);
       }
 
       .feature-icon {
         display: grid;
-        width: 48px;
-        height: 48px;
-        margin-bottom: 18px;
+        width: 58px;
+        height: 54px;
+        margin-bottom: 20px;
         place-items: center;
-        border-radius: 14px;
+        border-radius: var(--blob);
         color: var(--brand);
         background: var(--brand-soft);
       }
 
+      .feature:nth-child(even) .feature-icon {
+        border-radius: var(--blob-alt);
+        color: var(--clay);
+        background: var(--clay-soft);
+      }
+
       .feature h3 {
-        font-size: 21px;
+        font-size: 23px;
       }
 
       .feature p {
@@ -770,9 +940,9 @@
 
       .feature .ref {
         display: inline-block;
-        margin-top: 14px;
-        padding: 3px 10px;
-        border-radius: 99px;
+        margin-top: 16px;
+        padding: 4px 12px;
+        border-radius: 999px;
         color: var(--text-muted);
         background: var(--surface-sunk);
         font-size: 14px;
@@ -782,7 +952,7 @@
       .steps {
         display: grid;
         grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
+        gap: 22px;
         margin: 0;
         padding: 0;
         list-style: none;
@@ -790,24 +960,33 @@
       }
 
       .steps li {
-        padding: 28px;
-        border-top: 4px solid var(--brand);
-        border-radius: 4px 4px var(--radius) var(--radius);
+        padding: 32px;
+        border-radius: var(--pebble);
         background: var(--surface);
         counter-increment: step;
       }
 
+      .steps li:nth-child(2) {
+        border-radius: var(--pebble-alt);
+      }
+
       .steps li::before {
-        display: block;
-        margin-bottom: 10px;
-        color: var(--brand);
-        font-size: 15px;
-        font-weight: 700;
-        content: 'Step ' counter(step);
+        display: grid;
+        width: 52px;
+        height: 48px;
+        margin-bottom: 18px;
+        place-items: center;
+        border-radius: var(--blob);
+        color: var(--on-brand);
+        background: var(--brand);
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: 22px;
+        font-weight: 600;
+        content: counter(step);
       }
 
       .steps h3 {
-        font-size: 21px;
+        font-size: 23px;
       }
 
       .steps p {
@@ -817,15 +996,11 @@
       }
 
       /* Comparison */
-      .alt-bg {
-        background: var(--surface);
-        border-block: 1px solid var(--border);
-      }
-
       .table-scroll {
         overflow-x: auto;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        border-radius: 36px 48px 36px 48px;
+        background: var(--surface);
+        box-shadow: var(--shadow);
       }
 
       table {
@@ -845,7 +1020,7 @@
 
       th,
       td {
-        padding: 16px 20px;
+        padding: 18px 24px;
         border-bottom: 1px solid var(--border);
         text-align: left;
         vertical-align: top;
@@ -874,9 +1049,10 @@
 
       .quote {
         max-width: 820px;
-        margin: 56px auto 0;
+        margin: 60px auto 0;
         padding: 0;
-        font-size: clamp(22px, 2.6vw, 28px);
+        font-family: 'Fraunces', Georgia, serif;
+        font-size: clamp(23px, 2.8vw, 30px);
         line-height: 1.4;
         text-align: center;
         list-style: none;
@@ -888,33 +1064,35 @@
 
       .quote b {
         color: var(--brand);
+        font-style: italic;
+        font-weight: 600;
       }
 
       /* Promise */
       .promise {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 20px;
+        gap: 22px;
       }
 
       .promise > div {
-        padding: 32px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        padding: 36px;
+        border-radius: var(--pebble);
         background: var(--surface);
       }
 
+      .promise > div.no {
+        border-radius: var(--pebble-alt);
+      }
+
       .promise h3 {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        font-size: 22px;
+        font-size: 26px;
       }
 
       .promise ul {
         display: grid;
-        gap: 10px;
-        margin: 18px 0 0;
+        gap: 12px;
+        margin: 20px 0 0;
         padding: 0;
         list-style: none;
       }
@@ -944,28 +1122,33 @@
       .roadmap {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 16px;
+        gap: 18px;
         margin: 0;
         padding: 0;
         list-style: none;
       }
 
       .roadmap li {
-        padding: 24px;
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
+        padding: 28px;
+        border: 2px solid transparent;
+        border-radius: var(--pebble);
         background: var(--surface);
       }
 
+      .roadmap li:nth-child(even) {
+        border-radius: var(--pebble-alt);
+      }
+
       .roadmap li[data-now] {
-        border: 2px solid var(--brand);
+        border-color: var(--brand);
+        background: var(--brand-soft);
       }
 
       .badge {
         display: inline-block;
-        margin-bottom: 12px;
-        padding: 2px 10px;
-        border-radius: 99px;
+        margin-bottom: 14px;
+        padding: 3px 12px;
+        border-radius: 999px;
         color: var(--text-muted);
         background: var(--surface-sunk);
         font-size: 14px;
@@ -978,7 +1161,7 @@
       }
 
       .roadmap h3 {
-        font-size: 19px;
+        font-size: 21px;
       }
 
       .roadmap p {
@@ -989,36 +1172,54 @@
 
       /* Install */
       .install {
+        position: relative;
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 48px;
         align-items: start;
-        padding: 48px;
-        border-radius: 28px;
-        color: #eef4ef;
-        background: #13201a;
+        overflow: hidden;
+        padding: 56px;
+        border-radius: 56px 80px 48px 88px;
+        color: #f4ecdc;
+        background: #2e4a33;
+      }
+
+      .install::before {
+        position: absolute;
+        right: -90px;
+        bottom: -110px;
+        width: 320px;
+        height: 300px;
+        border-radius: var(--blob);
+        background: #3d6b45;
+        content: '';
+        opacity: 0.6;
+      }
+
+      .install > * {
+        position: relative;
       }
 
       .install h2 {
-        font-size: clamp(30px, 4vw, 42px);
+        font-size: clamp(32px, 4vw, 46px);
       }
 
       .install p {
         margin-top: 16px;
-        color: #b3c4b9;
+        color: #dfd3bd;
         font-size: 19px;
       }
 
       .install .button {
         margin-top: 28px;
-        color: #0b1a12;
-        border-color: #5fd39a;
-        background: #5fd39a;
+        color: #2a2118;
+        border-color: #f4ecdc;
+        background: #f4ecdc;
       }
 
       .install .button:hover {
-        border-color: #7fe0b0;
-        background: #7fe0b0;
+        border-color: #ffffff;
+        background: #ffffff;
       }
 
       .install ol {
@@ -1030,23 +1231,22 @@
       }
 
       .install li::marker {
-        color: #5fd39a;
+        color: #c8e0b8;
         font-weight: 700;
       }
 
       pre {
         overflow-x: auto;
         margin: 8px 0 0;
-        padding: 12px 14px;
-        border: 1px solid #33433a;
-        border-radius: 10px;
-        color: #eef4ef;
-        background: #0b120e;
+        padding: 14px 18px;
+        border-radius: 20px;
+        color: #f4ecdc;
+        background: #1f3323;
         font-size: 15px;
       }
 
       .install :focus-visible {
-        outline-color: var(--focus);
+        outline-color: #f0c08a;
       }
 
       footer {
@@ -1068,24 +1268,19 @@
           grid-template-columns: 1fr;
         }
 
-        .demo-panel {
-          border-right: 0;
-          border-bottom: 1px solid var(--border);
-        }
-
         .roadmap {
           grid-template-columns: 1fr 1fr;
         }
 
         .install {
           grid-template-columns: 1fr;
-          padding: 32px;
+          padding: 36px;
         }
       }
 
       @media (max-width: 720px) {
         section {
-          padding: 64px 0;
+          padding: 72px 0;
         }
 
         .nav-links {
@@ -1111,7 +1306,8 @@
         }
 
         .install {
-          padding: 24px;
+          padding: 28px;
+          border-radius: 40px 56px 36px 60px;
         }
       }
 
@@ -1195,6 +1391,209 @@
         <path d="m12 5 7 7-7 7" />
       </symbol>
     </svg>
+
+    <div class="bg-blobs" aria-hidden="true">
+      <div
+        class="pb"
+        style="
+          top: -4%;
+          left: -10%;
+          --w: clamp(280px, 44vw, 640px);
+          --ar: 1.15;
+          --f: 0.1;
+          --dx: 0px;
+          --rot: 0deg;
+          --o: 0.75;
+          --c1: var(--blob-sage);
+          --c2: var(--blob-butter);
+          --angle: 140deg;
+          --r: 62% 38% 55% 45% / 48% 60% 40% 52%;
+          --idle: 34s;
+          --delay: -6s;
+          --bx: 14px;
+          --by: 10px;
+          --bs: 1.05;
+          --br: 2deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 3%;
+          left: 70%;
+          --w: clamp(220px, 32vw, 460px);
+          --ar: 0.9;
+          --f: 0.3;
+          --dx: -40px;
+          --rot: 0deg;
+          --o: 0.85;
+          --c1: var(--blob-clay);
+          --c2: var(--blob-peach);
+          --angle: 200deg;
+          --r: 41% 59% 33% 67% / 57% 38% 62% 43%;
+          --idle: 27s;
+          --delay: -12s;
+          --bx: -10px;
+          --by: 12px;
+          --bs: 1.07;
+          --br: -4deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 10%;
+          left: 4%;
+          --w: clamp(140px, 16vw, 240px);
+          --ar: 1.2;
+          --f: 0.48;
+          --dx: 30px;
+          --rot: 24deg;
+          --o: 0.9;
+          --c1: var(--blob-moss);
+          --c2: var(--blob-sage);
+          --angle: 110deg;
+          --r: 70% 30% 46% 54% / 39% 52% 48% 61%;
+          --idle: 21s;
+          --delay: -3s;
+          --bx: 8px;
+          --by: -10px;
+          --bs: 1.08;
+          --br: 5deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 27%;
+          left: 58%;
+          --w: clamp(260px, 40vw, 580px);
+          --ar: 1.05;
+          --f: 0.18;
+          --dx: 0px;
+          --rot: 0deg;
+          --o: 0.7;
+          --c1: var(--blob-butter);
+          --c2: var(--blob-sand);
+          --angle: 170deg;
+          --r: 48% 52% 64% 36% / 61% 44% 56% 39%;
+          --idle: 38s;
+          --delay: -20s;
+          --bx: -14px;
+          --by: -8px;
+          --bs: 1.04;
+          --br: -2deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 31%;
+          left: -6%;
+          --w: clamp(200px, 26vw, 380px);
+          --ar: 0.85;
+          --f: 0.4;
+          --dx: 50px;
+          --rot: 0deg;
+          --o: 0.85;
+          --c1: var(--blob-peach);
+          --c2: var(--blob-clay);
+          --angle: 80deg;
+          --r: 35% 65% 58% 42% / 44% 63% 37% 56%;
+          --idle: 24s;
+          --delay: -9s;
+          --bx: 12px;
+          --by: 8px;
+          --bs: 1.06;
+          --br: 4deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 48%;
+          left: 64%;
+          --w: clamp(220px, 30vw, 440px);
+          --ar: 1.25;
+          --f: 0.25;
+          --dx: 0px;
+          --rot: -18deg;
+          --o: 0.78;
+          --c1: var(--blob-sage);
+          --c2: var(--blob-moss);
+          --angle: 220deg;
+          --r: 57% 43% 39% 61% / 66% 41% 59% 34%;
+          --idle: 31s;
+          --delay: -15s;
+          --bx: -8px;
+          --by: -12px;
+          --bs: 1.05;
+          --br: -3deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 44%;
+          left: 10%;
+          --w: clamp(130px, 14vw, 220px);
+          --ar: 1;
+          --f: 0.45;
+          --dx: -24px;
+          --rot: 0deg;
+          --o: 0.9;
+          --c1: var(--blob-clay);
+          --c2: var(--blob-butter);
+          --angle: 30deg;
+          --r: 66% 34% 52% 48% / 35% 58% 42% 65%;
+          --idle: 19s;
+          --delay: -4s;
+          --bx: 10px;
+          --by: 10px;
+          --bs: 1.09;
+          --br: 6deg;
+        "
+      >
+        <span></span>
+      </div>
+      <div
+        class="pb"
+        style="
+          top: 80%;
+          left: 30%;
+          --w: clamp(280px, 42vw, 620px);
+          --ar: 1.1;
+          --f: 0.15;
+          --dx: 0px;
+          --rot: 0deg;
+          --o: 0.72;
+          --c1: var(--blob-moss);
+          --c2: var(--blob-peach);
+          --angle: 160deg;
+          --r: 44% 56% 61% 39% / 53% 37% 63% 47%;
+          --idle: 36s;
+          --delay: -25s;
+          --bx: -12px;
+          --by: 10px;
+          --bs: 1.04;
+          --br: 2deg;
+        "
+      >
+        <span></span>
+      </div>
+    </div>
 
     <a class="skip-link" href="#main">Skip to content</a>
 
@@ -1985,6 +2384,51 @@ pnpm extension:enable</code></pre>
         form.elements.contrast.value = 'high';
         render();
       });
+
+      // Parallax: CSS scroll timelines need the scrollable distance in px.
+      const root = document.documentElement;
+      const blobs = [...document.querySelectorAll('.pb')];
+      const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+      let scrollMax = 0;
+      const measure = () => {
+        scrollMax = Math.max(0, root.scrollHeight - innerHeight);
+        root.style.setProperty('--scroll-max', scrollMax);
+      };
+      new ResizeObserver(measure).observe(document.body);
+      addEventListener('resize', measure);
+      measure();
+
+      if (!CSS.supports('animation-timeline', 'scroll()')) {
+        const params = blobs.map((blob) => {
+          const style = getComputedStyle(blob);
+          return {
+            f: parseFloat(style.getPropertyValue('--f')) || 0,
+            dx: parseFloat(style.getPropertyValue('--dx')) || 0,
+            rot: parseFloat(style.getPropertyValue('--rot')) || 0,
+          };
+        });
+        let queued = false;
+        const update = () => {
+          queued = false;
+          const y = reduceMotion.matches ? 0 : scrollY;
+          const progress = scrollMax ? y / scrollMax : 0;
+          blobs.forEach((blob, i) => {
+            const { f, dx, rot } = params[i];
+            blob.style.transform = reduceMotion.matches
+              ? ''
+              : `translate3d(${dx * progress}px, ${y * f}px, 0) rotate(${rot * progress}deg)`;
+          });
+        };
+        const queue = () => {
+          if (!queued) {
+            queued = true;
+            requestAnimationFrame(update);
+          }
+        };
+        addEventListener('scroll', queue, { passive: true });
+        reduceMotion.addEventListener('change', queue);
+        update();
+      }
     </script>
   </body>
 </html>
