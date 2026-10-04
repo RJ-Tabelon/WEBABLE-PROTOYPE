@@ -11,9 +11,14 @@ import type {
 import type { EngineStatus } from '../protocol';
 import { extract } from './extract';
 import { LayerManager } from './ops/layer';
-import { MarkBook, setOffGate } from './ops/marks';
+import { hasToken, MarkBook, setOffGate, tokenOp, tokensOf } from './ops/marks';
 import { BISECT_ORDER, levelValue, OPS } from './ops/registry';
-import type { AppliedOp, OpEnv, Prepared } from './ops/types';
+import {
+  notNeeded,
+  type AppliedOp,
+  type OpEnv,
+  type Prepared,
+} from './ops/types';
 import {
   FrictionDetector,
   installFriction,
@@ -25,16 +30,22 @@ import { RouteWatcher } from './runtime/route';
 import type { Extraction, PageFacts, VocabPort } from './types';
 import { InPageLayer, type OutlineGroup } from './ui/layer';
 import { setColorParseFallback, type RGBA } from './util/color';
-import { shadowRootsWithin, SKIP_TAGS } from './util/dom';
+import {
+  composedContains,
+  isOurs,
+  shadowRootsWithin,
+  SKIP_TAGS,
+} from './util/dom';
 import type { Box } from './util/geometry';
 import { Mutex, settle, whenIdle, yieldToMain } from './util/schedule';
 import { readingAnchor, restoreAnchor } from './verify/anchor';
 import {
   buildProbes,
+  clippingContainers,
   diffSnapshots,
+  isClipped,
   takeSnapshot,
   type Failure,
-  type ProbeSet,
   type Snapshot,
 } from './verify/checks';
 
@@ -89,6 +100,13 @@ export interface ApplyOptions {
   refresh?: boolean;
   /** First auto changes on this site: show the toast. */
   announce?: boolean;
+  /**
+   * The page changed under an applied fit (content, route, viewport), not the
+   * person's fit: never remove an applied op or change its level or scope;
+   * add only ops new to this page view, and extend applied ops to text they
+   * do not cover yet. Ignored with `replace`.
+   */
+  sticky?: boolean;
 }
 
 export interface VerifyReport {
@@ -204,6 +222,43 @@ const TARGET_OPS: ReadonlySet<OpId> = new Set([
   'target_spacing',
 ]);
 
+/**
+ * Ops that fit around a failure: when one card clips or one line overflows,
+ * only the elements involved are put back and the rest of the fit stays.
+ */
+const PARTIAL_OPS: ReadonlySet<OpId> = new Set([
+  'text_floor',
+  'line_spacing',
+  'line_length',
+]);
+/** Ops whose new content is marked inside the MutationObserver callback, before it paints. */
+const SYNC_OPS: ReadonlySet<OpId> = new Set(['text_floor', 'line_spacing']);
+/** Busy time allowed per MutationObserver callback for pre-paint marking, ms. */
+const SYNC_BUDGET_MS = 6;
+/** Quiet time after the last scroll before measuring or verifying again, ms. */
+const SCROLL_QUIET_MS = 250;
+/** Never wait longer than this for scrolling to stop, ms. */
+const SCROLL_MAX_DEFER_MS = 3000;
+/** Minimum spacing between fresh decisions the page asks for on its own, ms. */
+const REPLAN_MIN_MS = 5000;
+/** ...while content may still need a planned op, or a rejected fit's box moved. */
+const REPLAN_EAGER_MS = 1200;
+/** Added elements since the last decision that count as new content. */
+const REPLAN_MIN_ADDED = 3;
+/** Whole-op rollbacks after which a changed page no longer retries the op. */
+const MAX_ROLLBACKS = 3;
+/** Keys that scroll the page. */
+const SCROLL_KEYS: ReadonlySet<string> = new Set([
+  'ArrowDown',
+  'ArrowUp',
+  'PageDown',
+  'PageUp',
+  'Home',
+  'End',
+  ' ',
+  'Spacebar',
+]);
+
 const FRICTION_REASON: Record<FrictionSignal, string> = {
   misclick_burst: 'You clicked just next to small buttons a few times.',
   rage_click: 'You clicked the same spot several times.',
@@ -306,6 +361,30 @@ export class Engine {
     writeMs: 0,
     layoutMs: 0,
   };
+  /**
+   * Elements each op was fitted around after a failure, with the native
+   * constraints they failed under. Not marked again until those change (the
+   * card grows, the line may wrap): then they are tried, and checked, again.
+   */
+  private readonly exempt = new Map<OpId, WeakMap<Element, string>>();
+  /** Elements marked after their op was verified, waiting for a check. */
+  private readonly unverified = new Set<Element>();
+  /** Whole-op rollbacks this page view (a changed page retries only a few times). */
+  private readonly rollbacks = new Map<OpId, number>();
+  /** Last trusted wheel, touch, scroll-key or pointer input. */
+  private lastUserScrollAt = -Infinity;
+  /** Last scroll of any origin (person, page script, browser anchoring). */
+  private lastScrollAt = -Infinity;
+  /** When debounced work first waited for scrolling to stop (0: not waiting). */
+  private deferredSince = 0;
+  /** When the engine last applied a decision. */
+  private lastPlanAt = -Infinity;
+  /** Elements the page added since the last decision. */
+  private addedSincePlan = 0;
+  /** A fresh decision is owed: 'eager' when content or constraints call for one soon. */
+  private replanWanted: 'eager' | 'normal' | null = null;
+  private replanTimer: ReturnType<typeof setTimeout> | null = null;
+  private lastWidth = 0;
 
   constructor(private readonly opts: EngineOptions) {
     this.doc = opts.doc ?? document;
@@ -324,18 +403,36 @@ export class Engine {
       if (!e.isTrusted) return;
       const first = this.lastInputAt === -Infinity;
       this.lastInputAt = performance.now();
+      if (e.type !== 'keydown' || SCROLL_KEYS.has((e as KeyboardEvent).key))
+        this.lastUserScrollAt = this.lastInputAt;
       if (first) this.opts.events.interacted?.();
     };
-    const inputs = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+    const onScroll = (): void => {
+      this.lastScrollAt = performance.now();
+    };
+    const inputs = [
+      'pointerdown',
+      'keydown',
+      'wheel',
+      'touchstart',
+      'touchmove',
+    ] as const;
     for (const type of inputs)
       this.view.addEventListener(type, onInput, {
         capture: true,
         passive: true,
       });
+    // Capturing on the window also sees scrolls of inner scroll containers.
+    this.view.addEventListener('scroll', onScroll, {
+      capture: true,
+      passive: true,
+    });
     this.offInput = () => {
       for (const type of inputs)
         this.view.removeEventListener(type, onInput, true);
+      this.view.removeEventListener('scroll', onScroll, true);
     };
+    this.lastWidth = this.view.innerWidth;
   }
 
   get status(): EngineStatus {
@@ -408,8 +505,65 @@ export class Engine {
       throw err;
     } finally {
       restore();
-      restoreAnchor(this.doc, anchor);
+      this.restore(anchor);
     }
+  }
+
+  /** Keep the reader's place after a write, unless they scrolled since. */
+  private restore(anchor: ReturnType<typeof readingAnchor>): number {
+    return restoreAnchor(this.doc, anchor, this.lastUserScrollAt);
+  }
+
+  /** The person or the page is scrolling: measuring now would fight it. */
+  private scrolling(now = performance.now()): boolean {
+    return (
+      now - Math.max(this.lastUserScrollAt, this.lastScrollAt) < SCROLL_QUIET_MS
+    );
+  }
+
+  /** The box an element's fit failed in: its own width and its clipping ancestors' sizes. */
+  private constraintKey(el: Element): string {
+    const parts: number[] = [Math.round((el as HTMLElement).clientWidth)];
+    let n: Element | null = el;
+    for (let i = 0; n && i < 4; i++, n = n.parentElement) {
+      if (n.localName === 'body' || n.localName === 'html') break;
+      const cs = this.view.getComputedStyle(n);
+      if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible')
+        parts.push(Math.round(n.clientWidth), Math.round(n.clientHeight));
+      if (cs.whiteSpace.startsWith('nowrap') || cs.whiteSpace === 'pre')
+        parts.push(-1);
+    }
+    return parts.join(',');
+  }
+
+  private exemptAdd(op: OpId, el: Element): void {
+    let map = this.exempt.get(op);
+    if (!map) this.exempt.set(op, (map = new WeakMap()));
+    map.set(el, this.constraintKey(el));
+  }
+
+  private isExempt(op: OpId, el: Element): boolean {
+    const map = this.exempt.get(op);
+    const key = map?.get(el);
+    if (key === undefined) return false;
+    if (key === this.constraintKey(el)) return true;
+    map?.delete(el);
+    return false;
+  }
+
+  /** A prepared fit without the elements this op was fitted around. */
+  private withoutExempt(op: OpId, p: Prepared): Prepared {
+    if (!this.exempt.has(op) || !p.marks || p.status !== 'ready') return p;
+    const marks = p.marks.filter(([el]) => !this.isExempt(op, el));
+    if (marks.length === p.marks.length) return p;
+    if (marks.length === 0) return notNeeded('fitted around every element');
+    const kept = new Set(marks.map(([el]) => el));
+    return {
+      ...p,
+      marks,
+      count: kept.size,
+      show: p.show?.filter((el) => kept.has(el)),
+    };
   }
 
   // ======================================================================
@@ -422,6 +576,7 @@ export class Engine {
   ): Promise<AppliedChange[]> {
     return this.mutex.run(async () => {
       if (this.destroyed) return [];
+      const sticky = options.sticky === true && !options.replace;
       this.lastPlan =
         options.replace || !this.lastPlan
           ? plan
@@ -455,6 +610,18 @@ export class Engine {
       const toApply: PlannedOp[] = [];
       for (const p of wanted) {
         const cur = this.applied.get(p.op);
+        if (sticky && cur) {
+          // The page changed, not the person's fit: keep this op as applied.
+          if (cur.level === p.level && sameScope(cur.planned.scope, p.scope))
+            cur.planned = p;
+          continue;
+        }
+        if (
+          sticky &&
+          !options.acceptOffers &&
+          (this.rollbacks.get(p.op) ?? 0) >= MAX_ROLLBACKS
+        )
+          continue;
         if (!cur && !options.acceptOffers && this.sameRejectedFit(p)) {
           const report = this.reports.get(p.op);
           if (report)
@@ -487,9 +654,13 @@ export class Engine {
           this.reports.delete(op);
         }
         this.layers.flush();
-        restoreAnchor(this.doc, anchor);
+        this.restore(anchor);
       }
       const results = toApply.length ? await this.batch(toApply) : [];
+      // Extend what stays applied to text it does not cover yet.
+      if (sticky) this.topUp(new Set(toApply.map((p) => p.op)));
+      this.lastPlanAt = performance.now();
+      this.addedSincePlan = 0;
       this.startRuntime();
       this._status = 'ready';
       if (options.announce) this.announce(results);
@@ -601,11 +772,17 @@ export class Engine {
       // ---- Read phase ----
       for (const it of items) {
         try {
-          it.prepared = OPS[it.p.op].prepare(env, it.value, it.p.scope);
+          const prepared = OPS[it.p.op].prepare(env, it.value, it.p.scope);
+          it.prepared = PARTIAL_OPS.has(it.p.op)
+            ? this.withoutExempt(it.p.op, prepared)
+            : prepared;
         } catch {
           it.error = true;
         }
       }
+      // What this prepare measured: marks elsewhere (content that arrived
+      // after the last extraction) are kept rather than dropped.
+      const scanned = new Set<Element>(env.facts.text.map((f) => f.el));
       const ready = items.filter(
         (it) => !it.error && it.prepared?.status === 'ready',
       );
@@ -658,7 +835,11 @@ export class Engine {
         const a = it.applied as AppliedOp;
         if (a.prepared.css) this.layers.set(a.op, a.prepared.css);
         else this.layers.drop(a.op);
-        this.marks.replaceOp(a.op, a.prepared.marks ?? []);
+        this.marks.replaceOp(
+          a.op,
+          a.prepared.marks ?? [],
+          SYNC_OPS.has(a.op) ? (el) => !scanned.has(el) : undefined,
+        );
         this.applied.set(a.op, a);
       }
       this.layers.flush();
@@ -679,12 +860,12 @@ export class Engine {
       this.perf.writeMs = performance.now() - t;
       // The first read after the write pays for the one style and layout pass.
       t = performance.now();
-      restoreAnchor(this.doc, anchor);
+      this.restore(anchor);
       this.perf.layoutMs = performance.now() - t;
 
       // ---- Settle, verify, roll back ----
       await settle(this.doc);
-      restoreAnchor(this.doc, anchor);
+      this.restore(anchor);
       const live = (): Item[] => ready.filter((it) => !it.error && !it.vcode);
       const ctx = () => ({
         contrastTarget: this.applied.has('contrast')
@@ -704,14 +885,27 @@ export class Engine {
       const rejected = new Map<OpId, Set<Element>>();
       try {
         fails = diff();
-        for (let round = 0; round < 3 && fails.length; round++) {
-          const culprits = new Map<OpId, VerifyCode>();
+        for (let round = 0; round < 4 && fails.length; round++) {
+          const culprits = new Map<
+            OpId,
+            { code: VerifyCode; caused: Failure[] }
+          >();
           const trials = new Map<string, Failure[]>();
           for (const f of fails) {
             // Tokens locate nearby adaptations, not causes. Verify causality
             // against the current page before undoing any of them.
             for (const op of this.causes(live(), f, diff, trials)) {
-              if (!culprits.has(op)) culprits.set(op, f.code);
+              let c = culprits.get(op);
+              if (!c) culprits.set(op, (c = { code: f.code, caused: [] }));
+              c.caused.push(f);
+            }
+          }
+          if (culprits.size === 0) break;
+          for (const [op, { code, caused }] of culprits) {
+            // Fit around the failure first: one clipped card or overflowing
+            // line puts back only its own elements; the rest of the fit stays.
+            if (this.fitAround(op, caused, diff) > 0) continue;
+            for (const f of caused)
               if (
                 f.code === 'clip' ||
                 f.code === 'overflow' ||
@@ -721,17 +915,14 @@ export class Engine {
                 if (!boxes) rejected.set(op, (boxes = new Set()));
                 boxes.add(f.el);
               }
-            }
-          }
-          if (culprits.size === 0) break;
-          for (const [op, code] of culprits) {
             const it = ready.find((x) => x.p.op === op);
             if (it) it.vcode = code;
+            this.rollbacks.set(op, (this.rollbacks.get(op) ?? 0) + 1);
             this.removeOp(op);
           }
           this.layers.flush();
           this.layers.finishOwnedTransitions();
-          restoreAnchor(this.doc, anchor);
+          this.restore(anchor);
           fails = diff();
         }
       } catch {
@@ -741,8 +932,39 @@ export class Engine {
         }
         this.layers.flush();
       }
+      // The probes cover the viewport and its surroundings; clipping
+      // anywhere else on the page (a teaser card far below) is caught here.
+      try {
+        const t2 = performance.now();
+        const fitted = this.clipSweep(
+          live()
+            .filter((it) => PARTIAL_OPS.has(it.p.op))
+            .flatMap((it) => this.pairsFor(it.p.op)),
+        );
+        let emptied = false;
+        for (const [op, boxes] of fitted) {
+          if (this.marks.countFor(op) > 0) continue;
+          // Nothing of this op fits anywhere: a whole-op rollback.
+          const it = ready.find((x) => x.p.op === op);
+          if (!it || it.vcode || it.error) continue;
+          it.vcode = 'clip';
+          let set = rejected.get(op);
+          if (!set) rejected.set(op, (set = new Set()));
+          for (const b of boxes) set.add(b);
+          this.rollbacks.set(op, (this.rollbacks.get(op) ?? 0) + 1);
+          this.removeOp(op);
+          emptied = true;
+        }
+        if (emptied) {
+          this.layers.flush();
+          this.restore(anchor);
+        }
+        verifyBusy += performance.now() - t2;
+      } catch {
+        // measurement only
+      }
       this.perf.verifyMs = verifyBusy;
-      restoreAnchor(this.doc, anchor);
+      this.restore(anchor);
 
       // ---- Real after-values ----
       for (const it of live()) {
@@ -751,6 +973,12 @@ export class Engine {
           OPS[a.op].afterApply?.(env, a);
         } catch {
           // measurement only; the change stands
+        }
+        if (PARTIAL_OPS.has(a.op)) {
+          a.prepared.count = this.marks.countFor(a.op);
+          a.prepared.show = a.prepared.show?.filter(
+            (el) => !this.isExempt(a.op, el),
+          );
         }
       }
       this.ui.refresh();
@@ -837,6 +1065,185 @@ export class Engine {
       if (!remains(trial)) disabled = trial;
     }
     return disabled;
+  }
+
+  /** Every [element, token] `op` has marked on connected elements. */
+  private pairsFor(op: OpId): Array<[Element, string]> {
+    const out: Array<[Element, string]> = [];
+    for (const el of this.marks.elementsFor(op)) {
+      if (!el.isConnected) continue;
+      for (const t of tokensOf(el)) if (tokenOp(t) === op) out.push([el, t]);
+    }
+    return out;
+  }
+
+  /**
+   * Clip check over the given marks wherever they are on the page: a box
+   * that clips with them and stops clipping without them gets them put back,
+   * and their ops fit around those elements. One counterfactual for the set:
+   * two layout reads, nothing painted in between.
+   */
+  private clipSweep(
+    pairs: ReadonlyArray<[Element, string]>,
+  ): Map<OpId, Element[]> {
+    const fitted = new Map<OpId, Element[]>();
+    if (pairs.length === 0) return fitted;
+    const byEl = new Map<Element, string[]>();
+    for (const [el, t] of pairs) {
+      if (!el.isConnected) continue;
+      const list = byEl.get(el);
+      if (list) list.push(t);
+      else byEl.set(el, [t]);
+    }
+    const marked = [...byEl.keys()];
+    const clipped = clippingContainers(marked, this.view, 300).filter((c) =>
+      isClipped(c, this.view),
+    );
+    if (clipped.length === 0) return fitted;
+    const inside = new Map<Element, Element[]>();
+    const trial = new Set<Element>();
+    for (const c of clipped) {
+      const els = this.involved(
+        { code: 'clip', el: c, ops: new Set() },
+        marked,
+      );
+      if (els.length === 0) continue;
+      inside.set(c, els);
+      for (const el of els) trial.add(el);
+    }
+    if (trial.size === 0) return fitted;
+    const toggle = (on: boolean): void => {
+      for (const el of trial)
+        for (const t of byEl.get(el) ?? [])
+          if (on) this.marks.mark(el, t);
+          else this.marks.unmark(el, t);
+    };
+    toggle(false);
+    let fixed: Element[];
+    try {
+      fixed = [...inside.keys()].filter((c) => !isClipped(c, this.view));
+    } finally {
+      toggle(true);
+    }
+    for (const c of fixed)
+      for (const el of inside.get(c) ?? [])
+        for (const t of byEl.get(el) ?? []) {
+          this.marks.unmark(el, t);
+          this.unverified.delete(el);
+          const op = tokenOp(t);
+          if (!op) continue;
+          this.exemptAdd(op, el);
+          const boxes = fitted.get(op) ?? [];
+          if (!boxes.includes(c)) boxes.push(c);
+          fitted.set(op, boxes);
+        }
+    this.layers.finishTransitionsOn(trial);
+    return fitted;
+  }
+
+  /**
+   * Element-level rollback: put back only `op`'s marks on the elements
+   * involved in the failures it caused, keeping the rest of the fit. Returns
+   * the number of elements put back, or 0 when that does not clear every
+   * failure (or would put back most of the page), so the caller rolls the
+   * whole op back. Synchronous: nothing is painted between trial and verdict.
+   */
+  private fitAround(
+    op: OpId,
+    caused: readonly Failure[],
+    diff: () => Failure[],
+  ): number {
+    if (!PARTIAL_OPS.has(op)) return 0;
+    const marked = this.marks.elementsFor(op).filter((el) => el.isConnected);
+    if (marked.length === 0) return 0;
+    const involved = new Set<Element>();
+    for (const f of caused)
+      for (const el of this.involved(f, marked)) involved.add(el);
+    if (involved.size === 0) return 0;
+    // Fitting around every element, or most of the page, is not a fit.
+    if (
+      involved.size >= marked.length ||
+      involved.size > Math.max(8, marked.length * 0.5)
+    )
+      return 0;
+    const removed: Array<[Element, string]> = [];
+    for (const el of involved)
+      for (const t of tokensOf(el))
+        if (tokenOp(t) === op) removed.push([el, t]);
+    if (removed.length === 0) return 0;
+    for (const [el, t] of removed) this.marks.unmark(el, t);
+    this.layers.finishOwnedTransitions();
+    let after: Failure[];
+    try {
+      after = diff();
+    } catch {
+      after = [...caused];
+    }
+    const cleared = caused.every(
+      (f) =>
+        !after.some(
+          (g) => g.code === f.code && (f.code === 'overflow' || g.el === f.el),
+        ),
+    );
+    if (!cleared) {
+      for (const [el, t] of removed) this.marks.mark(el, t);
+      this.layers.finishOwnedTransitions();
+      return 0;
+    }
+    for (const el of involved) this.exemptAdd(op, el);
+    return involved.size;
+  }
+
+  /** The marked elements a failure involves (candidates for an element-level rollback). */
+  private involved(f: Failure, marked: readonly Element[]): Element[] {
+    const docEl = this.doc.documentElement;
+    const near = (a: Element, b: Element): boolean =>
+      a === b || composedContains(a, b) || composedContains(b, a);
+    switch (f.code) {
+      case 'clip': {
+        const c = f.el;
+        const inside = marked.filter(
+          (el) => el === c || composedContains(c, el),
+        );
+        if (inside.length <= 12) return inside;
+        // A large clipping box: just the elements that now reach past its edges.
+        const r = c.getBoundingClientRect();
+        const right = r.left + c.clientLeft + c.clientWidth;
+        const bottom = r.top + c.clientTop + c.clientHeight;
+        const out = inside.filter((el) => {
+          const b = el.getBoundingClientRect();
+          return (
+            b.right > right + 1 ||
+            b.bottom > bottom + 1 ||
+            el.scrollWidth > el.clientWidth + 1
+          );
+        });
+        return out.length ? out : inside.length <= 40 ? inside : [];
+      }
+      case 'overflow': {
+        if (f.el !== docEl)
+          return marked.filter((el) => near(el, f.el)).slice(0, 40);
+        const width = docEl.clientWidth;
+        return marked
+          .filter((el) => {
+            const b = el.getBoundingClientRect();
+            return (
+              b.right + this.view.scrollX > width + 1 ||
+              el.scrollWidth > el.clientWidth + 1
+            );
+          })
+          .slice(0, 40);
+      }
+      case 'overlap':
+        return marked.filter((el) => near(el, f.el));
+      case 'control_collapsed':
+      case 'focus_hidden':
+        return marked.filter(
+          (el) => near(el, f.el) || (f.cover ? near(el, f.cover) : false),
+        );
+      default:
+        return [];
+    }
   }
 
   /** Remove one op completely: its rule block, its tokens, its imperative effects. */
@@ -944,7 +1351,7 @@ export class Engine {
       const anchor = readingAnchor(this.doc, this.facts.main);
       const planned = ops.map((a) => a.planned);
       const results = await this.batch(planned);
-      restoreAnchor(this.doc, anchor);
+      this.restore(anchor);
       const rolledBack = results
         .filter((r) => r.status === 'undone_by_checks')
         .map((r) => r.op);
@@ -981,7 +1388,8 @@ export class Engine {
       this.rejectedFits.clear();
     }
     this.layers.flush();
-    restoreAnchor(this.doc, anchor);
+    this.restore(anchor);
+    if (op === 'all') this.unverified.clear();
     this.ui.hideOutlines();
     this.ui.refresh();
     return this.changes();
@@ -1060,7 +1468,7 @@ export class Engine {
       const target = TARGET_OPS.has(id);
       // More candidates than are drawn: the layer outlines the first three in view.
       const items = (a.prepared.show ?? [])
-        .filter((el) => el.isConnected)
+        .filter((el) => el.isConnected && !this.isExempt(id, el))
         .slice(0, 24)
         .map((el) => {
           const now = docBox(el, this.view);
@@ -1215,9 +1623,10 @@ export class Engine {
     if (this.paused || this.destroyed) return;
     if (!this.scheduler) {
       this.scheduler = new MutationScheduler(
-        (roots) => this.mutex.run(() => this.onMutations(roots)),
+        (roots, added) => this.mutex.run(() => this.onMutations(roots, added)),
         undefined,
         () => this.route?.check(),
+        (added, restyled) => this.markNow(added, restyled),
       );
       this.scheduler.observe(this.doc);
       for (const s of this.layers.scopes())
@@ -1227,6 +1636,8 @@ export class Engine {
       this.route = new RouteWatcher(this.view, () => {
         this.ui.hideToast();
         this.ui.hideOffer();
+        // A new view may fit what the last one could not.
+        this.rollbacks.clear();
         this.opts.events.routeChanged();
       });
     }
@@ -1236,19 +1647,29 @@ export class Engine {
       );
       this.friction = installFriction(this.view, detector);
     }
-    if (!this.offPageChanges && this.opts.events.pageChanged) {
+    if (!this.offPageChanges) {
       const changed = (): void => this.scheduler?.requestAll();
+      // Width changes reflow text (breakpoints); height-only changes (mobile
+      // toolbars, devtools) do not, and image loads never change what text needs.
+      const resized = (): void => {
+        const width = this.view.innerWidth;
+        if (width === this.lastWidth) return;
+        this.lastWidth = width;
+        this.exempt.clear();
+        this.rollbacks.clear();
+        changed();
+      };
       const loaded = (e: Event): void => {
         const el = e.target;
-        if (el instanceof Element && /^(link|style|img)$/.test(el.localName))
+        if (el instanceof Element && /^(link|style)$/.test(el.localName))
           changed();
       };
       const onFonts = (): void => changed();
-      this.view.addEventListener('resize', changed, { passive: true });
+      this.view.addEventListener('resize', resized, { passive: true });
       this.doc.addEventListener('load', loaded, true);
       this.doc.fonts?.addEventListener('loadingdone', onFonts);
       this.offPageChanges = () => {
-        this.view.removeEventListener('resize', changed);
+        this.view.removeEventListener('resize', resized);
         this.doc.removeEventListener('load', loaded, true);
         this.doc.fonts?.removeEventListener('loadingdone', onFonts);
       };
@@ -1275,6 +1696,10 @@ export class Engine {
   private stopRuntime(): void {
     this.offPageChanges?.();
     this.offPageChanges = null;
+    if (this.replanTimer) clearTimeout(this.replanTimer);
+    this.replanTimer = null;
+    this.replanWanted = null;
+    this.unverified.clear();
     if (this.maintenance) clearInterval(this.maintenance);
     this.maintenance = null;
     this.cancelIdle?.();
@@ -1293,15 +1718,209 @@ export class Engine {
     return this.lastInputAt !== -Infinity;
   }
 
-  /** New subtrees: mark them with the ops already applied, verify just those marks. */
-  private async onMutations(rootsIn: FlushRoots): Promise<void> {
+  /**
+   * Inside the MutationObserver callback, before the browser renders the
+   * change: new and re-rendered content gets the applied fit straight away,
+   * so it never paints at its native size first. Bounded; anything left is
+   * reached by the debounced pass. Marks made here are checked later.
+   */
+  private markNow(
+    added: readonly Element[],
+    restyled: readonly Element[],
+  ): void {
     if (this.paused || this.destroyed || !this.facts) return;
+    const ops = [...this.applied.values()].filter(
+      (a) => SYNC_OPS.has(a.op) && OPS[a.op].incremental,
+    );
+    if (ops.length === 0) return;
+    const start = performance.now();
+    const roots: Element[] = [];
+    for (const el of [...added, ...restyled]) {
+      if (!el.isConnected || SKIP_TAGS.has(el.localName) || isOurs(el))
+        continue;
+      roots.push(el);
+      if (roots.length >= 80) break;
+    }
+    if (roots.length === 0) return;
+    const env = this.env();
+    // Read everything first, then write once: no layout thrash.
+    const incoming: Array<[Element, string]> = [];
+    for (const a of ops) {
+      try {
+        for (const [el, tok] of OPS[a.op].incremental?.(env, a, roots) ?? [])
+          if (!this.isExempt(a.op, el)) incoming.push([el, tok]);
+      } catch {
+        // Best effort: the debounced pass covers anything missed here.
+      }
+      if (performance.now() - start > SYNC_BUDGET_MS) break;
+    }
+    const fresh: Array<[Element, string]> = [];
+    for (const [el, tok] of incoming) {
+      if (hasToken(el, tok)) continue;
+      this.marks.mark(el, tok);
+      this.unverified.add(el);
+      fresh.push([el, tok]);
+    }
+    if (fresh.length === 0) return;
+    // Reading the native size gave the browser a "before" value: a page
+    // transition (`transition: all` on links) would animate from it.
+    this.layers.finishTransitionsOn(new Set(fresh.map(([el]) => el)));
+    if (fresh.length <= 160 && performance.now() - start < SYNC_BUDGET_MS)
+      this.clipSweep(fresh);
+  }
+
+  /**
+   * Check marks added after their op was verified, counterfactually and
+   * synchronously (nothing paints in between): read the page with the new
+   * marks, then without them. Elements whose marks cause a failure are put
+   * back, and their op fits around them for the rest of this page view.
+   */
+  private verifyNew(): void {
+    if (this.unverified.size === 0) return;
+    const els = [...this.unverified]
+      .filter((el) => el.isConnected)
+      .slice(0, 150);
+    this.unverified.clear();
+    const collect = (): Array<[Element, string]> => {
+      const out: Array<[Element, string]> = [];
+      for (const el of els)
+        for (const t of tokensOf(el)) {
+          const op = tokenOp(t);
+          if (op && PARTIAL_OPS.has(op) && this.applied.has(op))
+            out.push([el, t]);
+        }
+      return out;
+    };
+    // Clipping anywhere on the page first, then the viewport's full checks.
+    this.clipSweep(collect());
+    const pairs = collect();
+    if (pairs.length === 0) return;
+    const probes = buildProbes({
+      doc: this.doc,
+      view: this.view,
+      marked: pairs,
+      existing: [],
+      targets: [],
+      contrast: [],
+    });
+    let base: Snapshot;
+    for (const [el, t] of pairs) this.marks.unmark(el, t);
+    try {
+      base = takeSnapshot(this.doc, probes);
+    } finally {
+      for (const [el, t] of pairs) this.marks.mark(el, t);
+      this.layers.finishOwnedTransitions();
+    }
+    let fails: Failure[];
+    try {
+      fails = diffSnapshots(this.doc, probes, base, {
+        contrastTarget: 4.5,
+        marked: pairs.map(([el]) => el),
+      });
+    } catch {
+      return;
+    }
+    if (fails.length === 0) return;
+    const docEl = this.doc.documentElement;
+    const width = docEl.clientWidth;
+    for (const f of fails) {
+      const hit = pairs.filter(([el]) => {
+        if (f.code === 'overflow' && f.el === docEl) {
+          const b = el.getBoundingClientRect();
+          return (
+            b.right + this.view.scrollX > width + 1 ||
+            el.scrollWidth > el.clientWidth + 1
+          );
+        }
+        return (
+          el === f.el ||
+          composedContains(f.el, el) ||
+          composedContains(el, f.el) ||
+          (f.cover !== undefined && composedContains(f.cover, el))
+        );
+      });
+      // An overflow none of the new elements explains: put them all back.
+      const back = hit.length || f.code !== 'overflow' ? hit : pairs;
+      for (const [el, t] of back) {
+        const op = tokenOp(t);
+        this.marks.unmark(el, t);
+        if (op) this.exemptAdd(op, el);
+      }
+    }
+    this.layers.finishOwnedTransitions();
+  }
+
+  /**
+   * Extend applied ops to text they do not cover yet (content that arrived,
+   * or text a restyle made smaller), without unmarking anything, then check
+   * just the new marks. Covers the last extraction's text and its subtrees.
+   */
+  private topUp(skip: ReadonlySet<OpId>): void {
+    if (!this.facts) return;
+    const ops = [...this.applied.values()].filter(
+      (a) => !skip.has(a.op) && OPS[a.op].incremental,
+    );
+    if (ops.length === 0) return;
+    const env = this.env();
+    const roots = this.facts.text
+      .map((t) => t.el)
+      .filter((el) => el.isConnected);
+    const incoming: Array<[Element, string, OpId]> = [];
+    for (const a of ops) {
+      for (let i = 0; i < roots.length; i += 200) {
+        try {
+          for (const [el, tok] of OPS[a.op].incremental?.(
+            env,
+            a,
+            roots.slice(i, i + 200),
+          ) ?? [])
+            incoming.push([el, tok, a.op]);
+        } catch {
+          // best effort
+        }
+      }
+    }
+    const marked = new Set<Element>();
+    for (const [el, tok, op] of incoming) {
+      if (this.isExempt(op, el) || hasToken(el, tok)) continue;
+      this.marks.mark(el, tok);
+      this.unverified.add(el);
+      marked.add(el);
+    }
+    if (marked.size) {
+      this.layers.finishTransitionsOn(marked);
+      this.verifyNew();
+    }
+    for (const a of ops)
+      if (PARTIAL_OPS.has(a.op)) a.prepared.count = this.marks.countFor(a.op);
+  }
+
+  /**
+   * The debounced pass: reach what the pre-paint pass could not (bursts,
+   * inline style changes, deep subtrees), check new marks, run imperative
+   * ops' handlers, and ask for a fresh decision when the page really
+   * changed. Waits while the person scrolls: never measure under them.
+   */
+  private async onMutations(rootsIn: FlushRoots, added = 0): Promise<void> {
+    if (this.paused || this.destroyed || !this.facts) return;
+    this.addedSincePlan += added;
+    const now = performance.now();
+    if (this.scrolling(now)) {
+      if (!this.deferredSince) this.deferredSince = now;
+      if (now - this.deferredSince < SCROLL_MAX_DEFER_MS) {
+        this.scheduler?.requeue(rootsIn, SCROLL_QUIET_MS);
+        return;
+      }
+    }
+    this.deferredSince = 0;
     this.layers.watchdog();
     this.marks.prune();
-    const roots =
-      rootsIn === 'all'
-        ? [this.doc.body]
-        : rootsIn.filter((r) => r.isConnected && !SKIP_TAGS.has(r.localName));
+    const all = rootsIn === 'all';
+    const roots = all
+      ? [this.doc.body]
+      : rootsIn.filter(
+          (r) => r.isConnected && !SKIP_TAGS.has(r.localName) && !isOurs(r),
+        );
     if (roots.length === 0) return;
     // Shadow roots that arrived with the new content get a layer.
     for (const root of roots) {
@@ -1313,65 +1932,95 @@ export class Engine {
     }
     this.layers.flush();
 
-    if (this.opts.events.pageChanged) {
-      for (const active of this.applied.values()) {
-        try {
-          active.handle?.onAdded?.(roots);
-        } catch {
-          /* Host nodes may have disappeared. */
-        }
-      }
-      this.opts.events.pageChanged();
-      return;
-    }
-
     const env = this.env();
-    const incoming: Array<[OpId, Element, string]> = [];
-    for (const a of this.applied.values()) {
-      const impl = OPS[a.op];
-      if (impl.incremental) {
+    const deep =
+      all || roots.some((r) => r.getElementsByTagName('*').length > 400);
+    if (deep) this.topUp(new Set());
+    if (!all) {
+      const incoming: Array<[Element, string, OpId]> = [];
+      for (const a of this.applied.values()) {
+        const impl = OPS[a.op];
+        if (!impl.incremental) continue;
         try {
           for (const [el, tok] of impl.incremental(env, a, roots))
-            incoming.push([a.op, el, tok]);
+            incoming.push([el, tok, a.op]);
         } catch {
           // Incremental marking is best effort; the op stays as it was.
         }
       }
+      const marked = new Set<Element>();
+      for (const [el, tok, op] of incoming) {
+        if (this.isExempt(op, el) || hasToken(el, tok)) continue;
+        this.marks.mark(el, tok);
+        this.unverified.add(el);
+        marked.add(el);
+      }
+      if (marked.size) this.layers.finishTransitionsOn(marked);
+    }
+    this.verifyNew();
+    for (const a of this.applied.values()) {
       try {
         a.handle?.onAdded?.(roots);
       } catch {
         // ignore: the page removed what it inserted
       }
+      if (PARTIAL_OPS.has(a.op)) a.prepared.count = this.marks.countFor(a.op);
     }
-    if (incoming.length === 0) return;
-    const probes: ProbeSet = buildProbes({
-      doc: this.doc,
-      view: this.view,
-      marked: incoming.map(([, el, tok]) => [el, tok] as const),
-      existing: [],
-      targets: [],
-      contrast: [],
-    });
-    const base: Snapshot = takeSnapshot(this.doc, probes);
-    const anchor = readingAnchor(this.doc, this.facts.main);
-    for (const [, el, tok] of incoming) this.marks.mark(el, tok);
-    restoreAnchor(this.doc, anchor);
-    await settle(this.doc);
-    const fails = diffSnapshots(this.doc, probes, base, {
-      contrastTarget: 4.5,
-      marked: incoming.map(([, el]) => el),
-    });
-    // Scoped rollback: drop just the new marks near each failure.
-    for (const f of fails) {
-      for (const [op, el] of incoming) {
-        if (el === f.el || f.el.contains(el) || el.contains(f.el))
-          this.marks.unmarkOpOn(el, op);
-      }
-    }
-    restoreAnchor(this.doc, anchor);
-    for (const a of this.applied.values())
-      a.prepared.count = Math.max(a.prepared.count, this.marks.countFor(a.op));
     this.ui.refresh();
+
+    // A fresh decision when content arrived, a rejected fit's box changed,
+    // or a full pass is owed. Applied ops are sticky; it can only add.
+    const rejectedMoved =
+      !all &&
+      [...this.rejectedFits.values()].some((r) =>
+        [...r.checks.keys()].some((el) =>
+          roots.some(
+            (root) =>
+              el === root ||
+              composedContains(el, root) ||
+              composedContains(root, el),
+          ),
+        ),
+      );
+    if (all || rejectedMoved || this.wantsContent())
+      this.requestReplan('eager');
+    else if (this.addedSincePlan >= REPLAN_MIN_ADDED)
+      this.requestReplan('normal');
+  }
+
+  /** Something planned did nothing yet: content that needs it may still be arriving. */
+  private wantsContent(): boolean {
+    if (this.addedSincePlan < REPLAN_MIN_ADDED) return false;
+    if (this.applied.size === 0) return true;
+    return [...this.reports.values()].some(
+      (c) => c.mode === 'auto' && c.status === 'not_needed',
+    );
+  }
+
+  /**
+   * Ask the service worker to decide again, at most every few seconds and
+   * never while the person scrolls. The adapter applies the answer sticky.
+   */
+  private requestReplan(kind: 'eager' | 'normal'): void {
+    if (!this.opts.events.pageChanged || this.paused || this.destroyed) return;
+    if (this.replanWanted !== 'eager') this.replanWanted = kind;
+    const due =
+      this.lastPlanAt +
+      (this.replanWanted === 'eager' ? REPLAN_EAGER_MS : REPLAN_MIN_MS);
+    const fire = (): void => {
+      this.replanTimer = null;
+      if (this.paused || this.destroyed || !this.replanWanted) return;
+      if (this.scrolling()) {
+        this.replanTimer = setTimeout(fire, SCROLL_QUIET_MS);
+        return;
+      }
+      this.replanWanted = null;
+      this.addedSincePlan = 0;
+      this.lastPlanAt = performance.now();
+      this.opts.events.pageChanged?.();
+    };
+    if (this.replanTimer) clearTimeout(this.replanTimer);
+    this.replanTimer = setTimeout(fire, Math.max(0, due - performance.now()));
   }
 
   destroy(): void {

@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dynamic news feed</title>
+    <meta property="og:type" content="article" />
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #333;
+        background: #fff;
+      }
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+        padding: 14px 24px;
+        font-size: 14px;
+        transition:
+          padding 0.2s,
+          font-size 0.2s;
+      }
+      header.top.compact {
+        padding: 6px 24px;
+        font-size: 12px;
+      }
+      header.top nav a {
+        margin-right: 14px;
+      }
+      a {
+        color: #1a4d8f;
+        transition: all 0.3s ease;
+      }
+      .layout {
+        display: flex;
+        gap: 24px;
+        padding: 24px;
+        align-items: flex-start;
+      }
+      main.story {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      main.story p,
+      .feed .card p {
+        font-size: 13px;
+        line-height: 16px;
+        margin: 0 0 10px;
+      }
+      .byline,
+      .ticker {
+        font-size: 12px;
+        color: #555;
+      }
+      .carousel {
+        position: relative;
+        height: 140px;
+        overflow: hidden;
+        border: 1px solid #eee;
+        margin: 12px 0 16px;
+      }
+      .slide {
+        position: absolute;
+        inset: 0;
+        padding: 12px;
+        transform: translateX(100%);
+        opacity: 0;
+        transition:
+          transform 0.5s ease,
+          opacity 0.5s;
+      }
+      .slide.is-active {
+        transform: none;
+        opacity: 1;
+      }
+      .card {
+        border: 1px solid #e3e3e3;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .card .clamp {
+        height: 34px;
+        overflow: hidden;
+        font-size: 13px;
+        line-height: 17px;
+      }
+      .ad {
+        height: 0;
+        overflow: hidden;
+        background: #f4f4f4;
+        transition: height 0.3s;
+      }
+      .ad.loaded {
+        height: 180px;
+      }
+      img.lazy {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 20px;
+        background: #eee;
+      }
+      aside.trending {
+        position: sticky;
+        top: 64px;
+        width: 260px;
+        flex: none;
+        font-size: 12px;
+      }
+      aside.trending li {
+        margin-bottom: 6px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border: 2px solid #999;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <nav aria-label="Sections">
+        <a href="#world">World</a><a href="#business">Business</a
+        ><a href="#science">Science</a><a href="#culture">Culture</a>
+      </nav>
+    </header>
+    <div class="layout">
+      <main class="story" id="story">
+        <h1>River towns plan for a wetter decade</h1>
+        <p class="byline">By a staff reporter · Updated just now</p>
+        <p class="ticker" id="ticker">
+          <span class="spinner"></span> Live: <span id="clock">0</span>
+        </p>
+        <div class="carousel" id="carousel">
+          <div class="slide is-active">
+            <p>
+              Slide one: engineers walked the levee at dawn and counted the
+              places where the water had found a way through last spring.
+            </p>
+          </div>
+          <div class="slide">
+            <p>
+              Slide two: the county will publish its flood maps next month, and
+              residents can comment on them at three public meetings.
+            </p>
+          </div>
+          <div class="slide">
+            <p>
+              Slide three: volunteers planted willows along the bank, which slow
+              the current and hold the soil when the river rises.
+            </p>
+          </div>
+        </div>
+        <p>
+          The river has crested above the old marker four times in the last ten
+          years, and each time the town has spent the following summer repairing
+          roads, pumping basements and arguing about who should pay for the next
+          round of improvements to the levee system.
+        </p>
+        <p>
+          This year the council asked engineers for a plan that assumes the
+          wetter seasons will continue. Their draft proposes raising the lowest
+          stretch of road, widening two culverts and buying back a handful of
+          properties that have flooded more than three times.
+        </p>
+        <p>
+          Residents who spoke at the first meeting were divided. Some want the
+          buyouts to move faster; others worry that the town will lose the
+          families who have lived beside the river for generations and the small
+          businesses that depend on them.
+        </p>
+        <p>
+          The engineers say the plan can be built in phases, starting with the
+          culverts, which would reduce flooding on the main street even if the
+          rest of the work takes longer to fund than anyone would like.
+        </p>
+        <div class="ad" id="ad"><p>Advertisement</p></div>
+        <section class="feed" id="feed" aria-label="More stories"></section>
+        <div id="sentinel" style="height: 1px"></div>
+      </main>
+      <aside class="trending" aria-label="Trending">
+        <h2>Trending</h2>
+        <ol id="trending"></ol>
+      </aside>
+    </div>
+    <script>
+      const TOPICS = [
+        'Council approves the first phase of the culvert project after a long debate',
+        'What the new flood maps mean for homeowners along the river road',
+        'Volunteers plant four hundred willows on the north bank this weekend',
+        'School district moves the spring fair to higher ground for safety',
+        'A short history of the levee and the families who built it',
+      ];
+      const IMG =
+        'data:image/svg+xml,' +
+        encodeURIComponent(
+          "<svg xmlns='http://www.w3.org/2000/svg' width='600' height='160'><rect width='600' height='160' fill='#d9d9d9'/></svg>",
+        );
+
+      // Live clock: a text update every 100 ms.
+      let tick = 0;
+      setInterval(() => {
+        document.getElementById('clock').textContent = String(++tick);
+      }, 100);
+
+      // Carousel: class swaps and transforms every 700 ms.
+      let slide = 0;
+      setInterval(() => {
+        const slides = document.querySelectorAll('.slide');
+        slides[slide].classList.remove('is-active');
+        slide = (slide + 1) % slides.length;
+        slides[slide].classList.add('is-active');
+      }, 700);
+
+      // Trending: a framework-style re-render that replaces every node.
+      let order = 0;
+      function renderTrending() {
+        const ol = document.getElementById('trending');
+        const items = TOPICS.map((t, i) => TOPICS[(i + order) % TOPICS.length]);
+        ol.replaceChildren(
+          ...items.map((t) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.href = '#';
+            a.textContent = t;
+            li.append(a);
+            return li;
+          }),
+        );
+        order++;
+      }
+      renderTrending();
+      setInterval(renderTrending, 700);
+
+      // Feed: infinite scroll with lazy images and a clamped teaser per card.
+      let cards = 0;
+      const lazy = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          e.target.src = e.target.dataset.src;
+          lazy.unobserve(e.target);
+        }
+      });
+      function addCards(n) {
+        const feed = document.getElementById('feed');
+        for (let i = 0; i < n; i++) {
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.dataset.card = String(cards);
+          const h = document.createElement('h3');
+          h.textContent = `Story ${cards + 1}: ${TOPICS[cards % TOPICS.length]}`;
+          const img = document.createElement('img');
+          img.className = 'lazy';
+          img.alt = '';
+          img.dataset.src = IMG;
+          const p = document.createElement('p');
+          p.className = 'teaser';
+          p.textContent =
+            'Reporters followed the story through the week, talking with residents, engineers and the volunteers who turned out on the bank to help, and they will keep updating this page as the work continues.';
+          const clamp = document.createElement('p');
+          clamp.className = 'clamp';
+          clamp.textContent =
+            'Read more about how the town plans to pay for the work, and what it will mean for property taxes over the next decade, in our full explainer.';
+          card.append(h, img, p, clamp);
+          feed.append(card);
+          lazy.observe(img);
+          cards++;
+        }
+      }
+      addCards(4);
+      new IntersectionObserver(
+        (entries) => {
+          if (entries.some((e) => e.isIntersecting)) addCards(3);
+        },
+        { rootMargin: '400px' },
+      ).observe(document.getElementById('sentinel'));
+
+      // Sticky header that compacts on scroll.
+      addEventListener(
+        'scroll',
+        () => {
+          document
+            .querySelector('header.top')
+            .classList.toggle('compact', scrollY > 60);
+        },
+        { passive: true },
+      );
+
+      // A late ad slot that pushes content down.
+      setTimeout(
+        () => document.getElementById('ad').classList.add('loaded'),
+        1200,
+      );
+    </script>
+  </body>
+</html>

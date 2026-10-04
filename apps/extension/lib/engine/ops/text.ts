@@ -3,7 +3,14 @@ import type { PlannedOp } from '@webable/core/policy/types';
 import type { TextFact } from '../types';
 import { median, round, weightedMedian } from '../util/buckets';
 import { avgCharWidth, lineHeightPx, xHeightRatio } from '../extract/text';
-import { composedContains } from '../util/dom';
+import {
+  composedContains,
+  directText,
+  directTextLength,
+  isIconFont,
+  isOurs,
+  SKIP_TAGS,
+} from '../util/dom';
 import { tok } from './css';
 import { notNeeded, type OpEnv, type OpImpl } from './types';
 
@@ -128,22 +135,27 @@ export const textFloor: OpImpl = {
   incremental(env, applied, roots) {
     const floor = applied.value;
     const out: Array<[Element, string]> = [];
+    const seen = new Set<Element>();
     for (const root of roots) {
       for (const el of [root, ...root.querySelectorAll('*')].slice(0, 400)) {
-        if (el.closest(NO_TEXT_OPS)) continue;
-        if (
-          !el.firstChild ||
-          ![...el.childNodes].some(
-            (n) => n.nodeType === 3 && (n.nodeValue ?? '').trim(),
-          )
-        )
-          continue;
+        if (seen.has(el)) continue;
+        seen.add(el);
+        if (SKIP_TAGS.has(el.localName) || isOurs(el)) continue;
+        const chars = directTextLength(el);
+        if (chars === 0 || el.closest(NO_TEXT_OPS)) continue;
         const cs = env.view.getComputedStyle(el);
+        if (cs.display === 'none') continue;
         const size = parseFloat(cs.fontSize);
         if (!Number.isFinite(size) || size >= floor - 0.25) continue;
+        if (isIconFont(cs.fontFamily, chars <= 4 ? directText(el, 8) : ''))
+          continue;
         out.push([el, 'tf']);
         const lhToken = lineHeightToken(cs, size, floor);
         if (lhToken) out.push([el, lhToken]);
+        if (el.childElementCount === 0) {
+          const aspect = xHeightRatio(env.doc, cs.fontFamily, cs.fontWeight);
+          if (aspect !== null && aspect < 0.47) out.push([el, 'tfa']);
+        }
       }
     }
     return out;
@@ -162,18 +174,16 @@ export function wordSpacingFor(lineHeight: number): number {
   return 0.06;
 }
 
+/** Running text never sits in navigation, menus, controls or page headers. */
+const NOT_RUNNING =
+  'nav, [role="navigation"], [role="menu"], [role="tablist"], a, button, label, header';
+
 function isRunningText(env: OpEnv, t: TextFact, minChars: number): boolean {
   if (t.chars < minChars) return false;
   const tag = t.el.localName;
   if (/^h[1-6]$/.test(tag)) return false;
   if (!RUNNING_TEXT.test(tag)) return false;
-  if (
-    t.el.closest(
-      'nav, [role="navigation"], [role="menu"], [role="tablist"], a, button, label, header',
-    )
-  ) {
-    return false;
-  }
+  if (t.el.closest(NOT_RUNNING)) return false;
   const d = env.view.getComputedStyle(t.el).display;
   return BLOCK_DISPLAY.test(d);
 }
@@ -209,16 +219,27 @@ export const lineSpacing: OpImpl = {
     };
   },
   incremental(env, applied, roots) {
-    const main = env.facts.main;
+    // A main region the page replaced no longer bounds anything.
+    const main = env.facts.main?.isConnected ? env.facts.main : null;
     const out: Array<[Element, string]> = [];
+    const seen = new Set<Element>();
     for (const root of roots) {
-      if (main && !composedContains(main, root)) continue;
+      if (
+        main &&
+        !composedContains(main, root) &&
+        !composedContains(root, main)
+      )
+        continue;
       for (const el of [
         root,
         ...root.querySelectorAll('p, li, dd, blockquote, figcaption'),
       ].slice(0, 200)) {
-        if (!RUNNING_TEXT.test(el.localName) || el.closest(NO_TEXT_OPS))
+        if (seen.has(el)) continue;
+        seen.add(el);
+        if (main && !composedContains(main, el)) continue;
+        if (!RUNNING_TEXT.test(el.localName) || /^h[1-6]$/.test(el.localName))
           continue;
+        if (el.closest(NO_TEXT_OPS) || el.closest(NOT_RUNNING)) continue;
         if ((el.textContent ?? '').trim().length < 40) continue;
         const cs = env.view.getComputedStyle(el);
         if (!BLOCK_DISPLAY.test(cs.display)) continue;

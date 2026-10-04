@@ -119,12 +119,21 @@ test.describe('content script flow (fake service worker)', () => {
     await page.waitForTimeout(600);
     const samples = await page.evaluate(async () => {
       const p = document.querySelector('main p:not(.byline)')!;
+      const main = p.parentElement!;
       const tick = document.createElement('span');
       document.body.append(tick);
+      // Text-only churn every 180 ms, and new paragraphs arriving now and then.
       const timer = setInterval(() => {
         tick.textContent = String(Date.now());
       }, 180);
+      let n = 0;
+      const more = setInterval(() => {
+        const extra = document.createElement('p');
+        extra.textContent = `Arriving paragraph ${++n} with enough words to read as running text in the story.`;
+        main.append(extra);
+      }, 400);
       const sizes: number[] = [];
+      const arrivals: number[] = [];
       const opacityTransition = p.animate([{ opacity: 1 }, { opacity: 0.4 }], {
         duration: 10000,
       });
@@ -132,14 +141,18 @@ test.describe('content script flow (fake service worker)', () => {
       await new Promise<void>((resolve) => {
         const frame = () => {
           sizes.push(parseFloat(getComputedStyle(p).fontSize));
-          if (performance.now() - start < 3500) requestAnimationFrame(frame);
+          for (const q of main.querySelectorAll('p:not(.byline)'))
+            arrivals.push(parseFloat(getComputedStyle(q).fontSize));
+          if (performance.now() - start < 6500) requestAnimationFrame(frame);
           else resolve();
         };
         requestAnimationFrame(frame);
       });
       clearInterval(timer);
+      clearInterval(more);
       return {
         sizes,
+        arrivals,
         sent: window.__webableEngine.sentMessages(),
         animationState: opacityTransition.playState,
       };
@@ -150,13 +163,20 @@ test.describe('content script flow (fake service worker)', () => {
       'no frame may expose the original or transitioning text',
     ).toBe(18);
     expect(Math.max(...samples.sizes)).toBe(18);
+    // Arriving paragraphs are fitted in their first frame, never animating in.
+    expect(Math.min(...samples.arrivals)).toBe(18);
+    expect(Math.max(...samples.arrivals)).toBe(18);
+    // Text-only churn never re-measures the page; arriving content does, at a
+    // calm rate, always measuring the site's own styles.
     const signals = samples.sent.filter((m) => m.type === 'cs:signals');
-    expect(signals.length).toBeGreaterThan(2);
+    expect(signals.length).toBeGreaterThanOrEqual(2);
+    expect(signals.length).toBeLessThanOrEqual(3);
     expect(signals.map((m) => m.signals.text.mainFontPx)).toEqual(
       signals.map(() => 13),
     );
     expect(samples.animationState).toBe('running');
-    await page.waitForTimeout(1500);
+    // At most one trailing decision for the last arrivals, then quiet.
+    await page.waitForTimeout(6000);
     const quietCount = await page.evaluate(
       () =>
         window.__webableEngine
@@ -184,9 +204,15 @@ test.describe('content script flow (fake service worker)', () => {
     );
     await page.evaluate(() => {
       window.__webableEngine.holdSignals(true);
-      document
-        .querySelector('main p:not(.byline)')!
-        .append(document.createTextNode(' More content while planning.'));
+      // Content arrives: the page asks for a fresh decision (rate-limited).
+      const main = document.querySelector(
+        'main p:not(.byline)',
+      )!.parentElement!;
+      for (let i = 0; i < 3; i++) {
+        const p = document.createElement('p');
+        p.textContent = 'More content while planning, long enough to be read.';
+        main.append(p);
+      }
     });
     await expect
       .poll(
@@ -194,6 +220,7 @@ test.describe('content script flow (fake service worker)', () => {
           (
             await page.evaluate(() => window.__webableEngine.sentMessages())
           ).filter((m) => m.type === 'cs:signals').length,
+        { timeout: 10_000 },
       )
       .toBe(2);
     await page.evaluate(() =>

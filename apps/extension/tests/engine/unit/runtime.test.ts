@@ -151,7 +151,8 @@ describe('mutation scheduler', () => {
     for (const e of els) document.body.append(e);
     s.onRecords([rec(els)]);
     await vi.advanceTimersByTimeAsync(20);
-    expect(run).toHaveBeenLastCalledWith('all');
+    // The second argument counts the elements added since the last pass.
+    expect(run).toHaveBeenLastCalledWith('all', 5);
     const host = document.createElement('webable-ui');
     s.onRecords([rec([host])]);
     await vi.advanceTimersByTimeAsync(20);
@@ -170,7 +171,35 @@ describe('mutation scheduler', () => {
     p.hidden = false;
     await vi.advanceTimersByTimeAsync(400);
     expect(run).toHaveBeenCalledOnce();
-    expect(run).toHaveBeenCalledWith([p]);
+    // Updates to existing nodes add nothing: no fresh decision is due.
+    expect(run).toHaveBeenCalledWith([p], 0);
+    s.disconnect();
+  });
+
+  it('marks before paint: inserted and restyled elements reach the sync hook', async () => {
+    document.body.innerHTML = '<p id="old">Old</p>';
+    const old = document.querySelector('p')!;
+    const run = vi.fn(async (_roots: Element[] | 'all') => undefined);
+    const sync = vi.fn();
+    const s = new MutationScheduler(run, undefined, undefined, sync);
+    const fresh = document.createElement('p');
+    s.onRecords([rec([fresh])]);
+    expect(sync).toHaveBeenLastCalledWith([fresh], []);
+    s.onRecords([
+      {
+        type: 'attributes',
+        attributeName: 'class',
+        target: old,
+        addedNodes: [] as unknown as NodeList,
+      } as unknown as MutationRecord,
+    ]);
+    expect(sync).toHaveBeenLastCalledWith([], [old]);
+    // WebAble's own host never reaches it.
+    s.onRecords([rec([document.createElement('webable-ui')])]);
+    expect(sync).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(run).toHaveBeenCalledOnce();
+    expect(run.mock.calls[0]?.[1]).toBe(1);
     s.disconnect();
   });
 

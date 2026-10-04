@@ -141,6 +141,11 @@ const api = {
     const e = (adapter as unknown as { engine: Engine | null } | null)?.engine;
     return e ? e.layer.press(label) : false;
   },
+  /** The adapter's engine: its current change records. */
+  adapterChanges() {
+    const e = (adapter as unknown as { engine: Engine | null } | null)?.engine;
+    return e ? e.changes() : [];
+  },
   async workerMessage(msg: unknown) {
     return workerHandler ? workerHandler(msg) : undefined;
   },

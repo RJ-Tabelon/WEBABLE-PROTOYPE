@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { open, plan } from './helpers';
 
-test('overflow rolls back only the responsible fit and does not retry it on unrelated updates', async ({
+test('overflow puts back only the responsible element and does not retry it on unrelated updates', async ({
   page,
 }) => {
   await open(page, 'article');
@@ -30,10 +30,20 @@ test('overflow rolls back only the responsible fit and does not retry it on unre
       window.__webableEngine.workerMessage({ type: 'sw:get-changes' }),
     )) as { changes: Array<{ op: string; status: string; vcode?: string }> }
   ).changes;
+  // The fit goes around the one line that would overflow; the rest keeps it.
   expect(changes.find((c) => c.op === 'text_floor')).toMatchObject({
-    status: 'undone_by_checks',
-    vcode: 'overflow',
+    status: 'applied',
   });
+  expect(
+    await page.locator('#normal').evaluate((p) => getComputedStyle(p).fontSize),
+  ).toBe('18px');
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth -
+        document.documentElement.clientWidth,
+    ),
+  ).toBeLessThanOrEqual(1);
   expect(changes.find((c) => c.op === 'contrast')?.status).toBe('applied');
   expect(changes.find((c) => c.op === 'line_spacing')?.status).toBe('applied');
   expect(changes.find((c) => c.op === 'target_size')?.status).toBe('applied');

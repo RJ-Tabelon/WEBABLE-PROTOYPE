@@ -274,10 +274,14 @@ export class ContentAdapter {
       revision !== this.revision
     )
       return;
-    const changes = await this.applyAndReport(reply.plan, {
-      replace: true,
-      refresh: true,
-    });
+    // The first decision replaces whatever ran before it. Later ones answer
+    // the page changing (content, route, viewport) and are sticky: what is
+    // applied stays exactly as it is, and they can only add. Only the person
+    // (undo, levels, pause, settings) removes or resizes a change.
+    const changes = await this.applyAndReport(
+      reply.plan,
+      first ? { replace: true, refresh: true } : { sticky: true },
+    );
     // The toast is for the first automatic changes on a site; the service
     // worker decides (`announce` on the reply) and remembers where it has.
     if (first && reply.announce === true) engine.announce(changes);

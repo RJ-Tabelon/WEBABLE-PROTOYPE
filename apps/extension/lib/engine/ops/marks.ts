@@ -156,8 +156,16 @@ export class MarkBook {
     return n;
   }
 
-  /** Replace an op's marks without touching tokens that have stayed the same. */
-  replaceOp(op: OpId, marks: readonly (readonly [Element, string])[]): void {
+  /**
+   * Replace an op's marks without touching tokens that have stayed the same.
+   * `keep` spares elements the new marks could not speak for (content the
+   * measurement did not cover), so they are not unmarked by omission.
+   */
+  replaceOp(
+    op: OpId,
+    marks: readonly (readonly [Element, string])[],
+    keep?: (el: Element) => boolean,
+  ): void {
     const next = new Map<string, Set<Element>>();
     for (const [el, token] of marks) {
       let set = next.get(token);
@@ -167,7 +175,9 @@ export class MarkBook {
     for (const [token, set] of this.byToken) {
       if (tokenOp(token) !== op) continue;
       for (const el of [...set]) {
-        if (!next.get(token)?.has(el)) this.unmark(el, token);
+        if (next.get(token)?.has(el)) continue;
+        if (keep && el.isConnected && keep(el)) continue;
+        this.unmark(el, token);
       }
       if (set.size === 0) this.byToken.delete(token);
     }

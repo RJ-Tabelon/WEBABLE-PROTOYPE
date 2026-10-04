@@ -51,6 +51,8 @@ export interface Failure {
   code: VerifyCode;
   el: Element;
   ops: Set<OpId>;
+  /** What now covers a control that was reachable before (hit-test failures). */
+  cover?: Element;
 }
 
 const LAYOUT_TOKENS_TEXT = /^(tf|ls|ll)/;
@@ -62,7 +64,7 @@ function overflowOf(cs: CSSStyleDeclaration): 'hidden' | 'scroll' | 'visible' {
   return 'visible';
 }
 
-function isClipped(el: Element, view: Window): boolean {
+export function isClipped(el: Element, view: Window): boolean {
   const h = el as HTMLElement;
   const cs = view.getComputedStyle(el);
   const kind = overflowOf(cs);
@@ -330,7 +332,12 @@ export function diffSnapshots(
         continue;
       const ops = opsNear(c);
       if (cover) for (const op of opsNear(cover)) ops.add(op);
-      fails.push({ code: 'control_collapsed', el: c, ops });
+      fails.push({
+        code: 'control_collapsed',
+        el: c,
+        ops,
+        ...(cover ? { cover } : {}),
+      });
     }
   }
 

@@ -1,4 +1,4 @@
-import type { OpId } from '@webable/core/ops/catalog';
+import { OP_IDS, type OpId } from '@webable/core/ops/catalog';
 
 import type { TreeScope } from '../util/dom';
 import { tokenOp, tokensOf } from './marks';
@@ -50,6 +50,51 @@ const TRANSITION_PROPS: Partial<Record<OpId, readonly string[]>> = {
   focus_view: ['opacity'],
   unpin_bars: ['position'],
 };
+
+/**
+ * Cascade order is the catalog order, never insertion order. A counterfactual
+ * read removes and re-adds an op's block; if that moved it to the end, which
+ * of two equally specific rules wins (text_floor's line-height safety net or
+ * line_spacing's line height) would depend on verification history.
+ */
+const RANK = new Map<string, number>(OP_IDS.map((op, i) => [op, i]));
+const rank = (key: string): number => RANK.get(key) ?? OP_IDS.length;
+
+/** Properties that inherit: a marked ancestor changes them on descendants too. */
+const INHERITED = new Set([
+  'font-size',
+  'font-size-adjust',
+  'line-height',
+  'word-spacing',
+  'color',
+]);
+
+/** Ops that own `property` on `el`, directly or (inherited properties) through a marked ancestor. */
+function owns(el: Element, property: string): boolean {
+  let n: Element | null = el;
+  for (let depth = 0; n && depth < 5; depth++, n = n.parentElement) {
+    if (depth > 0 && !INHERITED.has(property)) return false;
+    for (const token of tokensOf(n)) {
+      const op = tokenOp(token);
+      if (op && TRANSITION_PROPS[op]?.includes(property)) return true;
+    }
+  }
+  return false;
+}
+
+/** Cancel CSS transitions of properties WebAble controls on these animations. */
+function cancelOwned(animations: readonly Animation[]): void {
+  for (const animation of animations) {
+    const property = (animation as Animation & { transitionProperty?: string })
+      .transitionProperty;
+    const target = (animation.effect as KeyframeEffect | null)?.target;
+    if (!property || !(target instanceof Element)) continue;
+    if (!owns(target, property)) continue;
+    // cancel exposes the underlying CSS value immediately; finish would
+    // leave a transition filling with the value from the previous phase.
+    animation.cancel();
+  }
+}
 
 class StyleLayer {
   readonly sheet: CSSStyleSheet;
@@ -111,6 +156,7 @@ class StyleLayer {
     this.sheet.replaceSync(
       [...this.blocks]
         .filter(([key]) => !this.measuring || !MEASURED_OPS.has(key))
+        .sort(([a], [b]) => rank(a) - rank(b))
         .map(([, css]) => css)
         .join('\n'),
     );
@@ -205,30 +251,33 @@ export class LayerManager {
     }
   }
 
-  /** Finish only transitions of properties WebAble currently controls. */
+  /**
+   * Finish only transitions of properties WebAble currently controls,
+   * including inherited ones on descendants of marked elements (a link with
+   * `transition: all` inside an enlarged paragraph must not animate its size).
+   */
   finishOwnedTransitions(): void {
     for (const scope of this.layers.keys()) {
       // getAnimations forces the style update that creates CSS transitions.
-      const animations =
+      cancelOwned(
         (
           scope as TreeScope & { getAnimations?: () => Animation[] }
-        ).getAnimations?.() ?? [];
-      for (const animation of animations) {
-        const property = (
-          animation as Animation & { transitionProperty?: string }
-        ).transitionProperty;
-        const target = (animation.effect as KeyframeEffect | null)?.target;
-        if (!property || !(target instanceof Element)) continue;
-        if (
-          !tokensOf(target).some((token) => {
-            const op = tokenOp(token);
-            return op && TRANSITION_PROPS[op]?.includes(property);
-          })
-        )
-          continue;
-        // cancel exposes the underlying CSS value immediately; finish would
-        // leave a transition filling with the value from the previous phase.
-        animation.cancel();
+        ).getAnimations?.() ?? [],
+      );
+    }
+  }
+
+  /**
+   * The same, for just these elements and their subtrees: what was marked
+   * inside a MutationObserver callback, where a document-wide scan is too much.
+   */
+  finishTransitionsOn(els: Iterable<Element>): void {
+    for (const el of els) {
+      if (!el.isConnected) continue;
+      try {
+        cancelOwned(el.getAnimations({ subtree: true }));
+      } catch {
+        // getAnimations({subtree}) unsupported: the next full pass covers it.
       }
     }
   }

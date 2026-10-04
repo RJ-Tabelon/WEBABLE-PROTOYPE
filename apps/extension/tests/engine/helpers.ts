@@ -8,7 +8,15 @@ import type {
 } from '@webable/core/policy/types';
 
 export type Fixture =
-  'article' | 'store' | 'app' | 'clip' | 'shadow' | 'spa' | 'large' | 'csp';
+  | 'article'
+  | 'store'
+  | 'app'
+  | 'clip'
+  | 'shadow'
+  | 'spa'
+  | 'large'
+  | 'csp'
+  | 'dynamic';
 export const FIXTURES: readonly Fixture[] = [
   'article',
   'store',

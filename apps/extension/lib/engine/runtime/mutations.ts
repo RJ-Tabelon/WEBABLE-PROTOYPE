@@ -6,6 +6,11 @@ import { isOurs, type TreeScope } from '../util/dom';
  * Changes are debounced (350 ms, max wait 1 s), nested roots collapsed,
  * and a burst of more than 1,000 added elements switches to a full pass.
  * Pages that mutate constantly (tickers, feeds) back the debounce off.
+ *
+ * Two paths: `sync` runs inside the MutationObserver callback, before the
+ * browser renders the change, so new content can be adapted in its very
+ * first frame; `run` is the debounced pass for everything that needs
+ * measuring (verification, imperative effects, a fresh decision).
  */
 
 export interface SchedulerOptions {
@@ -22,10 +27,17 @@ export const DEFAULT_SCHEDULER: SchedulerOptions = {
 
 export type FlushRoots = Element[] | 'all';
 
+/** Pre-paint hook: element nodes the page inserted, and elements whose class changed. */
+export type SyncHook = (
+  added: readonly Element[],
+  restyled: readonly Element[],
+) => void;
+
 export class MutationScheduler {
   private pending = new Set<Element>();
   private huge = false;
   private first = 0;
+  private added = 0;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private flushTimes: number[] = [];
   private debounce: number;
@@ -35,9 +47,10 @@ export class MutationScheduler {
   private disposed = false;
 
   constructor(
-    private readonly run: (roots: FlushRoots) => Promise<void>,
+    private readonly run: (roots: FlushRoots, added: number) => Promise<void>,
     private readonly opts: SchedulerOptions = DEFAULT_SCHEDULER,
     private readonly onActivity?: () => void,
+    private readonly sync?: SyncHook,
   ) {
     this.debounce = opts.debounceMs;
   }
@@ -71,6 +84,8 @@ export class MutationScheduler {
   onRecords(recs: readonly MutationRecord[]): void {
     if (this.disposed) return;
     let changed = false;
+    const inserted: Element[] = [];
+    const restyled: Element[] = [];
     const add = (el: Element | null): void => {
       if (!el || isOurs(el)) return;
       changed = true;
@@ -84,20 +99,39 @@ export class MutationScheduler {
           ? (r.target as Element)
           : r.target?.parentElement;
       if (target && isOurs(target)) continue;
-      if (r.type === 'attributes' || r.type === 'characterData')
+      if (r.type === 'attributes' || r.type === 'characterData') {
         add(target ?? null);
+        if (
+          r.type === 'attributes' &&
+          r.attributeName === 'class' &&
+          target &&
+          !isOurs(target)
+        )
+          restyled.push(target);
+      }
       if (
         Array.from(r.removedNodes ?? []).some(
           (n) => n.nodeType !== 1 || !isOurs(n as Element),
         )
       )
         add(target ?? null);
-      for (const n of r.addedNodes) {
-        if (n.nodeType === 1) add(n as Element);
-        else if (n.nodeType === 3) add(target ?? null);
+      for (const n of r.addedNodes ?? []) {
+        if (n.nodeType === 1) {
+          if (isOurs(n as Element)) continue;
+          add(n as Element);
+          inserted.push(n as Element);
+          this.added++;
+        } else if (n.nodeType === 3) add(target ?? null);
       }
     }
     if (!changed) return;
+    if (this.sync && (inserted.length || restyled.length)) {
+      try {
+        this.sync(inserted, restyled);
+      } catch {
+        // Best effort: the debounced pass covers anything missed here.
+      }
+    }
     this.arm();
   }
 
@@ -106,6 +140,21 @@ export class MutationScheduler {
     if (this.disposed) return;
     this.huge = true;
     this.arm();
+  }
+
+  /**
+   * Hand roots back to be processed later (the person is scrolling). Their
+   * added-element count was already reported, so it is not counted again.
+   */
+  requeue(roots: FlushRoots, delayMs: number): void {
+    if (this.disposed) return;
+    if (roots === 'all') this.huge = true;
+    else for (const r of roots) this.pending.add(r);
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(
+      () => void this.flush().catch(() => undefined),
+      delayMs,
+    );
   }
 
   private arm(): void {
@@ -140,9 +189,11 @@ export class MutationScheduler {
       : all.filter(
           (e) => e.isConnected && !all.some((p) => p !== e && p.contains(e)),
         );
+    const added = this.added;
     this.pending.clear();
     this.huge = false;
     this.first = 0;
+    this.added = 0;
     const now = performance.now();
     this.flushTimes = this.flushTimes.filter((t) => now - t < 10_000);
     this.flushTimes.push(now);
@@ -152,7 +203,7 @@ export class MutationScheduler {
     if (roots !== 'all' && roots.length === 0) return;
     this.running = true;
     try {
-      await this.run(roots);
+      await this.run(roots, added);
     } finally {
       this.running = false;
     }
