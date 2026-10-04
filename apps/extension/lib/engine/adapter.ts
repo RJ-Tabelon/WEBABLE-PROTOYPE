@@ -136,6 +136,8 @@ export class ContentAdapter {
   /** A start in flight (first load, or waking after WebAble was off). */
   private booting: Promise<void> | null = null;
   private planning: Promise<void> | null = null;
+  private revision = 0;
+  private requestedPlan = false;
   private offPageShow: (() => void) | null = null;
   private readonly doc: Document;
 
@@ -186,7 +188,15 @@ export class ContentAdapter {
     try {
       hello = await this.opts.transport.send({ type: 'cs:hello' });
     } catch {
-      return; // no service worker (extension reloading): leave the page untouched
+      // MV3 can restart between dispatch and delivery. Recover once without
+      // requiring the person to open the popup or reload the page.
+      await new Promise((r) => setTimeout(r, 150));
+      if (this.stopped) return;
+      try {
+        hello = await this.opts.transport.send({ type: 'cs:hello' });
+      } catch {
+        return;
+      }
     }
     if (this.stopped || !hello) return;
     this.hello = hello;
@@ -210,18 +220,29 @@ export class ContentAdapter {
       return;
     }
     await visible(this.doc);
+    if (this.stopped || this.engine?.isPaused) return;
     await this.plan(true);
   }
 
   /** Extract, ask for a plan, apply it as a fresh decision, report. One at a time. */
   private plan(first: boolean): Promise<void> {
-    this.planning ??= this.planNow(first).finally(() => {
+    this.revision++;
+    this.requestedPlan = true;
+    this.planning ??= (async () => {
+      let announce = first;
+      while (this.requestedPlan && !this.stopped) {
+        this.requestedPlan = false;
+        const revision = this.revision;
+        await this.planNow(announce, revision);
+        announce = false;
+      }
+    })().finally(() => {
       this.planning = null;
     });
     return this.planning;
   }
 
-  private async planNow(first: boolean): Promise<void> {
+  private async planNow(first: boolean, revision: number): Promise<void> {
     const engine = this.engine;
     if (!engine || this.stopped || engine.isPaused) return;
     let x;
@@ -230,6 +251,7 @@ export class ContentAdapter {
     } catch {
       return; // unreadable page: status says so; nothing applied
     }
+    if (revision !== this.revision || this.stopped || engine.isPaused) return;
     const ask = () =>
       this.opts.transport
         .send({
@@ -245,8 +267,17 @@ export class ContentAdapter {
       await new Promise((r) => setTimeout(r, 1000));
       reply = await ask();
     }
-    if (!reply?.plan || this.stopped) return;
-    const changes = await this.applyAndReport(reply.plan, { replace: true });
+    if (
+      !reply?.plan ||
+      this.stopped ||
+      engine.isPaused ||
+      revision !== this.revision
+    )
+      return;
+    const changes = await this.applyAndReport(reply.plan, {
+      replace: true,
+      refresh: true,
+    });
     // The toast is for the first automatic changes on a site; the service
     // worker decides (`announce` on the reply) and remembers where it has.
     if (first && reply.announce === true) engine.announce(changes);
@@ -283,8 +314,18 @@ export class ContentAdapter {
       return;
     }
     if (this.stopped) return;
+    this.hello = hello;
     this.configure(hello ?? {});
     const engine = this.engine;
+    if (!hello?.enabled || hello.paused) {
+      await engine?.pause();
+      return;
+    }
+    if (engine?.isPaused) {
+      await engine.resume();
+      await this.plan(false);
+      return;
+    }
     if (!engine || this.planId === null) return;
     await this.opts.transport
       .send({
@@ -337,11 +378,20 @@ export class ContentAdapter {
       },
       // The toast's Undo all: one message; the worker records the undo events.
       undone: () => {
+        this.revision++;
+        this.requestedPlan = false;
         void this.opts.transport
           .send({ type: 'cs:undo-all', source: 'toast' })
           .catch(() => undefined);
       },
       routeChanged: () => void this.plan(false).catch(() => undefined),
+      pageChanged: () => void this.plan(false).catch(() => undefined),
+      interacted: () => {
+        if (!this.hello) return;
+        void this.opts.transport
+          .send({ type: 'cs:interaction', tabSession: this.hello.tabSession })
+          .catch(() => undefined);
+      },
     };
   }
 
@@ -378,37 +428,68 @@ export class ContentAdapter {
     }
     switch (msg.type) {
       case 'sw:plan': {
+        if (msg.reason !== 'refine') {
+          this.revision++;
+          this.requestedPlan = false;
+        }
+        if (msg.reason === 'refine') {
+          // A fast response can arrive before the instant plan finishes.
+          await this.planning;
+          if (
+            this.stopped ||
+            engine.isPaused ||
+            (msg.basePlanId && msg.basePlanId !== this.planId)
+          )
+            return { changes: engine.changes() };
+        }
+        const plan =
+          msg.reason === 'refine' && engine.hasInteracted
+            ? {
+                ...msg.plan,
+                ops: msg.plan.ops.filter((p) =>
+                  engine.appliedOps().includes(p.op),
+                ),
+              }
+            : msg.plan;
         if (msg.plan.ops.some((p) => p.op === 'page_zoom'))
           engine.suppressZoomFriction();
-        const changes = await engine.apply(msg.plan, {
+        const changes = await engine.apply(plan, {
           acceptOffers: msg.reason === 'offer_accepted',
           replace: msg.reason === 'settings',
         });
-        this.planId = msg.plan.id;
+        this.planId =
+          msg.reason === 'refine'
+            ? (msg.basePlanId ?? this.planId ?? msg.plan.id)
+            : msg.plan.id;
         return { changes } satisfies WorkerReplies['sw:plan'];
       }
       case 'sw:undo':
+        if (msg.basePlanId && msg.basePlanId !== this.planId)
+          return { changes: engine.changes() };
+        this.revision++;
+        this.requestedPlan = false;
         return {
           changes: await engine.undo(msg.op),
         } satisfies WorkerReplies['sw:undo'];
       case 'sw:set-level':
+        this.revision++;
+        this.requestedPlan = false;
         return {
           changes: await engine.setLevel(msg.op, msg.level),
         } satisfies WorkerReplies['sw:set-level'];
       case 'sw:pause':
+        this.revision++;
+        this.requestedPlan = false;
         await engine.pause();
         return { ok: true } satisfies WorkerReplies['sw:pause'];
       case 'sw:resume': {
         const changes = await engine.resume();
-        // Paused since it loaded, so nothing was ever planned here: plan now.
-        if (this.planId === null) {
-          void this.plan(true).catch(() => undefined);
-          return {
-            changes,
-            restarting: true,
-          } satisfies WorkerReplies['sw:resume'];
-        }
-        return { changes } satisfies WorkerReplies['sw:resume'];
+        // The DOM may have changed while paused. Always measure it again.
+        void this.plan(this.planId === null).catch(() => undefined);
+        return {
+          changes,
+          restarting: true,
+        } satisfies WorkerReplies['sw:resume'];
       }
       case 'sw:show-on-page':
         engine.showOnPage(msg.op, msg.on);
@@ -429,6 +510,8 @@ export class ContentAdapter {
 
   stop(): void {
     this.stopped = true;
+    this.revision++;
+    this.requestedPlan = false;
     this.unlisten?.();
     this.unlisten = null;
     this.offPageShow?.();

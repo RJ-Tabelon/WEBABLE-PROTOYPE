@@ -267,4 +267,20 @@ export class UndoHold {
       this.session.remove([UNDO_HOLD_KEY]).catch(() => undefined),
     );
   }
+
+  /** An explicit turn-on supersedes pending and late reasons for this site. */
+  cancel(domain: string, ops: readonly OpId[]): Promise<Set<OpId>> {
+    return this.run((list) => {
+      const matching = list.filter(
+        (h) => h.domain === domain && ops.includes(h.input.op),
+      );
+      const dropped = new Set(
+        matching.filter((h) => h.flushedAt === null).map((h) => h.input.op),
+      );
+      return [
+        list.filter((h) => h.domain !== domain || !ops.includes(h.input.op)),
+        dropped,
+      ];
+    });
+  }
 }

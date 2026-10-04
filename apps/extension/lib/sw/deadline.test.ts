@@ -6,6 +6,7 @@ import {
   applyRefinement,
   diffRefinement,
   HARD_TIMEOUT_MS,
+  limitLateAnalysis,
   refinementMode,
   SOFT_DEADLINE_MS,
 } from './deadline';
@@ -75,6 +76,23 @@ describe('when a late answer may still change the page (08 section 6)', () => {
 });
 
 describe('refinement diff', () => {
+  it('keeps cached late answers from adding effects during a DOM refresh, while native fit and protection still work', () => {
+    const ai = op('dim_distractions', { regions: ['r1', 'r2'] });
+    ai.trace.evidence = [
+      { kind: 'region_role', role: 'promo_ad', by: 'page_analysis' },
+    ];
+    const local = op('text_floor');
+    const offer = op('focus_view', 'page', 'offer');
+    expect(
+      limitLateAnalysis(plan([]), plan([local, ai, offer]), []).ops,
+    ).toEqual([local, offer]);
+    const existing = op('dim_distractions', { regions: ['r1', 'protected'] });
+    const next = limitLateAnalysis(plan([existing]), plan([ai]), [
+      'dim_distractions',
+    ]);
+    expect(next.ops[0]?.scope).toEqual({ regions: ['r1'] });
+  });
+
   it('adds a new paint op in time, never a layout op', () => {
     const current = plan([]);
     const refined = plan([

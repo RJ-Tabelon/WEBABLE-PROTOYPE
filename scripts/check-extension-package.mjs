@@ -21,7 +21,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const extensionDirectory = resolve(root, 'apps/extension/.output/chrome-mv3');
+const extensionDirectory = resolve(
+  root,
+  process.argv[2] ?? 'apps/extension/.output/chrome-mv3',
+);
 const configPath = resolve(root, 'apps/extension/wxt.config.ts');
 
 /** localhost, 127.0.0.0/8, [::1] and *.localhost hosts in a match pattern. */
@@ -145,5 +148,7 @@ if (problems.length > 0) {
   process.exitCode = 1;
 } else {
   console.log('Extension package check passed.');
-  console.log(`Load-unpacked directory: ${extensionDirectory}`);
+  console.log(
+    `${process.argv[2] ? 'Checked directory' : 'Load-unpacked directory'}: ${extensionDirectory}`,
+  );
 }

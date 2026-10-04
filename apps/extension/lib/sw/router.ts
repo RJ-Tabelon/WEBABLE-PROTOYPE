@@ -83,6 +83,10 @@ export function parseContent(msg: unknown): ContentToWorker | null {
         msg.changes.every((c) => isRecord(c) && isOp(c.op) && isRecord(c.trace))
         ? (msg as unknown as ContentToWorker)
         : null;
+    case 'cs:interaction':
+      return typeof msg.tabSession === 'string' && msg.tabSession.length <= 64
+        ? { type: 'cs:interaction', tabSession: msg.tabSession }
+        : null;
     case 'cs:event': {
       const ev = msg.event;
       return isRecord(ev) &&

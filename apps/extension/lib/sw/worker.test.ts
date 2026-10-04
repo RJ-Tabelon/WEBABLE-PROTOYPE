@@ -18,7 +18,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { WorkerToContent } from '../protocol';
-import { memoryArea } from '../storage/area';
+import { memoryArea, type KvArea } from '../storage/area';
 import { createStores, type LocalStores } from '../storage';
 import type { BadgeState } from './badge';
 import type { AuthService } from './auth';
@@ -103,6 +103,7 @@ class FakeEngine {
 interface SetupOptions {
   auth?: AuthService;
   fetch?: typeof fetch;
+  localArea?: KvArea;
 }
 
 function fakeAuth(overrides: Partial<AuthService> = {}): AuthService {
@@ -134,7 +135,7 @@ function fakeAuth(overrides: Partial<AuthService> = {}): AuthService {
 function setup(opts: SetupOptions = {}) {
   let now = FIXTURE_NOW;
   const clock = { now: () => now, advance: (ms: number) => (now += ms) };
-  const stores = createStores(memoryArea(), clock.now);
+  const stores = createStores(opts.localArea ?? memoryArea(), clock.now);
   const engine = new FakeEngine();
   const zoom = new Map<number, number>();
   const badges = new Map<number, BadgeState>();
@@ -237,7 +238,115 @@ beforeEach(() => {
   env = setup();
 });
 
+it('an engine upgrade clears old verifier suppression while preserving saved user decisions', async () => {
+  await seedProfile(env.stores);
+  const day = Math.floor(env.clock.now() / 86_400_000);
+  await env.stores.sites.update('example.com', (s) => {
+    Object.assign(s, { engineVersion: 'engine-1.0.0' });
+    s.rule.blocks = ['target_size'];
+    s.rule.pins = ['text_floor'];
+    s.state.ops.text_floor = {
+      s: 2,
+      f: 1,
+      t: day,
+      e: { s: 0, f: 10, t: day },
+      engineUntil: day + 7,
+      skipUntil: day + 7,
+    };
+    s.state.ops.line_spacing = { s: 1, f: 2, t: day, skipUntil: day + 9 };
+    s.state.ops.contrast = {
+      s: 0,
+      f: 0,
+      t: day,
+      sessionOff: 'a-previous-page',
+    };
+  });
+  const { plan } = await loadPage(env);
+  expect(plan.ops.find((p) => p.op === 'text_floor')?.mode).toBe('auto');
+  const site = await env.stores.sites.get('example.com');
+  expect(site.state.ops.text_floor?.engineUntil).toBeUndefined();
+  expect(site.state.ops.text_floor?.skipUntil).toBeUndefined();
+  expect(site.state.ops.line_spacing?.skipUntil).toBe(day + 9);
+  expect(site.rule.pins).toContain('text_floor');
+  expect(site.rule.blocks).toEqual(
+    expect.arrayContaining(['target_size', 'contrast']),
+  );
+  expect(
+    plan.ops.some((p) => p.op === 'target_size' || p.op === 'contrast'),
+  ).toBe(false);
+});
+
 describe('a page load', () => {
+  it('upgrades existing saved fits without resetting feedback, blocks or learned levels', async () => {
+    await seedProfile(env.stores);
+    await loadPage(env);
+    const before = await env.stores.learning.update((record) => {
+      record.user!.ops.text_floor.src = 'none';
+      record.user!.ops.text_floor.blocked = true;
+      record.user!.ops.text_floor.c.f = 3;
+      return record;
+    });
+    await env.worker.profileChanged();
+    const after = await env.stores.learning.read();
+    expect(after.user!.ops.text_floor).toEqual({
+      ...before.user!.ops.text_floor,
+      src: 'profile',
+    });
+    expect(after.user!.dims).toEqual(before.user!.dims);
+    expect(after.seededFor).toBe(before.seededFor);
+  });
+
+  it('records the first interaction only for the current top-frame session', async () => {
+    const hello = await env.worker.hello(TAB, 0, URL_A);
+    await env.worker.interacted(TAB, 1, hello.tabSession);
+    await env.worker.interacted(TAB, 0, 'previous-session');
+    expect((await env.worker.tabRecord(TAB))?.interactedAt).toBeNull();
+    await env.worker.interacted(TAB, 0, hello.tabSession);
+    env.clock.advance(100);
+    await env.worker.interacted(TAB, 0, hello.tabSession);
+    expect((await env.worker.tabRecord(TAB))?.interactedAt).toBe(FIXTURE_NOW);
+  });
+
+  it('applies an ordinary saved minimum and replans tabs already open when the fit changes', async () => {
+    await loadPage(env);
+    const profile = strongReaderProfile();
+    profile.vision.textMinPx.value = 16;
+    profile.motor.minTargetPx.value = 32;
+    await env.stores.profile.write({
+      profile,
+      source: 'account',
+      version: 1,
+      fetchedAt: 0,
+    });
+    await env.worker.profileChanged();
+    const plan = env.engine.received.filter((m) => m.type === 'sw:plan').at(-1);
+    expect(plan?.type === 'sw:plan' && plan.reason).toBe('settings');
+    expect(
+      plan?.type === 'sw:plan' &&
+        plan.plan.ops.find((op) => op.op === 'text_floor'),
+    ).toMatchObject({ mode: 'auto' });
+    expect(env.engine.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ op: 'text_floor', status: 'applied' }),
+      ]),
+    );
+  });
+
+  it('persists the extraction identity across service-worker restarts', async () => {
+    const area = memoryArea();
+    const memo = {
+      id: 'extraction-1',
+      tabSession: 'view-1',
+      signals: articleSignals(),
+      evidence: { page: workedExamplePage(), regions: {} },
+      answers: { regions: new Map() },
+      cacheKeys: { site: 'site', region: {} },
+    };
+    await new PageMemos(area).set(TAB, memo);
+    expect(await new PageMemos(area).get(TAB, 'view-1')).toEqual(memo);
+    expect(await new PageMemos(area).get(TAB, 'view-2')).toBeNull();
+  });
+
   it('answers hello with the pre-paint ops and a random page-view id', async () => {
     const a = await env.worker.hello(TAB, 0, URL_A);
     const b = await env.worker.hello(TAB, 0, URL_A);
@@ -309,6 +418,60 @@ describe('a page load', () => {
 });
 
 describe('undo', () => {
+  it('a new explicit fit cancels a pending Undo so the reason timer cannot switch it off again', async () => {
+    await seedProfile(env.stores);
+    await loadPage(env);
+    await env.worker.undo(TAB, 'text_floor');
+    await env.worker.setLevel(TAB, 'text_floor', 1, 'site');
+    env.clock.advance(REASON_WINDOW_MS + 100);
+    await env.worker.flushUndos();
+    const { plan } = await loadPage(env);
+    expect(plan.ops.find((p) => p.op === 'text_floor')).toMatchObject({
+      level: 1,
+      mode: 'auto',
+    });
+    expect(
+      (await env.stores.sites.get('example.com')).rule.blocks,
+    ).not.toContain('text_floor');
+  });
+
+  it('keeps saved Undo after all session state is lost, using only local storage', async () => {
+    const localArea = memoryArea();
+    const first = setup({ localArea });
+    await seedProfile(first.stores);
+    await loadPage(first);
+    await first.worker.undo(TAB, 'text_floor');
+    const restarted = setup({ localArea });
+    const { plan } = await loadPage(restarted);
+    expect(plan.ops.some((p) => p.op === 'text_floor')).toBe(false);
+    expect((await restarted.worker.view(TAB)).undoneByYou).toContain(
+      'text_floor',
+    );
+    await restarted.worker.redo(TAB, 'text_floor');
+    expect(restarted.engine.changes.some((c) => c.op === 'text_floor')).toBe(
+      true,
+    );
+  });
+
+  it('saves Undo immediately for the site, survives reload without a reason, and explicit Redo restores it', async () => {
+    await seedProfile(env.stores);
+    await loadPage(env);
+    await env.worker.setLevel(TAB, 'text_floor', 3, 'site');
+    env.clock.advance(60_000); // A deliberate late Undo must also stick.
+    await env.worker.undo(TAB, 'text_floor');
+    expect((await env.stores.sites.get('example.com')).rule.blocks).toContain(
+      'text_floor',
+    );
+    const { plan } = await loadPage(env);
+    expect(plan.ops.some((p) => p.op === 'text_floor')).toBe(false);
+    expect((await env.worker.view(TAB)).undoneByYou).toContain('text_floor');
+    await env.worker.redo(TAB, 'text_floor');
+    expect(
+      (await env.stores.sites.get('example.com')).rule.blocks,
+    ).not.toContain('text_floor');
+    expect(env.engine.changes.some((c) => c.op === 'text_floor')).toBe(true);
+  });
+
   it('restores the page at once and holds the learning event for the reason window', async () => {
     await seedProfile(env.stores);
     await loadPage(env);

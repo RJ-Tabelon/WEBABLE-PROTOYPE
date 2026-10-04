@@ -14,7 +14,7 @@ export const DERIVATION_VERSION = 'fit-1.0.0' as const;
 export const OP_LIBRARY_VERSION = 'ops-1.0.0' as const;
 
 /** In-page engine: extraction, apply, verify. */
-export const ENGINE_VERSION = 'engine-1.0.0' as const;
+export const ENGINE_VERSION = 'engine-1.0.1' as const;
 
 /** Learning state and policy parameters. */
 export const LEARNING_VERSION = 'learn-1.0.0' as const;

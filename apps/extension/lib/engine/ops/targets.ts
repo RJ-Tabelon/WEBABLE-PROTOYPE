@@ -139,7 +139,32 @@ export const targetSize: OpImpl = {
         parseFloat(cs.borderTopWidth) || 0,
         parseFloat(cs.borderBottomWidth) || 0,
       );
-      const extX = Math.min(needX, Math.max(0, capX));
+      // Pseudo-elements contribute to scrollable overflow even though the
+      // button's own rect never grows. Keep the hit area inside native page
+      // bounds, including pages already horizontally scrollable.
+      let edgeX = Math.min(
+        t.box.left,
+        Math.max(
+          env.doc.documentElement.clientWidth,
+          env.doc.documentElement.scrollWidth,
+        ) - t.box.right,
+      );
+      for (
+        let n = t.host.parentElement;
+        n && n !== env.doc.body;
+        n = n.parentElement
+      ) {
+        const nc = env.view.getComputedStyle(n);
+        if (nc.overflowX === 'visible') continue;
+        const r = n.getBoundingClientRect();
+        const left = r.left + env.view.scrollX + n.clientLeft;
+        edgeX = Math.min(
+          edgeX,
+          t.box.left - left,
+          left + n.clientWidth - t.box.right,
+        );
+      }
+      const extX = Math.min(needX, Math.max(0, capX), Math.max(0, edgeX));
       const extY = Math.min(needY, Math.max(0, capY));
       if (extX < 2 && extY < 2) continue;
       const cssX = padBucket(extX + bx);

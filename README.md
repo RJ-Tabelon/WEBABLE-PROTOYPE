@@ -80,3 +80,32 @@ deploys without Docker and checks each function answers.
 
 In the Supabase dashboard, set the Auth site URL to the web origin and add
 `/auth/callback` and `/auth/confirm` as redirect URLs.
+
+The functions authenticate inside their handlers using `getClaims` / `getUser`.
+Keep `verify_jwt = false` in `supabase/config.toml`, following Supabase's documented
+setup for asymmetric signing keys. Disabling that gateway check does not
+disable the handlers' session, consent, quota or origin checks.
+
+Saved text and target minimums apply automatically when a page needs them,
+including content rendered after loading and client-side navigation. Existing
+tabs update when Tune saves a new fit. Undo and paused sites take precedence;
+failed layout checks restore the original page. Basic adaptations work locally,
+while optional cloud analysis requires sign-in and consent.
+
+Refreshes measure the site's native styles without painting an unadapted frame,
+replace marks without rewriting unchanged ones, and retain previously scanned
+content when a later scan is incomplete. Layout failures are confirmed with
+synchronous counterfactual measurements so safe changes are kept, and rejected
+fits stay rolled back during unrelated updates until their native constraints
+change. Expanded click areas stay within page and scroll-container bounds.
+Undo immediately saves an off preference for that site in local storage, across
+reloads and browser restarts; Redo or an explicit turn-on clears it. The optional
+reason window delays learning only, and the popup shows the saved preference.
+On engine upgrades, outdated verifier counts and verifier suppression are reset;
+user preferences and offer snoozes remain. Legacy Undo flags become saved site
+preferences, so existing installations retain those decisions too.
+
+`pnpm check` validates a separate `chrome-mv3-package-check` build with a dummy
+web origin. It does not overwrite the unpacked extension in `chrome-mv3` or
+`chrome-mv3-dev`. Rebuild the extension with its configured origins before
+reloading it in Chrome; the fixed extension version is 0.1.1.

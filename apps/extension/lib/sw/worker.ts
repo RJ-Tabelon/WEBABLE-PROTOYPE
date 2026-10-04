@@ -56,6 +56,7 @@ import {
   applyRefinement,
   diffRefinement,
   HARD_TIMEOUT_MS,
+  limitLateAnalysis,
   refinementMode,
 } from './deadline';
 import { classifyUrl } from './domain';
@@ -170,8 +171,7 @@ const GLOBAL_OVERRIDE_OPS = [
 ] as const;
 
 /** The measurement a page memo came from: an SPA route change measures again. */
-const memoId = (m: PageMemo): string | undefined =>
-  (m as PageMemo & { id?: string }).id;
+const memoId = (m: PageMemo): string => m.id;
 
 /** No in-page offer in the first 10 s of a page view (personalization.md 5.2). */
 export const OFFER_QUIET_MS = 10_000;
@@ -214,6 +214,7 @@ export class Worker {
   private lastRegistration = '';
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly injectedAt = new Map<number, number>();
+  private readonly analyzing = new Set<number>();
   /**
    * Per-tab queue for page-view boundaries. A navigation commit and the new
    * page's hello arrive close together; run concurrently, the commit's reset
@@ -464,6 +465,17 @@ export class Worker {
     signals: PageSignals,
     evidence: PageEvidence,
   ): Promise<ContentReplies['cs:signals'] & { announce: boolean }> {
+    return this.serial(tabId, () =>
+      this.signalsNow(tabId, frameId, signals, evidence),
+    );
+  }
+
+  private async signalsNow(
+    tabId: number,
+    frameId: number,
+    signals: PageSignals,
+    evidence: PageEvidence,
+  ): Promise<ContentReplies['cs:signals'] & { announce: boolean }> {
     const tab = await this.d.tabs.get(tabId);
     if (frameId !== 0 || !tab.domain || !tab.tabSession)
       return { plan: emptyPlan(tab.tabSession, this.now), announce: false };
@@ -494,7 +506,22 @@ export class Worker {
     };
     const memo = await this.lookup(domain, tabSession, measured, evidence);
     const view = analysisView(measured, evidence.regions, memo.answers);
-    const plan = await this.planFor(c, tab, view, true);
+    let plan = await this.planFor(c, tab, view, true);
+    if (
+      tab.plan &&
+      tab.signalsAt !== null &&
+      refinementMode({
+        dclAt: tab.signalsAt,
+        answeredAt: c.now,
+        interactedAt: tab.interactedAt,
+      }) === 'cache_only'
+    ) {
+      plan = limitLateAnalysis(
+        tab.plan,
+        plan,
+        appliedChanges(tab.changes).map((change) => change.op),
+      );
+    }
     await this.d.pages.set(tabId, memo);
 
     const offer = plan.ops.find((p) => p.mode === 'offer') ?? null;
@@ -529,6 +556,17 @@ export class Worker {
   ): Promise<void> {
     if (frameId !== 0) return;
     await this.processChanges(tabId, changes);
+  }
+
+  async interacted(
+    tabId: number,
+    frameId: number,
+    tabSession: string,
+  ): Promise<void> {
+    if (frameId !== 0) return;
+    await this.d.tabs.update(tabId, (t) => {
+      if (t.tabSession === tabSession) t.interactedAt ??= this.now;
+    });
   }
 
   async contentEvent(
@@ -580,6 +618,10 @@ export class Worker {
     }
     await this.holdUndos(tab, events);
     await this.syncSiteCount(tabId);
+    await this.reflectSavedUndo(
+      tab,
+      events.map((e) => e.op),
+    );
     await this.afterChange(tabId);
   }
 
@@ -607,6 +649,10 @@ export class Worker {
     });
     await this.holdUndos(tab, events);
     await this.syncSiteCount(tabId);
+    await this.reflectSavedUndo(
+      tab,
+      events.map((e) => e.op),
+    );
     await this.afterChange(tabId);
   }
 
@@ -821,7 +867,14 @@ export class Worker {
       for (const ev of events) {
         const dop = (s.state.ops[ev.op] ??= { s: 0, f: 0, t: day });
         dop.sessionOff = tabSession;
+        if (!s.rule.blocks.includes(ev.op)) s.rule.blocks.push(ev.op);
       }
+      s.rule.updatedAt = this.now;
+    });
+    await this.d.tabs.update(tab.tabId, (t) => {
+      const off = new Set(events.map((e) => e.op));
+      t.acceptedOps = t.acceptedOps.filter((op) => !off.has(op));
+      if (t.offer && off.has(t.offer.op)) t.offer = null;
     });
     // Region-scoped ops keep the keys they targeted, for "I needed that".
     const regionsOf = (op: OpId): string[] => {
@@ -842,6 +895,32 @@ export class Worker {
       this.now,
     );
     this.scheduleUndoFlush();
+  }
+
+  /** A saved site decision also applies to its other already-open pages. */
+  private async reflectSavedUndo(
+    tab: TabRecord,
+    ops: readonly OpId[],
+  ): Promise<void> {
+    if (!tab.domain) return;
+    for (const other of await this.domainTabs(tab.domain)) {
+      if (other.tabId === tab.tabId || !other.engine) continue;
+      await this.d.tabs.update(other.tabId, (t) => {
+        t.acceptedOps = t.acceptedOps.filter((op) => !ops.includes(op));
+        if (t.offer && ops.includes(t.offer.op)) t.offer = null;
+      });
+      for (const op of ops) {
+        if (op === 'page_zoom') await this.resetZoom(other.tabId);
+        else {
+          const reply = await this.d.port.sendToTab(other.tabId, {
+            type: 'sw:undo',
+            op,
+          });
+          if (reply) await this.processChanges(other.tabId, reply.changes);
+        }
+      }
+      await this.afterChange(other.tabId);
+    }
   }
 
   /**
@@ -1090,6 +1169,7 @@ export class Worker {
       return;
     }
     await this.endPageView(tabId);
+    this.injectedAt.delete(tabId);
     await this.d.tabs.update(tabId, (t) => {
       Object.assign(t, freshTab(tabId), { domain, access: access.kind });
     });
@@ -1232,6 +1312,20 @@ export class Worker {
     tabSession: string,
     memo: PageMemo,
   ): Promise<void> {
+    if (this.analyzing.has(tabId)) return;
+    this.analyzing.add(tabId);
+    try {
+      await this.analyzeNow(tabId, tabSession, memo);
+    } finally {
+      this.analyzing.delete(tabId);
+    }
+  }
+
+  private async analyzeNow(
+    tabId: number,
+    tabSession: string,
+    memo: PageMemo,
+  ): Promise<void> {
     const tab = await this.d.tabs.get(tabId);
     if (!tab.domain || tab.tabSession !== tabSession) return;
     const domain = tab.domain;
@@ -1281,6 +1375,8 @@ export class Worker {
     if (!built) return;
     const token = await auth.accessToken();
     if (!token) return;
+    const latest = await this.d.pages.get(tabId, tabSession);
+    if (!latest || latest.id !== memo.id) return;
 
     const sentAt = this.now;
     await this.d.stores.receipts.add({
@@ -1370,6 +1466,7 @@ export class Worker {
   ): Promise<void> {
     const tab = await this.d.tabs.get(tabId);
     if (tab.tabSession !== tabSession || !tab.plan || !tab.domain) return;
+    const basePlanId = tab.plan.id;
     // An SPA route change measured the page again while analysis was out:
     // these answers belong to a page that is gone.
     const current = await this.d.pages.get(tabId, tabSession);
@@ -1383,6 +1480,10 @@ export class Worker {
     });
     const c = await this.context(tab.domain);
     if (!c.settings.enabled || c.rule.paused) return;
+    const latestTab = await this.d.tabs.peek(tabId);
+    const latestMemo = await this.d.pages.get(tabId, tabSession);
+    if (latestTab?.plan?.id !== tab.plan.id || latestMemo?.id !== memo.id)
+      return;
     const view = analysisView(
       memo.signals,
       memo.evidence.regions,
@@ -1391,7 +1492,11 @@ export class Worker {
     const refined = await this.planFor(c, tab, view, true);
     const diff = diffRefinement(tab.plan, refined, mode, view.protectedKeys);
     for (const op of diff.undo) {
-      const reply = await this.d.port.sendToTab(tabId, { type: 'sw:undo', op });
+      const reply = await this.d.port.sendToTab(tabId, {
+        type: 'sw:undo',
+        op,
+        basePlanId: tab.plan.id,
+      });
       if (reply) await this.processChanges(tabId, reply.changes);
     }
     if (diff.ops.length > 0) {
@@ -1399,11 +1504,12 @@ export class Worker {
         type: 'sw:plan',
         plan: { ...refined, ops: diff.ops },
         reason: 'refine',
+        basePlanId: tab.plan.id,
       });
       if (reply) await this.processChanges(tabId, reply.changes);
     }
     await this.d.tabs.update(tabId, (t) => {
-      if (t.tabSession !== tabSession || !t.plan) return;
+      if (t.tabSession !== tabSession || t.plan?.id !== basePlanId) return;
       t.plan = applyRefinement(
         t.plan,
         diff,
@@ -1479,6 +1585,13 @@ export class Worker {
     return true;
   }
 
+  /** Recovery for missed document_start injection; ordinary visits need no popup. */
+  async pageLoaded(tabId: number): Promise<void> {
+    const tab = await this.d.tabs.peek(tabId);
+    if (tab?.engine) return;
+    await this.startEngine(tabId);
+  }
+
   async view(tabId: number): Promise<TabDetail> {
     await this.settleRestore(tabId);
     let tab = await this.d.tabs.get(tabId);
@@ -1536,7 +1649,7 @@ export class Worker {
       tab.plan?.ops.find((p) => p.op === op)?.level;
     const level = (op: OpId, fallback: number): number =>
       rule?.levels[op] ?? settings.globalLevels[op] ?? planned(op) ?? fallback;
-    const pins = rule?.pins ?? [];
+    const pins = (rule?.pins ?? []).filter((op) => !rule?.blocks.includes(op));
     const offer =
       tab.offer &&
       !tab.acceptedOps.includes(tab.offer.op) &&
@@ -1563,7 +1676,7 @@ export class Worker {
       enabled: settings.enabled,
       analyzed: tab.analysis.used,
       lastSentAt: tab.analysis.lastSentAt,
-      undoneByYou: tab.undoneByYou,
+      undoneByYou: [...new Set([...tab.undoneByYou, ...(rule?.blocks ?? [])])],
       reasonOpen: await this.d.undos.openFor(tab.tabId, now),
       site: {
         paused,
@@ -1617,6 +1730,9 @@ export class Worker {
     const targets = op === 'all' ? applied : applied.filter((c) => c.op === op);
     if (targets.length === 0) return;
     const events = targets.map((c) => this.undoEvent(tab, c));
+    // Save the explicit site decision before any page message can cause a
+    // re-plan. The optional reason window delays only the learning event.
+    await this.holdUndos(tab, events);
     if (targets.some((c) => c.op === 'page_zoom')) await this.resetZoom(tabId);
     const engineTargets = targets.filter((c) => c.op !== 'page_zoom');
     let engineChanges: AppliedChange[] | null = null;
@@ -1640,8 +1756,8 @@ export class Worker {
         ...(zoom && t.zoom ? [zoom] : []),
       ];
     });
-    await this.holdUndos(tab, events);
     await this.syncSiteCount(tabId);
+    await this.reflectSavedUndo(tab, [...undone]);
     await this.afterChange(tabId);
   }
 
@@ -1699,6 +1815,7 @@ export class Worker {
     domain: string,
     ops: readonly OpId[],
   ): Promise<void> {
+    await this.d.undos.cancel(domain, ops);
     await this.d.stores.sites.update(domain, (s) => {
       for (const op of ops) {
         const dop = s.state.ops[op];
@@ -1956,34 +2073,14 @@ export class Worker {
   }
 
   /**
-   * Take this page view's held undos for `ops` off the hold, unrecorded. The
-   * page view's other held undos are recorded now. Returns the ops dropped.
+   * Cancel superseded Undo decisions on this site, including another tab's
+   * pending reason. Returns the pending learning events dropped.
    */
   private async dropHeldUndos(
     tab: TabRecord,
     ops: readonly OpId[],
   ): Promise<Set<OpId>> {
-    const dropped = new Set<OpId>();
-    if (!tab.tabSession) return dropped;
-    const open = await this.d.undos.openFor(tab.tabId, this.now);
-    if (!open.some((h) => ops.includes(h.op))) return dropped;
-    const taken = await this.d.undos.takeDue(this.now, tab.tabSession);
-    const profile = await loadProfile(this.d.stores, this.now);
-    for (const h of taken) {
-      if (h.tabSession === tab.tabSession && ops.includes(h.input.op)) {
-        dropped.add(h.input.op);
-        continue;
-      }
-      await recordEvents(
-        this.d.stores,
-        profile,
-        h.domain,
-        h.tabSession,
-        [h.input],
-        this.now,
-      ).catch(() => undefined);
-    }
-    return dropped;
+    return tab.domain ? this.d.undos.cancel(tab.domain, ops) : new Set<OpId>();
   }
 
   /**
@@ -1995,7 +2092,11 @@ export class Worker {
   async redo(tabId: number, op: OpId | 'all'): Promise<void> {
     const tab = await this.d.tabs.get(tabId);
     if (!tab.domain || !tab.tabSession) return;
-    const ops = op === 'all' ? [...tab.undoneByYou] : [op];
+    const saved = await this.d.stores.sites.get(tab.domain);
+    const ops =
+      op === 'all'
+        ? [...new Set([...tab.undoneByYou, ...saved.rule.blocks])]
+        : [op];
     if (ops.length === 0) return;
     const dropped = await this.dropHeldUndos(tab, ops);
     const base = (o: OpId) => ({
@@ -2031,6 +2132,9 @@ export class Worker {
       if (reply) await this.processChanges(tabId, reply.changes);
     }
     await this.syncSiteCount(tabId);
+    for (const other of await this.domainTabs(tab.domain))
+      if (other.tabId !== tabId && other.engine)
+        await this.replanLive(other.tabId);
     await this.afterChange(tabId);
   }
 
@@ -2315,6 +2419,13 @@ export class Worker {
     const profile = await loadProfile(this.d.stores, this.now);
     await ensureLearning(this.d.stores, profile, this.now);
     await this.reconcileRegistration();
+    // A fit saved from Tune must take effect on pages already open. Previously
+    // only the badges changed, leaving their basic-fit plans in place.
+    for (const tab of await this.d.tabs.all()) {
+      if (!tab.engine) continue;
+      await this.replanLive(tab.tabId);
+    }
+    if (await this.allSites()) await this.grantedAllSites();
     await this.refreshAllBadges();
     this.d.port.broadcast({ type: 'ui:changed', tabId: null });
   }

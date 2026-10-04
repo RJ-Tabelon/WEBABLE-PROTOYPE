@@ -134,7 +134,7 @@ describe('mutation scheduler', () => {
     s.onRecords([rec([a, b])]);
     s.onRecords([rec([c, document.createTextNode('x')])]);
     expect(run).not.toHaveBeenCalled();
-    await vi.advanceTimersByTimeAsync(200);
+    await vi.advanceTimersByTimeAsync(400);
     expect(run).toHaveBeenCalledTimes(1);
     expect(run.mock.calls[0]?.[0]).toEqual([a, c]);
     s.disconnect();
@@ -157,6 +157,37 @@ describe('mutation scheduler', () => {
     await vi.advanceTimersByTimeAsync(20);
     expect(run).toHaveBeenCalledTimes(1);
     s.disconnect();
+  });
+
+  it('observes text, class and visibility updates on reused nodes', async () => {
+    document.body.innerHTML = '<p id="reuse" hidden>Loading</p>';
+    const p = document.querySelector('p')!;
+    const run = vi.fn(async (_roots: Element[] | 'all') => undefined);
+    const s = new MutationScheduler(run);
+    s.observe(document);
+    p.firstChild!.textContent = 'Rendered content';
+    p.className = 'small';
+    p.hidden = false;
+    await vi.advanceTimersByTimeAsync(400);
+    expect(run).toHaveBeenCalledOnce();
+    expect(run).toHaveBeenCalledWith([p]);
+    s.disconnect();
+  });
+
+  it('ignores extension marks and cancels pending work on disconnect', async () => {
+    document.body.innerHTML = '<p id="reuse">Text</p>';
+    const p = document.querySelector('p')!;
+    const run = vi.fn(async (_roots: Element[] | 'all') => undefined);
+    const s = new MutationScheduler(run);
+    s.observe(document);
+    p.setAttribute('data-wa-off', 'text_floor');
+    await vi.advanceTimersByTimeAsync(400);
+    expect(run).not.toHaveBeenCalled();
+    p.className = 'small';
+    await vi.advanceTimersByTimeAsync(1);
+    s.disconnect();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(run).not.toHaveBeenCalled();
   });
 });
 

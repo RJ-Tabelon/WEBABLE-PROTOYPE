@@ -21,8 +21,7 @@ export default defineContentScript({
   runAt: 'document_start',
   noScriptStartedPostMessage: true,
   main(ctx) {
-    if (!(document instanceof HTMLDocument) || !document.documentElement)
-      return;
+    if (!(document instanceof HTMLDocument)) return;
     const { adapter, created } = startOnce(
       window,
       () =>

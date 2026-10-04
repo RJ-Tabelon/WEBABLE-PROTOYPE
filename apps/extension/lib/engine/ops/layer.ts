@@ -1,6 +1,7 @@
 import type { OpId } from '@webable/core/ops/catalog';
 
 import type { TreeScope } from '../util/dom';
+import { tokenOp, tokensOf } from './marks';
 
 /**
  * One constructed stylesheet per tree scope (the document and each open shadow
@@ -21,10 +22,40 @@ interface Adopter {
   adoptedStyleSheets: CSSStyleSheet[];
 }
 
+// Expose host styles synchronously while measuring; restore before every yield.
+const MEASURED_OPS = new Set<string>([
+  'text_floor',
+  'line_spacing',
+  'line_length',
+  'contrast',
+  'target_size',
+  'target_spacing',
+  'dim_distractions',
+  'focus_view',
+  'unpin_bars',
+  'calm_motion',
+]);
+
+// CSS transitions outrank even !important declarations. Reading the baseline
+// can otherwise start a transition from the fit to the host style (and back),
+// so both the measurements and the next painted frame see interpolated values.
+const TRANSITION_PROPS: Partial<Record<OpId, readonly string[]>> = {
+  text_floor: ['font-size', 'font-size-adjust', 'line-height'],
+  line_spacing: ['line-height', 'word-spacing'],
+  line_length: ['max-inline-size', 'max-width', 'max-height'],
+  contrast: ['color'],
+  target_size: ['inset', 'top', 'right', 'bottom', 'left', 'opacity'],
+  target_spacing: ['column-gap', 'row-gap'],
+  dim_distractions: ['opacity'],
+  focus_view: ['opacity'],
+  unpin_bars: ['position'],
+};
+
 class StyleLayer {
   readonly sheet: CSSStyleSheet;
   private readonly blocks = new Map<string, string>();
   private dirty = false;
+  private measuring = false;
 
   constructor(
     readonly scope: TreeScope,
@@ -77,8 +108,20 @@ class StyleLayer {
   flush(): void {
     if (!this.dirty) return;
     this.dirty = false;
-    this.sheet.replaceSync([...this.blocks.values()].join('\n'));
+    this.sheet.replaceSync(
+      [...this.blocks]
+        .filter(([key]) => !this.measuring || !MEASURED_OPS.has(key))
+        .map(([, css]) => css)
+        .join('\n'),
+    );
     if (this.blocks.size > 0) this.attach();
+  }
+
+  measure(on: boolean): void {
+    if (this.measuring === on) return;
+    this.measuring = on;
+    this.dirty = true;
+    this.flush();
   }
 }
 
@@ -129,6 +172,65 @@ export class LayerManager {
   /** One replaceSync per changed layer: the single write of a batch. */
   flush(): void {
     for (const layer of this.layers.values()) layer.flush();
+  }
+
+  /** Synchronously expose host styles for measurements, then restore them. */
+  measure(on: boolean): void {
+    for (const layer of this.layers.values()) layer.measure(on);
+    this.finishOwnedTransitions();
+  }
+
+  /** Counterfactual layout read. Restore every sheet before returning/yielding. */
+  without<T>(ops: readonly OpId[], read: () => T): T {
+    for (const layer of this.layers.values())
+      for (const op of ops) layer.drop(op);
+    this.flush();
+    this.finishOwnedTransitions();
+    try {
+      return read();
+    } finally {
+      for (const op of ops) {
+        const css = this.blocks.get(op);
+        if (!css) continue;
+        for (const layer of this.layers.values())
+          layer.set(
+            op,
+            layer.kind === 'doc'
+              ? (css.doc ?? '')
+              : (css.shadow ?? css.doc ?? ''),
+          );
+      }
+      this.flush();
+      this.finishOwnedTransitions();
+    }
+  }
+
+  /** Finish only transitions of properties WebAble currently controls. */
+  finishOwnedTransitions(): void {
+    for (const scope of this.layers.keys()) {
+      // getAnimations forces the style update that creates CSS transitions.
+      const animations =
+        (
+          scope as TreeScope & { getAnimations?: () => Animation[] }
+        ).getAnimations?.() ?? [];
+      for (const animation of animations) {
+        const property = (
+          animation as Animation & { transitionProperty?: string }
+        ).transitionProperty;
+        const target = (animation.effect as KeyframeEffect | null)?.target;
+        if (!property || !(target instanceof Element)) continue;
+        if (
+          !tokensOf(target).some((token) => {
+            const op = tokenOp(token);
+            return op && TRANSITION_PROPS[op]?.includes(property);
+          })
+        )
+          continue;
+        // cancel exposes the underlying CSS value immediately; finish would
+        // leave a transition filling with the value from the previous phase.
+        animation.cancel();
+      }
+    }
   }
 
   /**

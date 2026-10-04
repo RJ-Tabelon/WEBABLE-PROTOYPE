@@ -227,6 +227,13 @@ export function profileSource(
   profile: FitProfile,
   needs: NeedLevels,
 ): OpState['src'] {
+  // A saved minimum is useful even at need level 0: 16 px text still needs
+  // enlarging on a 12 px page, and 32 px targets on a 20 px toolbar.
+  if (
+    (op === 'text_floor' && profile.vision.textMinPx.source !== 'default') ||
+    (op === 'target_size' && profile.motor.minTargetPx.source !== 'default')
+  )
+    return 'profile';
   if (
     (op === 'calm_motion' || op === 'pause_media') &&
     profile.attention.systemReducedMotion
@@ -885,7 +892,10 @@ export function applyEvent(
 
     case 'site_enable': {
       const dop = domain.ops[ev.op];
-      if (dop) delete dop.block;
+      if (dop) {
+        delete dop.block;
+        delete dop.demoted;
+      }
       break;
     }
 

@@ -27,7 +27,7 @@ const TARGET_LIMITED = 'Limited by nearby buttons';
  * "What changed" (design-final 10.1-10.2): one row per change with its fit
  * mark and an Undo right beside it. Changes WebAble's checks put back sit at
  * the top as neutral rows; they are not errors. A change the person undid
- * stays as a "{label} was undone" row with Redo until the popup closes; one
+ * stays as a "{label} was undone" row with Redo on this site; one
  * undone here also offers an optional reason.
  */
 export function ChangesSection({ model, view, api }: ChangesSectionProps) {
@@ -243,6 +243,9 @@ function ReasonRow({
           Redo
         </Button>
       </div>
+      <p className="pp-reason__meta">
+        Saved for this site. Redo turns it back on.
+      </p>
       {!ask ? null : answered ? (
         <p className="pp-reason__meta" role="status">
           Noted. WebAble will use this next time.

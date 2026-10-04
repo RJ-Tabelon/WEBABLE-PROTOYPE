@@ -365,7 +365,7 @@ export function applicability(
         : NONE;
     }
     case 'target_size': {
-      const px = profile.motor.minTargetPx.value;
+      const px = levelValue('target_size', levelFor('target_size', input));
       const count = signals.targets.below[targetKey(px)];
       if (count < 1) return NONE;
       return page([{ kind: 'target_failures', count, targetPx: px }]);
@@ -566,6 +566,16 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
     return skip('engine_unreliable_here', { pOk: round2(pOk), evidence });
   }
 
+  // Tune and explicit adjustments already chose these minimums. A population
+  // prior for "would you like larger text?" must not veto the saved fit.
+  // Page applicability, user blocks/undo and engine reliability still gate it.
+  const savedMinimum =
+    source === 'profile' &&
+    ((op === 'text_floor' &&
+      input.profile.vision.textMinPx.source !== 'default') ||
+      (op === 'target_size' &&
+        input.profile.motor.minTargetPx.source !== 'default'));
+
   const needs = evidenceNeeds(input.profile, input.needs);
   const theta = pinned
     ? pinnedDesirability(d, op, day)
@@ -587,7 +597,8 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
   const autoSource =
     pinned ||
     ((source === 'profile' || source === 'system') && def.autoEligible);
-  if (autoSource && !demotedHere(d, op) && euAuto(P, pOk) > 0) {
+  const matchesFit = savedMinimum && !snoozed;
+  if (autoSource && !demotedHere(d, op) && (matchesFit || euAuto(P, pOk) > 0)) {
     const regions =
       def.scope === 'region'
         ? app.regions.filter(
@@ -595,11 +606,15 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
           )
         : [];
     if (def.scope === 'page' || regions.length > 0) {
-      const trace = make('auto', `auto P=${P.toFixed(2)}`, {
-        p: round2(P),
-        pOk: round2(pOk),
-        evidence,
-      });
+      const trace = make(
+        'auto',
+        matchesFit ? 'saved_fit' : `auto P=${P.toFixed(2)}`,
+        {
+          p: round2(P),
+          pOk: round2(pOk),
+          evidence,
+        },
+      );
       return {
         planned: {
           op,

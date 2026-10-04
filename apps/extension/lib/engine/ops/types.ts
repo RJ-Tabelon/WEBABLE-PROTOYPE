@@ -48,6 +48,8 @@ export interface Prepared {
 /** What an imperative op leaves behind: its undo, and how to treat new content. */
 export interface RunHandle {
   undo(): void;
+  /** Motion this handle paused, which remains a reason to keep the op active. */
+  heldMotion?(): { running?: number; autoplayMedia?: number };
   /** Called with subtrees the page inserted after apply (MutationObserver path). */
   onAdded?(roots: readonly Element[]): void;
 }

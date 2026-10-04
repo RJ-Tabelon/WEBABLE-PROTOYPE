@@ -156,6 +156,24 @@ export class MarkBook {
     return n;
   }
 
+  /** Replace an op's marks without touching tokens that have stayed the same. */
+  replaceOp(op: OpId, marks: readonly (readonly [Element, string])[]): void {
+    const next = new Map<string, Set<Element>>();
+    for (const [el, token] of marks) {
+      let set = next.get(token);
+      if (!set) next.set(token, (set = new Set()));
+      set.add(el);
+    }
+    for (const [token, set] of this.byToken) {
+      if (tokenOp(token) !== op) continue;
+      for (const el of [...set]) {
+        if (!next.get(token)?.has(el)) this.unmark(el, token);
+      }
+      if (set.size === 0) this.byToken.delete(token);
+    }
+    for (const [el, token] of marks) this.mark(el, token);
+  }
+
   /** Remove `op`'s tokens from one element only (partial rollback). */
   unmarkOpOn(el: Element, op: OpId): void {
     for (const t of tokensOf(el)) if (tokenOp(t) === op) this.unmark(el, t);
@@ -211,8 +229,10 @@ export class MarkBook {
 /** Add or remove a token in the `data-wa-off` list on <html>. */
 export function setOffGate(doc: Document, token: string, off: boolean): void {
   const root = doc.documentElement;
+  if (!root) return; // document_start can run before the parser creates <html>.
   const cur = (root.getAttribute(OFF_ATTR) ?? '').split(/\s+/).filter(Boolean);
   const has = cur.includes(token);
+  if (has === off) return;
   if (off && !has) cur.push(token);
   if (!off && has) cur.splice(cur.indexOf(token), 1);
   if (cur.length) root.setAttribute(OFF_ATTR, cur.join(' '));

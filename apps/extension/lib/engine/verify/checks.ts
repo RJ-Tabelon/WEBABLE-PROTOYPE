@@ -14,9 +14,8 @@ import {
 /**
  * Native, geometry-based verification (engine.md 4). A baseline snapshot of a
  * bounded probe set is taken before the write and diffed after it settles.
- * Every failure names the ops whose tokens sit on the failing element, its
- * ancestors, or (for clipping containers) its descendants; failures with no
- * culprit are resolved by bisection.
+ * Nearby tokens identify candidates only; the engine confirms causal layout
+ * changes with synchronous counterfactual reads before rolling anything back.
  */
 
 export interface ProbeSet {
@@ -297,7 +296,7 @@ export function diffSnapshots(
     for (const el of ctx.marked) {
       if (!el.isConnected) continue;
       const r = el.getBoundingClientRect();
-      if (r.right > view.innerWidth + 1) {
+      if (r.right + view.scrollX > doc.documentElement.clientWidth + 1) {
         for (const op of opsNear(el)) culprits.add(op);
         culpritEl = el;
       }

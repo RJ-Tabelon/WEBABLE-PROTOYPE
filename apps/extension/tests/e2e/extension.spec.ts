@@ -22,6 +22,246 @@ import { fakeSession, startDecideStub } from './supabase-stub';
 
 const STORY = 'main.story p:not(.byline)';
 
+test('an existing install recovers its saved fit after old verifier failures without losing site choices', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  await ext.control.evaluate(async () => {
+    const storage = (
+      globalThis as unknown as {
+        chrome: {
+          storage: {
+            local: { set(v: Record<string, unknown>): Promise<void> };
+          };
+        };
+      }
+    ).chrome.storage.local;
+    const day = Math.floor(Date.now() / 86_400_000);
+    await storage.set({
+      'wa.sites': {
+        '127.0.0.1': {
+          engineVersion: 'engine-1.0.0',
+          rule: {
+            paused: false,
+            pins: ['text_floor'],
+            blocks: ['target_size'],
+            levels: {},
+            updatedAt: Date.now(),
+          },
+          state: {
+            t: day,
+            dims: {},
+            ops: {
+              text_floor: {
+                s: 0,
+                f: 0,
+                t: day,
+                e: { s: 0, f: 10, t: day },
+                skipUntil: day + 7,
+                engineUntil: day + 7,
+              },
+              contrast: { s: 0, f: 0, t: day, sessionOff: 'old-page-undo' },
+            },
+          },
+          lastVisit: 0,
+          lastChanges: 0,
+          announced: false,
+          levelMemo: null,
+          at: Date.now(),
+        },
+      },
+    });
+  });
+  const { page, tabId } = await ext.openFixture('article');
+  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  const view = await ext.send<{
+    site: { blocks: string[] };
+    undoneByYou: string[];
+  }>({ type: 'ui:view', tabId });
+  expect(view.site.blocks).toEqual(
+    expect.arrayContaining(['target_size', 'contrast']),
+  );
+  expect(view.undoneByYou).toContain('contrast');
+  const popup = await ext.openPopup(tabId);
+  await expect(
+    popup.getByRole('button', { name: 'Redo contrast' }),
+  ).toBeVisible();
+});
+
+function ordinaryFit() {
+  const p = strongReaderProfile();
+  p.vision.textMinPx.value = 16;
+  p.motor.minTargetPx.value = 32;
+  return p;
+}
+
+test('the saved fit stays adapted on every frame through continuous rendering and transitions', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  const { page, tabId } = await ext.openFixture('article');
+  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  await page.addStyleTag({
+    content: 'main.story p { transition: font-size 400ms, line-height 400ms; }',
+  });
+  await page.waitForTimeout(1000);
+  const sizes = await page.evaluate(async () => {
+    const story = document.querySelector('main.story p:not(.byline)')!;
+    const ticker = document.createElement('span');
+    document.body.append(ticker);
+    const timer = setInterval(() => {
+      ticker.textContent = String(Date.now());
+    }, 180);
+    const sizes: number[] = [];
+    const start = performance.now();
+    await new Promise<void>((resolve) => {
+      const sample = () => {
+        sizes.push(parseFloat(getComputedStyle(story).fontSize));
+        if (performance.now() - start < 4500) requestAnimationFrame(sample);
+        else resolve();
+      };
+      requestAnimationFrame(sample);
+    });
+    clearInterval(timer);
+    return sizes;
+  });
+  expect(sizes.length).toBeGreaterThan(30);
+  expect(Math.min(...sizes)).toBe(16);
+  expect(Math.max(...sizes)).toBe(16);
+  await expect
+    .poll(async () =>
+      (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
+    )
+    .toContainEqual(['text_floor', 'applied']);
+});
+
+test('a saved ordinary fit adapts delayed rendering, reused nodes and changed styles', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  const { page, tabId } = await ext.openFixture('hydration');
+  await expect(page.locator('#story').first()).toBeAttached();
+  await expect
+    .poll(() => computed(page, '#story', 'font-size'), { timeout: 15_000 })
+    .toBe('16px');
+  await expect
+    .poll(async () =>
+      (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
+    )
+    .toContainEqual(['target_size', 'applied']);
+
+  // A framework reuses its node, then CSS switches back to small text.
+  await page
+    .locator('p')
+    .evaluateAll((ps) => ps.forEach((p) => p.classList.add('large')));
+  await expect.poll(() => computed(page, '#story', 'font-size')).toBe('24px');
+  await page
+    .locator('p')
+    .evaluateAll((ps) => ps.forEach((p) => p.classList.remove('large')));
+  await expect.poll(() => computed(page, '#story', 'font-size')).toBe('16px');
+
+  // A fresh decision must measure the host CSS, not WebAble's own 16px rule.
+  await page.locator('#story').evaluate((p) => {
+    p.firstChild!.textContent += ' Content updated again.';
+  });
+  await page.waitForTimeout(1200);
+  expect(await computed(page, '#story', 'font-size')).toBe('16px');
+
+  const popup = await ext.openPopup(tabId);
+  const rows = await changeRows(popup);
+  await rows
+    .filter({ hasText: 'Text size' })
+    .getByRole('button', { name: 'Undo text size' })
+    .click();
+  await expect.poll(() => computed(page, '#story', 'font-size')).toBe('12px');
+  await page.locator('#story').evaluate((p) => {
+    p.firstChild!.textContent += ' Another update after Undo.';
+  });
+  await page.waitForTimeout(1200);
+  expect(await computed(page, '#story', 'font-size')).toBe('12px');
+});
+
+test('an ordinary saved fit applies on an initial document and a full navigation', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  const { page } = await ext.openFixture('article');
+  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  await page.goto(`${FIXTURE_ORIGIN}/engine/hydration.html`);
+  await expect(page.locator('#story').first()).toBeAttached();
+  await expect
+    .poll(() => computed(page, '#story', 'font-size'), { timeout: 15_000 })
+    .toBe('16px');
+});
+
+test('saving a fit updates a page that was already open without a popup or reload', async ({
+  ext,
+}) => {
+  const { page } = await ext.openFixture('article');
+  expect(await computed(page, STORY, 'font-size')).toBe('13px');
+  const result = await ext.send<{ ok: boolean }>({
+    type: 'e2e:seed',
+    profile: ordinaryFit(),
+    reset: false,
+  });
+  expect(result.ok).toBe(true);
+  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+});
+
+test('a calmer page stays calm through automatic refreshes', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  const { page, tabId } = await ext.openFixture('store');
+  await ext.send({ type: 'ui:quick', tabId, key: 'calm', on: true });
+  const moving = () =>
+    page.evaluate(
+      () =>
+        document
+          .getAnimations()
+          .filter(
+            (a) =>
+              a.playState === 'running' &&
+              a.effect?.getComputedTiming().iterations === Infinity,
+          ).length,
+    );
+  await expect.poll(moving).toBe(0);
+  const frames = await page.evaluate(async () => {
+    const ticker = document.createElement('span');
+    document.querySelector('main')!.append(ticker);
+    const timer = setInterval(() => {
+      ticker.textContent = String(Date.now());
+    }, 180);
+    const frames: number[] = [];
+    const start = performance.now();
+    await new Promise<void>((resolve) => {
+      const sample = () => {
+        frames.push(
+          document
+            .getAnimations()
+            .filter(
+              (a) =>
+                a.playState === 'running' &&
+                a.effect?.getComputedTiming().iterations === Infinity,
+            ).length,
+        );
+        if (performance.now() - start < 3500) requestAnimationFrame(sample);
+        else resolve();
+      };
+      requestAnimationFrame(sample);
+    });
+    clearInterval(timer);
+    return frames;
+  });
+  expect(Math.max(...frames)).toBe(0);
+  expect(await moving()).toBe(0);
+  await expect
+    .poll(async () =>
+      (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
+    )
+    .toContainEqual(['calm_motion', 'applied']);
+});
+
 async function expectNoAxeViolations(page: Page): Promise<void> {
   // Contrast is measured on settled colours, not mid-fade.
   await page.waitForFunction(() =>
@@ -139,6 +379,69 @@ test.describe('popup', () => {
     expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
   });
 
+  test('Undo is saved without answering a reason and survives reload, a new tab, and a worker restart', async ({
+    ext,
+  }) => {
+    await ext.seed({ profile: strongReaderProfile() });
+    const { page, tabId } = await ext.openFixture('article');
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .not.toBe('13px');
+    const alreadyOpen = await ext.openFixture('article');
+    await expect
+      .poll(() => computed(alreadyOpen.page, STORY, 'font-size'))
+      .not.toBe('13px');
+    const popup = await ext.openPopup(tabId);
+    const rows = await changeRows(popup);
+    await rows
+      .filter({ hasText: 'Text size' })
+      .getByRole('button', { name: 'Undo text size' })
+      .click();
+    await expect(
+      popup.getByRole('group', { name: 'Text size was undone' }),
+    ).toContainText('Saved for this site');
+    await expect
+      .poll(() => computed(alreadyOpen.page, STORY, 'font-size'))
+      .toBe('13px');
+    const session = (await ext.tabState(tabId))?.tabSession;
+    await page.reload();
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.tabSession)
+      .not.toBe(session);
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.phase)
+      .toBe('ready');
+    expect(await computed(page, STORY, 'font-size')).toBe('13px');
+    await popup.reload();
+    await expect(
+      popup.getByRole('group', { name: 'Text size was undone' }),
+    ).toBeVisible();
+    const next = await ext.openFixture('article');
+    expect(await computed(next.page, STORY, 'font-size')).toBe('13px');
+    // Stop the actual worker; the next UI message wakes a new instance.
+    const cdp = await ext.context.newCDPSession(ext.control);
+    await cdp.send('ServiceWorker.enable');
+    await cdp.send('ServiceWorker.stopAllWorkers');
+    await cdp.detach();
+    await expect
+      .poll(async () => {
+        const view = await ext.send<{ site: { blocks: string[] } }>({
+          type: 'ui:view',
+          tabId,
+        });
+        return view.site.blocks;
+      })
+      .toContain('text_floor');
+    await popup.reload();
+    await popup.getByRole('button', { name: 'Redo text size' }).click();
+    await expect
+      .poll(() => computed(page, STORY, 'font-size'))
+      .not.toBe('13px');
+    await expect
+      .poll(() => computed(alreadyOpen.page, STORY, 'font-size'))
+      .not.toBe('13px');
+  });
+
   test('a text size set for this site applies on the page, and its Undo restores the page', async ({
     ext,
   }) => {
@@ -177,15 +480,24 @@ test.describe('popup', () => {
     ).toBeVisible();
   });
 
-  test('an offer asks first, and "Try it" applies exactly that change', async ({
+  test('an optional spacing offer asks first, and "Try it" applies exactly that change', async ({
     ext,
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
-    const { tabId } = await ext.openFixture('store');
+    const { page, tabId } = await ext.openFixture('store');
     const popup = await ext.openPopup(tabId);
 
+    // A saved minimum applies automatically; a fast Undo on this site
+    // leaves optional suggestions for the next visit.
+    const initialRows = await changeRows(popup);
+    await initialRows
+      .filter({ hasText: 'Click targets' })
+      .getByRole('button', { name: 'Undo click targets' })
+      .click();
+    await page.reload();
+
     const offer = popup.getByRole('region', {
-      name: /Make them bigger here\?/,
+      name: /Add space between them\?/,
     });
     await expect(offer).toBeVisible();
     const accept = offer.getByRole('button', { name: 'Try it' });
@@ -206,12 +518,14 @@ test.describe('popup', () => {
     await accept.click();
     await expect(offer).toHaveCount(0);
     const rows = await changeRows(popup);
-    await expect(rows.filter({ hasText: 'Click targets' })).toHaveCount(1);
+    await expect(
+      rows.filter({ hasText: 'Space between controls' }),
+    ).toHaveCount(1);
     await expect
       .poll(async () =>
         (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
       )
-      .toContainEqual(['target_size', 'applied']);
+      .toContainEqual(['target_spacing', 'applied']);
   });
 
   test('a text change that clips is undone by the checks and shown as a neutral row', async ({
@@ -646,7 +960,12 @@ test.describe('turning WebAble off and on', () => {
     // The tab still shows the store, and its record is untouched.
     const during = await ext.tabState(tabId);
     expect(during?.phase).toBe('ready');
-    expect(during?.changes).toEqual(before?.changes);
+    // The new link on the current page is adapted too, but prerendering
+    // must not bind the current tab to a different document.
+    expect(during?.tabSession).toBe(before?.tabSession);
+    expect(during?.changes.map((c) => [c.op, c.status, c.level])).toEqual(
+      before?.changes.map((c) => [c.op, c.status, c.level]),
+    );
 
     await page.click('#go');
     await page.waitForURL(target);

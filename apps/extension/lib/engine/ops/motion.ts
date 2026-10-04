@@ -145,8 +145,10 @@ export const calmMotion: OpImpl = {
           if (++sweeps >= 10) env.view.clearInterval(timer);
         }, 1000);
         let lastSweep = performance.now();
+        let pendingSweep: number | null = null;
         const undo = (): void => {
           env.view.clearInterval(timer);
+          if (pendingSweep !== null) env.view.clearTimeout(pendingSweep);
           if (prePaint) setOffGate(env.doc, 'calm_motion', true);
           for (const a of sweep.paused) {
             try {
@@ -176,11 +178,29 @@ export const calmMotion: OpImpl = {
             }
           }
           // getAnimations() forces a style update: at most once a second.
-          if (performance.now() - lastSweep < 1000) return;
+          const elapsed = performance.now() - lastSweep;
+          if (elapsed < 1000) {
+            pendingSweep ??= env.view.setTimeout(() => {
+              pendingSweep = null;
+              lastSweep = performance.now();
+              sweepAnimations(env.layers.scopes(), sweep);
+            }, 1000 - elapsed);
+            return;
+          }
           lastSweep = performance.now();
           sweepAnimations(env.layers.scopes(), sweep);
         };
-        return { undo, onAdded };
+        return {
+          undo,
+          onAdded,
+          heldMotion: () => ({
+            running: [...sweep.paused].filter(
+              (a) =>
+                a.playState === 'paused' &&
+                (a.effect as KeyframeEffect | null)?.target?.isConnected,
+            ).length,
+          }),
+        };
       },
     };
   },
@@ -334,6 +354,7 @@ export const pauseMedia: OpImpl = {
             for (const img of [root, ...root.querySelectorAll('img')]) {
               if (
                 !(img instanceof HTMLImageElement) ||
+                frozen.has(img) ||
                 !GIF_RE.test(img.currentSrc || img.src)
               )
                 continue;
@@ -349,7 +370,15 @@ export const pauseMedia: OpImpl = {
             }
           }
         };
-        return { undo, onAdded };
+        return {
+          undo,
+          onAdded,
+          heldMotion: () => ({
+            autoplayMedia: [...paused].filter(
+              (v) => !released.has(v) && v.isConnected && v.paused,
+            ).length,
+          }),
+        };
       },
     };
   },

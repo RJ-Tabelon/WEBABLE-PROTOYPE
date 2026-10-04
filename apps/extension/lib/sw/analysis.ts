@@ -20,6 +20,7 @@ import type { PageSignals, RegionEvidence } from '@webable/core/page/types';
 import { vocabularyViolations } from '@webable/core/page/vocab-check';
 import type { RegionVerdict } from '@webable/core/policy/types';
 import { CATALOG_VERSION, JEV_PINNED_MODEL } from '@webable/core/versions';
+import { parseRetryAfter } from '@webable/core/jev/client';
 
 import type { PageEvidence } from '../protocol';
 import type { CachedAnswer } from '../storage/answers';
@@ -147,6 +148,8 @@ export async function callDecide(call: DecideCall): Promise<DecideOutcome> {
   const start = now();
   const doFetch = call.fetch ?? fetch;
   let res: Response;
+  let json: unknown;
+  const deadline = AbortSignal.timeout(call.timeoutMs);
   try {
     res = await doFetch(call.url, {
       method: 'POST',
@@ -156,15 +159,31 @@ export async function callDecide(call: DecideCall): Promise<DecideOutcome> {
         'content-type': 'application/json',
       },
       body: call.body,
-      signal: AbortSignal.timeout(call.timeoutMs),
+      signal: deadline,
       credentials: 'omit',
       cache: 'no-store',
       referrerPolicy: 'no-referrer',
     });
+    try {
+      json = await res.json();
+    } catch (error) {
+      if (
+        deadline.aborted ||
+        (typeof error === 'object' &&
+          error !== null &&
+          'name' in error &&
+          (error.name === 'TimeoutError' || error.name === 'AbortError'))
+      )
+        throw error;
+      json = null;
+    }
   } catch (err) {
     const timeout =
-      err instanceof DOMException &&
-      (err.name === 'TimeoutError' || err.name === 'AbortError');
+      deadline.aborted ||
+      (typeof err === 'object' &&
+        err !== null &&
+        'name' in err &&
+        (err.name === 'TimeoutError' || err.name === 'AbortError'));
     return {
       ok: false,
       reason: timeout ? 'timeout' : 'network',
@@ -172,12 +191,6 @@ export async function callDecide(call: DecideCall): Promise<DecideOutcome> {
     };
   }
   const ms = now() - start;
-  let json: unknown = null;
-  try {
-    json = await res.json();
-  } catch {
-    json = null;
-  }
   if (res.status === 401)
     return { ok: false, reason: 'unauthorized', status: 401, ms };
   if (res.status === 403) {
@@ -193,8 +206,11 @@ export async function callDecide(call: DecideCall): Promise<DecideOutcome> {
   if (!parsed.success)
     return {
       ok: false,
-      reason: res.ok ? 'shape' : 'http',
+      reason: res.status === 429 ? 'rate_limited' : res.ok ? 'shape' : 'http',
       status: res.status,
+      ...(parseRetryAfter(res.headers) !== undefined
+        ? { retryAfterMs: parseRetryAfter(res.headers) }
+        : {}),
       ms,
     };
   const data = parsed.data;
@@ -208,6 +224,7 @@ export async function callDecide(call: DecideCall): Promise<DecideOutcome> {
       status: res.status,
       ms,
     };
+  if (!res.ok) return { ok: false, reason: 'http', status: res.status, ms };
   if (data.model !== JEV_PINNED_MODEL)
     return { ok: false, reason: 'model_drift', status: res.status, ms };
   return { ok: true, data, ms };

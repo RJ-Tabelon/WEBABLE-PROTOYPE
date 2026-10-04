@@ -57,6 +57,10 @@ export interface ExtractOptions {
   walkBudgetMs?: number;
   maxNodes?: number;
   now?: () => number;
+  /** Restore adaptations while yielding, so baseline measurement never paints. */
+  yieldMain?: () => Promise<void>;
+  /** Previously covered live nodes, to retain coverage when a walk is truncated. */
+  previousFacts?: PageFacts;
 }
 
 export const TARGET_LADDER = [24, 32, 44, 56, 72] as const;
@@ -92,7 +96,12 @@ export async function extract(
   const view = doc.defaultView;
   if (!view || !doc.body)
     throw new Error('extract: document has no view or body');
-  const walkBudget = new Budget(opts.walkBudgetMs ?? 20, 5, now);
+  const walkBudget = new Budget(
+    opts.walkBudgetMs ?? 20,
+    5,
+    now,
+    opts.yieldMain,
+  );
   const vw = view.innerWidth;
   const vh = view.innerHeight;
   const sx = view.scrollX;
@@ -105,8 +114,10 @@ export async function extract(
   const pointerCursor = new WeakMap<Element, boolean>();
   const pinnedEls: Array<{ el: Element; position: 'fixed' | 'sticky' }> = [];
   const counts = { links: 0, buttons: 0, headings: 0, images: 0, videos: 0 };
+  const visited = new Set<Element>();
 
   const visit = (el: Element, cs: CSSStyleDeclaration): void => {
+    visited.add(el);
     const tag = el.localName;
     const pointer = cs.cursor === 'pointer';
     pointerCursor.set(el, pointer);
@@ -157,7 +168,7 @@ export async function extract(
   const scopes: TreeScope[] = [doc, ...stats.shadowRoots];
 
   // The rest runs in bounded slices; measure it on its own budget.
-  const rest = new Budget(40, 5, now);
+  const rest = new Budget(40, 5, now, opts.yieldMain);
   const phases: Record<string, number> = { walk: round(walkBudget.used, 2) };
   let lapFrom = 0;
   const lap = (name: string): void => {
@@ -165,6 +176,33 @@ export async function extract(
     phases[name] = round(u - lapFrom, 2);
     lapFrom = u;
   };
+
+  // A time-limited walk is not evidence that previously fitted nodes vanished.
+  // Re-read the known live candidates it missed, rather than removing their
+  // marks or reusing stale host styles after a framework changes their class.
+  if (stats.truncated && opts.previousFacts) {
+    const previous = opts.previousFacts;
+    const candidates = new Set([
+      ...previous.text.map((t) => t.el),
+      ...previous.targets.map((t) => t.el),
+      ...previous.pinned.map((t) => t.el),
+    ]);
+    let n = 0;
+    for (const el of candidates) {
+      if (!el.isConnected || visited.has(el) || !isRendered(el)) continue;
+      visit(el, view.getComputedStyle(el));
+      if ((++n & 31) === 0) await rest.tick();
+    }
+    for (const scope of previous.scopes) {
+      if (
+        scope instanceof ShadowRoot &&
+        scope.host.isConnected &&
+        !scopes.includes(scope)
+      )
+        scopes.push(scope);
+    }
+  }
+  lap('coverage');
 
   // ---- 2. Main content -----------------------------------------------------
   const mainRes = findMainContent(doc, { visible: (el) => isRendered(el) });

@@ -1,5 +1,6 @@
 // Entry point: wires the handler to the real environment and Supabase clients.
-// config.toml: [functions.extension-link] verify_jwt = true.
+// config.toml disables the legacy gateway JWT check for ES256 support.
+// verifyRequest below authenticates every protected request.
 //
 // Environment:
 //   SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY  injected by Supabase

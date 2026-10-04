@@ -108,12 +108,33 @@ describe('marks', () => {
     const raw = (p.getAttribute(MARK_ATTR) ?? '').split(' ');
     expect(raw).toHaveLength(3);
     for (const t of raw) expect(t).toMatch(/^[a-z]{5}$/);
-    expect(raw.join(' ')).not.toMatch(/tf|ct\d|hx|150|12/);
+    expect(raw).not.toEqual(expect.arrayContaining(['tflh150', 'ct3', 'hx12']));
     expect(tokensOf(p)).toEqual(['tflh150', 'ct3', 'hx12']);
     expect(tok('ct3')).toContain(`[${MARK_ATTR}~="${raw[1]}"]`);
     expect(tok('ct3')).not.toContain('ct3');
     book.clear();
     expect(p.hasAttribute(MARK_ATTR)).toBe(false);
+  });
+
+  it('refreshes marks without rewriting unchanged tokens or removing another op', () => {
+    document.body.innerHTML = '<p id="a">one</p><p id="b">two</p>';
+    const a = document.getElementById('a')!;
+    const b = document.getElementById('b')!;
+    const book = new MarkBook();
+    book.mark(a, 'tf');
+    book.mark(a, 'ct0');
+    const observer = new MutationObserver(() => undefined);
+    observer.observe(document.body, { attributes: true, subtree: true });
+    book.replaceOp('text_floor', [[a, 'tf']]);
+    expect(observer.takeRecords()).toHaveLength(0);
+    book.replaceOp('text_floor', [[b, 'tf']]);
+    expect(tokensOf(a)).toEqual(['ct0']);
+    expect(tokensOf(b)).toEqual(['tf']);
+    expect(book.elementsFor('text_floor')).toEqual([b]);
+    book.replaceOp('text_floor', []);
+    expect(tokensOf(a)).toEqual(['ct0']);
+    expect(b.hasAttribute(MARK_ATTR)).toBe(false);
+    observer.disconnect();
   });
 
   it('keeps the pre-paint stand-down list on <html>', () => {

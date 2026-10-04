@@ -73,6 +73,7 @@ export class Budget {
     readonly totalMs: number,
     readonly sliceMs = 5,
     private readonly now: () => number = () => performance.now(),
+    private readonly yieldMain: () => Promise<void> = yieldToMain,
   ) {
     this.sliceStart = now();
   }
@@ -95,7 +96,7 @@ export class Budget {
     this.sliceStart = now;
     if (this.busy > this.totalMs) return false;
     this.paused = true;
-    await yieldToMain();
+    await this.yieldMain();
     this.resume();
     return true;
   }

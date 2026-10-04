@@ -53,6 +53,34 @@ const computed = (page: Page, sel: string, prop: string): Promise<string> =>
   );
 
 test.describe('ops apply, verify and remove cleanly', () => {
+  test('lowering a text fit and rechecking it preserve the requested size on transitioning pages', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.addStyleTag({
+      content: 'main p { transition: font-size 400ms, line-height 400ms; }',
+    });
+    await page.evaluate(() => window.__webableEngine.extract());
+    await page.evaluate(
+      (p) => window.__webableEngine.apply(p),
+      plan([{ op: 'text_floor', level: 3 }]),
+    );
+    await page.evaluate(() => window.__webableEngine.setLevel('text_floor', 1));
+    expect(
+      await page
+        .locator('main p:not(.byline)')
+        .first()
+        .evaluate((p) => getComputedStyle(p).fontSize),
+    ).toBe('16px');
+    await page.evaluate(() => window.__webableEngine.verify());
+    expect(
+      await page
+        .locator('main p:not(.byline)')
+        .first()
+        .evaluate((p) => getComputedStyle(p).fontSize),
+    ).toBe('16px');
+  });
+
   test('text_floor raises only small text, with a real fit mark', async ({
     page,
   }) => {

@@ -18,9 +18,10 @@ import {
   type Transport,
 } from '../../../lib/engine/adapter';
 import { Engine, type ApplyOptions } from '../../../lib/engine/engine';
+import { extract } from '../../../lib/engine/extract';
 import { sel } from '../../../lib/engine/ops/marks';
 import type { ContentToWorker, HelloReply } from '../../../lib/protocol';
-import type { VocabPort } from '../../../lib/engine/types';
+import type { PageFacts, VocabPort } from '../../../lib/engine/types';
 import { fallbackVocab } from './vocab-fallback';
 
 interface HarnessEvent {
@@ -41,6 +42,7 @@ function vocab(): VocabPort & { source: 'core' | 'fallback' } {
 const events: HarnessEvent[] = [];
 const port = vocab();
 let engine: Engine | null = null;
+let coverage: PageFacts | undefined;
 
 function ensure(prePaint: OpId[] = []): Engine {
   if (!engine) {
@@ -72,6 +74,8 @@ let adaptersCreated = 0;
 let workerHandler: ((msg: unknown) => Promise<unknown> | undefined) | null =
   null;
 const sent: ContentToWorker[] = [];
+let signalsGate: Promise<void> | null = null;
+let releaseSignals: (() => void) | null = null;
 
 /** A stand-in service worker: answers every content-script message. */
 function fakeWorker(plan: AdaptationPlan, hello: HelloReply): Transport {
@@ -82,6 +86,7 @@ function fakeWorker(plan: AdaptationPlan, hello: HelloReply): Transport {
         case 'cs:hello':
           return hello;
         case 'cs:signals':
+          await signalsGate;
           return { plan, announce: true };
         case 'cs:friction':
           return { offer: null };
@@ -142,6 +147,17 @@ const api = {
   sentMessages() {
     return sent.slice();
   },
+  holdSignals(hold: boolean) {
+    if (hold)
+      signalsGate ??= new Promise<void>((resolve) => {
+        releaseSignals = resolve;
+      });
+    else {
+      releaseSignals?.();
+      signalsGate = null;
+      releaseSignals = null;
+    }
+  },
   stopAdapter() {
     adapter?.stop();
     adapter = null;
@@ -154,6 +170,17 @@ const api = {
   async extract() {
     const x = await ensure().extract();
     return { signals: x.signals, evidence: x.evidence, perf: x.perf };
+  },
+  /** Force an incomplete walk to verify recovery of previously covered nodes. */
+  async extractLimited(maxNodes: number) {
+    const x = await extract(document, {
+      vocab: port,
+      maxNodes,
+      walkBudgetMs: 1000,
+      previousFacts: coverage,
+    });
+    coverage = x.facts;
+    return { signals: x.signals, perf: x.perf };
   },
   async apply(
     plan: AdaptationPlan,

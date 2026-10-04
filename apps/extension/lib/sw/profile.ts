@@ -2,6 +2,7 @@ import {
   applyEvent,
   initialLearningState,
   OP_IMPL_VERSION,
+  profileSource,
   reseedFromProfile,
   toDay,
 } from '@webable/core/learning/learners';
@@ -143,7 +144,20 @@ export async function ensureLearning(
         seededFor: ctx.identity,
         reseed: true,
       };
-    return cur;
+    // Upgrade existing saved fits whose old need-level gate seeded these
+    // minimums as "none". Keep all blocks, feedback and learned levels.
+    const ops = { ...cur.user.ops };
+    let upgraded = false;
+    for (const op of ['text_floor', 'target_size'] as const) {
+      if (
+        ops[op].src === 'none' &&
+        profileSource(op, ctx.profile, ctx.needs) === 'profile'
+      ) {
+        ops[op] = { ...ops[op], src: 'profile' };
+        upgraded = true;
+      }
+    }
+    return upgraded ? { ...cur, user: { ...cur.user, ops } } : cur;
   });
   return rec.user!;
 }

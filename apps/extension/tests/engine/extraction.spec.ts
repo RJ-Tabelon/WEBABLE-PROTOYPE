@@ -8,6 +8,35 @@ import {
 import { FIXTURES, open, PRIVATE_STRINGS, regionKeys } from './helpers';
 
 test.describe('extraction', () => {
+  test('partial walks retain native measurements of covered content and update reused nodes', async ({
+    page,
+  }) => {
+    await open(page, 'large');
+    const full = await page.evaluate(() =>
+      window.__webableEngine.extractLimited(6000),
+    );
+    expect(full.perf.truncated).toBe(false);
+    await page.addStyleTag({ content: 'main p { font-size: 24px; }' });
+    const partial = await page.evaluate(() =>
+      window.__webableEngine.extractLimited(12),
+    );
+    expect(partial.perf.truncated).toBe(true);
+    expect(partial.signals.text.totalChars).toBe(full.signals.text.totalChars);
+    expect(partial.signals.text.mainFontPx).toBe(24);
+    expect(partial.signals.targets.count).toBe(full.signals.targets.count);
+    await page
+      .locator('main p')
+      .first()
+      .evaluate((p) => p.remove());
+    const removed = await page.evaluate(() =>
+      window.__webableEngine.extractLimited(12),
+    );
+    expect(removed.signals.text.totalChars).toBeLessThan(
+      partial.signals.text.totalChars,
+    );
+    expect(removed.signals.text.mainFontPx).toBe(24);
+  });
+
   for (const fixture of FIXTURES) {
     test(`${fixture}: no page text, URL, title or form value in signals or evidence`, async ({
       page,

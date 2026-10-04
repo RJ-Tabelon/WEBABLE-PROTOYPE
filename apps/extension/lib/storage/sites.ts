@@ -1,6 +1,7 @@
 import type { DomainState, SiteRule } from '@webable/core/learning/types';
 import { OP_IDS, type OpId } from '@webable/core/ops/catalog';
 import type { LocalSite } from '@webable/core/bridge/protocol';
+import { ENGINE_VERSION } from '@webable/core/versions';
 
 import type { KvArea } from './area';
 import { KEYS } from './keys';
@@ -14,6 +15,8 @@ import { bool, isRecord, JsonStore, num } from './store';
  * open). LRU-capped at 500 sites; sites idle for 180 days are dropped.
  */
 export interface SiteRecord {
+  /** Version that produced the local verifier reliability channel. */
+  engineVersion: string;
   rule: SiteRule;
   /** Domain learning state (Learner A domain counts, engine channel, offsets). */
   state: DomainState;
@@ -54,6 +57,7 @@ export function emptyDomain(day: number): DomainState {
 
 export function newSiteRecord(now: number): SiteRecord {
   return {
+    engineVersion: ENGINE_VERSION,
     rule: emptyRule(now),
     state: emptyDomain(Math.floor(now / 86_400_000)),
     lastVisit: 0,
@@ -101,9 +105,33 @@ function normalizeDomain(raw: unknown, now: number): DomainState {
 
 export function normalizeSiteRecord(raw: unknown, now: number): SiteRecord {
   if (!isRecord(raw)) return newSiteRecord(now);
+  const rule = normalizeRule(raw.rule, now);
+  let state = normalizeDomain(raw.state, now);
+  if (raw.engineVersion !== ENGINE_VERSION) {
+    state = structuredClone(state);
+    for (const [op, dop] of Object.entries(state.ops) as Array<
+      [OpId, NonNullable<DomainState['ops'][OpId]>]
+    >) {
+      // Undo used to save only a page-session flag. Honour those explicit
+      // choices as saved site preferences when upgrading an existing install.
+      if (typeof dop.sessionOff === 'string' && !rule.blocks.includes(op))
+        rule.blocks.push(op);
+      if (
+        dop.engineUntil !== undefined &&
+        dop.skipUntil !== undefined &&
+        dop.skipUntil <= dop.engineUntil
+      )
+        delete dop.skipUntil;
+      delete dop.e;
+      delete dop.rejects;
+      delete dop.passDay;
+      delete dop.engineUntil;
+    }
+  }
   return {
-    rule: normalizeRule(raw.rule, now),
-    state: normalizeDomain(raw.state, now),
+    engineVersion: ENGINE_VERSION,
+    rule,
+    state,
     lastVisit: num(raw.lastVisit, 0),
     lastChanges: Math.max(0, Math.round(num(raw.lastChanges, 0))),
     announced: bool(raw.announced, false),

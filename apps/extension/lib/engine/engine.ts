@@ -27,8 +27,8 @@ import { InPageLayer, type OutlineGroup } from './ui/layer';
 import { setColorParseFallback, type RGBA } from './util/color';
 import { shadowRootsWithin, SKIP_TAGS } from './util/dom';
 import type { Box } from './util/geometry';
-import { Mutex, settle, whenIdle } from './util/schedule';
-import { readingAnchor, restoreAnchor, type Anchor } from './verify/anchor';
+import { Mutex, settle, whenIdle, yieldToMain } from './util/schedule';
+import { readingAnchor, restoreAnchor } from './verify/anchor';
 import {
   buildProbes,
   diffSnapshots,
@@ -57,6 +57,10 @@ export interface EngineEvents {
   /** The person pressed Undo in the toast; the engine has already undone these. */
   undone(changes: AppliedChange[], via: 'toast'): void;
   routeChanged(): void;
+  /** Host content, styles, fonts or viewport changed; measure and decide again. */
+  pageChanged?(): void;
+  /** First real page interaction; late AI additions must stand down. */
+  interacted?(): void;
   /** Show-on-page outlines were dismissed with Esc. */
   outlinesClosed?(): void;
 }
@@ -81,6 +85,8 @@ export interface ApplyOptions {
   acceptOffers?: boolean;
   /** Remove applied ops that are absent from this plan (a fresh decision). */
   replace?: boolean;
+  /** Rebuild equal-level ops against newly measured elements/geometry. */
+  refresh?: boolean;
   /** First auto changes on this site: show the toast. */
   announce?: boolean;
 }
@@ -282,6 +288,18 @@ export class Engine {
   private toastOp: OpId | null = null;
   private readonly bornAt = performance.now();
   private escOff: (() => void) | null = null;
+  private offPageChanges: (() => void) | null = null;
+  private offInput: (() => void) | null = null;
+  private lastInputAt = -Infinity;
+  private readonly rejectedFits = new Map<
+    OpId,
+    {
+      level: number;
+      scope: PlannedOp['scope'];
+      code: VerifyCode;
+      checks: Map<Element, string>;
+    }
+  >();
   readonly perf: EnginePerf = {
     extract: null,
     verifyMs: 0,
@@ -301,6 +319,23 @@ export class Engine {
       offerAnswer: (op, answer) => this.opts.events.offerAnswer(op, answer),
       toastUndo: (all) => void this.undoFromToast(all),
     });
+    // Listen before the first extraction or AI request can complete.
+    const onInput = (e: Event): void => {
+      if (!e.isTrusted) return;
+      const first = this.lastInputAt === -Infinity;
+      this.lastInputAt = performance.now();
+      if (first) this.opts.events.interacted?.();
+    };
+    const inputs = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
+    for (const type of inputs)
+      this.view.addEventListener(type, onInput, {
+        capture: true,
+        passive: true,
+      });
+    this.offInput = () => {
+      for (const type of inputs)
+        this.view.removeEventListener(type, onInput, true);
+    };
   }
 
   get status(): EngineStatus {
@@ -324,20 +359,56 @@ export class Engine {
   }
 
   private async extractNow(): Promise<Extraction> {
+    const anchor = readingAnchor(this.doc, this.facts?.main ?? null);
+    const offGate = this.doc.documentElement.getAttribute('data-wa-off');
+    // Re-reading our own overrides would make policy conclude that the page
+    // no longer needs them and oscillate between on and off.
+    const measure = () => {
+      this.layers.measure(true);
+      if (this.prePaint.has('calm_motion'))
+        setOffGate(this.doc, 'calm_motion', true);
+    };
+    const restore = () => {
+      this.layers.measure(false);
+      if (this.doc.documentElement.getAttribute('data-wa-off') === offGate)
+        return;
+      if (offGate === null)
+        this.doc.documentElement.removeAttribute('data-wa-off');
+      else this.doc.documentElement.setAttribute('data-wa-off', offGate);
+    };
+    measure();
     try {
       const x = await extract(this.doc, {
         vocab: this.opts.vocab,
         openClosed: this.opts.openClosed,
+        previousFacts: this.facts ?? undefined,
+        yieldMain: async () => {
+          restore();
+          await yieldToMain();
+          if (!this.destroyed) measure();
+        },
       });
+      for (const active of this.applied.values()) {
+        const held = active.handle?.heldMotion?.();
+        if (held?.running) x.signals.motion.running += held.running;
+        if (held?.autoplayMedia)
+          x.signals.motion.autoplayMedia += held.autoplayMedia;
+      }
       this.facts = x.facts;
       this.lastExtraction = x;
       this.perf.extract = x.perf;
       for (const scope of x.facts.scopes)
-        if (scope instanceof ShadowRoot) this.layers.addScope(scope);
+        if (scope instanceof ShadowRoot) {
+          this.layers.addScope(scope);
+          this.scheduler?.observe(scope);
+        }
       return x;
     } catch (err) {
       this._status = 'unreadable';
       throw err;
+    } finally {
+      restore();
+      restoreAnchor(this.doc, anchor);
     }
   }
 
@@ -362,6 +433,12 @@ export class Engine {
         (p) => p.mode === 'auto' || options.acceptOffers,
       );
       const wantedIds = new Set(wanted.map((p) => p.op));
+      if (options.replace)
+        for (const op of this.reports.keys())
+          if (!wantedIds.has(op)) {
+            this.reports.delete(op);
+            this.rejectedFits.delete(op);
+          }
 
       // Pre-paint stylesheets the plan does not want stand down.
       if (options.replace || this.reports.size === 0) {
@@ -378,15 +455,29 @@ export class Engine {
       const toApply: PlannedOp[] = [];
       for (const p of wanted) {
         const cur = this.applied.get(p.op);
+        if (!cur && !options.acceptOffers && this.sameRejectedFit(p)) {
+          const report = this.reports.get(p.op);
+          if (report)
+            this.reports.set(p.op, { ...report, trace: p.trace, mode: p.mode });
+          continue;
+        }
         if (
           cur &&
+          (!options.refresh ||
+            [
+              'calm_motion',
+              'pause_media',
+              'steady_clicks',
+              'menu_grace',
+              'reading_guide',
+              'focus_outline',
+            ].includes(p.op)) &&
           cur.level === p.level &&
           sameScope(cur.planned.scope, p.scope)
         ) {
           cur.planned = p; // keep the newest trace
           continue;
         }
-        if (cur) removals.push(p.op);
         toApply.push(p);
       }
       if (removals.length) {
@@ -420,6 +511,54 @@ export class Engine {
     };
   }
 
+  /** Native constraints of a rejected fit; no text content is retained. */
+  private rejectionKey(el: Element): string {
+    const rect = el.getBoundingClientRect();
+    const cs = this.view.getComputedStyle(el);
+    return JSON.stringify([
+      rect.width,
+      rect.height,
+      el.scrollWidth,
+      el.scrollHeight,
+      cs.overflowX,
+      cs.overflowY,
+      cs.fontSize,
+      cs.lineHeight,
+      cs.padding,
+      cs.whiteSpace,
+      cs.display,
+      cs.maxWidth,
+      cs.wordSpacing,
+      cs.letterSpacing,
+      el.parentElement?.clientWidth,
+      el.childElementCount,
+      el.textContent?.length,
+      this.view.innerWidth,
+      this.view.innerHeight,
+    ]);
+  }
+
+  /** Unrelated page activity must not keep painting a fit already rejected. */
+  private sameRejectedFit(p: PlannedOp): boolean {
+    const failed = this.rejectedFits.get(p.op);
+    if (
+      !failed ||
+      failed.level !== p.level ||
+      !sameScope(failed.scope, p.scope)
+    )
+      return false;
+    this.layers.measure(true);
+    try {
+      const unchanged = [...failed.checks].every(
+        ([el, key]) => el.isConnected && this.rejectionKey(el) === key,
+      );
+      if (!unchanged) this.rejectedFits.delete(p.op);
+      return unchanged;
+    } finally {
+      this.layers.measure(false);
+    }
+  }
+
   /** Component keys -> live elements through the local registry. */
   private resolve(scope: PlannedOp['scope']): Element[] {
     if (scope === 'page' || !this.facts) return [];
@@ -433,7 +572,7 @@ export class Engine {
 
   /**
    * One batch: read phase (every op measures), one write phase, settle,
-   * verify, per-op rollback, bisection for unattributed failures, then real
+   * verify, causally confirmed rollback, then real
    * "after" values. Returns the change records for this batch.
    */
   private async batch(planned: PlannedOp[]): Promise<AppliedChange[]> {
@@ -455,197 +594,249 @@ export class Engine {
       applied: null,
     }));
 
-    // ---- Read phase ----
-    for (const it of items) {
-      try {
-        it.prepared = OPS[it.p.op].prepare(env, it.value, it.p.scope);
-      } catch {
-        it.error = true;
-      }
-    }
-    const ready = items.filter(
-      (it) => !it.error && it.prepared?.status === 'ready',
-    );
-    for (const it of ready) {
-      const before = new Map<Element, Box>();
-      for (const el of (it.prepared?.show ?? []).slice(0, 24))
-        before.set(el, docBox(el, this.view));
-      it.applied = {
-        op: it.p.op,
-        level: it.p.level,
-        value: it.value,
-        planned: it.p,
-        prepared: it.prepared as Prepared,
-        handle: null,
-        before,
-        appliedAt: now,
-      };
-    }
-    let verifyBusy = 0;
-    let t = performance.now();
-    const probes = buildProbes({
-      doc: this.doc,
-      view: this.view,
-      marked: ready.flatMap((it) => it.prepared?.marks ?? []),
-      existing: this.marks.all(200),
-      targets: env.facts.targets.map((t) => t.el),
-      contrast: [
-        ...env.facts.contrast.map((c) => c.el),
-        ...ready
-          .filter((it) => it.p.op === 'contrast')
-          .flatMap((it) => (it.prepared?.marks ?? []).map(([el]) => el)),
-      ],
-    });
-    const base = takeSnapshot(this.doc, probes);
-    verifyBusy += performance.now() - t;
-    const anchor = readingAnchor(this.doc, env.facts.main);
-
-    // ---- Write phase (one) ----
-    t = performance.now();
-    for (const it of ready) {
-      const a = it.applied as AppliedOp;
-      if (a.prepared.css) this.layers.set(a.op, a.prepared.css);
-      for (const [el, tok] of a.prepared.marks ?? []) this.marks.mark(el, tok);
-      this.applied.set(a.op, a);
-    }
-    this.layers.flush();
-    for (const it of ready) {
-      const a = it.applied as AppliedOp;
-      if (!a.prepared.run) continue;
-      try {
-        const r = a.prepared.run();
-        a.handle = typeof r === 'function' ? { undo: r } : r;
-      } catch {
-        it.error = true;
-        it.vcode = 'apply_error';
-        this.removeOp(a.op);
-      }
-    }
-    this.layers.flush();
-    this.perf.writeMs = performance.now() - t;
-    // The first read after the write pays for the one style and layout pass.
-    t = performance.now();
-    restoreAnchor(this.doc, anchor);
-    this.perf.layoutMs = performance.now() - t;
-
-    // ---- Settle, verify, roll back ----
-    await settle(this.doc);
-    restoreAnchor(this.doc, anchor);
-    const live = (): Item[] => ready.filter((it) => !it.error && !it.vcode);
-    const ctx = () => ({
-      contrastTarget: this.applied.has('contrast')
-        ? (this.applied.get('contrast')?.value ?? 4.5)
-        : 4.5,
-      marked: this.marks.all(300),
-    });
-    const diff = (): Failure[] => {
-      const s = performance.now();
-      try {
-        return diffSnapshots(this.doc, probes, base, ctx());
-      } finally {
-        verifyBusy += performance.now() - s;
-      }
-    };
-    let fails: Failure[];
+    // Keep the previous fit installed until its replacement is ready. Prepare
+    // against native styles synchronously; never yield with them exposed.
+    this.layers.measure(true);
     try {
-      fails = diff();
-      for (let round = 0; round < 3 && fails.length; round++) {
-        const inBatch = new Set(live().map((it) => it.p.op));
-        const culprits = new Map<OpId, VerifyCode>();
-        for (const f of fails) {
-          for (const op of f.ops)
-            if (inBatch.has(op) && !culprits.has(op)) culprits.set(op, f.code);
+      // ---- Read phase ----
+      for (const it of items) {
+        try {
+          it.prepared = OPS[it.p.op].prepare(env, it.value, it.p.scope);
+        } catch {
+          it.error = true;
         }
-        if (culprits.size === 0) break;
-        for (const [op, code] of culprits) {
-          const it = ready.find((x) => x.p.op === op);
-          if (it) it.vcode = code;
-          this.removeOp(op);
-        }
-        this.layers.flush();
-        restoreAnchor(this.doc, anchor);
-        await settle(this.doc);
-        fails = diff();
       }
-      if (fails.length) await this.bisect(live(), fails, diff, anchor);
-    } catch {
-      for (const it of live()) {
-        it.vcode = 'apply_error';
-        this.removeOp(it.p.op);
+      const ready = items.filter(
+        (it) => !it.error && it.prepared?.status === 'ready',
+      );
+      for (const it of ready) {
+        const before = new Map<Element, Box>();
+        for (const el of (it.prepared?.show ?? []).slice(0, 24))
+          before.set(el, docBox(el, this.view));
+        it.applied = {
+          op: it.p.op,
+          level: it.p.level,
+          value: it.value,
+          planned: it.p,
+          prepared: it.prepared as Prepared,
+          handle: null,
+          before,
+          appliedAt: now,
+        };
+      }
+      let verifyBusy = 0;
+      let t = performance.now();
+      const probes = buildProbes({
+        doc: this.doc,
+        view: this.view,
+        marked: ready.flatMap((it) => it.prepared?.marks ?? []),
+        existing: this.marks.all(200),
+        targets: env.facts.targets.map((t) => t.el),
+        contrast: [
+          ...env.facts.contrast.map((c) => c.el),
+          ...ready
+            .filter((it) => it.p.op === 'contrast')
+            .flatMap((it) => (it.prepared?.marks ?? []).map(([el]) => el)),
+        ],
+      });
+      const base = takeSnapshot(this.doc, probes);
+      verifyBusy += performance.now() - t;
+      const anchor = readingAnchor(this.doc, env.facts.main);
+
+      this.layers.measure(false);
+
+      // ---- Write phase (one) ----
+      t = performance.now();
+      for (const it of items) {
+        if (it.error) continue;
+        const previous = this.applied.get(it.p.op);
+        if (it.prepared?.status !== 'ready' || previous?.handle) {
+          this.removeOp(it.p.op);
+        }
+      }
+      for (const it of ready) {
+        const a = it.applied as AppliedOp;
+        if (a.prepared.css) this.layers.set(a.op, a.prepared.css);
+        else this.layers.drop(a.op);
+        this.marks.replaceOp(a.op, a.prepared.marks ?? []);
+        this.applied.set(a.op, a);
       }
       this.layers.flush();
-    }
-    this.perf.verifyMs = verifyBusy;
-    restoreAnchor(this.doc, anchor);
-
-    // ---- Real after-values ----
-    for (const it of live()) {
-      const a = it.applied as AppliedOp;
-      try {
-        OPS[a.op].afterApply?.(env, a);
-      } catch {
-        // measurement only; the change stands
+      this.layers.finishOwnedTransitions();
+      for (const it of ready) {
+        const a = it.applied as AppliedOp;
+        if (!a.prepared.run) continue;
+        try {
+          const r = a.prepared.run();
+          a.handle = typeof r === 'function' ? { undo: r } : r;
+        } catch {
+          it.error = true;
+          it.vcode = 'apply_error';
+          this.removeOp(a.op);
+        }
       }
-    }
-    this.ui.refresh();
+      this.layers.flush();
+      this.perf.writeMs = performance.now() - t;
+      // The first read after the write pays for the one style and layout pass.
+      t = performance.now();
+      restoreAnchor(this.doc, anchor);
+      this.perf.layoutMs = performance.now() - t;
 
-    const out: AppliedChange[] = [];
-    for (const it of items) {
-      const change = this.report(
-        it.p,
-        it.prepared,
-        it.error ? 'apply_error' : it.vcode,
-      );
-      this.reports.set(it.p.op, change);
-      out.push(change);
+      // ---- Settle, verify, roll back ----
+      await settle(this.doc);
+      restoreAnchor(this.doc, anchor);
+      const live = (): Item[] => ready.filter((it) => !it.error && !it.vcode);
+      const ctx = () => ({
+        contrastTarget: this.applied.has('contrast')
+          ? (this.applied.get('contrast')?.value ?? 4.5)
+          : 4.5,
+        marked: this.marks.all(300),
+      });
+      const diff = (): Failure[] => {
+        const s = performance.now();
+        try {
+          return diffSnapshots(this.doc, probes, base, ctx());
+        } finally {
+          verifyBusy += performance.now() - s;
+        }
+      };
+      let fails: Failure[];
+      const rejected = new Map<OpId, Set<Element>>();
+      try {
+        fails = diff();
+        for (let round = 0; round < 3 && fails.length; round++) {
+          const culprits = new Map<OpId, VerifyCode>();
+          const trials = new Map<string, Failure[]>();
+          for (const f of fails) {
+            // Tokens locate nearby adaptations, not causes. Verify causality
+            // against the current page before undoing any of them.
+            for (const op of this.causes(live(), f, diff, trials)) {
+              if (!culprits.has(op)) culprits.set(op, f.code);
+              if (
+                f.code === 'clip' ||
+                f.code === 'overflow' ||
+                f.code === 'overlap'
+              ) {
+                let boxes = rejected.get(op);
+                if (!boxes) rejected.set(op, (boxes = new Set()));
+                boxes.add(f.el);
+              }
+            }
+          }
+          if (culprits.size === 0) break;
+          for (const [op, code] of culprits) {
+            const it = ready.find((x) => x.p.op === op);
+            if (it) it.vcode = code;
+            this.removeOp(op);
+          }
+          this.layers.flush();
+          this.layers.finishOwnedTransitions();
+          restoreAnchor(this.doc, anchor);
+          fails = diff();
+        }
+      } catch {
+        for (const it of live()) {
+          it.vcode = 'apply_error';
+          this.removeOp(it.p.op);
+        }
+        this.layers.flush();
+      }
+      this.perf.verifyMs = verifyBusy;
+      restoreAnchor(this.doc, anchor);
+
+      // ---- Real after-values ----
+      for (const it of live()) {
+        const a = it.applied as AppliedOp;
+        try {
+          OPS[a.op].afterApply?.(env, a);
+        } catch {
+          // measurement only; the change stands
+        }
+      }
+      this.ui.refresh();
+
+      const out: AppliedChange[] = [];
+      for (const it of items) {
+        const change = this.report(
+          it.p,
+          it.prepared,
+          it.error ? 'apply_error' : it.vcode,
+        );
+        this.reports.set(it.p.op, change);
+        const boxes = rejected.get(it.p.op);
+        if (it.vcode && boxes?.size) {
+          // Root overflow can come from pseudo-elements whose host rect has
+          // not moved. Track this op's native hosts, not unrelated body text.
+          if (boxes.delete(this.doc.documentElement))
+            for (const el of (it.prepared?.show ?? []).slice(0, 24))
+              boxes.add(el);
+          this.layers.measure(true);
+          try {
+            this.rejectedFits.set(it.p.op, {
+              level: it.p.level,
+              scope: it.p.scope,
+              code: it.vcode,
+              checks: new Map(
+                [...boxes].map((el) => [el, this.rejectionKey(el)]),
+              ),
+            });
+          } finally {
+            this.layers.measure(false);
+          }
+        } else this.rejectedFits.delete(it.p.op);
+        out.push(change);
+      }
+      return out;
+    } finally {
+      this.layers.measure(false);
     }
-    return out;
   }
 
   /**
-   * Failures nobody's tokens explain: roll back batch ops riskiest-first,
-   * one at a time; the first whose removal clears the failures is the culprit.
-   * Ops whose removal did not help are re-applied.
+   * Find the smallest responsible set, keeping the rest of the fit installed.
+   * Every trial is a synchronous stylesheet-only read: no page mutations,
+   * imperative side effects or rendered frames between removal and restore.
    */
-  private async bisect(
+  private causes(
     live: Array<{
       p: PlannedOp;
       applied: AppliedOp | null;
       vcode?: VerifyCode;
     }>,
-    fails: Failure[],
+    failure: Failure,
     diff: () => Failure[],
-    anchor: Anchor | null,
-  ): Promise<void> {
-    const same = (a: Failure, b: Failure): boolean =>
-      a.code === b.code && a.el === b.el;
-    for (const op of BISECT_ORDER) {
-      const it = live.find((x) => x.p.op === op);
-      if (!it?.applied) continue;
-      this.removeOp(op);
-      this.layers.flush();
-      await settle(this.doc);
-      const now = diff();
-      if (!now.some((f) => fails.some((g) => same(f, g)))) {
-        it.vcode = fails[0]?.code ?? 'layout_shift';
-        restoreAnchor(this.doc, anchor);
-        return;
+    trials: Map<string, Failure[]>,
+  ): OpId[] {
+    const geometry = ['overflow', 'clip', 'overlap'].includes(failure.code);
+    const candidates = BISECT_ORDER.filter(
+      (op) =>
+        (!geometry ||
+          !['contrast', 'dim_distractions', 'focus_view'].includes(op)) &&
+        live.some((it) => it.p.op === op && it.applied?.prepared.css),
+    );
+    const remains = (disabled: OpId[]): boolean => {
+      const key = disabled.join(',');
+      let failures = trials.get(key);
+      if (!failures) {
+        failures = this.layers.without(disabled, diff);
+        trials.set(key, failures);
       }
-      this.reapply(it.applied);
+      return failures.some(
+        (f) =>
+          f.code === failure.code &&
+          (f.code === 'overflow' || f.el === failure.el),
+      );
+    };
+    if (!candidates.length || remains(candidates)) return []; // Host page activity.
+    // Prefer a single causal rollback when it suffices.
+    for (const op of candidates) if (!remains([op])) return [op];
+    // Multiple independent causes: restore every op that is safe to keep.
+    let disabled = [...candidates];
+    for (const op of candidates) {
+      const trial = disabled.filter((o) => o !== op);
+      if (!remains(trial)) disabled = trial;
     }
-    // Nothing in this batch explains it: page activity, not WebAble. Keep the batch.
-  }
-
-  private reapply(a: AppliedOp): void {
-    if (a.prepared.css) this.layers.set(a.op, a.prepared.css);
-    for (const [el, tok] of a.prepared.marks ?? [])
-      if (el.isConnected) this.marks.mark(el, tok);
-    this.layers.flush();
-    if (a.prepared.run) {
-      const r = a.prepared.run();
-      a.handle = typeof r === 'function' ? { undo: r } : r;
-    }
-    this.applied.set(a.op, a);
+    return disabled;
   }
 
   /** Remove one op completely: its rule block, its tokens, its imperative effects. */
@@ -742,8 +933,8 @@ export class Engine {
   // ======================================================================
 
   /**
-   * Re-verify everything currently applied: take a baseline with every op
-   * removed, re-apply in one write, diff, and roll back failures.
+   * Re-verify everything currently applied against native measurements,
+   * replacing the fit in one write, then rolling back failures.
    */
   async verify(): Promise<VerifyReport> {
     return this.mutex.run(async () => {
@@ -751,8 +942,6 @@ export class Engine {
       if (ops.length === 0 || !this.facts)
         return { failures: [], rolledBack: [], busyMs: 0 };
       const anchor = readingAnchor(this.doc, this.facts.main);
-      for (const a of ops) this.removeOp(a.op);
-      this.layers.flush();
       const planned = ops.map((a) => a.planned);
       const results = await this.batch(planned);
       restoreAnchor(this.doc, anchor);
@@ -783,11 +972,13 @@ export class Engine {
     for (const id of ids) {
       this.removeOp(id);
       this.reports.delete(id);
+      this.rejectedFits.delete(id);
       if (this.prePaint.has(id)) setOffGate(this.doc, id, true);
     }
     if (op === 'all') {
       for (const id of this.prePaint) setOffGate(this.doc, id, true);
       this.reports.clear();
+      this.rejectedFits.clear();
     }
     this.layers.flush();
     restoreAnchor(this.doc, anchor);
@@ -815,8 +1006,6 @@ export class Engine {
         this.lastPlan?.ops.find((p) => p.op === op) ??
         undefined;
       if (!planned) return this.changes();
-      if (cur) this.removeOp(op);
-      this.layers.flush();
       if (!this.facts) await this.extractNow();
       await this.batch([
         { ...planned, level, trace: { ...planned.trace, level } },
@@ -1047,6 +1236,23 @@ export class Engine {
       );
       this.friction = installFriction(this.view, detector);
     }
+    if (!this.offPageChanges && this.opts.events.pageChanged) {
+      const changed = (): void => this.scheduler?.requestAll();
+      const loaded = (e: Event): void => {
+        const el = e.target;
+        if (el instanceof Element && /^(link|style|img)$/.test(el.localName))
+          changed();
+      };
+      const onFonts = (): void => changed();
+      this.view.addEventListener('resize', changed, { passive: true });
+      this.doc.addEventListener('load', loaded, true);
+      this.doc.fonts?.addEventListener('loadingdone', onFonts);
+      this.offPageChanges = () => {
+        this.view.removeEventListener('resize', changed);
+        this.doc.removeEventListener('load', loaded, true);
+        this.doc.fonts?.removeEventListener('loadingdone', onFonts);
+      };
+    }
     if (!this.maintenance) {
       // Style-layer watchdog (pages that reassign adoptedStyleSheets) and mark
       // pruning, in idle time about every two seconds.
@@ -1067,6 +1273,8 @@ export class Engine {
   }
 
   private stopRuntime(): void {
+    this.offPageChanges?.();
+    this.offPageChanges = null;
     if (this.maintenance) clearInterval(this.maintenance);
     this.maintenance = null;
     this.cancelIdle?.();
@@ -1079,6 +1287,10 @@ export class Engine {
     this.friction = null;
     this.escOff?.();
     this.escOff = null;
+  }
+
+  get hasInteracted(): boolean {
+    return this.lastInputAt !== -Infinity;
   }
 
   /** New subtrees: mark them with the ops already applied, verify just those marks. */
@@ -1100,6 +1312,18 @@ export class Engine {
       }
     }
     this.layers.flush();
+
+    if (this.opts.events.pageChanged) {
+      for (const active of this.applied.values()) {
+        try {
+          active.handle?.onAdded?.(roots);
+        } catch {
+          /* Host nodes may have disappeared. */
+        }
+      }
+      this.opts.events.pageChanged();
+      return;
+    }
 
     const env = this.env();
     const incoming: Array<[OpId, Element, string]> = [];
@@ -1157,6 +1381,8 @@ export class Engine {
       this.undoNow('all');
     } finally {
       this.stopRuntime();
+      this.offInput?.();
+      this.offInput = null;
       this.marks.clear();
       this.layers.clear();
       this.ui.destroy();

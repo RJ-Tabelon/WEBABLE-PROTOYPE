@@ -33,7 +33,8 @@ export const EXTENSION_DIR = resolve(
 );
 export const FIXTURE_ORIGIN = 'http://127.0.0.1:4173';
 
-export type Fixture = 'article' | 'store' | 'app' | 'clip' | 'shadow' | 'spa';
+export type Fixture =
+  'article' | 'store' | 'app' | 'clip' | 'shadow' | 'spa' | 'hydration';
 
 export interface TabState {
   tabId: number;

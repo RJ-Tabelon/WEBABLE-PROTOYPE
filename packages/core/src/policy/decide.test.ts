@@ -245,9 +245,10 @@ describe('decideOp', () => {
     ]);
   });
 
-  it('offers, never auto-applies, a mild need', () => {
+  it('applies the saved target minimum even for a mild need', () => {
     const { planned } = decideOp('target_size', makeInput());
-    expect(planned?.mode).toBe('offer');
+    expect(planned?.mode).toBe('auto');
+    expect(planned?.trace.why).toBe('saved_fit');
   });
 
   it('lets friction raise an offer but never apply a change', () => {

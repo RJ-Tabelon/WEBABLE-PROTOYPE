@@ -3,6 +3,37 @@ import { expect, test } from '@playwright/test';
 import { domState, open, plan, styleState } from './helpers';
 
 test.describe('runtime', () => {
+  test('hash routes are detected, while document anchors do not start a new page view', async ({
+    page,
+  }) => {
+    await open(page, 'spa');
+    await page.evaluate(() => window.__webableEngine.extract());
+    await page.evaluate(
+      (p) => window.__webableEngine.apply(p),
+      plan([{ op: 'focus_outline' }]),
+    );
+    await page.evaluate(() => {
+      location.hash = '#section';
+    });
+    await page.waitForTimeout(700);
+    expect(
+      (await page.evaluate(() => window.__webableEngine.events())).filter(
+        (e) => e.type === 'routeChanged',
+      ),
+    ).toHaveLength(0);
+    await page.evaluate(() => {
+      location.hash = '#/story';
+    });
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(() => window.__webableEngine.events())).filter(
+            (e) => e.type === 'routeChanged',
+          ).length,
+      )
+      .toBe(1);
+  });
+
   test('SPA: content inserted later is adapted incrementally', async ({
     page,
   }) => {

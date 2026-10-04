@@ -1,9 +1,9 @@
-import { HOST_TAG, type TreeScope } from '../util/dom';
+import { isOurs, type TreeScope } from '../util/dom';
 
 /**
- * Incremental re-application (engine.md 3.5). Only childList additions are
- * observed (never attributes, so WebAble's own marks never feed back).
- * Additions are debounced (150 ms, max wait 1 s), nested roots collapsed,
+ * Host changes, including text updates and reused framework nodes. A narrow
+ * attribute allowlist excludes WebAble's own marks, preventing feedback.
+ * Changes are debounced (350 ms, max wait 1 s), nested roots collapsed,
  * and a burst of more than 1,000 added elements switches to a full pass.
  * Pages that mutate constantly (tickers, feeds) back the debounce off.
  */
@@ -15,7 +15,7 @@ export interface SchedulerOptions {
 }
 
 export const DEFAULT_SCHEDULER: SchedulerOptions = {
-  debounceMs: 150,
+  debounceMs: 350,
   maxWaitMs: 1000,
   huge: 1000,
 };
@@ -32,6 +32,7 @@ export class MutationScheduler {
   private readonly observers: MutationObserver[] = [];
   private readonly observed = new WeakSet<TreeScope>();
   private running = false;
+  private disposed = false;
 
   constructor(
     private readonly run: (roots: FlushRoots) => Promise<void>,
@@ -45,26 +46,69 @@ export class MutationScheduler {
     if (this.observed.has(root)) return;
     this.observed.add(root);
     const mo = new MutationObserver((recs) => this.onRecords(recs));
-    mo.observe(root, { childList: true, subtree: true });
+    mo.observe(root, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: [
+        'class',
+        'style',
+        'hidden',
+        'open',
+        'role',
+        'id',
+        'lang',
+        'aria-hidden',
+        'type',
+        'contenteditable',
+      ],
+    });
     this.observers.push(mo);
   }
 
   /** Visible for tests. */
   onRecords(recs: readonly MutationRecord[]): void {
-    let added = 0;
+    if (this.disposed) return;
+    let changed = false;
+    const add = (el: Element | null): void => {
+      if (!el || isOurs(el)) return;
+      changed = true;
+      if (/^(style|link)$/.test(el.localName)) this.huge = true;
+      this.pending.add(el);
+      if (this.pending.size > this.opts.huge) this.huge = true;
+    };
     for (const r of recs) {
+      const target =
+        r.target?.nodeType === 1
+          ? (r.target as Element)
+          : r.target?.parentElement;
+      if (target && isOurs(target)) continue;
+      if (r.type === 'attributes' || r.type === 'characterData')
+        add(target ?? null);
+      if (
+        Array.from(r.removedNodes ?? []).some(
+          (n) => n.nodeType !== 1 || !isOurs(n as Element),
+        )
+      )
+        add(target ?? null);
       for (const n of r.addedNodes) {
-        if (n.nodeType !== 1) continue;
-        const el = n as Element;
-        if (el.localName === HOST_TAG) continue;
-        if (++added > this.opts.huge) {
-          this.huge = true;
-          break;
-        }
-        this.pending.add(el);
+        if (n.nodeType === 1) add(n as Element);
+        else if (n.nodeType === 3) add(target ?? null);
       }
     }
-    if (added === 0 && !this.huge) return;
+    if (!changed) return;
+    this.arm();
+  }
+
+  /** Stylesheet loads, font completion and viewport changes need a full pass. */
+  requestAll(): void {
+    if (this.disposed) return;
+    this.huge = true;
+    this.arm();
+  }
+
+  private arm(): void {
     this.onActivity?.();
     const now = performance.now();
     if (!this.first) this.first = now;
@@ -73,14 +117,21 @@ export class MutationScheduler {
       0,
       Math.min(this.debounce, this.opts.maxWaitMs - (now - this.first)),
     );
-    this.timer = setTimeout(() => void this.flush(), wait);
+    this.timer = setTimeout(
+      () => void this.flush().catch(() => undefined),
+      wait,
+    );
   }
 
   private async flush(): Promise<void> {
     this.timer = null;
+    if (this.disposed) return;
     if (this.running) {
       // A flush is in progress: try again after it.
-      this.timer = setTimeout(() => void this.flush(), this.debounce);
+      this.timer = setTimeout(
+        () => void this.flush().catch(() => undefined),
+        this.debounce,
+      );
       return;
     }
     const all = [...this.pending];
@@ -97,6 +148,7 @@ export class MutationScheduler {
     this.flushTimes.push(now);
     if (this.flushTimes.length > 20)
       this.debounce = Math.min(this.debounce * 2, 2000);
+    else if (this.flushTimes.length < 5) this.debounce = this.opts.debounceMs;
     if (roots !== 'all' && roots.length === 0) return;
     this.running = true;
     try {
@@ -107,6 +159,7 @@ export class MutationScheduler {
   }
 
   disconnect(): void {
+    this.disposed = true;
     for (const mo of this.observers) mo.disconnect();
     this.observers.length = 0;
     if (this.timer) clearTimeout(this.timer);

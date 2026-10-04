@@ -149,6 +149,12 @@ async function seed(e: Env, profile: FitProfile = strongReaderProfile()) {
     version: 1,
     fetchedAt: 0,
   });
+  // A previously undone target adjustment is offered before it runs again.
+  // Otherwise the saved target minimum now applies automatically.
+  await e.stores.sites.update(DOMAIN, (site) => {
+    site.state.ops.target_size = { s: 0, f: 0, t: site.state.t, demoted: true };
+    return site;
+  });
 }
 
 /** hello, signals, apply: what the content script does on a page load. */

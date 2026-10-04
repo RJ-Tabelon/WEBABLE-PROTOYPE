@@ -19,6 +19,35 @@ export const HARD_TIMEOUT_MS = 3_000;
 
 export type RefinementMode = 'apply_paint' | 'cache_only';
 
+/** A DOM refresh must not turn a cached late answer into a new automatic change. */
+export function limitLateAnalysis(
+  current: AdaptationPlan,
+  next: AdaptationPlan,
+  applied: readonly OpId[],
+): AdaptationPlan {
+  return {
+    ...next,
+    ops: next.ops.flatMap((op) => {
+      if (
+        op.mode === 'offer' ||
+        !op.trace.evidence.some(
+          (e) => e.kind === 'region_role' && e.by === 'page_analysis',
+        )
+      )
+        return [op];
+      const prev = current.ops.find(
+        (p) => p.op === op.op && p.mode === 'auto' && applied.includes(p.op),
+      );
+      if (!prev) return [];
+      if (op.scope === 'page' || prev.scope === 'page') return [op];
+      const regions = op.scope.regions.filter(
+        (k) => prev.scope !== 'page' && prev.scope.regions.includes(k),
+      );
+      return regions.length ? [{ ...op, scope: { regions } }] : [];
+    }),
+  };
+}
+
 export function refinementMode(t: {
   /** When the page's signals arrived (DOMContentLoaded + extraction). */
   dclAt: number;

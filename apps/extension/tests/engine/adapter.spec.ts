@@ -10,6 +10,254 @@ const hello = {
 };
 
 test.describe('content script flow (fake service worker)', () => {
+  test('a rejected fit does not flash on every unrelated update, and retries when the clipping box changes', async ({
+    page,
+  }) => {
+    await open(page, 'clip');
+    await page.evaluate(
+      ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+      [plan([{ op: 'text_floor', level: 2 }]), hello] as const,
+    );
+    const sizes = await page.evaluate(async () => {
+      const p = document.querySelector('#card-1 p')!;
+      const ticker = document.createElement('span');
+      document.body.append(ticker);
+      const timer = setInterval(() => {
+        ticker.textContent = String(Date.now());
+      }, 180);
+      const sizes: number[] = [];
+      const start = performance.now();
+      await new Promise<void>((resolve) => {
+        const frame = () => {
+          sizes.push(parseFloat(getComputedStyle(p).fontSize));
+          if (performance.now() - start < 3500) requestAnimationFrame(frame);
+          else resolve();
+        };
+        requestAnimationFrame(frame);
+      });
+      clearInterval(timer);
+      return sizes;
+    });
+    expect(Math.max(...sizes)).toBe(12);
+    await page.locator('.card').evaluateAll((cards) =>
+      cards.forEach((card) => {
+        (card as HTMLElement).style.height = '160px';
+      }),
+    );
+    await expect
+      .poll(() =>
+        page.locator('#card-1 p').evaluate((p) => getComputedStyle(p).fontSize),
+      )
+      .toBe('18px');
+  });
+
+  for (const fixture of ['large', 'shadow'] as const) {
+    test(`${fixture}: extraction yields and shadow styles never expose the original fit`, async ({
+      page,
+    }) => {
+      await open(page, fixture);
+      await page.evaluate(() => {
+        const root =
+          document.querySelector('product-card')?.shadowRoot ?? document;
+        const style = document.createElement('style');
+        style.textContent =
+          'p { transition: font-size 400ms, line-height 400ms; }';
+        (root instanceof Document ? root.head : root).append(style);
+      });
+      await page.evaluate(
+        ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+        [plan([{ op: 'text_floor', level: 2 }]), hello] as const,
+      );
+      const sizes = await page.evaluate(async () => {
+        const root =
+          document.querySelector('product-card')?.shadowRoot ?? document;
+        const paragraphs = [...root.querySelectorAll('p')].filter(
+          (p) => getComputedStyle(p).fontSize === '18px',
+        );
+        const watched = [
+          paragraphs[0]!,
+          paragraphs[Math.floor(paragraphs.length / 2)]!,
+          paragraphs.at(-1)!,
+        ];
+        const ticker = document.createElement('span');
+        document.body.append(ticker);
+        const timer = setInterval(() => {
+          ticker.textContent = String(Date.now());
+        }, 180);
+        const sizes: number[] = [];
+        const start = performance.now();
+        await new Promise<void>((resolve) => {
+          const frame = () => {
+            for (const p of watched)
+              sizes.push(parseFloat(getComputedStyle(p).fontSize));
+            if (performance.now() - start < 3500) requestAnimationFrame(frame);
+            else resolve();
+          };
+          requestAnimationFrame(frame);
+        });
+        clearInterval(timer);
+        return sizes;
+      });
+      expect(sizes.length).toBeGreaterThan(30);
+      expect(Math.min(...sizes)).toBe(18);
+      expect(Math.max(...sizes)).toBe(18);
+    });
+  }
+
+  test('adapted text stays stable on every frame during repeated page updates and host transitions', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.addStyleTag({
+      content:
+        'main p { transition: font-size 400ms, line-height 400ms, color 400ms; }',
+    });
+    await page.evaluate(
+      ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+      [plan([{ op: 'text_floor', level: 2 }]), hello] as const,
+    );
+    await page.waitForTimeout(600);
+    const samples = await page.evaluate(async () => {
+      const p = document.querySelector('main p:not(.byline)')!;
+      const tick = document.createElement('span');
+      document.body.append(tick);
+      const timer = setInterval(() => {
+        tick.textContent = String(Date.now());
+      }, 180);
+      const sizes: number[] = [];
+      const opacityTransition = p.animate([{ opacity: 1 }, { opacity: 0.4 }], {
+        duration: 10000,
+      });
+      const start = performance.now();
+      await new Promise<void>((resolve) => {
+        const frame = () => {
+          sizes.push(parseFloat(getComputedStyle(p).fontSize));
+          if (performance.now() - start < 3500) requestAnimationFrame(frame);
+          else resolve();
+        };
+        requestAnimationFrame(frame);
+      });
+      clearInterval(timer);
+      return {
+        sizes,
+        sent: window.__webableEngine.sentMessages(),
+        animationState: opacityTransition.playState,
+      };
+    });
+    expect(samples.sizes.length).toBeGreaterThan(30);
+    expect(
+      Math.min(...samples.sizes),
+      'no frame may expose the original or transitioning text',
+    ).toBe(18);
+    expect(Math.max(...samples.sizes)).toBe(18);
+    const signals = samples.sent.filter((m) => m.type === 'cs:signals');
+    expect(signals.length).toBeGreaterThan(2);
+    expect(signals.map((m) => m.signals.text.mainFontPx)).toEqual(
+      signals.map(() => 13),
+    );
+    expect(samples.animationState).toBe('running');
+    await page.waitForTimeout(1500);
+    const quietCount = await page.evaluate(
+      () =>
+        window.__webableEngine
+          .sentMessages()
+          .filter((m) => m.type === 'cs:signals').length,
+    );
+    await page.waitForTimeout(1500);
+    expect(
+      await page.evaluate(
+        () =>
+          window.__webableEngine
+            .sentMessages()
+            .filter((m) => m.type === 'cs:signals').length,
+      ),
+    ).toBe(quietCount);
+  });
+
+  test('Undo wins over a page plan that was already in flight', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.evaluate(
+      ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+      [plan([{ op: 'text_floor', level: 2 }]), hello] as const,
+    );
+    await page.evaluate(() => {
+      window.__webableEngine.holdSignals(true);
+      document
+        .querySelector('main p:not(.byline)')!
+        .append(document.createTextNode(' More content while planning.'));
+    });
+    await expect
+      .poll(
+        async () =>
+          (
+            await page.evaluate(() => window.__webableEngine.sentMessages())
+          ).filter((m) => m.type === 'cs:signals').length,
+      )
+      .toBe(2);
+    await page.evaluate(() =>
+      window.__webableEngine.workerMessage({
+        type: 'sw:undo',
+        op: 'text_floor',
+      }),
+    );
+    await page.evaluate(() => window.__webableEngine.holdSignals(false));
+    await page.waitForTimeout(1000);
+    expect(
+      await page
+        .locator('main p:not(.byline)')
+        .first()
+        .evaluate((p) => getComputedStyle(p).fontSize),
+    ).toBe('13px');
+  });
+
+  test('late AI cannot add a new change after a real interaction or an obsolete plan', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    const initial = plan([{ op: 'text_floor', level: 2 }]);
+    await page.evaluate(
+      ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+      [initial, hello] as const,
+    );
+    await page.mouse.click(1200, 750);
+    await expect
+      .poll(async () =>
+        (await page.evaluate(() => window.__webableEngine.sentMessages())).map(
+          (m) => m.type,
+        ),
+      )
+      .toContain('cs:interaction');
+    const late = plan([{ op: 'contrast' }]);
+    const reply = await page.evaluate(
+      (pl) =>
+        window.__webableEngine.workerMessage({
+          type: 'sw:plan',
+          plan: pl,
+          reason: 'refine',
+          basePlanId: 'obsolete-plan',
+        }),
+      late,
+    );
+    expect(reply).toMatchObject({
+      changes: [{ op: 'text_floor', status: 'applied' }],
+    });
+    const interacted = await page.evaluate(
+      ([pl, id]) =>
+        window.__webableEngine.workerMessage({
+          type: 'sw:plan',
+          plan: pl,
+          reason: 'refine',
+          basePlanId: id,
+        }),
+      [late, initial.id] as const,
+    );
+    expect(interacted).toMatchObject({
+      changes: [{ op: 'text_floor', status: 'applied' }],
+    });
+  });
+
   test('hello -> signals -> apply -> applied, and nothing private is sent', async ({
     page,
   }) => {

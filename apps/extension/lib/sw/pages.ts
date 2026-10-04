@@ -13,6 +13,8 @@ import type { KeyedAnswers } from './analysis';
  * cleared when the browser closes. It holds structure, never text or URLs.
  */
 export interface PageMemo {
+  /** Identifies one extraction, including after the MV3 worker restarts. */
+  id: string;
   tabSession: string;
   signals: PageSignals;
   evidence: PageEvidence;
@@ -51,7 +53,12 @@ function toStored(m: PageMemo): StoredMemo {
 }
 
 function fromStored(raw: unknown): PageMemo | null {
-  if (!isRecord(raw) || typeof raw.tabSession !== 'string') return null;
+  if (
+    !isRecord(raw) ||
+    typeof raw.tabSession !== 'string' ||
+    typeof raw.id !== 'string'
+  )
+    return null;
   if (
     !isRecord(raw.signals) ||
     !isRecord(raw.evidence) ||
@@ -61,6 +68,7 @@ function fromStored(raw: unknown): PageMemo | null {
   const s = raw as unknown as StoredMemo;
   return {
     tabSession: s.tabSession,
+    id: s.id,
     signals: s.signals,
     evidence: s.evidence,
     cacheKeys: s.cacheKeys,

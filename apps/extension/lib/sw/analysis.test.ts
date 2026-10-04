@@ -230,6 +230,36 @@ describe('calling decide', () => {
       retryAfterMs: 60_000,
     });
   });
+
+  it('rejects success-shaped error responses and honours gateway retry headers', async () => {
+    expect(
+      await call(respond(503, ok) as unknown as typeof fetch),
+    ).toMatchObject({ ok: false, reason: 'http' });
+    const fetcher = vi.fn(
+      async () =>
+        new Response('gateway busy', {
+          status: 429,
+          headers: { 'retry-after': '3' },
+        }),
+    );
+    expect(await call(fetcher as unknown as typeof fetch)).toMatchObject({
+      ok: false,
+      reason: 'rate_limited',
+      retryAfterMs: 3000,
+    });
+  });
+
+  it('counts body latency and identifies body-read deadline failures as timeouts', async () => {
+    const fetcher = vi.fn(async () => ({
+      ok: true,
+      status: 200,
+      headers: new Headers(),
+      json: async () => {
+        throw new DOMException('Body timed out', 'TimeoutError');
+      },
+    })) as unknown as typeof fetch;
+    expect(await call(fetcher)).toMatchObject({ ok: false, reason: 'timeout' });
+  });
 });
 
 describe('answers into verdicts and the cache', () => {

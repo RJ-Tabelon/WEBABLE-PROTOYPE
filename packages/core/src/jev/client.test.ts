@@ -246,6 +246,24 @@ describe('callJev failure taxonomy (no retries)', () => {
 });
 
 describe('parseRetryAfter / checkJevShape', () => {
+  it('rejects incomplete or unnormalised probabilities and invalid usage', () => {
+    const missing = structuredClone(good);
+    const probs = (
+      missing.answers.role_r4 as { probabilities: Record<string, number> }
+    ).probabilities;
+    delete probs[Object.keys(probs)[0]!];
+    expect(checkJevShape(req.questions, missing)).toBe('probs:role_r4');
+    const unnormalised = structuredClone(good);
+    const dist = (
+      unnormalised.answers.role_r4 as { probabilities: Record<string, number> }
+    ).probabilities;
+    for (const key of Object.keys(dist)) dist[key] = 0;
+    expect(checkJevShape(req.questions, unnormalised)).toBe('probs:role_r4');
+    const invalidUsage = structuredClone(good);
+    invalidUsage.usage.input_tokens = -1;
+    expect(checkJevShape(req.questions, invalidUsage)).toBe('usage');
+  });
+
   it('parses HTTP dates relative to now', () => {
     const now = Date.UTC(2026, 8, 29, 12, 0, 0);
     const headers = new Headers({

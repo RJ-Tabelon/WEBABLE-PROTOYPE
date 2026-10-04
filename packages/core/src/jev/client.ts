@@ -81,6 +81,16 @@ const isRecord = (v: unknown): v is Record<string, unknown> =>
 const in01 = (x: unknown): boolean =>
   typeof x === 'number' && Number.isFinite(x) && x >= 0 && x <= 1;
 
+function distribution(value: unknown, keys: readonly string[]): boolean {
+  if (!isRecord(value) || Object.keys(value).length !== keys.length)
+    return false;
+  if (!keys.every((k) => in01(value[k]))) return false;
+  // Permit rounding in the provider's serialized probabilities.
+  return (
+    Math.abs(keys.reduce((sum, k) => sum + (value[k] as number), 0) - 1) <= 0.02
+  );
+}
+
 /**
  * Runtime shape check: the envelope, every asked id answered with the same
  * type, choices within the option set, probabilities in [0, 1], score levels in
@@ -100,8 +110,10 @@ export function checkJevShape(
   }
   const usage = body.usage;
   if (
-    typeof usage.input_tokens !== 'number' ||
-    typeof usage.output_tokens !== 'number'
+    !Number.isSafeInteger(usage.input_tokens) ||
+    (usage.input_tokens as number) < 0 ||
+    !Number.isSafeInteger(usage.output_tokens) ||
+    (usage.output_tokens as number) < 0
   )
     return 'usage';
   const answers = body.answers;
@@ -114,22 +126,20 @@ export function checkJevShape(
       const options = Object.keys(q.criteria);
       if (typeof a.choice !== 'string' || !options.includes(a.choice))
         return `choice:${id}`;
-      if (!isRecord(a.probabilities)) return `probs:${id}`;
-      const entries = Object.entries(a.probabilities);
-      if (
-        entries.length === 0 ||
-        !entries.every(([k, p]) => options.includes(k) && in01(p))
-      )
-        return `probs:${id}`;
-      if (typeof a.confidence !== 'number') return `confidence:${id}`;
+      if (!distribution(a.probabilities, options)) return `probs:${id}`;
+      if (!in01(a.confidence)) return `confidence:${id}`;
     } else {
       const n = q.criteria.length;
-      if (!isRecord(a.probabilities)) return `levels:${id}`;
-      const ok = Object.entries(a.probabilities).every(([k, p]) => {
-        const level = Number(k);
-        return Number.isInteger(level) && level >= 0 && level < n && in01(p);
-      });
-      if (!ok || typeof a.score !== 'number') return `levels:${id}`;
+      const levels = Array.from({ length: n }, (_, i) => String(i));
+      if (
+        !distribution(a.probabilities, levels) ||
+        typeof a.score !== 'number' ||
+        !Number.isFinite(a.score) ||
+        a.score < 0 ||
+        a.score > n - 1 ||
+        !in01(a.confidence)
+      )
+        return `levels:${id}`;
     }
   }
   return null;

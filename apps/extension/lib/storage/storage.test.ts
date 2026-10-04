@@ -20,6 +20,7 @@ import {
   KeyedMutex,
   listLocalSites,
   memoryArea,
+  newSiteRecord,
   normalizeAccount,
   normalizeLevels,
   normalizeSettings,
@@ -197,12 +198,7 @@ describe('site records', () => {
     const map: SiteMap = {};
     for (let i = 0; i < 510; i++) {
       map[`s${i}.com`] = {
-        rule: { paused: false, pins: [], blocks: [], levels: {}, updatedAt: 0 },
-        state: { t: 0, ops: {}, dims: {} },
-        lastVisit: 0,
-        lastChanges: 0,
-        announced: false,
-        levelMemo: null,
+        ...newSiteRecord(0),
         at: now - i * 1000,
       };
     }

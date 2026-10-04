@@ -118,6 +118,7 @@ export function startServiceWorker(): void {
         });
     }
     await worker.reconcileRegistration(true);
+    if (await hasAllSites()) await worker.grantedAllSites();
   };
 
   browser.runtime.onInstalled.addListener((details) => {
@@ -286,6 +287,9 @@ export function startServiceWorker(): void {
         return worker.signals(tabId, frameId, m.signals, m.evidence);
       case 'cs:applied':
         await worker.applied(tabId, frameId, m.changes);
+        return { ok: true };
+      case 'cs:interaction':
+        await worker.interacted(tabId, frameId, m.tabSession);
         return { ok: true };
       case 'cs:event':
         await worker.contentEvent(tabId, frameId, m.event);
@@ -457,6 +461,16 @@ export function startServiceWorker(): void {
         details.transitionQualifiers ?? [],
       )
       .catch(() => undefined);
+  });
+  browser.webNavigation.onDOMContentLoaded.addListener((details) => {
+    if (details.frameId !== 0 || details.documentLifecycle === 'prerender')
+      return;
+    void worker.pageLoaded(details.tabId).catch(() => undefined);
+  });
+  browser.webNavigation.onCompleted.addListener((details) => {
+    if (details.frameId !== 0 || details.documentLifecycle === 'prerender')
+      return;
+    void worker.pageLoaded(details.tabId).catch(() => undefined);
   });
   browser.alarms.onAlarm.addListener((alarm) => {
     void (async () => {

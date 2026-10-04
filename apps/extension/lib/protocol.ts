@@ -49,6 +49,7 @@ export type ContentToWorker =
   | { type: 'cs:hello'; restored?: true }
   | { type: 'cs:signals'; signals: PageSignals; evidence: PageEvidence }
   | { type: 'cs:applied'; planId: string; changes: AppliedChange[] }
+  | { type: 'cs:interaction'; tabSession: string }
   | {
       type: 'cs:event';
       event: Omit<
@@ -79,6 +80,7 @@ export interface ContentReplies {
   /** `announce`: show the first-visit toast for this site (the service worker remembers where it has). */
   'cs:signals': { plan: AdaptationPlan; announce?: boolean };
   'cs:applied': { ok: true };
+  'cs:interaction': { ok: true };
   'cs:event': { ok: true };
   'cs:friction': { offer: AdaptationPlan['ops'][number] | null };
   'cs:offer-answer': { plan: AdaptationPlan | null };
@@ -95,10 +97,14 @@ export type WorkerToContent =
       type: 'sw:plan';
       plan: AdaptationPlan;
       reason: 'refine' | 'offer_accepted' | 'settings';
+      /** Refinements are valid only for the plan they were computed from. */
+      basePlanId?: string;
     }
   | {
       type: 'sw:undo';
       op: OpId | 'all';
+      /** AI protection updates must belong to this document's current plan. */
+      basePlanId?: string;
       reason?:
         'dont_want' | 'too_much' | 'too_little' | 'broke_page' | 'needed_that';
     }

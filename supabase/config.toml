@@ -394,19 +394,22 @@ WEB_ORIGINS = "http://localhost:3000,http://127.0.0.1:3000"
 EXTENSION_ORIGINS = "chrome-extension://bbnblnlbgcccbbbbihngngbecbobedie"
 
 # Sign-in handoff to the extension. Only signed-in people with a live session may call it.
+# Verify ES256 sessions inside the handlers rather than relying on the
+# gateway's legacy JWT check. _shared/auth.ts uses getClaims/getUser.
+# https://supabase.com/docs/guides/auth/signing-keys
 [functions.extension-link]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 
 # Page analysis proxy to Jev. Holds TYPESAFE_API_KEY; the extension never sees it.
 [functions.decide]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 
 # Opt-in, randomized aggregate counts. Off unless the person consents.
 [functions.ingest]
 enabled = true
-verify_jwt = true
+verify_jwt = false
 
 [analytics]
 enabled = true

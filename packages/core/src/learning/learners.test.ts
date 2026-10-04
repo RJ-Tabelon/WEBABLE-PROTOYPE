@@ -560,11 +560,13 @@ describe('applyEvent routing', () => {
     expect(s.deltas).toContainEqual(
       expect.objectContaining({ op: 'contrast', blocked: true }),
     );
+    s.domain.ops.text_floor!.demoted = true;
     const re = run(s.user, s.domain, [
       event('site_enable'),
       event('manual_on', { op: 'contrast' }),
     ]);
     expect(re.domain.ops.text_floor!.block).toBeUndefined();
+    expect(re.domain.ops.text_floor!.demoted).toBeUndefined();
     expect(re.user.ops.contrast.blocked).toBeUndefined();
   });
 
