@@ -179,7 +179,9 @@ describe('mutation scheduler', () => {
   it('marks before paint: inserted and restyled elements reach the sync hook', async () => {
     document.body.innerHTML = '<p id="old">Old</p>';
     const old = document.querySelector('p')!;
-    const run = vi.fn(async (_roots: Element[] | 'all') => undefined);
+    const run = vi.fn(
+      async (_roots: Element[] | 'all', _added: number) => undefined,
+    );
     const sync = vi.fn();
     const s = new MutationScheduler(run, undefined, undefined, sync);
     const fresh = document.createElement('p');

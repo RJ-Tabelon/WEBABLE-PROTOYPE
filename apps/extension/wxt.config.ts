@@ -16,6 +16,13 @@ const isLocalMode = (mode: string): boolean =>
 const LOCAL_WEB_ORIGINS = 'http://localhost:3000/*,http://127.0.0.1:3000/*';
 
 /**
+ * `wxt prepare` (the postinstall step) only generates types; nothing it builds
+ * ships, so a fresh clone or CI can install without a release origin. Every
+ * build (`wxt build`, `wxt zip`, `wxt dev`) still requires one.
+ */
+const PREPARE_ONLY = process.argv.slice(2).includes('prepare');
+
+/**
  * externally_connectable patterns. Read when the manifest is built, after WXT
  * has loaded .env.local. A production build must name its web origins: it never
  * falls back to localhost, so a page on the person's own machine cannot reach it.
@@ -29,6 +36,7 @@ function webOrigins(mode: string): string[] {
     .map((origin) => origin.trim())
     .filter(Boolean);
   if (origins.length === 0) {
+    if (PREPARE_ONLY) return ['https://webable.invalid/*'];
     throw new Error(
       `WXT_WEB_ORIGINS is required for a ${mode} build (comma-separated match patterns, e.g. https://webable.app/*). ` +
         'Set it in the environment or apps/extension/.env.local, or build with --mode development.',
