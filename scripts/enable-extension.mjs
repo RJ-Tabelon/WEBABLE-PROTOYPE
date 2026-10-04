@@ -2,14 +2,16 @@ import { execFileSync } from 'node:child_process';
 import { access } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-const extensionDirectory = resolve('apps/extension/.output/chrome-mv3');
+// The development build: it carries the fixed dev id the local web app talks to,
+// and trusts the local web origins. Release builds come from "pnpm extension:release".
+const extensionDirectory = resolve('apps/extension/.output/chrome-mv3-dev');
 const shouldOpen = process.argv.includes('--open');
 
 try {
   await access(resolve(extensionDirectory, 'manifest.json'));
 } catch {
   console.error(
-    'The production extension has not been built. Run "pnpm build".',
+    'The development extension has not been built. Run "pnpm extension:enable".',
   );
   process.exit(1);
 }

@@ -1,0 +1,1344 @@
+/*
+ * The public website (Reading density, design-final §14). Tokens only; the sample
+ * page's own palette lives in sample/sample.css. Class prefix ws-.
+ *
+ * Breakpoints are container queries in em on .ws-root, so they follow the person's
+ * text scale (--wa-text-scale sizes the root font) as well as browser zoom.
+ */
+
+.ws-root {
+  container: ws / inline-size;
+}
+
+/*
+ * Half the section spacing above and below each section, so the gap between two
+ * sections is one --section-y: 64 / 96 / 128. The hero and the final call to
+ * action set their own.
+ */
+.ws-section {
+  padding-block: calc(var(--section-y) / 2);
+}
+
+/* Home sections carry one idea each, so their titles sit a step above documents'. */
+.ws-section .wa-section-head__title {
+  max-inline-size: 18em;
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+  text-wrap: balance;
+}
+
+/* =========================================================================
+   Fit-mark plate on captures (§7.20 block form, §8 signature)
+   One style everywhere: label Next 15 / 540, value Mono 15, radius 4, padding
+   2 8, canvas fill, 1 px hairline. One line. Lines and leaders are drawn by
+   the overlay in sample/sample.css.
+   ========================================================================= */
+
+.ws-mark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-0-5) var(--space-2);
+  border: var(--bw-hair) solid var(--line);
+  border-radius: var(--radius-1);
+  background: var(--canvas);
+  color: var(--ink-2);
+  line-height: var(--leading-label);
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.ws-mark__label {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-mark__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-label);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.ws-mark__arrow {
+  inline-size: 0.8em;
+  block-size: 0.5333em;
+  overflow: visible;
+}
+
+/* The after-value and its unit never part. */
+.ws-mark__after {
+  white-space: nowrap;
+}
+
+.ws-mark__to {
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+}
+
+.ws-mark__unit {
+  margin-inline-start: 0.25em;
+}
+
+/* =========================================================================
+   Hero
+   ========================================================================= */
+
+.ws-hero {
+  padding-block: var(--space-12) var(--section-y);
+}
+
+.ws-hero__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+.ws-hero__copy {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+}
+
+.ws-hero__title {
+  max-inline-size: 11em;
+  font-size: var(--text-display);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-display);
+  letter-spacing: var(--track-display);
+}
+
+.ws-hero__deck {
+  max-inline-size: 30rem;
+  margin-block-start: var(--space-6);
+  color: var(--ink-2);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+.ws-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  margin-block-start: var(--space-10);
+}
+
+/* Below 30em buttons run full width (§7.1); the text link keeps the text edge. */
+@container ws (max-width: 29.99em) {
+  :is(.ws-hero__actions, .ws-get__actions, .ws-cta__actions) {
+    justify-self: stretch;
+  }
+  :is(.ws-hero__actions, .ws-get__actions, .ws-cta__actions) > .wa-btn {
+    inline-size: 100%;
+  }
+}
+
+@container ws (min-width: 64em) {
+  .ws-hero {
+    padding-block-start: var(--space-16);
+  }
+  .ws-hero__grid {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    align-items: center;
+    gap: var(--space-12);
+  }
+  .ws-hero__copy {
+    padding-block-end: var(--space-16);
+  }
+}
+
+@container ws (min-width: 80em) {
+  .ws-hero__grid {
+    gap: var(--space-16);
+  }
+}
+
+/* =========================================================================
+   Hero demo figure and preview frame (radius 20, §5.3)
+   ========================================================================= */
+
+.ws-demo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+/* One meta line, as wide as the frame. */
+.ws-demo__caption {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+/*
+ * When the page in the frame is too narrow for plates (a small screen, or a
+ * large text scale), the three values sit under the frame as inline fit marks,
+ * like the fits row. SampleMarks measures and sets data-compact; until then,
+ * the width decides.
+ */
+.ws-demo__legend.ws-fit__marks {
+  display: none;
+  margin: 0;
+}
+.ws-demo[data-compact='true'] .ws-demo__legend.ws-fit__marks {
+  display: grid;
+}
+@container ws (max-width: 24.25em) {
+  .ws-demo:not([data-compact]) .ws-demo__legend.ws-fit__marks {
+    display: grid;
+  }
+}
+
+/* Below 48em the Original / Fitted control runs full width, directly above the frame. */
+.ws-demo__control .wa-segmented {
+  display: flex;
+  inline-size: 100%;
+}
+.ws-demo__control .wa-segmented__item {
+  flex: 1 1 0;
+}
+
+.ws-frame {
+  min-inline-size: 0;
+  overflow: hidden;
+  border: var(--bw-hair) solid var(--line);
+  border-radius: var(--radius-4);
+  background: var(--surface-tonal);
+}
+
+/* One 44 px row: lock, domain, then WebAble's state for the page. It never wraps:
+   on a narrow screen the domain gives way first. */
+.ws-frame__chrome {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-block-size: var(--control-md);
+  padding: var(--space-1) var(--space-4);
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-frame__address {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+  color: var(--ink-2);
+}
+
+.ws-frame__address .wa-icon {
+  flex: none;
+}
+
+.ws-frame__domain {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ws-frame__status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+/* "· 3 changes" joins "Adapted" where the row has room. */
+.ws-frame__status-more {
+  display: none;
+}
+
+.ws-frame__glyph {
+  color: var(--ink-2);
+}
+.ws-frame__glyph.wa-status-glyph--adapted {
+  color: var(--accent);
+}
+
+.ws-frame__view {
+  block-size: clamp(24rem, 64vh, 30rem);
+  background: #ffffff;
+}
+
+/*
+ * At ≥48em the control moves into the frame's top strip, at its end, like an
+ * extension's button in a browser toolbar. It stays one element (and one place in
+ * the tab order); the strip keeps room for it and grows to hold it.
+ */
+@container ws (min-width: 48em) {
+  .ws-demo--hero {
+    grid-template-rows: auto auto;
+  }
+  .ws-demo--hero .ws-demo__control {
+    grid-row: 1;
+    grid-column: 1;
+    z-index: 1;
+    justify-self: end;
+    align-self: start;
+    margin: calc(var(--space-2) + var(--bw-hair));
+  }
+  .ws-demo--hero .ws-demo__control .wa-segmented {
+    display: inline-flex;
+    inline-size: auto;
+    background: var(--canvas);
+  }
+  .ws-demo--hero .ws-demo__control .wa-segmented__item {
+    flex: 0 0 auto;
+  }
+  .ws-demo--hero .ws-frame {
+    grid-row: 1;
+    grid-column: 1;
+  }
+  .ws-demo--hero .ws-frame__chrome {
+    /* The control's height plus the strip's padding; room at the end for its width. */
+    min-block-size: calc(
+      max(var(--control-md), var(--target-min)) + 0.5rem + 2 * var(--space-2)
+    );
+    gap: var(--space-6);
+    padding: var(--space-2) 13rem var(--space-2) var(--space-4);
+  }
+  .ws-frame__status {
+    min-inline-size: 11.5em;
+  }
+  .ws-frame__status-more {
+    display: inline;
+  }
+}
+
+@container ws (min-width: 64em) {
+  .ws-frame__view--hero {
+    block-size: clamp(28rem, 66vh, 35rem);
+  }
+}
+
+/* =========================================================================
+   Different people, different fits: one crop, three fits, no controls
+   ========================================================================= */
+
+.ws-fits {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-10);
+}
+
+.ws-fit {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--space-3);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+@container ws (min-width: 64em) {
+  .ws-fits {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto 1fr auto;
+    gap: 0 var(--space-8);
+  }
+  /* One row of three: heads, frames and marks line up across the columns. */
+  .ws-fit {
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+    row-gap: var(--space-3);
+  }
+}
+
+.ws-fit__head {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-fit__frame {
+  min-inline-size: 0;
+  overflow: hidden;
+  border: var(--bw-hair) solid var(--line);
+  border-radius: var(--radius-3);
+  background: #ffffff;
+}
+
+/* Label and value in two columns sized to the longest label, so values line up. */
+.ws-fit__marks {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-2) var(--space-4);
+  margin: var(--space-1) 0 0;
+  padding: 0;
+}
+
+.ws-fit__marks > li,
+.ws-fit__marks .wa-fit-mark {
+  display: grid;
+  grid-column: span 2;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
+
+/* Very narrow (a small screen at a large text scale): each value follows its
+   label and wraps under it rather than pushing the page sideways. */
+@container ws (max-width: 21em) {
+  .ws-fit__marks.ws-fit__marks {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ws-fit__marks > li,
+  .ws-fit__marks .wa-fit-mark {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: auto;
+    align-items: baseline;
+    gap: 0 var(--space-3);
+  }
+}
+
+/* =========================================================================
+   How it works: three columns on the text edge
+   ========================================================================= */
+
+.ws-steps {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-10);
+  margin: 0;
+  padding: 0;
+}
+
+@container ws (min-width: 64em) {
+  .ws-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-12);
+  }
+}
+
+/* Each step opens with the index rule's tick: 24 px of 2 px ink. */
+.ws-step {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  max-inline-size: 24rem;
+}
+
+.ws-step::before {
+  content: '';
+  display: block;
+  inline-size: var(--space-6);
+  block-size: var(--bw-strong);
+  margin-block-end: var(--space-2);
+  background: var(--ink);
+}
+
+.ws-step__title {
+  font-size: var(--text-h3);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-h3);
+  letter-spacing: var(--track-h3);
+}
+
+.ws-step__text {
+  color: var(--ink-2);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+/* =========================================================================
+   Checked before it stays
+   ========================================================================= */
+
+.ws-verify {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+@container ws (min-width: 64em) {
+  .ws-verify {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    align-items: start;
+    gap: var(--space-16);
+  }
+}
+
+.ws-tiles {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8) var(--space-6);
+  margin: 0;
+}
+
+@container ws (min-width: 40em) {
+  .ws-tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A tile is its caption and the card; the tried card's overlap label hangs below. */
+.ws-tile {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  margin: 0;
+  padding-block-end: var(--space-8);
+}
+
+.ws-tile__caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+  max-inline-size: 17.5rem;
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-tile__caption strong {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.ws-tile__change {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0 var(--space-2);
+}
+
+.ws-tile__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+}
+
+.ws-tile__arrow {
+  inline-size: 0.8em;
+  block-size: 0.5333em;
+  overflow: visible;
+}
+
+/* The verifier log: one row per check. */
+.ws-checks {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-checks > li {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-block-size: var(--control-md);
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+.ws-checks__glyph {
+  color: var(--ink-2);
+}
+
+.ws-checks__result {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-checks > li[data-found] .ws-checks__name,
+.ws-checks > li[data-found] .ws-checks__result {
+  color: var(--ink);
+  font-weight: var(--weight-medium);
+}
+
+.ws-checks__head {
+  margin-block-end: var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+/* The neutral "undone" row (design-final §10.2): never an alarm. */
+.ws-undone {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin-block-start: var(--space-8);
+}
+
+.ws-undone__glyph {
+  grid-row: span 2;
+  margin-block-start: 0.15rem;
+  color: var(--ink-2);
+}
+
+.ws-undone__title {
+  font-size: var(--text-ui);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+
+.ws-undone__text {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+/* =========================================================================
+   Privacy in plain nouns
+   ========================================================================= */
+
+.ws-privacy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-12);
+}
+
+@container ws (min-width: 64em) {
+  .ws-privacy {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+    gap: var(--space-16);
+  }
+}
+
+.ws-ledger {
+  display: grid;
+  align-content: start;
+  gap: var(--space-12);
+  margin: 0;
+}
+
+.ws-ledger dd {
+  margin: 0;
+}
+
+.ws-ledger__term {
+  margin-block-end: var(--space-3);
+  font-size: var(--text-title);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-title);
+}
+
+.ws-ledger__list {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-ledger__list > li {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--row-min);
+  padding-block: var(--space-2);
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.ws-payload {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.ws-payload__caption {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-payload__code {
+  margin: 0;
+  padding: var(--space-5);
+  border-radius: var(--radius-2);
+  background: var(--surface-tonal);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ws-payload__code code {
+  display: block;
+}
+
+.ws-payload__brace,
+.ws-payload__line {
+  display: block;
+}
+
+/* Hanging indent: fields sit 2ch in, and a wrapped value continues 2ch further. */
+.ws-payload__line {
+  padding-inline-start: 4ch;
+  text-indent: -2ch;
+}
+
+.ws-payload__key {
+  color: var(--ink-2);
+}
+
+.ws-payload__more {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-link-row {
+  margin-block-start: var(--space-8);
+}
+
+/* =========================================================================
+   Boundary line and the final call to action
+   ========================================================================= */
+
+.ws-boundary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+}
+
+@container ws (min-width: 64em) {
+  .ws-boundary {
+    grid-template-columns: minmax(0, 6fr) minmax(0, 6fr);
+    gap: var(--space-16);
+  }
+}
+
+.ws-boundary__list {
+  margin: 0;
+  padding: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-boundary__list > li {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.ws-boundary__list .wa-icon {
+  margin-block-start: 0.3rem;
+  color: var(--ink-2);
+}
+
+.ws-cta {
+  display: grid;
+  justify-items: center;
+  padding-block: calc(var(--section-y) * 1.25);
+  text-align: center;
+}
+
+.ws-cta__title {
+  max-inline-size: 16em;
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+}
+
+.ws-cta__deck {
+  max-inline-size: 30rem;
+  margin-block-start: var(--space-4);
+  color: var(--ink-2);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.ws-cta__actions {
+  margin-block-start: var(--space-8);
+}
+
+/* =========================================================================
+   /get: the install path
+   ========================================================================= */
+
+.ws-get {
+  padding-block: var(--space-12) var(--section-y);
+}
+
+@container ws (min-width: 64em) {
+  .ws-get {
+    padding-block-start: var(--space-20);
+  }
+}
+
+.ws-get__head {
+  display: grid;
+  justify-items: start;
+}
+
+.ws-get__title {
+  max-inline-size: 16em;
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+}
+
+.ws-get__deck {
+  max-inline-size: var(--w-prose);
+  margin-block-start: var(--space-4);
+  color: var(--ink-2);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+.ws-get__actions {
+  margin-block-start: var(--space-8);
+}
+
+/* Three hairline rows: a Mono numeral, the step, and (last) a link to Tune. */
+.ws-get__steps {
+  max-inline-size: 40rem;
+  margin: var(--space-16) 0 0;
+  padding: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-get__step {
+  display: grid;
+  grid-template-columns: var(--space-8) minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-4);
+  min-block-size: var(--row-min);
+  padding-block: var(--space-3);
+  border-block-end: var(--bw-hair) solid var(--line);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.ws-get__num {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-mono);
+}
+
+.ws-get__note {
+  color: var(--ink-2);
+}
+
+.ws-get__link {
+  justify-self: end;
+  font-size: var(--text-ui);
+}
+
+/* Below 30em the link drops under its step, on the step's text edge. */
+@container ws (max-width: 29.99em) {
+  .ws-get__link {
+    grid-column: 2;
+    justify-self: start;
+  }
+}
+
+.ws-get__meta {
+  margin-block-start: var(--space-6);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+/* =========================================================================
+   Documents: privacy, research, accessibility, help (Reading density)
+   One grid, one text edge: at ≥64em the header and the sections share column 2,
+   and "On this page" sits in column 1, sticky.
+   ========================================================================= */
+
+.ws-doc {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-8);
+  padding-block: var(--space-12) var(--section-y);
+}
+
+@container ws (min-width: 64em) {
+  .ws-doc {
+    grid-template-columns: var(--w-rail) minmax(0, var(--w-prose));
+    gap: var(--space-16);
+    padding-block-start: var(--space-20);
+  }
+  .ws-doc-head {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .ws-toc {
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .ws-doc__content {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}
+
+@container ws (min-width: 80em) {
+  .ws-doc {
+    column-gap: var(--space-24);
+  }
+}
+
+.ws-doc-head__eyebrow {
+  margin-block-end: var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-doc-head__title {
+  max-inline-size: 16em;
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+}
+
+.ws-doc-head__deck {
+  max-inline-size: var(--w-prose);
+  margin-block-start: var(--space-5);
+  color: var(--ink-2);
+  font-size: var(--text-lead);
+  line-height: var(--leading-lead);
+}
+
+/* ---------- On this page ---------- */
+
+.ws-toc {
+  align-self: start;
+  min-inline-size: 0;
+}
+
+/* Below 64em: one closed 48 px row. At ≥64em: the list in the rail, sticky. */
+.ws-toc__rail {
+  display: none;
+}
+
+@container ws (min-width: 64em) {
+  .ws-toc__details {
+    display: none;
+  }
+  .ws-toc__rail {
+    display: block;
+  }
+  @media (min-height: 37.5em) {
+    .ws-toc {
+      position: sticky;
+      inset-block-start: calc(var(--header-h) + var(--space-8));
+    }
+  }
+}
+
+.ws-toc__details {
+  border-block: var(--bw-hair) solid var(--line);
+}
+
+.ws-toc__summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-block-size: max(var(--control-lg), var(--target-min));
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-2);
+  color: var(--ink);
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  list-style: none;
+  cursor: pointer;
+}
+.ws-toc__summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ws-toc__summary:hover {
+    background: var(--surface-hover);
+  }
+}
+
+.ws-toc__chevron {
+  flex: none;
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-wa-motion='reduce']) .ws-toc__chevron {
+    transition: rotate var(--dur-2) var(--ease);
+  }
+}
+
+.ws-toc__details[open] .ws-toc__chevron {
+  rotate: 180deg;
+}
+
+.ws-toc__details .ws-toc__list {
+  margin-block: var(--space-2) var(--space-4);
+}
+
+.ws-toc__head {
+  margin-block-end: var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-toc__list {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border-inline-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-toc__link {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+  margin-inline-start: -1px;
+  padding: var(--space-1) var(--space-3);
+  border-inline-start: var(--bw-strong) solid transparent;
+  color: var(--ink-2);
+  font-size: var(--text-ui);
+  line-height: var(--leading-label);
+  text-decoration: none;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ws-toc__link:hover {
+    color: var(--ink);
+  }
+}
+
+/* The section being read: a 2 px ink bar and ink text. */
+.ws-toc__link[aria-current='location'] {
+  border-inline-start-color: var(--ink);
+  color: var(--ink);
+}
+
+.ws-doc__content {
+  min-inline-size: 0;
+}
+
+.ws-doc-section + .ws-doc-section {
+  margin-block-start: var(--space-16);
+}
+
+.ws-doc-section .wa-section-head {
+  margin-block-end: var(--space-6);
+}
+
+/* Running text inside documents. */
+.ws-prose {
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.ws-prose > * + * {
+  margin-block-start: var(--space-4);
+}
+
+.ws-prose h3 {
+  margin-block-start: var(--space-10);
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  letter-spacing: 0;
+}
+
+.ws-prose h3 + * {
+  margin-block-start: var(--space-3);
+}
+
+.ws-prose ul,
+.ws-prose ol {
+  display: grid;
+  gap: var(--space-2);
+  padding-inline-start: 1.25em;
+}
+
+.ws-prose li::marker {
+  color: var(--ink-2);
+}
+
+.ws-prose .ws-secondary {
+  color: var(--ink-2);
+}
+
+/* Key–value rows (what is stored, where, for how long). */
+.ws-facts {
+  margin: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-facts__row {
+  display: grid;
+  gap: var(--space-1);
+  padding-block: var(--space-4);
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.ws-facts__row dt {
+  font-size: var(--text-body);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+
+.ws-facts__row dd {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+}
+
+.ws-facts__meta {
+  display: block;
+  margin-block-start: var(--space-1);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+/* Research: every change on one screen, then one block per change. */
+.ws-table {
+  inline-size: 100%;
+  margin-block: var(--space-2) var(--space-12);
+  border-collapse: collapse;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+/* Where there is room, the evidence column stays narrow and what WebAble does
+   takes half; on a small screen the columns size to their words. */
+@container ws (min-width: 48em) {
+  .ws-table thead th:nth-child(2) {
+    inline-size: 7.5rem;
+  }
+  .ws-table thead th:nth-child(3) {
+    inline-size: 50%;
+  }
+}
+
+.ws-table :is(th, td) {
+  padding: var(--space-3) var(--space-4) var(--space-3) 0;
+  border-block-end: var(--bw-hair) solid var(--line);
+  text-align: start;
+  vertical-align: baseline;
+}
+
+.ws-table :is(th, td):last-child {
+  padding-inline-end: 0;
+}
+
+.ws-table thead th {
+  padding-block-start: 0;
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-table tbody th {
+  font-weight: var(--weight-medium);
+}
+
+.ws-table tbody td {
+  color: var(--ink-2);
+}
+
+.ws-evidence + .ws-evidence {
+  margin-block-start: var(--space-6);
+  padding-block-start: var(--space-6);
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-evidence__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-4);
+}
+
+.ws-evidence .ws-evidence__title {
+  margin: 0;
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  letter-spacing: 0;
+}
+
+.ws-evidence__strength {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.ws-evidence__body {
+  margin-block-start: var(--space-3);
+}
+
+.ws-evidence__body > * + * {
+  margin-block-start: var(--space-3);
+}
+
+.ws-evidence__gap {
+  color: var(--ink-2);
+}
+
+.ws-nowrap {
+  white-space: nowrap;
+}
+
+/* Sources: one meta line, separated by middle dots. */
+.ws-cites {
+  margin-block-start: var(--space-3);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+/*
+ * The research page keeps a note column right of the text at ≥80em (the doc grid
+ * leaves at least that much room there). Sources sit in it beside their block,
+ * level with its title, so the text column reads straight through. Section rules,
+ * the summary table and the rules between blocks span both columns; running text
+ * keeps the reading measure.
+ */
+@container ws (min-width: 80em) {
+  .ws-doc--notes {
+    --ws-note-reach: calc(15rem + var(--space-12));
+  }
+  .ws-doc--notes .ws-doc-section .wa-section-head,
+  .ws-doc--notes .ws-evidence {
+    margin-inline-end: calc(-1 * var(--ws-note-reach));
+  }
+  .ws-doc--notes .ws-table {
+    inline-size: calc(100% + var(--ws-note-reach));
+  }
+  .ws-doc--notes .ws-evidence {
+    display: grid;
+    grid-template-columns: minmax(0, var(--w-prose)) minmax(0, 1fr);
+    column-gap: var(--space-12);
+  }
+  .ws-doc--notes .ws-evidence > :not(.ws-cites) {
+    grid-column: 1;
+  }
+  .ws-doc--notes .ws-evidence > .ws-cites {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    margin: 0;
+    /* Level the first line with the title's first line (20 / 1.3 vs 15 / 1.45). */
+    padding-block-start: 0.125rem;
+  }
+}
+
+/* Help: questions stay open (help is never hidden, WCAG 3.2.6). */
+.ws-faq + .ws-faq {
+  margin-block-start: var(--space-10);
+}
+
+.ws-faq__q {
+  font-size: var(--text-title);
+  line-height: var(--leading-title);
+  letter-spacing: 0;
+}
+
+.ws-faq__a {
+  margin-block-start: var(--space-3);
+}
+
+/* Keyboard shortcut rows. */
+.ws-keys {
+  margin: 0;
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.ws-keys__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  min-block-size: var(--row-min);
+  padding-block: var(--space-2);
+  border-block-end: var(--bw-hair) solid var(--line);
+}
+
+.ws-keys__row dt {
+  font-size: var(--text-ui);
+}
+
+.ws-keys__row dd {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+/* ---------- Forced colours ---------- */
+
+@media (forced-colors: active) {
+  .ws-mark,
+  .ws-mark__to {
+    forced-color-adjust: auto;
+  }
+  .ws-frame,
+  .ws-fit__frame,
+  .ws-card {
+    border: 1px solid CanvasText;
+  }
+  .ws-step::before {
+    background: CanvasText;
+  }
+  .ws-toc__link[aria-current='location'] {
+    border-inline-start-color: CanvasText;
+  }
+}

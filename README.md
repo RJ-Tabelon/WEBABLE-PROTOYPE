@@ -1,50 +1,111 @@
 # WebAble
 
-WebAble is a local-first Chrome extension that reads the current page and will eventually apply verified, reversible accessibility transformations. Phase 1 deliberately has no backend, database, native app, or AI.
+The web, made to measure.
 
-## What works now
+WebAble learns how a person reads, points and focuses, then adapts each website to fit
+them. A short set of tasks (**Tune**) measures what works for the person and produces a
+**fit profile**. The Chrome extension combines that fit with what it sees on each page,
+chooses from a reviewed library of bounded adaptations, checks every change after it
+applies, undoes anything that breaks the page, and learns from what the person keeps or
+undoes. It never claims to make a site accessible, never diagnoses anyone, and never
+sends page text anywhere.
 
-- Click the WebAble toolbar icon on a normal website.
-- WebAble temporarily reads the active tab using Chrome's `activeTab` permission.
-- The popup shows the page title, a bounded text preview, structural counts, small-text findings, and basic layout measurements.
-- A `MutationObserver` detects client-rendered changes and refreshes the analysis without collecting form values.
-- Deterministic, opt-in rules provide a 16px text floor, published text-spacing minimums, enhanced keyboard focus, reduced motion, and high-contrast or dark-page modes.
-- Enabled rules are reapplied to content inserted dynamically by React, Vue, or similar page frameworks.
-- Form-field values are excluded, and the snapshot never leaves the browser.
+- Architecture and decisions: [docs/08-System-Architecture.md](docs/08-System-Architecture.md)
+- The research behind them: [docs/research/](docs/research/README.md)
+- Positioning and invariants: [docs/01-Positioning.md](docs/01-Positioning.md)
 
-## Development
+## Repository
 
-Requirements: Node.js 22+ and pnpm 10.
+```text
+apps/web/         Next.js 16: public site, Tune (calibration), the app, extension handoff
+apps/extension/   WXT (MV3): service worker, in-page engine, popup, welcome page
+packages/core/    Contracts and pure logic: fit profile, calibration, ops, policy,
+                  learners, page-analysis catalog, Jev adapter, templates, DB types
+packages/tokens/  Design tokens and self-hosted fonts (Atkinson Hyperlegible Next/Mono)
+packages/ui/      Shared React components for the web app and extension pages
+supabase/         Migrations (RLS on every table), Edge Functions, database tests
+docs/             Architecture, research, positioning
+```
+
+## Getting started
+
+Requirements: Node 22+, pnpm 10, Deno 2 (for Edge Function tests), Google Chrome.
 
 ```sh
 pnpm install
-pnpm dev:chrome
+cp .env.example .env          # fill in the Supabase URL, publishable key, database URL
+pnpm env:sync                 # writes apps/web/.env.local and apps/extension/.env.local
+pnpm db:push                  # applies supabase/migrations to the project
+pnpm dev                      # web app on http://localhost:3000
+pnpm dev:extension            # extension in a disposable Chrome profile
 ```
 
-WXT opens a dedicated Chromium profile with the development extension loaded. Visit a website and click the WebAble toolbar icon.
+To load WebAble in your normal Chrome: `pnpm extension:enable`, then **Load unpacked** with
+`apps/extension/.output/chrome-mv3-dev`. This development build has a fixed id
+(`bbnblnlbgcccbbbbihngngbecbobedie`) and trusts the local web app, so the two can talk.
 
-To build WebAble and enable it in a normal Chrome profile:
+A release build (`pnpm extension:release`) needs `WXT_WEB_ORIGINS` set to the deployed https
+origin (e.g. `https://webable.app/*`) and `WXT_WEB_ORIGIN`. It never trusts localhost and
+carries no development key; the package check fails the build otherwise.
+
+## Commands
+
+| Command                                  | What it does                                                                                                                            |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm check`                             | Format, lint, typecheck, unit tests, Edge Function tests, bundle drift check, contrast gate, release extension build and manifest check |
+| `pnpm test`                              | Unit tests in every package                                                                                                             |
+| `pnpm db:test`                           | RLS and SQL function tests against the database (each test rolls back)                                                                  |
+| `pnpm test:functions`                    | Type-checks and tests the Edge Functions with Deno                                                                                      |
+| `pnpm build:functions`                   | Rebuilds the core bundle the Edge Functions import (`--check` to verify)                                                                |
+| `pnpm test:e2e`                          | Playwright: engine on fixture pages, the extension end to end, and the web app                                                          |
+| `pnpm --filter @webable/tokens contrast` | Verifies every colour pair in both themes                                                                                               |
+| `node scripts/gen-db-types.mjs`          | Regenerates `packages/core/src/db/types.ts` from the live schema                                                                        |
+
+## Edge Functions
+
+`decide` (page analysis through Jev), `extension-link` (sign-in handoff to the extension)
+and `ingest` (opt-in anonymous counts). Connecting the extension on `/connect` needs
+`extension-link` deployed. Deploy all three, with their secrets, as an account that can see
+the project in `SUPABASE_URL`:
 
 ```sh
-pnpm extension:enable
+SUPABASE_ACCESS_TOKEN=<token> pnpm deploy:functions
 ```
 
-See [TESTING.md](TESTING.md) for the complete development-browser, normal-Chrome, debugging, and manual smoke-test workflows.
+Create the token at https://supabase.com/dashboard/account/tokens while signed in as the
+project owner. The script sets `WEB_ORIGINS` (from `WEB_ORIGIN`), `EXTENSION_ORIGINS` (the
+development extension id unless set), a generated `INGEST_TAG_SECRET` (kept on later runs)
+and `TYPESAFE_API_KEY` when `.env` has one (without it, page analysis stays on-device), then
+deploys without Docker and checks each function answers.
 
-## Verification
+In the Supabase dashboard, set the Auth site URL to the web origin and add
+`/auth/callback` and `/auth/confirm` as redirect URLs.
 
-```sh
-pnpm verify
-```
+The functions authenticate inside their handlers using `getClaims` / `getUser`.
+Keep `verify_jwt = false` in `supabase/config.toml`, following Supabase's documented
+setup for asymmetric signing keys. Disabling that gateway check does not
+disable the handlers' session, consent, quota or origin checks.
 
-The unit suite checks page extraction, privacy boundaries, and every deterministic rule. The Playwright suite loads the built extension in Chromium and verifies page reading, rule application, and dynamic-page updates end to end.
+Saved text and target minimums apply automatically when a page needs them,
+including content rendered after loading and client-side navigation. Existing
+tabs update when Tune saves a new fit. Undo and paused sites take precedence;
+failed layout checks restore the original page. Basic adaptations work locally,
+while optional cloud analysis requires sign-in and consent.
 
-The unpacked production extension is written to `apps/extension/.output/chrome-mv3`.
+Refreshes measure the site's native styles without painting an unadapted frame,
+replace marks without rewriting unchanged ones, and retain previously scanned
+content when a later scan is incomplete. Layout failures are confirmed with
+synchronous counterfactual measurements so safe changes are kept, and rejected
+fits stay rolled back during unrelated updates until their native constraints
+change. Expanded click areas stay within page and scroll-container bounds.
+Undo immediately saves an off preference for that site in local storage, across
+reloads and browser restarts; Redo or an explicit turn-on clears it. The optional
+reason window delays learning only, and the popup shows the saved preference.
+On engine upgrades, outdated verifier counts and verifier suppression are reset;
+user preferences and offer snoozes remain. Legacy Undo flags become saved site
+preferences, so existing installations retain those decisions too.
 
-## Repository layout
-
-```text
-apps/extension/     WXT Manifest V3 extension and React popup
-packages/shared/    Zod schemas and shared TypeScript types
-docs/               Research and product decisions
-```
+`pnpm check` validates a separate `chrome-mv3-package-check` build with a dummy
+web origin. It does not overwrite the unpacked extension in `chrome-mv3` or
+`chrome-mv3-dev`. Rebuild the extension with its configured origins before
+reloading it in Chrome; the fixed extension version is 0.1.1.

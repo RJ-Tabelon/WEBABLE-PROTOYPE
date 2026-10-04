@@ -1,0 +1,374 @@
+/*
+ * The calm frame: sign-in, account forms and the extension handoff (Task-like
+ * density, design-final §14). One centred column (--w-form, or --w-task for the
+ * handoff), a quiet 64 px bar with the wordmark and Help, nothing else competing.
+ */
+
+.wa-calm {
+  container: wa-calm / inline-size;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 100dvh;
+  background: var(--canvas);
+}
+
+.wa-calm__bar {
+  position: relative;
+  z-index: var(--z-header);
+  border-block-end: var(--bw-hair) solid transparent;
+  background: var(--header-bg);
+  -webkit-backdrop-filter: blur(var(--blur-header));
+  backdrop-filter: blur(var(--blur-header));
+  transition: border-color var(--dur-1) var(--ease);
+}
+
+/* Sticky only when there is room, like the site header (§7.8). */
+@media (min-height: 37.5em) {
+  .wa-calm__bar {
+    position: sticky;
+    inset-block-start: 0;
+  }
+}
+
+.wa-calm__bar[data-scrolled] {
+  border-block-end-color: var(--line);
+}
+
+.wa-calm__bar-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0 var(--space-4);
+  min-block-size: var(--header-h);
+}
+
+/* The same brand box as the site header's, so the wordmark lands on one x. */
+.wa-calm__brand {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: max(var(--control-md), var(--target-min));
+  margin-inline-start: calc(-1 * var(--space-2));
+  padding-inline: var(--space-2);
+  border-radius: var(--radius-2);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.wa-calm__main {
+  display: flex;
+  flex: 1 0 auto;
+  justify-content: center;
+  padding: var(--space-12) var(--gutter) var(--space-20);
+}
+
+@container wa-calm (min-width: 48em) {
+  .wa-calm__main {
+    padding-block-start: var(--space-20);
+  }
+}
+
+.wa-calm__column {
+  inline-size: 100%;
+  max-inline-size: var(--w-form);
+}
+
+.wa-calm__column--task {
+  max-inline-size: var(--w-task);
+}
+
+.wa-calm__footer {
+  padding-block: var(--space-6);
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.wa-calm__footer-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-6);
+}
+
+/* The honesty line, as on the site footer: body 18, secondary ink. */
+.wa-calm__honesty {
+  max-inline-size: var(--w-prose);
+  margin: 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+}
+
+.wa-calm__links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin: 0;
+  padding: 0;
+}
+
+/* Header links hang out by their padding, so their words sit on the edge. */
+.wa-calm__bar .wa-calm__links {
+  margin-inline-end: calc(-1 * var(--space-3));
+}
+
+.wa-calm__footer .wa-calm__links {
+  margin-inline: calc(-1 * var(--space-3));
+}
+
+/* ---------- Heading block ---------- */
+
+.wa-auth-head {
+  display: grid;
+  justify-items: start;
+  margin-block-end: var(--space-10);
+}
+
+.wa-auth-head__eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-auth-title {
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--track-h1);
+}
+
+.wa-auth-title:focus {
+  outline: none;
+}
+
+.wa-auth-deck {
+  max-inline-size: var(--w-prose);
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-body);
+  line-height: var(--leading-body);
+  color: var(--ink-2);
+}
+
+/* ---------- Forms ---------- */
+
+.wa-auth-form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+/* ForgotForm and ResetForm: the submit row sits a little further from the fields. */
+.wa-auth-form__submit {
+  margin-block-start: var(--space-2);
+}
+
+.wa-auth-form__actions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.wa-auth-form__hint,
+.wa-auth-alt__hint {
+  margin: 0;
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink-2);
+}
+
+.wa-auth-alt {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.wa-auth-alt__link {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+/* "Forgot your password?": a meta link at the right end of the label row. */
+.wa-auth-meta-link {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: var(--space-6);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.wa-auth-foot {
+  margin-block-start: var(--space-10);
+  padding-block-start: var(--space-6);
+  border-block-start: var(--bw-hair) solid var(--line);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
+
+.wa-auth-foot > * + * {
+  margin-block-start: var(--space-2);
+}
+
+.wa-auth-notice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  margin-block-end: var(--space-8);
+  padding: var(--space-4);
+  border-radius: var(--radius-3);
+  background: var(--surface-tonal);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+.wa-auth-notice > .wa-icon,
+.wa-auth-notice > .wa-check-glyph {
+  margin-block-start: 0.125rem;
+  color: var(--ink-2);
+}
+
+.wa-auth-notice p {
+  margin: 0;
+}
+
+.wa-auth-error {
+  margin-block-end: var(--space-6);
+}
+
+/* ---------- Handoff (Connect) ---------- */
+
+.wa-connect {
+  display: grid;
+  gap: var(--space-10);
+}
+
+/* The flow's own gap spaces its heading; the standalone margin would double it. */
+.wa-connect > .wa-auth-head {
+  margin-block-end: 0;
+}
+
+.wa-connect__status {
+  margin-block-end: var(--space-4);
+}
+
+.wa-connect__pill {
+  margin-block-start: var(--space-6);
+}
+
+.wa-connect__step {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.wa-connect__next {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+}
+
+.wa-steps {
+  display: grid;
+  gap: var(--space-3);
+  max-inline-size: var(--w-prose);
+  margin: 0;
+  padding: 0;
+  counter-reset: wa-step;
+}
+
+.wa-steps > li {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: var(--space-3);
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  counter-increment: wa-step;
+}
+
+.wa-steps > li::before {
+  content: counter(wa-step);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
+
+.wa-code {
+  padding: 0.0625rem 0.375rem;
+  border: var(--bw-hair) solid var(--line);
+  border-radius: var(--radius-1);
+  background: var(--surface-tonal);
+  font-family: var(--font-mono);
+  font-size: var(--text-mono);
+  font-weight: var(--weight-mono);
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+.wa-connect__dev {
+  display: grid;
+  gap: var(--space-4);
+  padding-block-start: var(--space-8);
+  border-block-start: var(--bw-hair) solid var(--line);
+}
+
+.wa-connect__dev-title {
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+
+.wa-password {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.wa-password > .wa-checkbox {
+  justify-self: start;
+}
+
+/*
+ * A link in the label row: the field's own parts join this grid, so the label
+ * and the link share the first row and everything else spans below.
+ */
+.wa-password--aside {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-4);
+}
+
+.wa-password--aside > .wa-field {
+  display: contents;
+}
+
+.wa-password--aside > .wa-field > *,
+.wa-password--aside > .wa-checkbox {
+  grid-column: 1 / -1;
+}
+
+.wa-password--aside > .wa-field > .wa-field__label {
+  grid-row: 1;
+  grid-column: 1;
+  align-self: center;
+}
+
+.wa-password__aside {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+}
+
+/* Plain facts: Next 16 in secondary ink, 8 px apart, no bullets or glyphs. */
+.wa-facts-list {
+  display: grid;
+  gap: var(--space-2);
+  max-inline-size: var(--w-prose);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-ui);
+  line-height: var(--leading-ui);
+  color: var(--ink-2);
+}
