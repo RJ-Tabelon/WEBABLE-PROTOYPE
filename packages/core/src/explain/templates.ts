@@ -7,6 +7,7 @@ import type {
   TraceEvidence,
   VerifyCode,
 } from '../policy/types';
+import type { TriageReason, TriageVerdict } from '../triage/types';
 
 /**
  * "Why this changed": deterministic templates rendered from the DecisionTrace.
@@ -50,6 +51,7 @@ const hasNote = (trace: DecisionTrace, note: EvidenceOf<'learned'>['note']) =>
 
 const num = (n: number): string => String(Math.round(n * 100) / 100);
 const px = (n: number): string => `${Math.round(n)}${NBSP}px`;
+const pct = (zoom: number): string => `${Math.round(zoom * 100)}%`;
 const ms = (n: number): string => `${Math.round(n)}${NBSP}ms`;
 const plural = (n: number, one: string, many: string): string =>
   n === 1 ? one : many;
@@ -125,6 +127,14 @@ const fitNumber = (raw: string | undefined): number | null => {
   if (raw === undefined) return null;
   const m = /-?\d+(?:\.\d+)?/.exec(raw);
   return m ? Number(m[0]) : null;
+};
+
+/** page_zoom's ladder value at a level (a Chrome preset). */
+const levelZoom = (level: number): number => {
+  const levels = OP_CATALOG.page_zoom.levels;
+  return (
+    levels[Math.max(0, Math.min(levels.length - 1, Math.round(level)))] ?? 1
+  );
 };
 
 /** Subject for sentences about a change, with number agreement. */
@@ -214,20 +224,42 @@ function appliedDetail(change: AppliedChange): string {
 
   switch (op) {
     case 'text_floor': {
+      // Sizes are effective px: what the person sees at the page scale in effect.
       const ev = find(trace, 'small_text');
+      const scale = find(trace, 'page_scale');
       const to =
         after('px') ?? (ev ? px(ev.floorPx) : formatLevel(op, change.level));
       const from =
         before('px') ?? (ev?.beforePx != null ? px(ev.beforePx) : null);
       const lead =
         ev && ev.share >= 0.5 ? 'Most text' : ev ? 'Some text' : 'Text';
+      if (scale && scale.zoom > 1 && from)
+        return `With this page at ${pct(scale.zoom)}, ${lead.toLowerCase()} here was ${from}. WebAble raised it to your ${to}.`;
       return from
         ? `${lead} here was ${from}. WebAble raised it to your ${to}.`
         : `Some text here was smaller than ${to}. WebAble raised it to your ${to}.`;
     }
     case 'page_zoom': {
-      const to = after('%') ?? formatLevel(op, change.level);
-      return `Text across this page was small. WebAble zoomed the page to ${to}, so everything grows together.`;
+      const scale = find(trace, 'page_scale');
+      const ev = find(trace, 'small_text');
+      const applied = fitNumber(change.fit?.after);
+      const zoom =
+        applied !== null && applied > 100
+          ? applied / 100
+          : (scale?.zoom ?? levelZoom(change.level));
+      const lead =
+        ev?.beforePx != null
+          ? `Most text here was ${px(ev.beforePx)}. `
+          : 'Text across this page was small. ';
+      // Say "reaches your size" only when the scale alone gets running text there.
+      const reaches =
+        scale !== undefined &&
+        ev !== undefined &&
+        scale.k > 0 &&
+        Math.round((ev.floorPx * zoom) / scale.k) >= ev.floorPx;
+      return reaches
+        ? `${lead}WebAble scaled this page to ${pct(zoom)} so its text reaches your ${px(ev.floorPx)}.`
+        : `${lead}WebAble scaled this page to ${pct(zoom)}, so everything grows together.`;
     }
     case 'line_spacing': {
       const ev = find(trace, 'tight_lines');
@@ -376,9 +408,12 @@ export function offerQuestion(trace: DecisionTrace): {
   switch (trace.op) {
     case 'text_floor': {
       const ev = find(trace, 'small_text');
+      const scale = find(trace, 'page_scale');
       const measured =
         ev?.beforePx != null
-          ? `Most text here is ${px(ev.beforePx)}. Your fit is ${px(ev.floorPx)}.`
+          ? scale && scale.zoom > 1
+            ? `With this page at ${pct(scale.zoom)}, most text here is ${px(ev.beforePx)}. Your fit is ${px(ev.floorPx)}.`
+            : `Most text here is ${px(ev.beforePx)}. Your fit is ${px(ev.floorPx)}.`
           : `Your fit is ${level}.`;
       return {
         question: 'Text on this page is small. Make it larger here?',
@@ -530,6 +565,47 @@ export function offerQuestion(trace: DecisionTrace): {
   }
 }
 
+/** Each triage reason as a phrase about the page (never the person). */
+const REASON_PHRASE: Readonly<Record<TriageReason['kind'], string | null>> = {
+  small_text: 'small text',
+  small_targets: 'small buttons',
+  crowded_targets: 'crowded buttons',
+  busy: 'a busy layout',
+  covered: 'bars that cover the page',
+  low_contrast: 'faint text',
+  motion: 'moving things',
+  // Why the page cannot absorb the change in place; the popup's Fit view offer says the rest.
+  cant_stretch: null,
+};
+
+function joinAnd(items: string[]): string {
+  if (items.length <= 1) return items[0] ?? '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]!}`;
+}
+
+/**
+ * The popup's one-line reason for a triage verdict, rendered from its
+ * structured reasons (docs/10 §3.2): "Small text and crowded buttons for
+ * your fit." At most three phrases, in the verdict's need order.
+ */
+export function triageLine(verdict: TriageVerdict): string {
+  if (verdict.verdict === 'fits') return 'This page already fits you.';
+  const kinds = new Set(verdict.reasons.map((r) => r.kind));
+  const phrases: string[] = [];
+  for (const reason of verdict.reasons) {
+    if (reason.kind === 'crowded_targets' && kinds.has('small_targets'))
+      continue;
+    const phrase =
+      reason.kind === 'small_targets' && kinds.has('crowded_targets')
+        ? 'small buttons close together'
+        : REASON_PHRASE[reason.kind];
+    if (phrase && !phrases.includes(phrase)) phrases.push(phrase);
+  }
+  if (phrases.length === 0) return 'A few things here differ from your fit.';
+  const line = joinAnd(phrases.slice(0, 3));
+  return `${line.charAt(0).toUpperCase()}${line.slice(1)} for your fit.`;
+}
+
 const UNDONE_REASON: Readonly<Record<VerifyCode, string>> = {
   clip: 'cut off some text here',
   overlap: 'made text overlap here',
@@ -541,6 +617,10 @@ const UNDONE_REASON: Readonly<Record<VerifyCode, string>> = {
   focus_lost: 'moved your place on the page',
   timeout: '',
   apply_error: 'did not work on this page',
+  hierarchy: 'made small text bigger than the headings around it',
+  inconsistent: 'sized matching items differently',
+  truncation: 'cut off more text than before',
+  nav_hidden: 'hid the site’s menu or search',
 };
 
 /** Neutral copy for a change the checks undid: "Line spacing was undone. It made text overlap here…" */

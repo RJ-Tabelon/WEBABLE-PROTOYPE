@@ -106,14 +106,18 @@ test.describe('pages', () => {
     await expectPageBasics(page, { h1: 'Sites', app: true });
   });
 
-  test('Privacy explains both consents, both off by default', async ({
+  test('Privacy explains each consent, each off by default', async ({
     page,
   }) => {
     await open(page, '/app/privacy', 'Privacy');
     await expectPageBasics(page, { h1: 'Privacy', app: true });
     const analysis = page.getByRole('switch', { name: /Page analysis/ });
+    const layouts = page.getByRole('switch', {
+      name: /Better Fit view layouts/,
+    });
     const improve = page.getByRole('switch', { name: /Help improve WebAble/ });
     await expect(analysis).toBeVisible();
+    await expect(layouts).toHaveAttribute('aria-checked', 'false');
     await expect(improve).toHaveAttribute('aria-checked', 'false');
     await expect(
       page.getByText(/Page text, anything you type, the site’s address/),

@@ -11,8 +11,14 @@ import { handleBridge, type BridgeHandlers } from './bridge';
 import { siteKey } from './cachekeys';
 import { chromePort } from './chrome';
 import { readConfig } from './config';
+import { ComposeInflight, FitViewStates } from './fitview';
 import { PageMemos } from './pages';
-import { hasAllSites, injectTab, reconcileRegistration } from './permissions';
+import {
+  hasAllSites,
+  injectFitView,
+  injectTab,
+  reconcileRegistration,
+} from './permissions';
 import {
   parseContent,
   parseUi,
@@ -24,6 +30,9 @@ import { TabRegistry } from './tabs';
 import type { UiMessage } from './ui';
 import { UndoHold } from './undo';
 import { Worker, type Registration } from './worker';
+// Fit view's face (Atkinson Hyperlegible Next, latin), inlined as a data URL:
+// the worker hands the bytes to the page, so no web-accessible resource exists.
+import fitViewFontUrl from '../../../../packages/tokens/fonts/webable-sans-latin.woff2?inline';
 
 /**
  * The service worker. Every listener is registered synchronously at the top
@@ -31,6 +40,12 @@ import { Worker, type Registration } from './worker';
  * place). No state survives in globals that matters: everything is rehydrated
  * from storage.
  */
+
+/** The base64 payload of a data: URL, or null. */
+export function dataUrlBase64(url: string): string | null {
+  const m = /^data:[^,]*;base64,(.+)$/s.exec(url);
+  return m?.[1] ?? null;
+}
 
 /** The engine's interim local memory of announced sites (superseded by the worker's site records). */
 export const LEGACY_ANNOUNCED_KEY = 'engine.announcedSites';
@@ -78,6 +93,7 @@ export function startServiceWorker(): void {
       await reconcileRegistration({ prePaint, pausedDomains });
     },
     inject: injectTab,
+    injectFitView,
     async openTabs() {
       const all = await browser.tabs.query({});
       return all
@@ -91,11 +107,14 @@ export function startServiceWorker(): void {
     tabs,
     pages,
     undos,
+    fitViews: new FitViewStates(session),
+    inflight: new ComposeInflight(session, Date.now),
     port,
     registration,
     auth,
     sync,
     now: Date.now,
+    font: () => dataUrlBase64(fitViewFontUrl),
   });
 
   auth?.onLost(() => {
@@ -188,7 +207,9 @@ export function startServiceWorker(): void {
         await stores.sites.forget(domain);
         await stores.events.forgetDomain(domain);
         await stores.receipts.forgetDomain(domain);
-        await stores.answers.forgetSite(await siteKey(install.secret, domain));
+        const site = await siteKey(install.secret, domain);
+        await stores.answers.forgetSite(site);
+        await stores.compose.forgetSite(site);
       } else {
         const wasPaused = (await stores.sites.get(domain)).rule.paused;
         await stores.sites.update(domain, (s) => {
@@ -284,9 +305,15 @@ export function startServiceWorker(): void {
       case 'cs:hello':
         return worker.hello(tabId, frameId, sender.url);
       case 'cs:signals':
-        return worker.signals(tabId, frameId, m.signals, m.evidence);
+        return worker.signals(
+          tabId,
+          frameId,
+          m.signals,
+          m.evidence,
+          sender.url,
+        );
       case 'cs:applied':
-        await worker.applied(tabId, frameId, m.changes);
+        await worker.applied(tabId, frameId, m.changes, m.viewport);
         return { ok: true };
       case 'cs:interaction':
         await worker.interacted(tabId, frameId, m.tabSession);
@@ -300,6 +327,17 @@ export function startServiceWorker(): void {
         return worker.offerAnswer(tabId, m.op, m.answer, 'page');
       case 'cs:undo-all':
         await worker.undoAllOnPage(tabId, frameId);
+        return { ok: true };
+      case 'cs:fitview-request':
+        return worker.fitViewRequest(
+          tabId,
+          frameId,
+          m.skeleton,
+          m.reason,
+          sender.url,
+        );
+      case 'cs:fitview-event':
+        await worker.fitViewEvent(tabId, frameId, m.event);
         return { ok: true };
     }
   };
@@ -352,6 +390,12 @@ export function startServiceWorker(): void {
       case 'ui:clear-everywhere':
         await worker.clearEverywhere();
         return { ok: true };
+      case 'ui:fit-view':
+        await worker.fitView(m.tabId, m.on, m.scope);
+        return worker.view(m.tabId);
+      case 'ui:fit-view-switch':
+        await worker.fitViewSwitch(m.tabId);
+        return worker.view(m.tabId);
       case 'ui:reading-guide':
         return (
           (await port.sendToTab(m.tabId, {
@@ -444,6 +488,17 @@ export function startServiceWorker(): void {
   browser.tabs.onRemoved.addListener((tabId) => {
     void worker.tabClosed(tabId).catch(() => undefined);
   });
+  // The person's own zoom wins over WebAble's page scale (docs/10 §5.1).
+  browser.tabs.onZoomChange.addListener((info) => {
+    void worker
+      .zoomChanged(
+        info.tabId,
+        info.oldZoomFactor,
+        info.newZoomFactor,
+        info.zoomSettings as { scope?: string; defaultZoomFactor?: number },
+      )
+      .catch(() => undefined);
+  });
   browser.webNavigation.onCommitted.addListener((details) => {
     if (details.frameId !== 0) return;
     // A prerendered page commits in the background while the tab still shows
@@ -493,6 +548,7 @@ export function startServiceWorker(): void {
       if (typeof tabId !== 'number') return;
       if (command === 'focus-layer') await worker.focusLayer(tabId);
       if (command === 'undo-all') await worker.undo(tabId, 'all');
+      if (command === 'toggle-fit-view') await worker.toggleFitView(tabId);
     })().catch(() => undefined);
   });
 

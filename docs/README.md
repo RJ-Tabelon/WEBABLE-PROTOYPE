@@ -11,6 +11,14 @@ Research-backed planning for the WebAble senior project, compiled 2026-09-07.
 | [05-Advisor-Meeting-2026-09-08.md](05-Advisor-Meeting-2026-09-08.md) | Timeboxed agenda for the 30-minute first advisor meeting (Tue 2026-09-08), with ground rules and a parking lot                                                                                                             |
 | [06-Technologies-and-Methods.md](06-Technologies-and-Methods.md)     | The full stack by layer with the reason for each choice, what we deliberately rejected, the five calls the team votes on Monday, and Monday's setup order                                                                  |
 | [07-Persona-Research.md](07-Persona-Research.md)                     | Current accessibility landscape, the three selected functional personas, AI opportunities and limits, and a recruitment/validation plan                                                                              |
+| [08-System-Architecture.md](08-System-Architecture.md)               | v1 architecture: the one loop, who decides what (rules, Jev, learners), surfaces and packages, data model, latency, learning, permissions and auth, design system                                                          |
+| [10-V2-Architecture.md](10-V2-Architecture.md)                       | v2: per-person triage, Tailor with page scale, Fit view and its proxies, the OpenAI layout planner, consent, release gates; with build status                                                                              |
+| [11-Restructure.md](11-Restructure.md) | v2.1: restructure for clutter and comprehension — who gets it (structure need from Tune's Focus effects), rules R1–R8, the before/after scorecard |
+| [12-Showroom.md](12-Showroom.md) | Fit view redesign after apple.com and the Google Store: measured reference tokens, palettes, type, components, and the planner's art-direction contract (PageSpec v2); with build status |
+
+Current meeting packet: [09-Advisor-Meeting-2026-10-07.md](09-Advisor-Meeting-2026-10-07.md), with the [guided mobile-study sandbox proposal](research/guided-study-sandbox-2026-10-07.md) and [community recruitment contacts](research/participant-recruitment-2026-10-07.md).
+
+Research reports are indexed in [research/README.md](research/README.md). The evidence behind v2 is compiled by decision in [research/v2-evidence.md](research/v2-evidence.md).
 
 ## The short version
 

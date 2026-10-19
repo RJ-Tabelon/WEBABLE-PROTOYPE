@@ -21,7 +21,29 @@ export interface Settings {
   welcomed: boolean;
   /** The popup's "Allow on all sites" line is hidden in the main view (Settings keeps it). */
   hideAllSitesAsk: boolean;
+  /**
+   * Development builds only: plan Fit view layouts with the local dev planner
+   * (`pnpm dev:compose`, no account). Ignored unless the build's compose URL
+   * is a loopback address (config.devPlanner).
+   */
+  devPlanner: boolean;
+  /**
+   * Text − / + presses inside Fit view, kept as an override of the fit's text
+   * size for Fit view (each step 1.125x, within ±FIT_TEXT_STEPS_MAX).
+   */
+  fitTextStep: number;
+  /**
+   * "Simplify busy pages automatically" (docs/11 §2): where the person's fit
+   * shows that busy pages cost them time, a busy page opens simplified on
+   * arrival. Off: such pages are offered instead, everywhere.
+   */
+  autoSimplify: boolean;
+  /** The one-time line explaining the first automatic simplify was shown. */
+  simplifyIntroShown: boolean;
 }
+
+/** Text − / + steps Fit view may keep as an override (the view's own limit). */
+export const FIT_TEXT_STEPS_MAX = 4;
 
 export const DEFAULT_SETTINGS: Settings = {
   v: 1,
@@ -31,6 +53,10 @@ export const DEFAULT_SETTINGS: Settings = {
   globalLevels: {},
   welcomed: false,
   hideAllSitesAsk: false,
+  devPlanner: false,
+  fitTextStep: 0,
+  autoSimplify: true,
+  simplifyIntroShown: false,
 };
 
 const OP_SET: ReadonlySet<string> = new Set(OP_IDS);
@@ -62,6 +88,16 @@ export function normalizeSettings(raw: unknown): Settings {
     globalLevels: normalizeLevels(raw.globalLevels),
     welcomed: bool(raw.welcomed, false),
     hideAllSitesAsk: bool(raw.hideAllSitesAsk, false),
+    devPlanner: bool(raw.devPlanner, false),
+    fitTextStep:
+      typeof raw.fitTextStep === 'number' && Number.isFinite(raw.fitTextStep)
+        ? Math.max(
+            -FIT_TEXT_STEPS_MAX,
+            Math.min(FIT_TEXT_STEPS_MAX, Math.round(raw.fitTextStep)),
+          )
+        : 0,
+    autoSimplify: bool(raw.autoSimplify, DEFAULT_SETTINGS.autoSimplify),
+    simplifyIntroShown: bool(raw.simplifyIntroShown, false),
   };
 }
 

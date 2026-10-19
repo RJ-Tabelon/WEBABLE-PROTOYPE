@@ -6,6 +6,15 @@ import { describe, expect, it } from 'vitest';
 import {
   ACTIVITY_WEEKS_MAX,
   addActivity,
+  addDefect,
+  addKeep,
+  FIT_COUNTS_MAX,
+  FIT_DEFECTS_MAX,
+  normalizeFitLearning,
+  normalizeSiteRecord,
+  pruneTemplates,
+  resetRule,
+  TEMPLATES_PER_SITE,
   AnswerCache,
   appendEvents,
   clearLocalData,
@@ -377,6 +386,7 @@ describe('settings and account', () => {
     ).toMatchObject({
       theme: 'system',
       cloudAnalysis: false,
+      aiLayout: false,
       needsReauth: false,
     });
   });
@@ -396,6 +406,7 @@ describe('clear local data', () => {
       userId: 'u',
       email: 'a@b.c',
       cloudAnalysis: true,
+      aiLayout: false,
       productLearning: false,
       theme: 'system',
       onboardingStep: 'connected',
@@ -431,5 +442,207 @@ describe('clear local data', () => {
     expect(await stores.answers.size()).toBe(0);
     expect((await stores.install.get()).secret).not.toBe(before.secret);
     expect(await stores.account.read()).not.toBeNull();
+  });
+});
+
+describe('v2 records', () => {
+  it('keeps "Always here", template memory and Fit view stats on a site, normalised', () => {
+    const rec = normalizeSiteRecord(
+      {
+        rule: { view: 'fit', pins: [], blocks: ['page_zoom'] },
+        templates: {
+          '0123456789abcdef': {
+            at: 5,
+            id: 'account:3',
+            prior: {
+              version: 'triage-1.0.0',
+              needs: {
+                text: 'compose',
+                targets: 'fits',
+                clutter: 'fits',
+                occlusion: 'tailor',
+                contrast: 'fits',
+                motion: 'fits',
+              },
+              zoom: 1.5,
+              blockers: ['paywall', 'made_up'],
+            },
+            zoom: { '8': 1.5, '9': 3, x: 1.25 },
+          },
+          'not-hex': { at: 1, id: 'x' },
+          fedcba9876543210: {
+            at: 1,
+            id: 'account:3',
+            prior: { version: 'v', needs: { text: 'huge' } },
+          },
+        },
+        fitView: { keep: 3, undo: 99, offerDay: 20725, offerAccepted: true },
+      },
+      T0,
+    );
+    expect(rec.rule.view).toBe('fit');
+    expect(rec.rule.blocks).toEqual(['page_zoom']);
+    expect(Object.keys(rec.templates).sort()).toEqual([
+      '0123456789abcdef',
+      'fedcba9876543210',
+    ]);
+    expect(rec.templates['0123456789abcdef']).toEqual({
+      at: 5,
+      id: 'account:3',
+      prior: {
+        version: 'triage-1.0.0',
+        needs: {
+          text: 'compose',
+          targets: 'fits',
+          clutter: 'fits',
+          occlusion: 'tailor',
+          contrast: 'fits',
+          motion: 'fits',
+        },
+        zoom: 1.5,
+        blockers: ['paywall'],
+      },
+      zoom: { '8': 1.5 },
+    });
+    // A prior that is not one is dropped, the memo kept.
+    expect(rec.templates.fedcba9876543210?.prior).toBeUndefined();
+    expect(rec.fitView).toEqual({
+      keep: 3,
+      undo: 40,
+      offerDay: 20725,
+      offerAccepted: true,
+    });
+    expect(
+      normalizeSiteRecord({ rule: { view: 'original' } }, T0).rule.view,
+    ).toBe(undefined);
+    expect(newSiteRecord(T0)).toMatchObject({
+      templates: {},
+      fitView: { keep: 0, undo: 0, offerDay: 0, offerAccepted: false },
+    });
+  });
+
+  it('remembers at most 12 templates per site, most recent first', () => {
+    const many = Object.fromEntries(
+      Array.from({ length: 20 }, (_, i) => [
+        i.toString(16).padStart(16, '0'),
+        { at: i, id: 'a' },
+      ]),
+    );
+    const kept = pruneTemplates(many);
+    expect(Object.keys(kept)).toHaveLength(TEMPLATES_PER_SITE);
+    expect(Math.min(...Object.values(kept).map((m) => m.at))).toBe(8);
+  });
+
+  it('a reset rule drops "Always here"', () => {
+    const rec = newSiteRecord(T0);
+    rec.rule.view = 'fit';
+    resetRule(rec, T0);
+    expect(rec.rule.view).toBeUndefined();
+  });
+
+  it('settings: the dev planner switch and the Fit view text override', () => {
+    expect(normalizeSettings({})).toMatchObject({
+      devPlanner: false,
+      fitTextStep: 0,
+    });
+    expect(
+      normalizeSettings({ devPlanner: true, fitTextStep: 2.6 }),
+    ).toMatchObject({ devPlanner: true, fitTextStep: 3 });
+    expect(normalizeSettings({ fitTextStep: 99 }).fitTextStep).toBe(4);
+    expect(normalizeSettings({ fitTextStep: -99 }).fitTextStep).toBe(-4);
+    expect(normalizeSettings({ fitTextStep: 'big' }).fitTextStep).toBe(0);
+  });
+
+  it('settings: busy pages are simplified automatically unless turned off; the intro is shown once', () => {
+    expect(normalizeSettings({})).toMatchObject({
+      autoSimplify: true,
+      simplifyIntroShown: false,
+    });
+    expect(
+      normalizeSettings({ autoSimplify: false, simplifyIntroShown: true }),
+    ).toMatchObject({ autoSimplify: false, simplifyIntroShown: true });
+    expect(normalizeSettings({ autoSimplify: 'no' }).autoSimplify).toBe(true);
+  });
+
+  it('the account mirror carries the layout-planning consent, off unless stored', () => {
+    const base = { userId: 'u', email: 'a@b.co' };
+    expect(normalizeAccount(base)?.aiLayout).toBe(false);
+    expect(normalizeAccount({ ...base, aiLayout: true })?.aiLayout).toBe(true);
+    expect(normalizeAccount({ ...base, aiLayout: 'yes' })?.aiLayout).toBe(
+      false,
+    );
+  });
+
+  it('keeps layout-planning receipts next to page-analysis ones', async () => {
+    const log = new ReceiptLog(memoryArea(), () => T0);
+    await log.add({ ...receipt(1, T0), destination: 'layout_planning' });
+    await log.add(receipt(2, T0));
+    await log.add({
+      ...receipt(3, T0),
+      destination: 'somewhere_else' as 'page_analysis',
+    });
+    expect((await log.list()).map((r) => r.destination).sort()).toEqual([
+      'layout_planning',
+      'page_analysis',
+    ]);
+  });
+});
+
+describe('Fit view learning', () => {
+  it('counts keep and undo, halving old evidence past the cap', () => {
+    let c = { keep: 0, undo: 0 };
+    for (let i = 0; i < FIT_COUNTS_MAX; i++) c = addKeep(c, i % 4 !== 0);
+    expect(c).toEqual({ keep: 30, undo: 10 });
+    c = addKeep(c, false);
+    expect(c).toEqual({ keep: 15, undo: 5.5 });
+  });
+
+  it('logs at most 50 recent defects, never naming a site', () => {
+    let rec = normalizeFitLearning(null);
+    for (let i = 0; i < 60; i++)
+      rec = addDefect(
+        rec,
+        {
+          at: T0 + i,
+          kind: 'proxy_failed',
+          source: 'heuristic',
+          cat: 'article',
+        },
+        T0 + i,
+      );
+    expect(rec.defects).toHaveLength(FIT_DEFECTS_MAX);
+    expect(rec.defects[0]?.at).toBe(T0 + 10);
+    rec = addDefect(
+      rec,
+      {
+        at: T0 + 40 * DAY,
+        kind: 'conservation_failed',
+        source: 'planner',
+        cat: 'feed_social',
+        missing: 2,
+      },
+      T0 + 40 * DAY,
+    );
+    expect(rec.defects).toHaveLength(1);
+    expect(
+      normalizeFitLearning({
+        pageTypes: { article: { keep: 2, undo: 1 }, nonsense: { keep: 1 } },
+        defects: [
+          {
+            at: 1,
+            kind: 'proxy_failed',
+            source: 'planner',
+            cat: 'article',
+            role: 'map',
+          },
+          { at: 1, kind: 'other', source: 'planner', cat: 'article' },
+        ],
+      }),
+    ).toEqual({
+      pageTypes: { article: { keep: 2, undo: 1 } },
+      defects: [
+        { at: 1, kind: 'proxy_failed', source: 'planner', cat: 'article' },
+      ],
+    });
   });
 });

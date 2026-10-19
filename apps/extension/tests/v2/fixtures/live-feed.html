@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Live: feed</title>
+    <script src="/__v2/live.js"></script>
+    <style>
+      body {
+        margin: 0;
+        font: 16px system-ui;
+      }
+      .card {
+        height: 260px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 8px;
+        border-bottom: 1px solid #ccc;
+      }
+      .card img {
+        width: 320px;
+        height: 180px;
+        background: #ddd;
+      }
+      #sentinel {
+        height: 1px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Videos</h1>
+    <!-- A feed with lazy thumbnails and infinite loading, driven by the
+         page's own IntersectionObservers. -->
+    <div id="feed" data-list="e10" data-open="title" data-thumb="thumb"></div>
+    <div id="sentinel"></div>
+    <script>
+      const PIXEL =
+        'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+      const feed = document.getElementById('feed');
+      window.loads = 0;
+      const lazy = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          const img = e.target;
+          if (!img.getAttribute('src'))
+            img.setAttribute('src', img.dataset.src);
+          lazy.unobserve(img);
+        }
+      });
+      let n = 0;
+      function more(count) {
+        for (let i = 0; i < count; i++, n++) {
+          const card = document.createElement('div');
+          card.className = 'card';
+          card.dataset.key = `c${n}`;
+          card.innerHTML =
+            `<img data-slot="thumb" alt="" data-src="${PIXEL}">` +
+            `<button type="button" data-slot="title" data-proxy="button">Video ${n}</button>`;
+          feed.append(card);
+          lazy.observe(card.querySelector('img'));
+        }
+      }
+      more(20);
+      new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting) && n < 60) {
+          window.loads++;
+          more(10);
+        }
+      }).observe(document.getElementById('sentinel'));
+    </script>
+  </body>
+</html>

@@ -1,12 +1,52 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 import { domState, open, plan, regionKeys, styleState } from './helpers';
 
+/**
+ * Paragraphs whose clipping box is sized by a fixed-height flex column four
+ * levels up: nothing within three ancestors says the text cannot grow, so
+ * only verification can find out.
+ */
+async function hiddenConstraint(page: Page): Promise<void> {
+  await open(page, 'article');
+  await page.evaluate(() => {
+    document.body.innerHTML = `<main><h1>Notes</h1><div class="outer"><div class="pane"><div><div><p>Small print that fits this panel exactly until it grows, then the panel cuts it off.</p><p>Another line of small print in the same panel, written to fill it.</p></div></div></div></div><p>A paragraph outside the panel, free to grow with the rest.</p></main>`;
+    const style = document.createElement('style');
+    style.textContent =
+      'body { margin: 0; font-family: Arial, sans-serif; } main p { font-size: 12px; line-height: 15px; margin: 0 0 4px; } .outer { display: flex; flex-direction: column; height: 72px; width: 320px; } .pane { flex: 1; min-height: 0; overflow: hidden; }';
+    document.head.append(style);
+  });
+}
+
 test.describe('verification and rollback', () => {
-  test('clipping trap: text floor is undone by checks with vcode clip', async ({
+  test('clipping trap: a class whose box would cut its text off is never enlarged', async ({
     page,
   }) => {
     await open(page, 'clip');
+    await page.evaluate(() => window.__webableEngine.extract());
+    const dom0 = await domState(page);
+    const css0 = await styleState(page);
+    const changes = await page.evaluate(
+      (p) => window.__webableEngine.apply(p),
+      plan([{ op: 'text_floor', level: 2 }]),
+    );
+    // The cards' text sits in fixed-height boxes that clip: excluded as a
+    // class before anything is written. What is left already reads at 18 px.
+    expect(changes[0]).toMatchObject({
+      op: 'text_floor',
+      status: 'not_needed',
+    });
+    expect(await domState(page)).toEqual(dom0);
+    expect(await styleState(page)).toEqual(css0);
+    expect(await page.evaluate(() => window.__webableEngine.applied())).toEqual(
+      [],
+    );
+  });
+
+  test('a constraint no style announces: text floor is undone whole by checks with vcode clip', async ({
+    page,
+  }) => {
+    await hiddenConstraint(page);
     await page.evaluate(() => window.__webableEngine.extract());
     const dom0 = await domState(page);
     const css0 = await styleState(page);
@@ -19,7 +59,8 @@ test.describe('verification and rollback', () => {
       status: 'undone_by_checks',
       vcode: 'clip',
     });
-    // Rolled back completely: the page is exactly as it was.
+    // Rolled back completely: the page is exactly as it was, every paragraph
+    // included (no element-by-element patchwork).
     expect(await domState(page)).toEqual(dom0);
     expect(await styleState(page)).toEqual(css0);
     expect(await page.evaluate(() => window.__webableEngine.applied())).toEqual(
@@ -47,7 +88,7 @@ test.describe('verification and rollback', () => {
   test('a failing op is rolled back alone; the rest of the batch stays', async ({
     page,
   }) => {
-    await open(page, 'clip');
+    await hiddenConstraint(page);
     await page.evaluate(() => window.__webableEngine.extract());
     const changes = await page.evaluate(
       (p) => window.__webableEngine.apply(p),

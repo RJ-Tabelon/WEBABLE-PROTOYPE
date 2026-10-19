@@ -20,11 +20,14 @@ const ENTRYPOINTS = [
   'supabase/functions/extension-link/index.ts',
   'supabase/functions/decide/index.ts',
   'supabase/functions/ingest/index.ts',
+  'supabase/functions/compose/index.ts',
+  'scripts/dev-compose.ts',
 ];
 const TEST_ROOTS = [
   'supabase/functions/extension-link',
   'supabase/functions/decide',
   'supabase/functions/ingest',
+  'supabase/functions/compose',
   'supabase/tests/functions',
 ];
 

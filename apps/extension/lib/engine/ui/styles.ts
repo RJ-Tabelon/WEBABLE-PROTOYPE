@@ -20,6 +20,8 @@ export const LAYER_TOKENS = {
     '--on-inverse-accent': '#9DD1A6',
     '--line-strong': '#7D7C73',
     '--accent': '#2D6A3E',
+    '--accent-hover': '#22552F',
+    '--on-accent': '#FFFFFF',
     '--action': '#1A1A17',
     '--action-hover': '#3A3934',
     '--action-press': '#000000',
@@ -41,6 +43,8 @@ export const LAYER_TOKENS = {
     '--on-inverse-accent': '#2D6A3E',
     '--line-strong': '#85847B',
     '--accent': '#8FCB9B',
+    '--accent-hover': '#A9D9B2',
+    '--on-accent': '#0F1A12',
     '--action': '#EDECE6',
     '--action-hover': '#FFFFFF',
     '--action-press': '#D3D2CA',
@@ -156,7 +160,15 @@ export function layerCss(): string {
   --focus: var(--focus-inverse);
 }
 .wa-toast__check { flex: none; color: var(--on-inverse-accent); }
+.wa-toast--notice > svg { flex: none; color: var(--on-inverse-accent); margin-inline-start: 2px; }
 .wa-toast__msg { flex: 1 1 auto; min-width: 0; margin: 0; font-size: 16px; line-height: 1.45; }
+/* With the Fit view action: the line and Close, then Undo and Simplify this page under the line. */
+.wa-toast--offer { flex-wrap: wrap; row-gap: 4px; padding-bottom: 8px; }
+.wa-toast__actions {
+  flex: 1 0 100%;
+  display: flex; flex-wrap: wrap; gap: 8px;
+  padding-inline-start: 32px;
+}
 
 /* ---------- Buttons (md: 44 px, pill) ---------- */
 .wa-btn {
@@ -171,6 +183,10 @@ export function layerCss(): string {
 .wa-btn--primary { background: var(--action); color: var(--on-action); }
 .wa-btn--secondary { background: transparent; color: var(--ink); border-color: var(--line-strong); }
 .wa-btn--inverse { background: transparent; color: var(--on-inverse); border-color: var(--on-inverse-2); }
+/* Fern marks WebAble's own controls: Simplify this page. */
+.wa-btn--fit { background: var(--accent); color: var(--on-accent); }
+.wa-btn--fit-inverse { background: transparent; color: var(--on-inverse-accent); border-color: var(--on-inverse-accent); }
+.wa-btn svg { flex: none; margin-inline-start: -4px; }
 .wa-icon-btn {
   appearance: none; margin: 0; padding: 0;
   display: inline-grid; place-items: center;
@@ -182,9 +198,12 @@ export function layerCss(): string {
   .wa-btn--primary:hover { background: var(--action-hover); }
   .wa-btn--secondary:hover, .wa-chip .wa-icon-btn:hover { background: var(--surface-hover); color: var(--ink); }
   .wa-btn--inverse:hover, .wa-toast .wa-icon-btn:hover { background: var(--surface-inverse-hover); color: var(--on-inverse); }
+  .wa-btn--fit:hover { background: var(--accent-hover); }
+  .wa-btn--fit-inverse:hover { background: var(--surface-inverse-hover); }
 }
 .wa-btn--primary:active { background: var(--action-press); }
 .wa-btn--secondary:active { background: var(--surface-press); }
+.wa-btn--fit:active { background: var(--accent-hover); }
 @media (prefers-reduced-motion: no-preference) {
   :host(:not([data-motion="reduce"])) .wa-btn:active,
   :host(:not([data-motion="reduce"])) .wa-icon-btn:active { transform: translateY(1px); }

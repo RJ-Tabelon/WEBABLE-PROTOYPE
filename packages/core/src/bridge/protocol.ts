@@ -79,12 +79,19 @@ export interface LocalSite {
   lastVisit: number;
 }
 
+export const RECEIPT_DESTINATIONS = [
+  'page_analysis',
+  'layout_planning',
+] as const;
+export type ReceiptDestination = (typeof RECEIPT_DESTINATIONS)[number];
+
 export interface SentReceipt {
   id: string;
   at: number;
   /** Shown locally only; never part of what was sent. */
   domain: string;
-  destination: 'page_analysis';
+  /** page_analysis: Jev via `decide`. layout_planning: OpenAI via `compose` (docs/10 §8). */
+  destination: ReceiptDestination;
   bytes: number;
   /** The exact request body that left the device. */
   body: unknown;

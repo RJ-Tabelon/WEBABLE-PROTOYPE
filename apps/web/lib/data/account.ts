@@ -31,6 +31,8 @@ export interface Account {
   onboardingStep: OnboardingStep;
   /** Consent to send vocabulary-filtered page structure for analysis. Off by default. */
   cloudAnalysis: boolean;
+  /** Consent to send page outlines to OpenAI for Fit view layouts (docs/10 §8). Off by default. */
+  aiLayout: boolean;
   /** Consent to contribute randomized, anonymous outcome counts. Off by default. */
   productLearning: boolean;
   theme: ThemePreference;
@@ -41,12 +43,13 @@ export interface Account {
 }
 
 const ACCOUNT_COLUMNS =
-  'onboarding_step, cloud_analysis, product_learning, theme, theme_set_at, created_at, updated_at' as const;
+  'onboarding_step, cloud_analysis, ai_layout, product_learning, theme, theme_set_at, created_at, updated_at' as const;
 
 type AccountRow = Pick<
   Tables<'accounts'>,
   | 'onboarding_step'
   | 'cloud_analysis'
+  | 'ai_layout'
   | 'product_learning'
   | 'theme'
   | 'theme_set_at'
@@ -62,6 +65,7 @@ export function toAccount(row: AccountRow): Account {
   return {
     onboardingStep: row.onboarding_step,
     cloudAnalysis: row.cloud_analysis,
+    aiLayout: row.ai_layout,
     productLearning: row.product_learning,
     theme: isTheme(row.theme) ? row.theme : 'system',
     themeSetAt: row.theme_set_at,
@@ -90,6 +94,7 @@ export async function getAccount(): Promise<DataResult<Account>> {
 export const accountPatchSchema = z
   .strictObject({
     cloudAnalysis: z.boolean().optional(),
+    aiLayout: z.boolean().optional(),
     productLearning: z.boolean().optional(),
     theme: z.enum(THEME_PREFERENCES).optional(),
   })
@@ -117,12 +122,15 @@ export async function updateAccount(
 
     const update: {
       cloud_analysis?: boolean;
+      ai_layout?: boolean;
       product_learning?: boolean;
       theme?: ThemePreference;
       theme_set_at?: string;
     } = {};
     if (parsed.data.cloudAnalysis !== undefined)
       update.cloud_analysis = parsed.data.cloudAnalysis;
+    if (parsed.data.aiLayout !== undefined)
+      update.ai_layout = parsed.data.aiLayout;
     if (parsed.data.productLearning !== undefined)
       update.product_learning = parsed.data.productLearning;
     if (parsed.data.theme !== undefined) {

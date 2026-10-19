@@ -29,12 +29,22 @@ import {
 } from '../page/types';
 import { needLevels } from '../profile/needs';
 import type { FitProfile } from '../profile/schema';
-import { buildPlan, planWithTraces, type PolicyInput } from './decide';
+import { TEXT_RESIDUAL_MIN, triage } from '../triage/triage';
+import {
+  buildPlan,
+  levelFor,
+  planWithTraces,
+  triageBand,
+  type PolicyInput,
+} from './decide';
+import { levelValue } from '../learning/learners';
 import {
   articleSignals,
   FIXTURE_DAY,
   FIXTURE_NOW,
   focusProfile,
+  largeTextProfile,
+  layoutFeatures,
   makeInput,
   makeRegion,
   strongReaderProfile,
@@ -89,6 +99,7 @@ function generate(seed: number): PolicyInput {
   const profiles: Array<() => FitProfile> = [
     strongReaderProfile,
     focusProfile,
+    () => largeTextProfile(pick([18, 28, 36])),
     () => tier0Profile(),
     () =>
       tier0Profile({
@@ -273,6 +284,43 @@ function generate(seed: number): PolicyInput {
 
   const friction: Partial<Record<OpId, number>> = {};
   for (const op of OP_IDS) if (chance(0.1)) friction[op] = pick([2, 3, 4, 1e6]);
+  const offersToday = int(0, 5);
+  const offersThisPage = int(0, 1);
+
+  // Triage (v2) on most pages; a fifth of those from an engine without layout features.
+  let verdict: PolicyInput['triage'];
+  if (chance(0.65)) {
+    if (chance(0.8)) {
+      signals.layout = layoutFeatures({
+        bodyPx: pick([null, 11, 12, 13, 14, 16, 17.5, 19, 22]),
+        slack: {
+          rowSlackMin: pick([null, 1.02, 1.2, 1.8]),
+          clipRiskShare: r(),
+        },
+        occlusion: pick([0, 0.08, 0.16, 0.25, 0.4]),
+        density: {
+          leafPer100k: int(5, 100),
+          corners: int(10, 350),
+          fontSizes: int(2, 15),
+          regions: int(0, 12),
+        },
+        records: pick([
+          { count: 0, largest: 0, mainShare: 0 },
+          { count: 2, largest: 12, mainShare: 0.7 },
+          { count: 1, largest: 6, mainShare: 0.2 },
+        ]),
+        readerable: pick([0, 15, 30, 120]),
+        kind: {
+          product: chance(0.1),
+          editor: chance(0.08),
+          videoPlayer: chance(0.08),
+          blockingOverlay: chance(0.08),
+        },
+      });
+    }
+    signals.viewport.width = pick([700, 1024, 1280, 1440, 1920]);
+    verdict = triage({ profile, signals, zoom: signals.viewport.zoom });
+  }
 
   return {
     profile,
@@ -283,12 +331,13 @@ function generate(seed: number): PolicyInput {
     domain,
     site,
     friction,
-    offersToday: int(0, 5),
-    offersThisPage: int(0, 1),
+    offersToday,
+    offersThisPage,
     tabSession: 'tab-1',
     now: FIXTURE_NOW,
     profileConfidence:
       profile.calibrationVersion === null ? null : profile.confidence,
+    ...(verdict ? { triage: verdict } : {}),
   };
 }
 
@@ -304,6 +353,20 @@ function isPinned(op: OpId, input: PolicyInput): boolean {
 
 function scopeRegions(scope: 'page' | { regions: string[] }): string[] {
   return scope === 'page' ? [] : scope.regions;
+}
+
+/** The person's own authority for an op on this site: a pin or a level they set. */
+function ownChoice(op: OpId, input: PolicyInput): boolean {
+  return isPinned(op, input) || Number.isFinite(input.site?.levels[op]);
+}
+
+/** page_zoom takes text_floor's saved-size authority under triage (docs/10 §5.1). */
+function savedTextScale(op: OpId, input: PolicyInput): boolean {
+  return (
+    op === 'page_zoom' &&
+    input.triage !== undefined &&
+    input.profile.vision.textMinPx.source !== 'default'
+  );
 }
 
 describe('policy invariants (random inputs)', () => {
@@ -347,10 +410,16 @@ describe('policy invariants (random inputs)', () => {
         // Auto only from an eligible source; friction and 'none' never auto-apply.
         expect(['pinned', 'profile', 'system']).toContain(planned.trace.source);
         if (!isPinned(op, input)) {
-          expect(input.learning.ops[op].src).not.toBe('none');
+          if (!savedTextScale(op, input))
+            expect(input.learning.ops[op].src).not.toBe('none');
           expect(NEVER_AUTO_UNLESS_PINNED).not.toContain(op);
         }
         expect(demotedHere(input.domain, op)).toBe(false);
+        // A need that fits gets nothing automatic, unless the person chose it here.
+        if (triageBand(op, input) === 'fits')
+          expect(ownChoice(op, input), `${op} auto on a need that fits`).toBe(
+            true,
+          );
       }
 
       if (planned.mode === 'offer') {
@@ -382,7 +451,10 @@ describe('policy invariants (random inputs)', () => {
           expect(key).not.toBe(input.signals.main.key);
           const v =
             input.verdicts[key] ?? (region ? ruleVerdict(region) : null);
-          expect(v?.protected ?? false).toBe(false);
+          // Navigation is a protected role (never dimmed), and it is the only
+          // role unpin_bars may target: scrolling away hides nothing.
+          if (op === 'dim_distractions')
+            expect(v?.protected ?? false).toBe(false);
           expect(v?.role).not.toBe('consent_banner');
           // Only navigation bars scroll away; consent and chat stay pinned.
           if (op === 'unpin_bars') expect(v?.role).toBe('navigation');
@@ -400,9 +472,37 @@ describe('policy invariants (random inputs)', () => {
       }
     }
 
-    // Alternatives and supersession.
-    const ops = plan.ops.map((o) => o.op);
-    expect(ops.includes('page_zoom') && ops.includes('text_floor')).toBe(false);
+    // Composition (docs/10 §5.2): page_zoom is triage's scale, plan.zoom the
+    // scale in effect, and text_floor carries only a residual past 1.05.
+    const scale = plan.ops.find((o) => o.op === 'page_zoom');
+    const floor = plan.ops.find((o) => o.op === 'text_floor');
+    const t = input.triage;
+    expect(plan.triage).toEqual(t);
+    expect(plan.zoom).toBe(
+      scale?.mode === 'auto' ? levelValue('page_zoom', scale.level) : 1,
+    );
+    if (!t) expect(scale).toBeUndefined();
+    if (t && scale && !Number.isFinite(input.site?.levels.page_zoom)) {
+      expect(levelValue('page_zoom', scale.level)).toBe(t.zoom);
+      expect(t.zoom).toBeGreaterThan(1);
+      expect(t.zoom).toBeLessThanOrEqual(t.zMax);
+      expect(t.needs.text).not.toBe('fits');
+    }
+    if (t && floor && t.k !== null) {
+      // The level is effective px, the same with or without a page scale.
+      expect(floor.level).toBe(levelFor('text_floor', input));
+      const running = input.profile.vision.textMinPx.value / t.k;
+      expect(
+        levelValue('text_floor', floor.level) / (running * plan.zoom!),
+      ).toBeGreaterThan(TEXT_RESIDUAL_MIN);
+    }
+    // Text changes are automatic only past k = 1.15, or by the person's own choice.
+    if (t && t.needs.text === 'fits') {
+      for (const o of [scale, floor])
+        if (o?.mode === 'auto') expect(ownChoice(o.op, input)).toBe(true);
+    }
+
+    // Supersession.
     const focus = plan.ops.find((o) => o.op === 'focus_view');
     const dim = plan.ops.find((o) => o.op === 'dim_distractions');
     if (focus && dim)
@@ -428,12 +528,19 @@ describe('policy invariants (generator coverage)', () => {
     const bump = (key: string) => seen.set(key, (seen.get(key) ?? 0) + 1);
     for (const seed of SEEDS) {
       const input = generate(seed);
-      for (const o of buildPlan(input).ops) {
+      const { plan, traces } = planWithTraces(input);
+      for (const o of plan.ops) {
         bump(`${o.op}:${o.mode}`);
         bump(o.mode);
         if (o.trace.source === 'friction') bump('friction');
         if (o.trace.source === 'pinned') bump('pinned');
       }
+      const autoOps = plan.ops
+        .filter((o) => o.mode === 'auto')
+        .map((o) => o.op);
+      if (autoOps.includes('page_zoom') && autoOps.includes('text_floor'))
+        bump('page_zoom+text_floor');
+      if (traces.some((tr) => tr.why === 'page_fits')) bump('fits_suppressed');
       if (input.site?.paused) bump('paused');
     }
     for (const key of [
@@ -446,6 +553,10 @@ describe('policy invariants (generator coverage)', () => {
       'unpin_bars:auto',
       'line_length:auto',
       'calm_motion:auto',
+      'page_zoom:auto',
+      'page_zoom+text_floor',
+      'text_floor:offer',
+      'fits_suppressed',
     ]) {
       expect(seen.get(key) ?? 0, key).toBeGreaterThan(0);
     }

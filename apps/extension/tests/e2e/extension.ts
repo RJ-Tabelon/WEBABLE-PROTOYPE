@@ -34,7 +34,15 @@ export const EXTENSION_DIR = resolve(
 export const FIXTURE_ORIGIN = 'http://127.0.0.1:4173';
 
 export type Fixture =
-  'article' | 'store' | 'app' | 'clip' | 'shadow' | 'spa' | 'hydration';
+  | 'article'
+  | 'store'
+  | 'app'
+  | 'clip'
+  | 'constraint'
+  | 'shadow'
+  | 'spa'
+  | 'hydration'
+  | 'shell';
 
 export interface TabState {
   tabId: number;
@@ -43,6 +51,8 @@ export interface TabState {
   phase: string;
   engine: boolean;
   changes: Array<{ op: string; status: string; level: number }>;
+  /** The one offer this page view shows, if any. */
+  offer?: { op: string } | null;
 }
 
 export interface Extension {
@@ -53,10 +63,13 @@ export interface Extension {
   send<T = unknown>(msg: Record<string, unknown>): Promise<T>;
   /** Reset local state and seed a profile (and optionally an account mirror). */
   seed(opts: { profile?: unknown; account?: unknown }): Promise<void>;
-  /** Open an engine fixture in a new tab and wait until the worker has its plan applied. */
+  /**
+   * Open an engine fixture in a new tab and wait until the worker has its
+   * plan applied. `viewport` sizes the page before it loads.
+   */
   openFixture(
     name: Fixture,
-    opts?: { settle?: boolean },
+    opts?: { settle?: boolean; viewport?: { width: number; height: number } },
   ): Promise<{ page: Page; tabId: number }>;
   tabState(tabId: number): Promise<TabState | undefined>;
   /** The popup, opened as a page for a tab (popup.html?tab=<id>, test builds only). */
@@ -164,8 +177,9 @@ export const test = base.extend<{ ext: Extension }, { extension: Extension }>({
           });
           expect(reply.ok, 'e2e:seed accepted').toBe(true);
         },
-        async openFixture(name, { settle = true } = {}) {
+        async openFixture(name, { settle = true, viewport } = {}) {
           const page = await context.newPage();
+          if (viewport) await page.setViewportSize(viewport);
           const url = `${FIXTURE_ORIGIN}/engine/${name}.html?e2e=${++nonce}`;
           await page.goto(url, { waitUntil: 'load' });
           const tabId = await control.evaluate(async (u) => {

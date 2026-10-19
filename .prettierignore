@@ -15,3 +15,4 @@ docx-qa.*
 supabase/.temp
 packages/core/src/db/types.ts
 pnpm-lock.yaml
+eval-output

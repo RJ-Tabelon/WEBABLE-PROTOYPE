@@ -14,7 +14,10 @@
 
 export declare const CATALOG_VERSION: 'wa-cat-1.0.0';
 export declare const JEV_PINNED_MODEL: 'jev-1.13.0';
-export declare const OP_LIBRARY_VERSION: 'ops-1.0.0';
+export declare const OP_LIBRARY_VERSION: 'ops-2.0.0';
+export declare const COMPOSE_SCHEMA_VERSION: 'wa-compose-2.0.0';
+export declare const COMPOSE_PINNED_MODEL: 'gpt-6-sol';
+export declare const COMPOSE_FALLBACK_MODEL: 'gpt-5.6-terra';
 
 // ---------------------------------------------------------------------------
 // Validation
@@ -332,6 +335,441 @@ export declare function callJev(
 ): Promise<JevResult>;
 
 // ---------------------------------------------------------------------------
+// Layout planning (docs/10 §6): skeleton/wire.ts, compose/{spec,wire,prompt}.ts,
+// skeleton/outline.ts
+// ---------------------------------------------------------------------------
+
+type SkelTag =
+  | 'a'
+  | 'article'
+  | 'aside'
+  | 'audio'
+  | 'blockquote'
+  | 'body'
+  | 'button'
+  | 'canvas'
+  | 'code'
+  | 'dd'
+  | 'details'
+  | 'dialog'
+  | 'div'
+  | 'dl'
+  | 'dt'
+  | 'em'
+  | 'fieldset'
+  | 'figcaption'
+  | 'figure'
+  | 'footer'
+  | 'form'
+  | 'h1'
+  | 'h2'
+  | 'h3'
+  | 'h4'
+  | 'h5'
+  | 'h6'
+  | 'header'
+  | 'iframe'
+  | 'img'
+  | 'input'
+  | 'label'
+  | 'legend'
+  | 'li'
+  | 'main'
+  | 'nav'
+  | 'ol'
+  | 'p'
+  | 'picture'
+  | 'pre'
+  | 'section'
+  | 'select'
+  | 'small'
+  | 'span'
+  | 'strong'
+  | 'summary'
+  | 'svg'
+  | 'table'
+  | 'td'
+  | 'textarea'
+  | 'th'
+  | 'time'
+  | 'tr'
+  | 'ul'
+  | 'video'
+  | 'custom'
+  | 'other';
+
+type SkelRole =
+  | 'alert'
+  | 'alertdialog'
+  | 'article'
+  | 'banner'
+  | 'button'
+  | 'cell'
+  | 'checkbox'
+  | 'columnheader'
+  | 'combobox'
+  | 'complementary'
+  | 'contentinfo'
+  | 'dialog'
+  | 'feed'
+  | 'figure'
+  | 'form'
+  | 'grid'
+  | 'gridcell'
+  | 'group'
+  | 'heading'
+  | 'img'
+  | 'link'
+  | 'list'
+  | 'listbox'
+  | 'listitem'
+  | 'main'
+  | 'menu'
+  | 'menubar'
+  | 'menuitem'
+  | 'menuitemcheckbox'
+  | 'menuitemradio'
+  | 'navigation'
+  | 'option'
+  | 'radio'
+  | 'radiogroup'
+  | 'region'
+  | 'row'
+  | 'rowheader'
+  | 'search'
+  | 'searchbox'
+  | 'slider'
+  | 'spinbutton'
+  | 'status'
+  | 'switch'
+  | 'tab'
+  | 'table'
+  | 'tablist'
+  | 'tabpanel'
+  | 'textbox'
+  | 'toolbar'
+  | 'tree'
+  | 'treeitem';
+
+type SkelKind =
+  | 'landmark'
+  | 'group'
+  | 'heading'
+  | 'control'
+  | 'input'
+  | 'media'
+  | 'text'
+  | 'stext'
+  | 'table'
+  | 'collection';
+
+type SkelFlag =
+  | 'fixed'
+  | 'sticky'
+  | 'playing'
+  | 'adhint'
+  | 'consenthint'
+  | 'icon'
+  | 'imgctrl'
+  | 'headlink'
+  | 'cliprisk'
+  | 'overlay'
+  | 'editable'
+  | 'disabled'
+  | 'selected'
+  | 'pressed'
+  | 'expanded'
+  | 'popup'
+  | 'required'
+  | 'bold'
+  | 'hoveronly'
+  | 'focus';
+
+type SkelPattern =
+  'price' | 'duration' | 'count' | 'rating' | 'date' | 'percent' | 'num';
+type SkelLengthBucket = 'xs' | 's' | 'm' | 'l' | 'xl' | 'xxl';
+type SkelCountBucket =
+  '0' | '1' | '2' | '3-5' | '6-10' | '11-25' | '26-50' | '51-100' | '100+';
+type SkelInputType =
+  | 'text'
+  | 'search'
+  | 'email'
+  | 'tel'
+  | 'url'
+  | 'number'
+  | 'password'
+  | 'checkbox'
+  | 'radio'
+  | 'range'
+  | 'date'
+  | 'file'
+  | 'select'
+  | 'textarea'
+  | 'other';
+type SkelHrefKind = 'same' | 'other' | 'fragment' | 'none';
+
+/** One node of the wire skeleton: enums, bounded numbers, ids and vocabulary words only. */
+export interface WireNode {
+  /** `^e[0-9]{1,4}$`. */
+  id: string;
+  /** Parent id; null only for the root. */
+  p: string | null;
+  t: SkelTag;
+  r: SkelRole | null;
+  k: SkelKind;
+  /** [x, y, w, h], rounded to 8 CSS px. */
+  b: [number, number, number, number];
+  fs?: number;
+  w?: 400 | 600;
+  lv?: number;
+  f?: SkelFlag[];
+  it?: SkelInputType;
+  o?: SkelCountBucket;
+  /** Label as public-vocabulary words (or '·'); absent inside records. */
+  l?: string[];
+  sh?: { len: SkelLengthBucket; pat?: SkelPattern[]; ln?: SkelCountBucket };
+  hr?: SkelHrefKind;
+  /** Collection: item count bucket, item tag, exemplar root id. */
+  n?: SkelCountBucket;
+  itm?: SkelTag;
+  ex?: string;
+  /** Slot inside a collection exemplar. */
+  s?: true;
+}
+
+export interface WirePage {
+  vw: number;
+  vh: number;
+  dw: number;
+  dh: number;
+  /** Two-letter language subtag or ''. */
+  lang: string;
+}
+
+export interface WireSkeleton {
+  page: WirePage;
+  nodes: WireNode[];
+}
+
+/** Extension service worker -> `compose`. */
+export interface ComposeRequest {
+  v: 1;
+  schema: 'wa-compose-2.0.0';
+  skeleton: WireSkeleton;
+}
+
+export type PageType =
+  | 'search_results'
+  | 'listing_grid'
+  | 'feed'
+  | 'article'
+  | 'product_detail'
+  | 'product_marketing'
+  | 'video_watch'
+  | 'channel_or_profile'
+  | 'inbox_or_messages'
+  | 'form_or_checkout'
+  | 'dashboard_or_app'
+  | 'home_portal'
+  | 'docs_reference'
+  | 'other';
+
+export type PrimaryTask =
+  | 'read'
+  | 'browse_and_choose'
+  | 'search'
+  | 'compare_and_buy'
+  | 'watch'
+  | 'fill_form'
+  | 'navigate'
+  | 'triage_messages'
+  | 'other';
+
+export type SectionKind =
+  | 'header'
+  | 'search'
+  | 'account_and_cart'
+  | 'primary_nav'
+  | 'secondary_nav'
+  | 'breadcrumbs'
+  | 'page_heading'
+  | 'tabs'
+  | 'filters'
+  | 'sort_and_view'
+  | 'main_list'
+  | 'article'
+  | 'product_detail'
+  | 'form'
+  | 'media'
+  | 'pagination'
+  | 'feature_blocks'
+  | 'promo_hero'
+  | 'related'
+  | 'comments'
+  | 'secondary'
+  | 'help_and_contact'
+  | 'legal'
+  | 'footer'
+  | 'consent'
+  | 'overlay_modal'
+  | 'toolbar'
+  | 'ads'
+  | 'clutter'
+  | 'other';
+
+export type Importance = 'primary' | 'secondary' | 'tertiary' | 'fold';
+
+export type SectionLayout =
+  | 'hero'
+  | 'buy_box'
+  | 'card_grid'
+  | 'row_list'
+  | 'chip_bar'
+  | 'reading'
+  | 'spotlight'
+  | 'link_grid'
+  | 'form_panel'
+  | 'menu'
+  | 'as_is';
+
+export type ItemKind =
+  | 'product'
+  | 'video'
+  | 'search_result'
+  | 'article_card'
+  | 'message'
+  | 'post'
+  | 'comment'
+  | 'image'
+  | 'event'
+  | 'person'
+  | 'file'
+  | 'feature'
+  | 'reference'
+  | 'nav_link'
+  | 'tab'
+  | 'chip'
+  | 'filter_option'
+  | 'other';
+
+export type FieldRole =
+  | 'title'
+  | 'thumbnail'
+  | 'author_or_channel'
+  | 'description'
+  | 'meta'
+  | 'timestamp'
+  | 'duration'
+  | 'price'
+  | 'rating'
+  | 'review_count'
+  | 'badge'
+  | 'label'
+  | 'link'
+  | 'primary_action'
+  | 'secondary_action'
+  | 'select_toggle'
+  | 'state_toggle'
+  | 'overflow_menu'
+  | 'decorative'
+  | 'other';
+
+export type FieldShow = 'always' | 'on_expand' | 'hide';
+
+/** The card template a collection's records share (docs/12 §6.2). */
+export type CardStyle =
+  'tile' | 'media' | 'story' | 'row' | 'message' | 'person' | 'chip' | 'link';
+
+export type MediaShape = 'landscape' | 'square' | 'portrait' | 'none';
+
+export type LeadMode = 'first' | 'none';
+
+export interface SpecSection {
+  kind: SectionKind;
+  importance: Importance;
+  /** Node ids from the request. */
+  node_ids: string[];
+  heading_ref: string | null;
+  layout: SectionLayout;
+}
+
+export interface SpecField {
+  slot_id: string;
+  role: FieldRole;
+  show: FieldShow;
+}
+
+export interface SpecCollection {
+  list_id: string;
+  item_kind: ItemKind;
+  open_slot: string | null;
+  card: CardStyle;
+  media: MediaShape;
+  lead: LeadMode;
+  fields: SpecField[];
+}
+
+/** What a page is: enums and ids only, no free text (docs/10 §4.1). */
+export interface PageSpec {
+  v: 1;
+  page_type: PageType;
+  primary_task: PrimaryTask;
+  sections: SpecSection[];
+  collections: SpecCollection[];
+}
+
+export type ComposeDegradedReason =
+  | 'unconfigured'
+  | 'quota'
+  | 'timeout'
+  | 'model_error'
+  | 'invalid_output'
+  | 'refused'
+  | 'disabled';
+
+/** `compose` -> extension. Usage, cache counts and timing are never returned. */
+export interface ComposeOk {
+  ok: true;
+  v: 1;
+  schema: 'wa-compose-2.0.0';
+  model: string;
+  spec: PageSpec;
+}
+
+export interface ComposeDegraded {
+  ok: false;
+  degraded: ComposeDegradedReason;
+  retryAfterMs?: number;
+}
+
+export type ComposeResponse = ComposeOk | ComposeDegraded;
+
+/** Strict: unknown keys are rejected. */
+export declare const composeRequestSchema: SafeParser<ComposeRequest>;
+/** Strips unknown keys on parse, so only contract fields reach a client. */
+export declare const composeResponseSchema: SafeParser<ComposeResponse>;
+export declare const pageSpecSchema: SafeParser<PageSpec>;
+
+/** The planner's input: a deterministic outline of a validated wire skeleton. */
+export declare function wireOutline(
+  wire: WireSkeleton,
+  budget?: number,
+): string;
+
+export interface PlannerRequestOptions {
+  model: string;
+  /** Use the priority (fast) service tier. */
+  fast: boolean;
+  maxOutputTokens?: number;
+}
+
+/** The OpenAI Responses API body for one compose call (no user, metadata or safety identifier). */
+export declare function plannerRequestBody(
+  outline: string,
+  opts: PlannerRequestOptions,
+): Record<string, unknown>;
+
+// ---------------------------------------------------------------------------
 // Page analysis wire contract (decide/wire.ts) and catalog (decide/catalog.ts)
 // ---------------------------------------------------------------------------
 
@@ -501,7 +939,11 @@ export type VerifyCode =
   | 'layout_shift'
   | 'focus_lost'
   | 'timeout'
-  | 'apply_error';
+  | 'apply_error'
+  | 'hierarchy'
+  | 'inconsistent'
+  | 'truncation'
+  | 'nav_hidden';
 
 export declare const VERIFY_CODES: readonly [
   'clip',
@@ -514,6 +956,10 @@ export declare const VERIFY_CODES: readonly [
   'focus_lost',
   'timeout',
   'apply_error',
+  'hierarchy',
+  'inconsistent',
+  'truncation',
+  'nav_hidden',
 ];
 
 export interface AggReport {

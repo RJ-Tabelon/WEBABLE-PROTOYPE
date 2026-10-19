@@ -24,7 +24,9 @@ type ViewReplying =
   | 'ui:quick'
   | 'ui:use-everywhere'
   | 'ui:pause-site'
-  | 'ui:offer-answer';
+  | 'ui:offer-answer'
+  | 'ui:fit-view'
+  | 'ui:fit-view-switch';
 
 export type ReplyOf<T extends UiMessage['type']> = T extends ViewReplying
   ? TabDetail

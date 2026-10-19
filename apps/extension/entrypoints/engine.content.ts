@@ -3,6 +3,7 @@ import { defineContentScript } from 'wxt/utils/define-content-script';
 
 import { ContentAdapter, startOnce } from '@/lib/engine/adapter';
 import { chromeTransport, closedShadowRootOpener } from '@/lib/engine/chrome';
+import { installFirewall } from '@/lib/engine/fitview/firewall';
 
 /**
  * The in-page engine content script. Registered at runtime by the service
@@ -15,6 +16,10 @@ import { chromeTransport, closedShadowRootOpener } from '@/lib/engine/chrome';
  * keep changes applied as the page changes. Pausing or invalidation
  * (extension reload) restores the page exactly. One engine per document: a
  * second injection reports the running one (cs:hello {restored}) instead.
+ *
+ * Fit view's input firewall is installed first, before any page script can
+ * register a listener (docs/10 §4.5). It stays for the document's lifetime
+ * and does nothing until Fit view opens.
  */
 export default defineContentScript({
   registration: 'runtime',
@@ -22,6 +27,7 @@ export default defineContentScript({
   noScriptStartedPostMessage: true,
   main(ctx) {
     if (!(document instanceof HTMLDocument)) return;
+    installFirewall(window);
     const { adapter, created } = startOnce(
       window,
       () =>

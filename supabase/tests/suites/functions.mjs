@@ -1,5 +1,6 @@
 // SQL functions: versioned fit saves, optimistic learning-state writes, weekly
-// activity, export, account deletion, and the service-only page-analysis quota.
+// activity, export, account deletion, and the service-only page-analysis and
+// layout-planning quotas.
 
 import assert from 'node:assert/strict';
 
@@ -576,6 +577,171 @@ export const tests = [
         'over the 1000 per minute product-wide cap',
       );
       assert.equal(global.user_ok, true);
+    },
+  },
+  // ------------------------------------------------------------------ consume_compose_quota
+  {
+    name: 'consume_compose_quota: not executable by authenticated or anon',
+    async fn(tx) {
+      const a = await tx.createUser('a');
+      await tx.asUser(a.id);
+      await tx.expectError(
+        `select public.consume_compose_quota($1)`,
+        [a.id],
+        '42501',
+        /permission denied/,
+      );
+      await tx.asAnon();
+      await tx.expectError(
+        `select public.consume_compose_quota($1)`,
+        [a.id],
+        '42501',
+        /permission denied/,
+      );
+    },
+  },
+  {
+    name: 'consume_compose_quota: service_role gets 10 per hour per person',
+    async fn(tx) {
+      const a = await tx.createUser('a');
+      const b = await tx.createUser('b');
+      await tx.asService();
+      // now() is fixed for the transaction, so every call lands in the same hour window.
+      const results = await tx.rows(
+        `select public.consume_compose_quota($1) as r from generate_series(1, 11)`,
+        [a.id],
+      );
+      assert.equal(results.length, 11);
+      const okCount = results.filter((row) => row.r.user_ok).length;
+      assert.equal(okCount, 10, '10 allowed, the 11th refused');
+      assert.ok(
+        results.every((row) => typeof row.r.global_ok === 'boolean'),
+        'every answer carries both decisions',
+      );
+      const other = await tx.value(`select public.consume_compose_quota($1)`, [
+        b.id,
+      ]);
+      assert.equal(
+        other.user_ok,
+        true,
+        "one person's limit does not affect another",
+      );
+    },
+  },
+  {
+    name: 'consume_compose_quota: enforces 60 per day across hours',
+    async fn(tx) {
+      const a = await tx.createUser('a');
+      await tx.asOwner();
+      // Earlier today, in a window that is never the current hour's.
+      await tx.query(
+        `insert into private.compose_quota (user_id, window_start, used)
+         values ($1, date_trunc('day', now()) + interval '1 second', 58)`,
+        [a.id],
+      );
+      await tx.asService();
+      const fiftyNinth = await tx.value(
+        `select public.consume_compose_quota($1)`,
+        [a.id],
+      );
+      assert.equal(fiftyNinth.user_ok, true, '59 today');
+      const sixtieth = await tx.value(
+        `select public.consume_compose_quota($1)`,
+        [a.id],
+      );
+      assert.equal(sixtieth.user_ok, true, '60 today');
+      const sixtyFirst = await tx.value(
+        `select public.consume_compose_quota($1)`,
+        [a.id],
+      );
+      assert.equal(
+        sixtyFirst.user_ok,
+        false,
+        'the 61st today is refused within the hourly limit',
+      );
+
+      // Yesterday's use does not count toward today.
+      const b = await tx.createUser('b');
+      await tx.asOwner();
+      await tx.query(
+        `insert into private.compose_quota (user_id, window_start, used)
+         values ($1, date_trunc('day', now()) - interval '1 hour', 500)`,
+        [b.id],
+      );
+      await tx.asService();
+      const fresh = await tx.value(`select public.consume_compose_quota($1)`, [
+        b.id,
+      ]);
+      assert.equal(fresh.user_ok, true, "yesterday's windows do not count");
+    },
+  },
+  {
+    name: 'consume_compose_quota: enforces the product-wide caps and prunes old windows',
+    async fn(tx) {
+      const a = await tx.createUser('a');
+      const b = await tx.createUser('b');
+      await tx.asOwner();
+      await tx.query(
+        `insert into private.compose_quota (user_id, window_start, used)
+         values ($1, now() - interval '3 days', 4)`,
+        [a.id],
+      );
+      await tx.query(
+        `insert into private.compose_quota_global (window_start, used)
+         values (now() - interval '3 days', 7)`,
+      );
+      await tx.asService();
+      const first = await tx.value(`select public.consume_compose_quota($1)`, [
+        a.id,
+      ]);
+      assert.equal(first.user_ok, true);
+      await tx.asOwner();
+      assert.equal(
+        Number(
+          await tx.value(
+            `select count(*) from private.compose_quota where window_start < now() - interval '2 days'`,
+          ),
+        ),
+        0,
+        'personal windows older than 2 days are pruned',
+      );
+      assert.equal(
+        Number(
+          await tx.value(
+            `select count(*) from private.compose_quota_global where window_start < now() - interval '2 days'`,
+          ),
+        ),
+        0,
+        'product-wide windows older than 2 days are pruned',
+      );
+
+      // 30 per minute product-wide.
+      await tx.query(
+        `insert into private.compose_quota_global (window_start, used) values (date_trunc('minute', now()), 30)
+         on conflict (window_start) do update set used = 30`,
+      );
+      await tx.asService();
+      const minute = await tx.value(`select public.consume_compose_quota($1)`, [
+        b.id,
+      ]);
+      assert.equal(minute.global_ok, false, 'over 30 per minute product-wide');
+      assert.equal(minute.user_ok, true);
+
+      // 2000 per day product-wide, with a quiet current minute.
+      await tx.asOwner();
+      await tx.query(
+        `update private.compose_quota_global set used = 0 where window_start = date_trunc('minute', now())`,
+      );
+      await tx.query(
+        `insert into private.compose_quota_global (window_start, used)
+         values (date_trunc('day', now()) + interval '1 second', 2000)
+         on conflict (window_start) do update set used = 2000`,
+      );
+      await tx.asService();
+      const day = await tx.value(`select public.consume_compose_quota($1)`, [
+        b.id,
+      ]);
+      assert.equal(day.global_ok, false, 'over 2000 per day product-wide');
     },
   },
 ];

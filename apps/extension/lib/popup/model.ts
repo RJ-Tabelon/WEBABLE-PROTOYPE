@@ -3,17 +3,24 @@ import { OP_CATALOG, type OpId } from '@webable/core/ops/catalog';
 import type { AppliedChange, PlannedOp } from '@webable/core/policy/types';
 
 import type { PopupStatus, QuickKey } from '../protocol';
-import type { TabDetail } from '../sw/ui';
+import type { Prefs, TabDetail, UiMessage } from '../sw/ui';
 import type { UndoReason } from '../sw/undo';
-import { COPY, stateCopy, undoneHere, type StateCopy } from './copy';
+import {
+  COPY,
+  FIT_VIEW_WHY,
+  stateCopy,
+  undoneHere,
+  type StateCopy,
+} from './copy';
 import { displayDomain } from '../sw/domain';
+import { plural } from './format';
 
 /**
  * What the popup shows for a tab (design-final 10.2), as data. The React
  * view renders this and nothing else decides layout, so every state is
  * covered by unit tests. Block order is always: domain, state line,
- * sentence, state body, What changed, (offer), Adjust or the quick
- * switches, footer. What changed never folds away.
+ * sentence, state body, (notice), Fit view, What changed, (offer), Adjust
+ * or the quick switches, footer. What changed never folds away.
  */
 
 export type PrimaryAction =
@@ -75,6 +82,25 @@ export interface ReasonChip {
   label: string;
 }
 
+/**
+ * The Fit view block (docs/10 §4.5, §6, docs/11 §2). One switch, "Simplify
+ * this page", opens or closes Fit view in this tab on every page it can show,
+ * whatever triage says; "Always here" opens it on this site by itself. When
+ * the page can't be shown, one plain line says why instead.
+ */
+export interface FitViewModel {
+  /** The Fit view switch: on while open, or while Fit view follows this tab. */
+  toggle: { on: boolean; description: string | null } | null;
+  /** "Always here" for this site (shown once Fit view is on, or the site has it). */
+  always: { on: boolean } | null;
+  /** Why the page can't be shown (no switch), or "Planning a better layout…". */
+  line: string | null;
+  /** "A better layout is ready · Switch": the planner's layout, while the quick one shows. */
+  better: boolean;
+  /** "Better layouts": the consent on the web Privacy page (signed in, not allowed yet). */
+  consent: boolean;
+}
+
 export interface PopupModel {
   domainLine: string | null;
   copy: StateCopy;
@@ -87,6 +113,7 @@ export interface PopupModel {
   quick: boolean;
   quickRows: QuickRow[];
   offer: OfferModel | null;
+  fitView: FitViewModel | null;
   changes: ChangeRow[];
   undone: UndoneRow[];
   /** Always false: What changed stays open in every offer state. */
@@ -167,6 +194,94 @@ export function quickRows(
   });
 }
 
+/** States with no Fit view block: WebAble can't run, read or reach the page, or is paused or off here. */
+const FIT_VIEW_HIDDEN: ReadonlySet<PopupStatus> = new Set([
+  'cant_run',
+  'unreadable',
+  'needs_site_access',
+  'paused',
+  'off',
+]);
+
+/**
+ * The Fit view block for this tab, or null when there is nothing worth
+ * saying: the page can't be shown and the person hasn't asked for Fit view
+ * here and triage doesn't suggest it.
+ */
+export function fitViewModel(
+  view: Pick<TabDetail, 'status' | 'fitView' | 'account'>,
+): FitViewModel | null {
+  const fv = view.fitView;
+  if (!fv || FIT_VIEW_HIDDEN.has(view.status)) return null;
+  const on = fv.open || fv.tabMode;
+  const shown = fv.available || fv.open;
+  const why = fv.why ? FIT_VIEW_WHY[fv.why] : null;
+  const engaged = on || fv.mode === 'auto' || fv.verdict === 'compose';
+  if (!shown && !(engaged && why)) return null;
+
+  const toggle: FitViewModel['toggle'] =
+    shown || on
+      ? {
+          on,
+          description: why ?? (on ? COPY.fitViewOn : COPY.fitViewDesc),
+        }
+      : null;
+  const pending = fv.open && fv.planner === 'pending';
+  return {
+    toggle,
+    always:
+      fv.mode !== 'off' && (on || fv.mode === 'auto')
+        ? { on: fv.mode === 'auto' }
+        : null,
+    line: toggle ? (pending ? COPY.planning : null) : why,
+    better: fv.open && fv.planner === 'ready' && fv.source === 'heuristic',
+    consent:
+      fv.open &&
+      fv.planner === 'unavailable' &&
+      view.account.signedIn &&
+      view.account.aiLayout !== true &&
+      fv.needsConsent === true,
+  };
+}
+
+/**
+ * The local dev planner switch (Settings): its value in a development build
+ * with a loopback planner, null (no switch) in every other build.
+ */
+export const devPlannerSwitch = (prefs: Prefs): boolean | null =>
+  typeof prefs.devPlanner === 'boolean' ? prefs.devPlanner : null;
+
+/**
+ * "Simplify busy pages automatically" (settings.autoSimplify, docs/11 §2):
+ * on unless the person turned it off (older workers do not say: on).
+ */
+export const autoSimplifySwitch = (prefs: Prefs): boolean =>
+  prefs.autoSimplify !== false;
+
+/**
+ * Fit view's Text − / + override (settings.fitTextStep); 0 means Fit view
+ * uses the fit's own size.
+ */
+export function fitTextStep(prefs: Prefs): number {
+  const step: unknown = prefs.fitTextStep;
+  return typeof step === 'number' && Number.isFinite(step)
+    ? Math.round(step)
+    : 0;
+}
+
+/** "In Fit view, text is 2 steps larger than your fit." (null at 0). */
+export function fitTextLine(step: number): string | null {
+  if (step === 0) return null;
+  const steps = plural(Math.abs(step), 'step', 'steps');
+  return `In Fit view, text is ${steps} ${step > 0 ? 'larger' : 'smaller'} than your fit.`;
+}
+
+/** Resets Fit view's text override. */
+export const RESET_FIT_TEXT: Extract<UiMessage, { type: 'ui:set-prefs' }> = {
+  type: 'ui:set-prefs',
+  fitTextStep: 0,
+};
+
 /** The page's origin for a one-site permission request, or null (not http). */
 export function originOf(url: string | undefined): string | null {
   if (!url) return null;
@@ -244,8 +359,12 @@ export function popupModel(view: TabDetail): PopupModel {
     primary = { kind: 'allow', label: COPY.allowSite };
   else if (status === 'cant_run') primary = cantRunAction(view);
 
+  // Tailor's offers are about the original page, out of sight while simplified.
   const offer =
-    pageRuns && status !== 'paused' && status !== 'needs_site_access'
+    pageRuns &&
+    status !== 'paused' &&
+    status !== 'needs_site_access' &&
+    view.fitView?.open !== true
       ? offerModel(view.offer)
       : null;
 
@@ -284,6 +403,7 @@ export function popupModel(view: TabDetail): PopupModel {
     quick: status === 'first_run',
     quickRows: status === 'first_run' ? quickRows(view) : [],
     offer,
+    fitView: fitViewModel(view),
     changes,
     undone,
     collapseChanges: false,

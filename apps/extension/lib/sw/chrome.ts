@@ -22,6 +22,15 @@ export interface ChromePort {
   getZoom(tabId: number): Promise<number>;
   /** Per-tab zoom (reset by navigation), then the factor. */
   setZoom(tabId: number, factor: number): Promise<void>;
+  /**
+   * Back to Chrome's per-origin zoom: the tab takes the site's own zoom again
+   * and the site's zoom is left as it was, or `factor` when given (written for
+   * the site, as the person's own Ctrl+/- would be). `own` is the factor the
+   * tab showed before WebAble's page scale (Chrome's default when unknown).
+   */
+  releaseZoom(tabId: number, factor?: number, own?: number): Promise<void>;
+  /** The tab's content width in DIP (CSS px at 100%), null when unknown. */
+  tabWidth(tabId: number): Promise<number | null>;
   tabUrl(tabId: number): Promise<string | undefined>;
   activeTabId(): Promise<number | null>;
   openTab(url: string): Promise<void>;
@@ -91,6 +100,33 @@ export function chromePort(): ChromePort {
         scope: 'per-tab',
       });
       await browser.tabs.setZoom(tabId, factor);
+    },
+    async releaseZoom(tabId, factor, own) {
+      // Leaving per-tab scope, Chrome keeps the tab's current zoom by writing
+      // it for a site that has no zoom of its own (ZoomController::
+      // SetZoomMode), so WebAble's page scale would become the site's zoom in
+      // every tab, paused or not. The person's own factor goes back on the
+      // tab first: a site with a zoom of its own then shows that, and one
+      // without keeps none.
+      if (factor === undefined) {
+        const { scope } = await browser.tabs.getZoomSettings(tabId);
+        if (scope === 'per-tab') await browser.tabs.setZoom(tabId, own ?? 0);
+      }
+      await browser.tabs.setZoomSettings(tabId, {
+        mode: 'automatic',
+        scope: 'per-origin',
+      });
+      if (factor !== undefined) await browser.tabs.setZoom(tabId, factor);
+    },
+    async tabWidth(tabId) {
+      try {
+        const tab = await browser.tabs.get(tabId);
+        return typeof tab.width === 'number' && tab.width > 0
+          ? tab.width
+          : null;
+      } catch {
+        return null;
+      }
     },
     async tabUrl(tabId) {
       try {

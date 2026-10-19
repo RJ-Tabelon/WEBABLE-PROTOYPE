@@ -16,7 +16,11 @@ export type Fixture =
   | 'spa'
   | 'large'
   | 'csp'
-  | 'dynamic';
+  | 'dynamic'
+  | 'cards'
+  | 'ranks'
+  | 'hydration'
+  | 'shell';
 export const FIXTURES: readonly Fixture[] = [
   'article',
   'store',
@@ -242,4 +246,143 @@ export async function regionKeys(
     ruleRole: r.ruleRole,
     zone: r.zone,
   }));
+}
+
+/** What a reader sees of one text element: its size, field, and how much of it shows. */
+export interface TextState {
+  /** Index in document order among the page's text elements. */
+  i: number;
+  /** tag.classes<parentTag.parentClasses (state classes kept: exact template). */
+  field: string;
+  px: number;
+  /** Share of the box its three nearest clipping ancestors leave visible. */
+  shown: number;
+  box: { left: number; top: number; right: number; bottom: number };
+  /** Ids of the regions (by selector) that contain it. */
+  regions: number[];
+}
+
+/**
+ * Every rendered element with its own text under `scope`, read in page:
+ * size, template field, visible share and box, plus which of `regions`
+ * (selectors, each matching any number of containers) holds it.
+ */
+export function textStates(
+  page: Page,
+  scope: string,
+  regions: string[],
+): Promise<TextState[]> {
+  return page.evaluate(
+    ([scopeSel, regionSels]) => {
+      const sig = (el: Element | null): string =>
+        el ? `${el.localName}.${[...el.classList].sort().join('.')}` : '';
+      const containers = (regionSels as string[]).flatMap((q) => [
+        ...document.querySelectorAll(q),
+      ]);
+      const out: TextState[] = [];
+      let i = 0;
+      for (const root of document.querySelectorAll(scopeSel as string))
+        for (const el of [root, ...root.querySelectorAll('*')]) {
+          const own = [...el.childNodes].some(
+            (n) => n.nodeType === 3 && (n.textContent ?? '').trim(),
+          );
+          if (!own || /^(script|style)$/.test(el.localName)) continue;
+          const r = el.getBoundingClientRect();
+          if (r.width < 1 || r.height < 1) continue;
+          let shown = 1;
+          for (
+            let n = el.parentElement, k = 0;
+            n && k < 3;
+            n = n.parentElement, k++
+          ) {
+            const cs = getComputedStyle(n);
+            if (cs.overflowX === 'visible' && cs.overflowY === 'visible')
+              continue;
+            const nr = n.getBoundingClientRect();
+            const left = Math.max(r.left, nr.left + n.clientLeft);
+            const right = Math.min(
+              r.right,
+              nr.left + n.clientLeft + n.clientWidth,
+            );
+            const top = Math.max(r.top, nr.top + n.clientTop);
+            const bottom = Math.min(
+              r.bottom,
+              nr.top + n.clientTop + n.clientHeight,
+            );
+            const a = Math.max(0, right - left) * Math.max(0, bottom - top);
+            shown = Math.min(shown, a / (r.width * r.height));
+          }
+          const h = el as HTMLElement;
+          if (h.scrollWidth > h.clientWidth + 1 && h.clientWidth > 0)
+            shown = Math.min(shown, h.clientWidth / h.scrollWidth);
+          if (h.scrollHeight > h.clientHeight + 1 && h.clientHeight > 0)
+            shown = Math.min(shown, h.clientHeight / h.scrollHeight);
+          out.push({
+            i: i++,
+            field: `${sig(el)}<${sig(el.parentElement)}`,
+            px: parseFloat(getComputedStyle(el).fontSize),
+            shown,
+            box: {
+              left: r.left,
+              top: r.top + scrollY,
+              right: r.right,
+              bottom: r.bottom + scrollY,
+            },
+            regions: containers
+              .map((c, k) => (c.contains(el) ? k : -1))
+              .filter((k) => k >= 0),
+          });
+        }
+      return out;
+    },
+    [scope, regions] as const,
+  );
+}
+
+/**
+ * Size-order inversions between two readings of the same elements, per
+ * region: pairs natively smaller by more than half a pixel that end larger
+ * by more than half a pixel. Zero inversions is Kendall tau = 1 with ties
+ * allowed (docs/10 §10).
+ */
+export function inversions(
+  before: readonly TextState[],
+  after: readonly TextState[],
+): string[] {
+  const out: string[] = [];
+  const regions = new Set(before.flatMap((t) => t.regions));
+  for (const r of regions) {
+    const ids = before.filter((t) => t.regions.includes(r)).map((t) => t.i);
+    for (const a of ids)
+      for (const b of ids) {
+        const ba = before[a] as TextState;
+        const bb = before[b] as TextState;
+        const aa = after[a] as TextState;
+        const ab = after[b] as TextState;
+        if (ba.px + 0.5 < bb.px && aa.px > ab.px + 0.5)
+          out.push(
+            `region ${r}: ${ba.field} ${ba.px}->${aa.px} above ${bb.field} ${bb.px}->${ab.px}`,
+          );
+      }
+  }
+  return out;
+}
+
+/** Instances of one template field, at one native size, that end at different sizes. */
+export function inconsistencies(
+  before: readonly TextState[],
+  after: readonly TextState[],
+): string[] {
+  const byField = new Map<string, number[]>();
+  for (const t of before) {
+    const key = `${t.field}@${t.px}`;
+    const list = byField.get(key) ?? [];
+    list.push((after[t.i] as TextState).px);
+    byField.set(key, list);
+  }
+  const out: string[] = [];
+  for (const [key, sizes] of byField)
+    if (Math.max(...sizes) - Math.min(...sizes) > 0.25)
+      out.push(`${key}: ${[...new Set(sizes)].join(', ')}`);
+  return out;
 }

@@ -42,6 +42,7 @@ beforeEach(() => {
 const accountRow = {
   onboarding_step: 'new',
   cloud_analysis: false,
+  ai_layout: false,
   product_learning: false,
   theme: 'system',
   created_at: '2026-09-29T10:00:00Z',
@@ -126,6 +127,7 @@ describe('account', () => {
       data: {
         onboardingStep: 'new',
         cloudAnalysis: false,
+        aiLayout: false,
         productLearning: false,
         theme: 'system',
         createdAt: accountRow.created_at,
@@ -145,9 +147,24 @@ describe('account', () => {
     ]);
   });
 
+  it('reads and saves the layout planning consent on its own (accounts.ai_layout)', async () => {
+    fake.queue('accounts', { data: { ...accountRow, ai_layout: true } });
+    const result = await updateAccount({ aiLayout: true });
+    expect(result.ok && result.data.aiLayout).toBe(true);
+    expect(result.ok && result.data.cloudAnalysis).toBe(false);
+    expect(fake.queries[0]?.ops[0]).toEqual(['update', { ai_layout: true }]);
+    expect(fake.queries[0]?.ops).toContainEqual([
+      'select',
+      expect.stringContaining('ai_layout'),
+    ]);
+  });
+
   it('rejects empty, unknown or malformed patches before any query', async () => {
     expect((await updateAccount({})).ok).toBe(false);
     expect((await updateAccount({ theme: 'blue' as 'dark' })).ok).toBe(false);
+    expect(
+      (await updateAccount({ aiLayout: 'yes' as unknown as boolean })).ok,
+    ).toBe(false);
     expect(
       (await updateAccount({ onboardingStep: 'connected' } as never)).ok,
     ).toBe(false);

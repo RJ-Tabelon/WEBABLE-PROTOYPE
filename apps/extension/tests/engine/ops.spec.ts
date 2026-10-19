@@ -81,7 +81,7 @@ test.describe('ops apply, verify and remove cleanly', () => {
     ).toBe('16px');
   });
 
-  test('text_floor raises only small text, with a real fit mark', async ({
+  test('text_floor maps main content through one order-preserving curve, with a real fit mark', async ({
     page,
   }) => {
     await roundTrip(
@@ -89,10 +89,24 @@ test.describe('ops apply, verify and remove cleanly', () => {
       'article',
       { op: 'text_floor', level: 2 },
       async (p) => {
+        // Running text reaches the person's size; the byline (11 px) too.
         expect(
           await computed(p, 'main.story p:not(.byline)', 'font-size'),
         ).toBe('18px');
-        expect(await computed(p, 'main.story h1', 'font-size')).toBe('32px');
+        expect(await computed(p, 'main.story .byline', 'font-size')).toBe(
+          '18px',
+        );
+        // The heading grows less than body text, and stays the largest.
+        const h1 = parseFloat(await computed(p, 'main.story h1', 'font-size'));
+        expect(h1).toBeGreaterThan(32);
+        expect(h1 / 32).toBeLessThan(18 / 13);
+        // Main content only: the header and the related rail keep their sizes.
+        expect(await computed(p, '.site-header nav a', 'font-size')).toBe(
+          '14px',
+        );
+        expect(await computed(p, 'aside.related .card', 'font-size')).toBe(
+          '13px',
+        );
         const c = (await p.evaluate(() => window.__webableEngine.changes()))[0];
         expect(c?.fit).toEqual({ before: '13 px', after: '18 px' });
       },
@@ -290,6 +304,55 @@ test.describe('ops apply, verify and remove cleanly', () => {
     expect(await slipClick()).toBe(false);
   });
 
+  test('steady_clicks: a synthetic press (a page script, a Fit view proxy) never captures the pointer', async ({
+    page,
+  }) => {
+    await open(page, 'store');
+    await page.evaluate(() => window.__webableEngine.extract());
+    await page.evaluate(
+      (p) => window.__webableEngine.apply(p),
+      plan([{ op: 'steady_clicks', level: 1 }]),
+    );
+    await page.evaluate(() => {
+      addEventListener(
+        'pointerdown',
+        (e) => {
+          (window as unknown as { __pid: number }).__pid = e.pointerId;
+        },
+        { capture: true, once: true },
+      );
+    });
+    // The person holds the real pointer down on the heading, not a control.
+    const box = await page.locator('h1').boundingBox();
+    if (!box) throw new Error('no heading');
+    await page.mouse.move(box.x + 4, box.y + box.height / 2);
+    await page.mouse.down();
+    const captured = await page.evaluate(() => {
+      const pid = (window as unknown as { __pid: number }).__pid;
+      const buy = document.getElementById('buy') as HTMLElement;
+      // A proxied click sends this press to the original button.
+      buy.dispatchEvent(
+        new PointerEvent('pointerdown', {
+          pointerId: pid,
+          pointerType: 'mouse',
+          isPrimary: true,
+          button: 0,
+          buttons: 1,
+          bubbles: true,
+          composed: true,
+        }),
+      );
+      const bySynthetic = buy.hasPointerCapture(pid);
+      // While the real button is held, capture is observable at all.
+      buy.setPointerCapture(pid);
+      const possible = buy.hasPointerCapture(pid);
+      buy.releasePointerCapture(pid);
+      return { bySynthetic, possible };
+    });
+    await page.mouse.up();
+    expect(captured).toEqual({ bySynthetic: false, possible: true });
+  });
+
   test('calm_motion stops animation and restores it on undo', async ({
     page,
   }) => {
@@ -446,13 +509,211 @@ test.describe('ops apply, verify and remove cleanly', () => {
     ).toBe(false);
   });
 
-  test('page_zoom belongs to the service worker', async ({ page }) => {
+  test('page_zoom: the service worker zooms; the engine reports the scale and writes nothing', async ({
+    page,
+  }) => {
     await open(page, 'article');
+    const dom0 = await domState(page);
+    const css0 = await styleState(page);
     const changes = await page.evaluate(
       (p) => window.__webableEngine.apply(p),
+      { ...plan([{ op: 'page_zoom', level: 2 }]), zoom: 1.5 },
+    );
+    expect(changes[0]).toMatchObject({
+      op: 'page_zoom',
+      status: 'applied',
+      fit: { before: '100%', after: '150%' },
+    });
+    expect(await domState(page)).toEqual(dom0);
+    expect(await styleState(page)).toEqual(css0);
+    // Without a plan zoom the level names the scale.
+    const byLevel = await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { replace: true }),
       plan([{ op: 'page_zoom', level: 1 }]),
     );
-    expect(changes[0]?.status).toBe('not_needed');
+    expect(byLevel[0]?.fit).toEqual({ before: '100%', after: '125%' });
+  });
+
+  test('text_floor carries only the residual under page scale', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.evaluate(() => window.__webableEngine.extract());
+    // 21 px effective at 150% is 14 CSS px: body text (13 px) grows a little.
+    const small = await page.evaluate((p) => window.__webableEngine.apply(p), {
+      ...plan([
+        { op: 'page_zoom', level: 2 },
+        { op: 'text_floor', level: 3 },
+      ]),
+      zoom: 1.5,
+    });
+    expect(small.find((c) => c.op === 'text_floor')).toMatchObject({
+      status: 'applied',
+      fit: { before: '20\u00a0px', after: '21\u00a0px' },
+    });
+    expect(await computed(page, 'main.story p:not(.byline)', 'font-size')).toBe(
+      '14px',
+    );
+    // 18 px effective at 150% is 12 CSS px: the page already fits.
+    const none = await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { replace: true }),
+      {
+        ...plan([
+          { op: 'page_zoom', level: 2 },
+          { op: 'text_floor', level: 2 },
+        ]),
+        zoom: 1.5,
+      },
+    );
+    expect(none.find((c) => c.op === 'text_floor')?.status).toBe('not_needed');
+    expect(await computed(page, 'main.story p:not(.byline)', 'font-size')).toBe(
+      '13px',
+    );
+  });
+
+  test('text_floor sizes for the tab’s whole zoom: the person’s own zoom times the page scale', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.evaluate(() => window.__webableEngine.extract());
+    const story = 'main.story p:not(.byline)';
+    // The person reads at 150% of their own and WebAble adds no scale: 21 px
+    // effective is 14 CSS px (21 CSS px would be seen at 31.5 px).
+    const own = await page.evaluate((p) => window.__webableEngine.apply(p), {
+      ...plan([{ op: 'text_floor', level: 3 }]),
+      zoom: 1,
+      ownZoom: 1.5,
+    });
+    expect(own.find((c) => c.op === 'text_floor')).toMatchObject({
+      status: 'applied',
+      fit: { before: '20\u00a0px', after: '21\u00a0px' },
+    });
+    expect(await computed(page, story, 'font-size')).toBe('14px');
+    // 120% of their own under WebAble's 125% is the same 150%: nothing is
+    // sized again, and page_zoom reports WebAble's scale alone.
+    const both = await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { replace: true }),
+      {
+        ...plan([
+          { op: 'page_zoom', level: 1 },
+          { op: 'text_floor', level: 3 },
+        ]),
+        zoom: 1.25,
+        ownZoom: 1.2,
+      },
+    );
+    expect(both.find((c) => c.op === 'page_zoom')?.fit).toEqual({
+      before: '100%',
+      after: '125%',
+    });
+    expect(await computed(page, story, 'font-size')).toBe('14px');
+    // The person zooms out to 110% of their own: the next plan says so, and
+    // the text is sized again for 137.5%, same level (15.27 CSS px).
+    await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { sticky: true }),
+      {
+        ...plan([
+          { op: 'page_zoom', level: 1 },
+          { op: 'text_floor', level: 3 },
+        ]),
+        zoom: 1.25,
+        ownZoom: 1.1,
+      },
+    );
+    expect(await computed(page, story, 'font-size')).toBe('15.25px');
+  });
+
+  test('a page-scale step-down measures scaled ops again at the same level', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.evaluate(() => window.__webableEngine.extract());
+    const ops = [
+      { op: 'page_zoom', level: 2 },
+      { op: 'text_floor', level: 3 },
+      { op: 'line_spacing', level: 1 },
+    ] as const;
+    await page.evaluate((p) => window.__webableEngine.apply(p), {
+      ...plan([...ops]),
+      zoom: 1.5,
+    });
+    expect(await computed(page, 'main.story p:not(.byline)', 'font-size')).toBe(
+      '14px',
+    );
+    // The zoom guard stepped down to 125%: the page changed, not the fit.
+    // 21 px effective at 125% is 16.8 CSS px (16.75 in quarter pixels). The
+    // newsletter's 16 px "Email" label shares main's region and keeps its
+    // size, but a control's label is no ceiling for running text (size
+    // order per region, verify/checks.ts controlCeiling).
+    const stepped = await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { sticky: true }),
+      { ...plan([...ops]), zoom: 1.25 },
+    );
+    expect(await computed(page, 'main.story p:not(.byline)', 'font-size')).toBe(
+      '16.75px',
+    );
+    expect(await computed(page, 'label[for="email"]', 'font-size')).toBe(
+      '16px',
+    );
+    expect(stepped.find((c) => c.op === 'page_zoom')?.fit).toEqual({
+      before: '100%',
+      after: '125%',
+    });
+    expect(stepped.find((c) => c.op === 'text_floor')).toMatchObject({
+      status: 'applied',
+      fit: { after: '21\u00a0px' },
+    });
+    // A later sticky plan that does not name a scale keeps 125%.
+    await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { sticky: true }),
+      plan([...ops]),
+    );
+    expect(await computed(page, 'main.story p:not(.byline)', 'font-size')).toBe(
+      '16.75px',
+    );
+  });
+
+  test('target_size reaches the level in effective px under page scale', async ({
+    page,
+  }) => {
+    await open(page, 'article');
+    await page.evaluate(() => {
+      document.body.innerHTML =
+        '<main><p>A toolbar with room around it.</p><div class="bar"><button class="ico" type="button">+</button><button class="ico" type="button">-</button></div></main>';
+      const style = document.createElement('style');
+      style.textContent =
+        'body { margin: 40px; } .bar { display: flex; gap: 80px; margin-top: 60px; } .ico { width: 20px; height: 20px; padding: 0; border: 0; }';
+      document.head.append(style);
+    });
+    await page.evaluate(() => window.__webableEngine.extract());
+    const inset = () =>
+      page
+        .locator('.ico')
+        .evaluateAll((els) =>
+          els.map((el) => getComputedStyle(el, '::after').left),
+        );
+    // 44 px at 100%: 12 px on each side of a 20 px button.
+    const plain = await page.evaluate(
+      (p) => window.__webableEngine.apply(p),
+      plan([{ op: 'target_size', level: 2 }]),
+    );
+    expect(plain[0]?.fit).toEqual({
+      before: '20\u00a0px',
+      after: '44\u00a0px',
+    });
+    expect(new Set(await inset())).toEqual(new Set(['-12px']));
+    // 44 px effective at 150% is 29.3 CSS px: 5 px a side, rounded up to
+    // the 6 px bucket so the target is never short; reported as the person
+    // sees it.
+    const scaled = await page.evaluate(
+      (p) => window.__webableEngine.apply(p, { replace: true }),
+      { ...plan([{ op: 'target_size', level: 2 }]), zoom: 1.5 },
+    );
+    expect(scaled[0]?.fit).toEqual({
+      before: '30\u00a0px',
+      after: '48\u00a0px',
+    });
+    expect(new Set(await inset())).toEqual(new Set(['-6px']));
   });
 
   test('shadow DOM: text floor and focus outline reach open shadow roots', async ({

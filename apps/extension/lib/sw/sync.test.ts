@@ -159,6 +159,7 @@ describe('account sync', () => {
     const { stores, sync, db } = setup({
       account: {
         cloud_analysis: true,
+        ai_layout: true,
         product_learning: false,
         theme: 'dark',
         onboarding_step: 'tuned',
@@ -170,6 +171,7 @@ describe('account sync', () => {
     expect(await stores.account.read()).toMatchObject({
       userId: 'u1',
       cloudAnalysis: true,
+      aiLayout: true,
       theme: 'dark',
       needsReauth: false,
     });
@@ -285,6 +287,7 @@ describe('account sync', () => {
       userId: 'someone-else',
       email: 'x@y.z',
       cloudAnalysis: true,
+      aiLayout: true,
       productLearning: false,
       theme: 'system',
       onboardingStep: 'connected',
@@ -296,6 +299,7 @@ describe('account sync', () => {
     await sync.connected('u1', 'person@example.com');
     expect((await stores.learning.read()).pending).toEqual([]);
     expect((await stores.account.read())?.cloudAnalysis).toBe(false);
+    expect((await stores.account.read())?.aiLayout).toBe(false);
   });
 
   it('nothing carries over between accounts, even after signing out', async () => {
@@ -391,6 +395,26 @@ describe('account sync', () => {
     expect(await stores.account.read()).toBeNull();
     expect(upserts()).toHaveLength(0);
     expect(db.calls.some((c) => c.kind === 'rpc')).toBe(false);
+  });
+
+  it('asks the account for the layout-planning consent', async () => {
+    const { stores, sync, db } = setup({
+      account: {
+        cloud_analysis: false,
+        ai_layout: true,
+        product_learning: false,
+        theme: 'system',
+        onboarding_step: 'tuned',
+      },
+    });
+    await sync.connected('u1', 'person@example.com');
+    expect(
+      db.calls.find((c) => c.table === 'accounts' && c.kind === 'select')?.args,
+    ).toContain('ai_layout');
+    expect(await stores.account.read()).toMatchObject({
+      cloudAnalysis: false,
+      aiLayout: true,
+    });
   });
 
   it('records when the last complete sync finished', async () => {

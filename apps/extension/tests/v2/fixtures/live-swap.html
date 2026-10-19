@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Live: a search field the site replaces</title>
+    <script src="/__v2/live.js"></script>
+    <style>
+      body {
+        font: 16px system-ui;
+      }
+    </style>
+  </head>
+  <body>
+    <script>
+      window.log = [];
+    </script>
+    <main data-scope data-id="e1">
+      <h1>Encyclopedia</h1>
+      <!-- Like Wikipedia's search: a plain field until it gets focus. -->
+      <div id="p-search" role="search">
+        <form id="searchform" action="/v2/live-swap.html">
+          <input
+            data-id="e2"
+            data-proxy="input"
+            id="searchInput"
+            type="search"
+            name="search"
+            aria-label="Search the encyclopedia"
+          />
+        </form>
+      </div>
+      <p>Articles on every subject.</p>
+    </main>
+    <script>
+      // On first focus the search app replaces the field with its own (a new
+      // element, a new form), which handles typing and Enter itself.
+      const box = document.getElementById('p-search');
+      document.getElementById('searchInput').addEventListener(
+        'focus',
+        () => {
+          const form = document.createElement('form');
+          form.className = 'cdx-search';
+          const input = document.createElement('input');
+          input.className = 'cdx-input';
+          input.type = 'search';
+          input.name = 'search';
+          input.setAttribute('aria-label', 'Search the encyclopedia');
+          input.addEventListener('focus', () => log.push('focus'));
+          input.addEventListener('input', () =>
+            log.push('input:' + input.value),
+          );
+          input.addEventListener('keydown', (e) => {
+            if (e.key !== 'Enter') return;
+            e.preventDefault();
+            log.push('search:' + input.value);
+          });
+          form.append(input);
+          // After the focus event, as a framework mounting its component.
+          setTimeout(() => {
+            box.replaceChildren(form);
+            log.push('swapped');
+          }, 0);
+        },
+        { once: true },
+      );
+    </script>
+  </body>
+</html>

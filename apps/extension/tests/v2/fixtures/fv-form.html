@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Library card</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          13px/1.4 Arial,
+          sans-serif;
+      }
+      header {
+        padding: 8px 16px;
+        background: #234;
+      }
+      header a {
+        color: #fff;
+      }
+      main {
+        padding: 16px;
+        max-width: 640px;
+      }
+      form {
+        display: grid;
+        gap: 8px;
+      }
+      label {
+        font-size: 12px;
+      }
+      input,
+      select,
+      textarea {
+        font-size: 12px;
+      }
+      .row {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+      }
+      .help {
+        font-size: 11px;
+        color: #666;
+      }
+    </style>
+  </head>
+  <body>
+    <header><a href="/v2/fv-form.html">Harbor Library</a></header>
+    <main>
+      <h1>Apply for a library card</h1>
+      <p class="help">
+        Fill in the form and we will email you when your card is ready to
+        collect at the front desk.
+      </p>
+      <form
+        id="apply"
+        aria-label="Library card application"
+        action="/v2/fv-form.html"
+      >
+        <label for="name">Full name</label>
+        <input id="name" type="text" required />
+        <label for="email">Email</label>
+        <input id="email" type="email" />
+        <label for="country">Country</label>
+        <select id="country">
+          <option>Argentina</option>
+          <option>Australia</option>
+          <option>Austria</option>
+          <option>Belgium</option>
+          <option>Brazil</option>
+          <option>Canada</option>
+          <option>Chile</option>
+          <option>Denmark</option>
+          <option>Egypt</option>
+          <option>Finland</option>
+          <option>France</option>
+          <option>Germany</option>
+          <option>Ghana</option>
+          <option>Greece</option>
+          <option>India</option>
+          <option>Ireland</option>
+          <option>Italy</option>
+          <option>Japan</option>
+          <option>Kenya</option>
+          <option>Mexico</option>
+        </select>
+        <fieldset>
+          <legend>Card type</legend>
+          <div class="row">
+            <input type="radio" id="t1" name="type" checked /><label for="t1"
+              >Adult</label
+            >
+          </div>
+          <div class="row">
+            <input type="radio" id="t2" name="type" /><label for="t2"
+              >Child</label
+            >
+          </div>
+        </fieldset>
+        <div class="row">
+          <input type="checkbox" id="news" /><label for="news"
+            >Send me the monthly newsletter</label
+          >
+        </div>
+        <label for="notes">Anything else?</label>
+        <textarea id="notes"></textarea>
+        <button type="submit">Apply</button>
+      </form>
+    </main>
+  </body>
+</html>

@@ -165,7 +165,8 @@ export function learnedSummary(state: unknown, today: number): LearnedSummary {
 
   const ops: LearnedOp[] = [];
   for (const id of OP_IDS) {
-    // Retired ops (page zoom) no longer apply, so what was learned about them doesn't matter.
+    // Retired ops no longer apply, so what was learned about them doesn't
+    // matter. None today: v2 brought page zoom back (docs/10 §5.1).
     if (RETIRED_OPS.has(id)) continue;
     const raw = parsed.data.ops?.[id];
     if (raw === undefined) continue;
@@ -183,7 +184,8 @@ export function learnedSummary(state: unknown, today: number): LearnedSummary {
 
   const dims: LearnedDim[] = [];
   for (const [id, raw] of Object.entries(parsed.data.dims ?? {})) {
-    // The zoom dimension belongs to page zoom, which WebAble no longer applies.
+    // Not a fit value: since v2, triage picks each page's zoom (docs/10 §5.1)
+    // and the learned zoom only fills in for a page without a triage.
     if (!isDimId(id) || id === 'zoom') continue;
     const dim = dimSchema.safeParse(raw);
     if (!dim.success) continue;

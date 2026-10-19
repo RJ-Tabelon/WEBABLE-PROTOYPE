@@ -31,10 +31,24 @@ export const KEYS = {
   offers: 'wa.offers',
   /** Page-analysis circuit breaker. */
   breaker: 'wa.breaker',
+  /** Layout-planner circuit breaker (an OpenAI outage never silences page analysis). */
+  composeBreaker: 'wa.breaker.compose',
+  /** Planner spec cache index: HMAC key -> last used, bytes, site (LRU, byte budget). */
+  composeIndex: 'wa.composeIndex',
+  /** Prefix for one cached planner entry (up to 3 spec variants) per HMAC key. */
+  composePrefix: 'wa.compose:',
+  /** Fit view keep/undo per page type and recent Fit view defects (local only, never synced). */
+  fitLearning: 'wa.fitLearning',
   /** Signals the browser gives before any calibration (OS settings). */
   system: 'wa.system',
   /** Per-tab state (storage.session: survives worker restarts, not browser restarts). */
   tabs: 'wa.tabs',
+  /** Prefix for one tab's Fit view state (storage.session; kept apart from the wa.tabs snapshot). */
+  fitViewPrefix: 'wa.fitview:',
+  /** Planner calls in flight, by cache key (storage.session: dedupe survives worker restarts). */
+  composeInflight: 'wa.composeInflight',
+  /** One-time popup notices the person dismissed: id -> ms since epoch. Written by the popup. */
+  notices: 'wa.notices',
 } as const;
 
 export type StorageKey = (typeof KEYS)[keyof typeof KEYS];

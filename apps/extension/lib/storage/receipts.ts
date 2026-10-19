@@ -1,4 +1,7 @@
-import type { SentReceipt } from '@webable/core/bridge/protocol';
+import {
+  RECEIPT_DESTINATIONS,
+  type SentReceipt,
+} from '@webable/core/bridge/protocol';
 
 import type { KvArea } from './area';
 import { KEYS } from './keys';
@@ -17,7 +20,7 @@ function isReceipt(v: unknown): v is SentReceipt {
     typeof v.id === 'string' &&
     typeof v.at === 'number' &&
     typeof v.domain === 'string' &&
-    v.destination === 'page_analysis' &&
+    (RECEIPT_DESTINATIONS as readonly unknown[]).includes(v.destination) &&
     typeof v.bytes === 'number' &&
     'body' in v
   );

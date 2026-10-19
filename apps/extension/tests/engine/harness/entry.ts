@@ -20,6 +20,13 @@ import {
 import { Engine, type ApplyOptions } from '../../../lib/engine/engine';
 import { extract } from '../../../lib/engine/extract';
 import { sel } from '../../../lib/engine/ops/marks';
+import {
+  buildProbes,
+  diffSnapshots,
+  takeSnapshot,
+  type ProbeSet,
+  type Snapshot,
+} from '../../../lib/engine/verify/checks';
 import type { ContentToWorker, HelloReply } from '../../../lib/protocol';
 import type { PageFacts, VocabPort } from '../../../lib/engine/types';
 import { fallbackVocab } from './vocab-fallback';
@@ -41,6 +48,13 @@ function vocab(): VocabPort & { source: 'core' | 'fallback' } {
 
 const events: HarnessEvent[] = [];
 const port = vocab();
+let scenario: { probes: ProbeSet; base: Snapshot } | null = null;
+
+/** A short, stable name for an element in test output. */
+function describe(el: Element): string {
+  const cls = el.getAttribute('class')?.split(/\s+/)[0];
+  return `${el.localName}${el.id ? `#${el.id}` : ''}${cls ? `.${cls}` : ''}`;
+}
 let engine: Engine | null = null;
 let coverage: PageFacts | undefined;
 
@@ -240,11 +254,98 @@ const api = {
   layer() {
     return ensure().layer.inspect();
   },
+  /** The first-visit toast, then (optionally) the Fit view offer on it or as a chip. */
+  fitViewOffer(toast: string | null, reason: string) {
+    const layer = ensure().layer;
+    if (toast) layer.showToast({ message: toast, undo: 'one' });
+    return layer.offerFitView({
+      reason,
+      open: () => events.push({ type: 'fitViewOpen', detail: {} }),
+    });
+  },
   press(label: string) {
     return ensure().layer.press(label);
   },
   events() {
     return events.slice();
+  },
+  /** Fit view open (true) or closed (false): Tailor freezes. */
+  freeze(on: boolean) {
+    ensure().freeze(on);
+    return ensure().isFrozen;
+  },
+  viewportGuard() {
+    return ensure().viewportGuard();
+  },
+  regionKeys() {
+    return [...ensure().regionKeys()].map(([el, key]) => ({
+      key,
+      el: describe(el),
+    }));
+  },
+  /** An element's font size with every op's CSS removed (measure mode). */
+  measuredFontSize(selector: string) {
+    return ensure().measured(
+      () =>
+        getComputedStyle(document.querySelector(selector) as Element).fontSize,
+    );
+  },
+  /**
+   * Verifier scenario: probes as a batch would build them for these marks
+   * ([selector, internal token]), a baseline now; `scenarioDiff` later.
+   */
+  scenarioStart(
+    marked: Array<[string, string]>,
+    peers: string,
+    scope?: string,
+    /** Region roots: every element a selector matches is one region. */
+    regions?: string[],
+  ) {
+    const pairs = marked.flatMap(([q, token]) =>
+      [...document.querySelectorAll(q)].map(
+        (el) => [el, token] as [Element, string],
+      ),
+    );
+    const t0 = performance.now();
+    const probes = buildProbes({
+      doc: document,
+      view: window,
+      marked: pairs,
+      existing: [],
+      targets: [],
+      contrast: [],
+      peers: [...document.querySelectorAll(peers)],
+      textScope: scope ? [...document.querySelectorAll(scope)] : undefined,
+      regions: regions
+        ? new Map(
+            regions.flatMap((q) =>
+              [...document.querySelectorAll(q)].map((el) => [el, q] as const),
+            ),
+          )
+        : undefined,
+    });
+    const t1 = performance.now();
+    scenario = { probes, base: takeSnapshot(document, probes) };
+    const t2 = performance.now();
+    return {
+      ms: { build: t1 - t0, snapshot: t2 - t1 },
+      text: probes.text.length,
+      groups: probes.groups.map((g) => g.members.length),
+      cuttable: probes.cuttable.length,
+      neighbours: Object.fromEntries(
+        [...probes.neighbours].map(([el, ns]) => [
+          describe(el),
+          ns.map(describe),
+        ]),
+      ),
+    };
+  },
+  scenarioDiff() {
+    if (!scenario) return [];
+    return diffSnapshots(document, scenario.probes, scenario.base, {
+      contrastTarget: 4.5,
+      marked: [],
+    }).map((f) => ({ code: f.code, el: describe(f.el) }));
   },
   destroy() {
     engine?.destroy();

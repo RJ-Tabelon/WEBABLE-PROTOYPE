@@ -11,12 +11,27 @@
 //   - externally_connectable lists exact https origins (no wildcard hosts, no
 //     http:// and no loopback host), and the manifest carries no dev `key`.
 //   - Every file the manifest and the service worker load is present, including
-//     the engine, the pre-paint stylesheets, the welcome page and the icons.
+//     the engine, Fit view (content-scripts/fitview.js, injected on first open),
+//     the MAIN-world key bridge (content-scripts/keybridge.js), the pre-paint
+//     stylesheets, the welcome page and the icons.
+//   - Bundle budgets (docs/10 §4.3: the engine runs on every page, so Fit view
+//     lives in its own script): engine.js <= 330 KB (v1 was 176 KB; v2 adds
+//     the skeleton reader, layout features and the rank solver; about 105 KB
+//     gzipped; moving the skeleton reader into fitview.js is the next cut),
+//     fitview.js <= 250 KB (only
+//     injected the first time Fit view opens; docs/11 adds the restructure:
+//     record templates, drawers, the outline and sentence splitting; docs/12
+//     adds the Showroom sheet, card templates and the buy box),
+//     keybridge.js <= 8 KB.
+//   - No loopback URL (localhost, 127.0.0.0/8, [::1]) in the service worker or
+//     the content scripts (docs/10 §8: production builds never reach the local
+//     dev planner, the e2e stubs or a local web app). Dev and e2e builds carry
+//     them on purpose; this check is for production builds only.
 //   - Test-only hooks from the e2e build are not reachable.
 //
 // Usage: pnpm --filter @webable/extension build && node scripts/check-extension-package.mjs
 
-import { access, readFile } from 'node:fs/promises';
+import { access, readFile, stat } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -30,6 +45,24 @@ const configPath = resolve(root, 'apps/extension/wxt.config.ts');
 /** localhost, 127.0.0.0/8, [::1] and *.localhost hosts in a match pattern. */
 const LOOPBACK =
   /^[a-z]+:\/\/(?:[^/]*\.)?(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?\//i;
+
+/** Bundle budgets in KiB (minified output). */
+const BUDGETS = {
+  'content-scripts/engine.js': 330,
+  'content-scripts/fitview.js': 250,
+  'content-scripts/keybridge.js': 8,
+};
+
+/** A loopback URL literal: http(s)/ws(s) to localhost, 127.0.0.0/8 or [::1]. */
+const LOOPBACK_URL =
+  /\b(?:https?|wss?):\/\/(?:[a-z0-9-]+\.)*(?:localhost|127(?:\.\d{1,3}){3}|\[::1\])(?::\d+)?/gi;
+
+/**
+ * Loopback literals that third-party code ships and never uses: supabase-js
+ * (gotrue) carries its local default auth URL; WebAble always constructs the
+ * client with the project URL.
+ */
+const INERT_LOOPBACK = new Set(['http://localhost:9999']);
 
 const problems = [];
 const fail = (message) => problems.push(message);
@@ -116,6 +149,8 @@ try {
     background,
     'welcome.html',
     'content-scripts/engine.js',
+    'content-scripts/fitview.js',
+    'content-scripts/keybridge.js',
     'prepaint/focus-outline.css',
     'prepaint/calm-motion.css',
     ...Object.values(manifest.icons ?? {}),
@@ -126,14 +161,32 @@ try {
   for (const file of required)
     if (!(await exists(file))) fail(`Missing file: ${file}.`);
 
-  if (background && (await exists(background))) {
-    const code = await readFile(
-      resolve(extensionDirectory, background),
-      'utf8',
+  for (const [file, kib] of Object.entries(BUDGETS)) {
+    if (!(await exists(file))) continue;
+    const size = (await stat(resolve(extensionDirectory, file))).size;
+    if (size > kib * 1024)
+      fail(
+        `${file} is ${(size / 1024).toFixed(1)} KB, over its ${kib} KB budget.`,
+      );
+  }
+
+  // Production builds never carry a loopback URL (the dev planner server,
+  // the e2e stubs and the local web app are dev and e2e builds only).
+  const scanned = [
+    background,
+    ...(manifest.content_scripts ?? []).flatMap((c) => c.js ?? []),
+    ...Object.keys(BUDGETS),
+  ].filter((f, i, a) => f && a.indexOf(f) === i);
+  for (const file of scanned) {
+    if (!(await exists(file))) continue;
+    const code = await readFile(resolve(extensionDirectory, file), 'utf8');
+    const found = new Set(
+      [...code.matchAll(LOOPBACK_URL)]
+        .map((m) => m[0].toLowerCase())
+        .filter((u) => !INERT_LOOPBACK.has(u)),
     );
-    // The e2e build's fixture origin must never ship.
-    if (code.includes('127.0.0.1:4173'))
-      fail('The service worker contains the e2e fixture origin.');
+    if (found.size > 0)
+      fail(`${file} contains loopback URLs: ${[...found].sort().join(', ')}.`);
   }
 } catch (error) {
   fail(error instanceof Error ? error.message : String(error));

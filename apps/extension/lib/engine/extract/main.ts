@@ -63,13 +63,24 @@ export function hasText(e: Element, min: number): boolean {
   return false;
 }
 
-export function linkDensity(e: Element): number {
-  const total = normText(e).length;
+/**
+ * Share of `e`'s text inside links (in-page anchors count 0.3). `total` is
+ * the text length when the caller has it; `stopAt` ends the count once the
+ * share reaches it (a bucket edge), so a region of a thousand links is not
+ * read to the end.
+ */
+export function linkDensity(
+  e: Element,
+  total: number = normText(e).length,
+  stopAt = Infinity,
+): number {
   if (!total) return 0;
   let linked = 0;
+  const limit = stopAt * total;
   for (const a of e.getElementsByTagName('a')) {
     const weight = /^#.+/.test(a.getAttribute('href') ?? '') ? 0.3 : 1;
     linked += normText(a).length * weight;
+    if (linked >= limit) break;
   }
   return Math.min(1, linked / total);
 }
@@ -172,6 +183,40 @@ export function findMainContent(
     candidates,
     ambiguous,
   };
+}
+
+/**
+ * Mozilla Readability-readerable.js isProbablyReaderable, as a score (the
+ * library answers score > 20): over visible `p`, `pre` and `article`
+ * elements and the parents of `div > br`, skipping unlikely candidates
+ * (class/id) and `li p`, add sqrt(length - 140) for every text of at least
+ * 140 characters (trimmed textContent). Stops adding at `cap`.
+ */
+export function readerableScore(
+  doc: Document,
+  visible: (el: Element) => boolean = () => true,
+  cap = 200,
+): number {
+  const nodes = new Set<Element>(doc.querySelectorAll('p, pre, article'));
+  for (const br of doc.querySelectorAll('div > br')) {
+    const p = br.parentElement;
+    if (p) nodes.add(p);
+  }
+  let score = 0;
+  let n = 0;
+  for (const node of nodes) {
+    if (++n > 3000) break;
+    if (node.getAttribute('aria-hidden') === 'true') continue;
+    if (node.hasAttribute('hidden') || !visible(node)) continue;
+    const sig = classString(node);
+    if (UNLIKELY.test(sig) && !MAYBE.test(sig)) continue;
+    if (node.matches('li p')) continue;
+    const len = (node.textContent ?? '').trim().length;
+    if (len < 140) continue;
+    score += Math.sqrt(len - 140);
+    if (score >= cap) return cap;
+  }
+  return Math.round(score * 10) / 10;
 }
 
 /**

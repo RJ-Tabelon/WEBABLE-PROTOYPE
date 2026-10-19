@@ -39,10 +39,11 @@ import {
 import { spacingFailures, type SpacingTarget } from '../util/geometry';
 import { Budget } from '../util/schedule';
 import { classifyPage } from './classify';
-import { measureContrast } from './contrast';
+import { measureContrast, type LayerCache } from './contrast';
 import { regionEvidence, repeatedCards, validatePageContext } from './evidence';
 import { detectHoverMenus } from './hover';
 import { findMainContent, isProbablyReaderable } from './main';
+import { LayoutCollector, layoutFeatures } from './layout';
 import { motionInventory } from './motion';
 import { keyFor, segmentRegions } from './regions';
 import { DECIDED_PRECISION } from './rules';
@@ -64,6 +65,19 @@ export interface ExtractOptions {
 }
 
 export const TARGET_LADDER = [24, 32, 44, 56, 72] as const;
+/** Text sampled for contrast, and those in view whose background a hit test confirms. */
+const CONTRAST_SAMPLES = 100;
+const CONTRAST_HIT_TESTS = 24;
+/** Tags that can match ACTIONABLE_SELECTOR without a role, tabindex or contenteditable. */
+const ACTIONABLE_TAGS: ReadonlySet<string> = new Set([
+  'a',
+  'button',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  'label',
+]);
 
 const LEAF_TEXT_EXCLUDE = new Set([
   'code',
@@ -115,13 +129,21 @@ export async function extract(
   const pinnedEls: Array<{ el: Element; position: 'fixed' | 'sticky' }> = [];
   const counts = { links: 0, buttons: 0, headings: 0, images: 0, videos: 0 };
   const visited = new Set<Element>();
+  const layout = new LayoutCollector();
 
   const visit = (el: Element, cs: CSSStyleDeclaration): void => {
     visited.add(el);
     const tag = el.localName;
     const pointer = cs.cursor === 'pointer';
     pointerCursor.set(el, pointer);
-    if (el.matches(ACTIONABLE_SELECTOR)) {
+    // Only these tags and attributes can match ACTIONABLE_SELECTOR: a few
+    // attribute reads spare most elements the selector match (eval M9).
+    const maybeActionable =
+      ACTIONABLE_TAGS.has(tag) ||
+      el.hasAttribute('role') ||
+      el.hasAttribute('tabindex') ||
+      el.hasAttribute('contenteditable');
+    if (maybeActionable && el.matches(ACTIONABLE_SELECTOR)) {
       if (targetEls.length < 2000) {
         targetEls.push(el);
         targetSet.add(el);
@@ -135,8 +157,10 @@ export async function extract(
       targetEls.push(el);
       targetSet.add(el);
     }
-    if (cs.position === 'fixed' || cs.position === 'sticky')
-      pinnedEls.push({ el, position: cs.position });
+    const position = cs.position;
+    if (position === 'fixed' || position === 'sticky')
+      pinnedEls.push({ el, position });
+    layout.visit(el, cs, position);
     if (tag === 'a' && el.hasAttribute('href')) counts.links++;
     else if (tag === 'button' || el.getAttribute('role') === 'button')
       counts.buttons++;
@@ -148,6 +172,8 @@ export async function extract(
     if (chars === 0) return;
     const fontPx = parseFloat(cs.fontSize);
     if (!Number.isFinite(fontPx) || fontPx <= 0) return;
+    const display = cs.display;
+    layout.noteText(el, cs, display);
     texts.push({
       el,
       chars,
@@ -157,7 +183,7 @@ export async function extract(
       family: cs.fontFamily,
       inMain: false,
       icon: isIconFont(cs.fontFamily, chars <= 4 ? directText(el, 8) : ''),
-      display: cs.display,
+      display,
     });
   };
   const stats = await walk(doc, visit, walkBudget, {
@@ -264,8 +290,18 @@ export async function extract(
     );
   const contrast = { sampled: 0, below45: 0, below7: 0, unknownBackground: 0 };
   const contrastSamples: ContrastSample[] = [];
-  for (const { t, vis } of ranked.slice(0, 150)) {
-    const m = measureContrast(t.el, view, vis);
+  const layers: LayerCache = new Map();
+  let hitTests = 0;
+  for (const { t, vis } of ranked.slice(0, CONTRAST_SAMPLES)) {
+    // Past CONTRAST_HIT_TESTS samples in view, the ancestor chain decides
+    // alone: each hit test costs about 0.15 ms on a large page (eval M9).
+    const m = measureContrast(
+      t.el,
+      view,
+      vis && hitTests < CONTRAST_HIT_TESTS,
+      layers,
+    );
+    if (vis) hitTests++;
     contrast.sampled++;
     if (m.ratio === null || !m.fg || !m.bg) {
       contrast.unknownBackground++;
@@ -424,6 +460,22 @@ export async function extract(
 
   lap('category');
 
+  // ---- 8b. Layout features for triage (docs/10 §3.1) -------------------------
+  const layoutF = layoutFeatures({
+    doc,
+    scopes,
+    collector: layout,
+    texts: body,
+    main,
+    regions: regionFacts,
+    mainFontPx: mainFontPx === null ? null : round(mainFontPx, 1),
+    jsonldProduct: signalSet.has('jsonld_product'),
+    rectOf,
+    openClosed: opts.openClosed,
+    lap,
+  });
+  lap('layout');
+
   // ---- 9. Assemble PageSignals (local) ---------------------------------------------
   const mq = (q: string): boolean => {
     try {
@@ -492,6 +544,7 @@ export async function extract(
       forcedColors: mq('(forced-colors: active)'),
       colorScheme: mq('(prefers-color-scheme: dark)') ? 'dark' : 'light',
     },
+    layout: layoutF,
   };
 
   // ---- 10. Evidence (vocabulary-filtered; the only thing that may leave) -------------

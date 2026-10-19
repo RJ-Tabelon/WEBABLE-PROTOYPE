@@ -1,5 +1,6 @@
 import type { OpId } from '../ops/catalog';
 import type { PageCategory, RegionRole } from '../page/types';
+import type { TriageVerdict } from '../triage/types';
 
 /** Calibrated confidence label for a page-analysis verdict. */
 export type AnalysisLabel = 'clear' | 'likely' | 'unsure';
@@ -40,7 +41,9 @@ export type TraceEvidence =
   | {
       kind: 'learned';
       note: 'kept_before' | 'site_pin' | 'system_setting' | 'undone_before';
-    };
+    }
+  /** Page scale chosen from the needed text scale k (docs/10 §5.1). */
+  | { kind: 'page_scale'; zoom: number; k: number };
 
 export interface DecisionTrace {
   op: OpId;
@@ -71,6 +74,21 @@ export interface AdaptationPlan {
   /** Whether page-analysis answers contributed (vs local rules only). */
   basis: 'local' | 'page_analysis';
   ops: PlannedOp[];
+  /**
+   * Page scale in effect for this page view (1 = none). Frozen at the first
+   * plan; text_floor's level is the effective px it aims for at this zoom.
+   */
+  zoom?: number;
+  /**
+   * The person's own zoom (the tab's zoom without WebAble's page scale,
+   * pinch excluded) when the worker sent the plan to the page; absent = 1.
+   * The tab shows ownZoom x zoom, and effective-px levels are sized against
+   * that product: text_floor aims for level / (ownZoom x zoom) CSS px, as
+   * triage's k reads body text at bodyPx x the tab's zoom (docs/10 §3.2).
+   */
+  ownZoom?: number;
+  /** Triage for this page view (absent before v2 engines report layout features). */
+  triage?: TriageVerdict;
 }
 
 export interface RegionVerdict {
@@ -97,6 +115,14 @@ export const VERIFY_CODES = [
   'focus_lost',
   'timeout',
   'apply_error',
+  /** A smaller text became larger than a bigger one in the same region. */
+  'hierarchy',
+  /** Instances of one template field ended up at different sizes. */
+  'inconsistent',
+  /** More text was cut off (ellipsis, clamp, clip) than before. */
+  'truncation',
+  /** Page scale hid primary navigation or the search field (a site breakpoint). */
+  'nav_hidden',
 ] as const;
 export type VerifyCode = (typeof VERIFY_CODES)[number];
 

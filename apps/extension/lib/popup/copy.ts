@@ -1,7 +1,7 @@
 import type { VerifyCode } from '@webable/core/policy/types';
 import type { ExtensionStatus } from '@webable/ui';
 
-import type { PopupStatus } from '../protocol';
+import type { FitViewUnavailable, PopupStatus } from '../protocol';
 import type { TabDetail } from '../sw/ui';
 
 /**
@@ -23,7 +23,14 @@ const count = (n: number): string => `${n} ${n === 1 ? 'change' : 'changes'}`;
 export function stateCopy(
   view: Pick<
     TabDetail,
-    'status' | 'changes' | 'domain' | 'undoneByYou' | 'account' | 'offer'
+    | 'status'
+    | 'changes'
+    | 'domain'
+    | 'undoneByYou'
+    | 'account'
+    | 'offer'
+    | 'triageLine'
+    | 'fitView'
   >,
 ): StateCopy {
   const applied = view.changes.filter((c) => c.status === 'applied').length;
@@ -34,11 +41,55 @@ export function stateCopy(
       title: 'Sign in again to sync',
       sentence: 'Your fit still works on this device.',
     };
-  return baseCopy(view.status, applied, site, {
+  const base = baseCopy(view.status, applied, site, {
     undoneByYou: view.undoneByYou.length > 0,
     calibrated: view.account.calibrated,
     offer: view.offer !== null,
   });
+  // Fit view shows the page restructured (docs/11): that is what changed,
+  // whatever Tailor holds underneath.
+  if (view.fitView?.open && SIMPLIFIABLE.has(view.status))
+    return {
+      glyph: 'adapted',
+      title: 'Page simplified',
+      sentence: view.triageLine ?? 'The same content, in a calmer layout.',
+    };
+  return withTriage(base, view);
+}
+
+/** States in which the page is read and adapted, so a simplified view can be said. */
+const SIMPLIFIABLE: ReadonlySet<PopupStatus> = new Set([
+  'adapted',
+  'nothing_to_change',
+  'all_undone',
+]);
+
+const FITS_TITLE = 'This page already fits you';
+
+const sameWords = (a: string, b: string): boolean =>
+  a.replace(/[.\s]+$/, '').toLowerCase() ===
+  b.replace(/[.\s]+$/, '').toLowerCase();
+
+/**
+ * Triage's one line ("Small text and crowded buttons for your fit.") becomes
+ * the sentence once WebAble has finished with the page (docs/10 §3.2). A
+ * page that triage says needs something is never said to "already fit you";
+ * an undo by the person, or a page that fits, keeps the state's own words.
+ */
+function withTriage(
+  base: StateCopy,
+  view: Pick<TabDetail, 'status' | 'undoneByYou' | 'triageLine' | 'fitView'>,
+): StateCopy {
+  const line = view.triageLine;
+  if (!line) return base;
+  const fits = view.fitView
+    ? view.fitView.verdict === 'fits'
+    : sameWords(line, FITS_TITLE);
+  if (fits) return base;
+  if (view.status === 'adapted') return { ...base, sentence: line };
+  if (view.status === 'nothing_to_change' && view.undoneByYou.length === 0)
+    return { ...base, title: 'Nothing changed here', sentence: line };
+  return base;
 }
 
 export interface CopyContext {
@@ -98,7 +149,7 @@ export function baseCopy(
         };
       return {
         glyph: 'on',
-        title: 'This page already fits you',
+        title: FITS_TITLE,
         sentence: calibrated
           ? 'WebAble checked it against your fit.'
           : 'WebAble checked it against the basic fit.',
@@ -156,10 +207,35 @@ const UNDONE_SHORT: Readonly<Record<VerifyCode, string>> = {
   focus_lost: 'it moved your place on the page',
   timeout: 'the page took too long to check',
   apply_error: 'it didn’t work on this page',
+  hierarchy: 'it made small text bigger than headings',
+  inconsistent: 'it sized matching items differently',
+  truncation: 'it cut off more text than before',
+  nav_hidden: 'it hid the site’s menu or search',
 };
 
 export const undoneHere = (vcode: VerifyCode | undefined): string =>
   `Undone here: ${UNDONE_SHORT[vcode ?? 'apply_error']}`;
+
+/**
+ * A page zoom the checks lowered by one step and kept (docs/10 §5.1): the
+ * row's note under its 100% -> 125% mark.
+ */
+const ZOOM_LOWERED: Readonly<Partial<Record<VerifyCode, string>>> = {
+  nav_hidden: 'Lowered so the site’s menu stays in view',
+  overflow: 'Lowered so the page fits the window',
+};
+
+export const zoomLowered = (vcode: VerifyCode): string =>
+  ZOOM_LOWERED[vcode] ?? 'Lowered to suit this page';
+
+/** Why Fit view can't show this page, in one plain line. */
+export const FIT_VIEW_WHY: Readonly<Record<FitViewUnavailable, string>> = {
+  not_representable: 'This page can’t be shown in Fit view.',
+  blocked_overlay: 'Close the site’s pop-up first, then try Fit view.',
+  excluded: 'Fit view isn’t used on banking, health or government sites.',
+  stale: 'The page changed while Fit view was opening. Try again.',
+  error: 'Fit view didn’t open on this page. Try again.',
+};
 
 export const COPY = {
   siteSwitch: 'WebAble on this site',
@@ -206,4 +282,26 @@ export const COPY = {
   notResponding: 'WebAble isn’t responding',
   notRespondingBody:
     'Nothing on this page changed. Close WebAble and open it again.',
+  fitView: 'Simplify this page',
+  fitViewDesc: 'The same content, in a calmer layout built for your fit.',
+  fitViewOn: 'Simplified for your fit.',
+  alwaysHere: 'Always here',
+  alwaysHereDesc: 'Simplify this site every time.',
+  autoSimplify: 'Simplify busy pages automatically',
+  autoSimplifyDesc:
+    'Busy pages open simplified when your fit shows they slow you down. The original page is one click away.',
+  planning: 'Planning a better layout…',
+  betterReady: 'A better layout is ready',
+  switchLayout: 'Switch',
+  switchLayoutLabel: 'Switch to the better layout',
+  betterLayouts: 'Better layouts',
+  betterLayoutsNote:
+    'Fit view can get better layouts from OpenAI if you allow it.',
+  fitViewNotice:
+    'WebAble now simplifies busy pages for your fit: the same content, in a calmer layout. Pages that are only a little small are zoomed instead.',
+  hideNotice: 'Hide this note',
+  devPlanner: 'Local dev planner',
+  devPlannerDesc:
+    'Plans Fit view layouts on this computer with pnpm dev:compose. Development builds only.',
+  fitTextReset: 'Reset Fit view text',
 } as const;

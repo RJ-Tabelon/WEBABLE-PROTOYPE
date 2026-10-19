@@ -25,10 +25,18 @@ export interface Background {
 
 const IMAGE_TAGS = new Set(['img', 'video', 'canvas', 'picture', 'iframe']);
 
-function layerOf(cs: CSSStyleDeclaration): {
+interface Layer {
   kind: BgKind | null;
   color: RGBA | null;
-} {
+}
+
+/**
+ * Layers already read in one pass (an extraction): texts that share a
+ * background share its ancestor walk (eval M9).
+ */
+export type LayerCache = Map<Element, Layer>;
+
+function layerOf(cs: CSSStyleDeclaration): Layer {
   if (cs.backgroundImage && cs.backgroundImage !== 'none') {
     return {
       kind: /gradient\(/.test(cs.backgroundImage) ? 'gradient' : 'image',
@@ -54,14 +62,21 @@ function composite(layers: readonly RGBA[], kind: BgKind): Background {
 }
 
 /** Ancestor-chain background: used off-screen and as the stack fallback. */
-export function ancestorBackground(el: Element, view: Window): Background {
+export function ancestorBackground(
+  el: Element,
+  view: Window,
+  cache?: LayerCache,
+): Background {
   const layers: RGBA[] = [];
   let kind: BgKind = 'solid';
   let n: Element | null = el;
   let depth = 0;
   while (n && depth++ < 40) {
-    const cs = view.getComputedStyle(n);
-    const l = layerOf(cs);
+    let l = cache?.get(n);
+    if (!l) {
+      l = layerOf(view.getComputedStyle(n));
+      cache?.set(n, l);
+    }
     if (l.kind) {
       kind = l.kind;
       break;
@@ -171,14 +186,22 @@ export function measureContrast(
   el: Element,
   view: Window,
   inViewport: boolean,
+  cache?: LayerCache,
 ): ContrastMeasure {
   const cs = view.getComputedStyle(el);
   const f = foregroundOf(cs);
   if (f.unknown || !f.fg)
     return { ratio: null, kind: 'fg_unknown', fg: f.fg, bg: null };
-  const b = inViewport
-    ? effectiveBackground(el, el.getBoundingClientRect(), view)
-    : ancestorBackground(el, view);
+  // The ancestor chain first: under a picture, a gradient or a filter no
+  // hit test makes the ratio known, and on image-heavy pages that is most
+  // samples (Amazon search: 117 of 150, each hit test about 0.15 ms; eval
+  // M9). A solid chain in view is confirmed against the hit-test stack,
+  // which also sees boxes positioned over or under the text.
+  const chain = ancestorBackground(el, view, cache);
+  const b =
+    inViewport && (chain.kind === 'solid' || chain.kind === 'translucent')
+      ? effectiveBackground(el, el.getBoundingClientRect(), view)
+      : chain;
   if (b.kind !== 'solid' && b.kind !== 'translucent') {
     return { ratio: null, kind: b.kind, fg: f.fg, bg: b.bg };
   }

@@ -172,6 +172,22 @@ export const tests = [
         true,
         'consume_ai_quota: service_role',
       );
+      assert.ok(byName.consume_compose_quota, 'consume_compose_quota exists');
+      assert.equal(
+        byName.consume_compose_quota.anon,
+        false,
+        'consume_compose_quota: anon',
+      );
+      assert.equal(
+        byName.consume_compose_quota.authed,
+        false,
+        'consume_compose_quota: authenticated',
+      );
+      assert.equal(
+        byName.consume_compose_quota.service,
+        true,
+        'consume_compose_quota: service_role',
+      );
       for (const fn of ['handle_new_user', 'touch_updated_at']) {
         assert.equal(byName[fn].anon, false, `${fn}: anon`);
         assert.equal(byName[fn].authed, false, `${fn}: authenticated`);

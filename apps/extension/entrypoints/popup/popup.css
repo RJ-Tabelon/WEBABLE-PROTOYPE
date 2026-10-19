@@ -381,6 +381,79 @@ body {
   margin-block-start: var(--space-3);
 }
 
+/* Page zoom is the whole page: its label is text, not a "show on page" button. */
+.pp-row__label--static {
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pp-row__label--static:hover {
+    background: transparent;
+  }
+}
+.pp-row__label--static:active {
+  background: transparent;
+}
+.pp-row__label--static:focus {
+  outline: none;
+}
+
+/* ---------------------------------------------------------------- notice */
+/* The one-time v2 notice: a tonal note beside its 44 px ✕. */
+.pp-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-1);
+  margin-block-start: var(--space-4);
+  padding-block: var(--space-1);
+  padding-inline: var(--space-3) var(--space-1);
+  border-radius: var(--radius-2);
+  background: var(--surface-tonal);
+}
+.pp-notice__text {
+  padding-block: var(--space-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- fit view */
+.pp-fitview {
+  display: grid;
+}
+.pp-fitview__live {
+  display: grid;
+}
+.pp-fitview__live > .pp-note {
+  padding-block: var(--space-1) var(--space-2);
+}
+.pp-fitview__live:first-child > .pp-note {
+  padding-block-start: 0;
+}
+.pp-fitview__better {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-block-size: var(--row-min);
+}
+.pp-fitview__ready {
+  min-inline-size: 0;
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+}
+.pp-fitview__consent {
+  display: grid;
+  justify-items: start;
+  gap: 0;
+  padding-block-start: var(--space-2);
+}
+.pp-fitview__consent > .wa-btn {
+  margin-inline-start: calc(-1 * var(--space-4));
+}
+
 /* ---------------------------------------------------------------- adjust */
 .pp-adjust {
   padding-block-start: var(--space-3);

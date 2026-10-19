@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>The Lighthouse Keepers</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          15px/1.5 Georgia,
+          serif;
+        color: #222;
+      }
+      .masthead {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        padding: 12px 24px;
+        border-bottom: 1px solid #ddd;
+      }
+      .masthead a {
+        font-size: 12px;
+        color: #333;
+      }
+      .brand {
+        font:
+          700 20px/1 Georgia,
+          serif;
+        text-decoration: none;
+      }
+      .wrap {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 280px;
+        gap: 32px;
+        padding: 24px;
+        max-width: 1100px;
+      }
+      article p {
+        margin: 0 0 1em;
+      }
+      .byline {
+        font-size: 12px;
+        color: #666;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+      .fold {
+        max-height: 3em;
+        overflow: hidden;
+      }
+      figure {
+        margin: 1em 0;
+      }
+      figcaption {
+        font-size: 12px;
+        color: #666;
+      }
+      blockquote {
+        border-left: 3px solid #ccc;
+        margin: 1em 0;
+        padding-left: 1em;
+        font-style: italic;
+      }
+      table {
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      td,
+      th {
+        border: 1px solid #ccc;
+        padding: 2px 6px;
+      }
+      aside {
+        font-size: 12px;
+      }
+      aside ul {
+        padding-left: 16px;
+      }
+      footer {
+        padding: 24px;
+        font-size: 11px;
+        color: #777;
+      }
+      iframe {
+        border: 0;
+        background: #000;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/v2/fv-article.html">The Coastal Review</a>
+      <nav aria-label="Sections">
+        <a href="/v2/fv-article.html#news">News</a>
+        <a href="/v2/fv-article.html#culture">Culture</a>
+        <a href="/v2/fv-article.html#travel">Travel</a>
+        <a href="/v2/fv-article.html#food">Food</a>
+      </nav>
+    </header>
+    <div class="wrap">
+      <main>
+        <article id="story">
+          <h1>The last lighthouse keepers of the northern coast</h1>
+          <p class="byline">
+            By Mara Linden <span class="sr-only">Article published</span> ·
+            October 2, 2026
+          </p>
+          <p>
+            For more than a century the light at Gull Point was tended by hand.
+            The keepers climbed
+            <a href="/v2/fv-article.html#stairs"
+              >one hundred and twelve steps</a
+            >
+            every evening, trimmed the wick and wound the clockwork that turned
+            the great lens through the night.
+          </p>
+          <p>
+            When the station was automated, the last family to live there stayed
+            on as caretakers. They still keep the logbook, <em>a habit</em> that
+            no machine asked them to keep, and they still
+            <strong>walk the gallery</strong> at dusk.
+          </p>
+          <h2>A life measured in weather</h2>
+          <p>
+            Storms arrive from the west with little warning. The keepers learned
+            to read the colour of the water and the way the gulls flew low over
+            the rocks before the wind turned.
+          </p>
+          <figure>
+            <img
+              src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='300'%3E%3Crect width='600' height='300' fill='%23557'/%3E%3C/svg%3E"
+              width="600"
+              height="300"
+              alt="The lighthouse at dusk"
+            />
+            <figcaption>
+              Gull Point light, photographed from the north beach.
+            </figcaption>
+          </figure>
+          <blockquote>
+            <p>
+              The sea does not care that you are tired. You light the lamp
+              anyway.
+            </p>
+          </blockquote>
+          <h2>What the logbook says</h2>
+          <ul>
+            <li>Fog on 61 nights in the first year of records.</li>
+            <li>Three shipwrecks avoided, according to the harbour master.</li>
+            <li>
+              One visit from a
+              <a href="/v2/fv-article.html#minister">government minister</a>,
+              who was seasick.
+            </li>
+          </ul>
+          <table>
+            <caption>
+              Keepers by decade
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Decade</th>
+                <th scope="col">Keepers</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1920s</td>
+                <td>4</td>
+              </tr>
+              <tr>
+                <td>1950s</td>
+                <td>3</td>
+              </tr>
+              <tr>
+                <td>1980s</td>
+                <td>2</td>
+              </tr>
+            </tbody>
+          </table>
+          <pre><code>LOG 1931-11-02  wind W 8, lamp lit 16:41</code></pre>
+          <iframe
+            title="Video tour of the lighthouse"
+            width="480"
+            height="270"
+            src="about:blank"
+          ></iframe>
+          <div class="fold" id="paywalled">
+            <p>
+              Subscribers can read the rest of the story, including the keepers'
+              own account of the winter of 1947.
+            </p>
+            <p class="hidden-by-wall">
+              This sentence is withheld by the paywall and must never appear in
+              Fit view.
+            </p>
+            <p class="hidden-by-wall">
+              Neither should this one, which sits further below the fold of the
+              wall.
+            </p>
+          </div>
+        </article>
+      </main>
+      <aside aria-label="Related">
+        <h2>Related</h2>
+        <ul>
+          <li>
+            <a href="/v2/fv-article.html#r1">Saving the old harbour cranes</a>
+          </li>
+          <li><a href="/v2/fv-article.html#r2">A guide to coastal walks</a></li>
+          <li><a href="/v2/fv-article.html#r3">The fog signal that sang</a></li>
+        </ul>
+      </aside>
+    </div>
+    <footer>
+      <a href="/v2/fv-article.html#contact">Contact</a>
+      <a href="/v2/fv-article.html#privacy">Privacy</a>
+      <p>The Coastal Review is a fixture for WebAble tests.</p>
+    </footer>
+  </body>
+</html>

@@ -187,6 +187,75 @@ export const tests = [
     },
   },
   {
+    name: 'accounts: ai_layout is off by default and only its owner can turn it on',
+    async fn(tx) {
+      const a = await tx.createUser('a');
+      const b = await tx.createUser('b');
+      await tx.asUser(a.id);
+      assert.equal(
+        await tx.value(
+          `select ai_layout from public.accounts where user_id = $1`,
+          [a.id],
+        ),
+        false,
+        'layout planning is off by default',
+      );
+      assert.equal(
+        await tx.count(
+          `update public.accounts set ai_layout = true where user_id = $1`,
+          [a.id],
+        ),
+        1,
+        'the owner turns it on',
+      );
+      assert.equal(
+        await tx.value(
+          `select ai_layout from public.accounts where user_id = $1`,
+          [a.id],
+        ),
+        true,
+      );
+      assert.equal(
+        await tx.count(
+          `update public.accounts set ai_layout = true where user_id = $1`,
+          [b.id],
+        ),
+        0,
+        'cannot turn it on for another person',
+      );
+      await tx.expectError(
+        `update public.accounts set ai_layout = null where user_id = $1`,
+        [a.id],
+        '23502',
+      );
+      assert.equal(
+        await tx.count(
+          `update public.accounts set ai_layout = false where user_id = $1`,
+          [a.id],
+        ),
+        1,
+        'the owner turns it off again',
+      );
+      await tx.asOwner();
+      assert.equal(
+        await tx.value(
+          `select ai_layout from public.accounts where user_id = $1`,
+          [b.id],
+        ),
+        false,
+      );
+      // The compose function reads it with the service role.
+      await tx.asService();
+      assert.equal(
+        await tx.value(
+          `select ai_layout from public.accounts where user_id = $1`,
+          [a.id],
+        ),
+        false,
+      );
+    },
+  },
+  {
     name: 'accounts: people cannot insert or delete account rows',
     async fn(tx) {
       const a = await tx.createUser('a');
@@ -263,6 +332,7 @@ export const tests = [
         [`select public.export_my_data()`, []],
         [`select public.delete_my_account()`, []],
         [`select public.consume_ai_quota($1)`, [a.id]],
+        [`select public.consume_compose_quota($1)`, [a.id]],
       ];
       for (const [sql, params] of calls) {
         await tx.expectError(sql, params, '42501', /permission denied/);
@@ -280,6 +350,8 @@ export const tests = [
           'ai_quota_global',
           'agg_outcome',
           'ingest_quota',
+          'compose_quota',
+          'compose_quota_global',
         ]) {
           await tx.expectError(
             `select * from private.${table}`,

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import type { LayoutFeatures } from '../triage/types';
 import {
   COUNT_BUCKETS,
   PAGE_CATEGORIES,
@@ -235,4 +236,9 @@ export interface PageSignals {
     forcedColors: boolean;
     colorScheme: 'light' | 'dark';
   };
+  /**
+   * Person-independent layout features for triage (docs/10 §3.1). Absent from
+   * engines older than v2; the worker then treats the page as un-triaged.
+   */
+  layout?: LayoutFeatures;
 }

@@ -16,3 +16,6 @@ export function ContactLine({ lead }: { lead?: string }) {
 
 /** When the site's documents were last changed. */
 export const DOCS_UPDATED = '29 September 2026';
+
+/** When the privacy policy last changed (Fit view layouts and page scale, docs/10 §8). */
+export const PRIVACY_UPDATED = '15 October 2026';

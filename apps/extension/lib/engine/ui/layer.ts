@@ -32,6 +32,33 @@ export interface ToastView {
   undo: 'one' | 'all';
 }
 
+/**
+ * The Fit view offer (docs/10 §7, docs/11 §2): a "Simplify this page" action
+ * on the toast when one is showing (one combined surface), otherwise a chip.
+ */
+export interface FitViewOfferView {
+  /** One calm line on why, rendered from the triage reasons (never page text). */
+  reason: string;
+  /** The person chose Simplify this page. */
+  open(): void;
+  /** The chip was answered "Not now", closed, or timed out (20 s). */
+  declined?(answer: 'dismiss' | 'timeout'): void;
+}
+
+/** Where the Fit view offer is: on the toast, on a chip, or waiting for the person to be idle. */
+export type FitViewOfferPlace = 'toast' | 'chip' | 'pending';
+
+/**
+ * Copy for the Fit view offer: WebAble's own words, verbs on buttons, and
+ * the popup's name for the same switch (docs/11 §2).
+ */
+export const FIT_VIEW_COPY = {
+  action: 'Simplify this page',
+  question: 'Show this page more simply?',
+  spoken: 'WebAble can show this page more simply.',
+  toastSpoken: 'You can also simplify this page.',
+} as const;
+
 export interface OutlineItem {
   /** The original box (targets only), drawn dashed inside the fit outline. */
   ghost: Box | null;
@@ -58,6 +85,8 @@ export interface LayerEvents {
 }
 
 export const OFFER_TIMEOUT_MS = 20_000;
+/** A notice (no action to take) leaves by itself after this long. */
+export const NOTICE_MS = 12_000;
 /** Outlines sit this far outside the element, so strokes never cross its glyphs. */
 const FIT_OUTSET = 4;
 /** At most this many outlines per change in the viewport. */
@@ -216,11 +245,16 @@ export class InPageLayer implements OverlayPort {
   private liveRaf = 0;
   private chip: HTMLElement | null = null;
   private toast: HTMLElement | null = null;
+  /** The toast's spoken line, kept to re-announce it with the Fit view action. */
+  private toastMessage = '';
   private marks: HTMLElement | null = null;
   private guide: HTMLElement | null = null;
   private frozen = new Map<HTMLImageElement, HTMLCanvasElement>();
   private offerOp: OpId | null = null;
   private pendingOffer: OfferView | null = null;
+  /** The Fit view offer, wherever it shows (toast action, chip, or held for idle). */
+  private fitView: FitViewOfferView | null = null;
+  private fitViewPlace: FitViewOfferPlace | null = null;
   private holdTimer: Timer | null = null;
   private activity: InputActivity | null;
   private offerTimer: Timer | null = null;
@@ -361,7 +395,7 @@ export class InPageLayer implements OverlayPort {
 
   private button(
     label: string,
-    variant: 'primary' | 'secondary' | 'inverse',
+    variant: 'primary' | 'secondary' | 'inverse' | 'fit' | 'fit-inverse',
     onClick: () => void,
   ): HTMLButtonElement {
     const b = this.doc.createElement('button');
@@ -422,7 +456,8 @@ export class InPageLayer implements OverlayPort {
   private showWhenIdle(): void {
     this.holdTimer = null;
     const view = this.pendingOffer;
-    if (!view) return;
+    const fit = this.fitViewPlace === 'pending' ? this.fitView : null;
+    if (!view && !fit) return;
     const wait = this.activity?.busyFor() ?? 0;
     if (wait > 0) {
       this.holdTimer = setTimeout(
@@ -431,11 +466,19 @@ export class InPageLayer implements OverlayPort {
       );
       return;
     }
-    this.pendingOffer = null;
-    this.renderOffer(view);
+    if (view) {
+      this.pendingOffer = null;
+      this.renderOffer(view);
+    } else if (fit) this.renderFitViewChip(fit);
   }
 
-  private renderOffer(view: OfferView): void {
+  /** The chip's frame: source line, question, close, reason, two actions. */
+  private renderChip(
+    question: string,
+    reason: string,
+    accept: HTMLButtonElement,
+    spoken: string,
+  ): HTMLElement {
     this.ensure();
     const chip = this.doc.createElement('section');
     chip.className = 'wa-chip';
@@ -448,20 +491,20 @@ export class InPageLayer implements OverlayPort {
     src.append(markGlyph(this.doc), 'WebAble');
     const q = this.doc.createElement('p');
     q.className = 'wa-chip__q';
-    q.textContent = view.question;
+    q.textContent = question;
     const close = this.closeButton('Close', () => this.answer('dismiss'));
     close.classList.add('wa-chip__close');
     chip.append(src, q, close);
-    if (view.reason) {
+    if (reason) {
       const why = this.doc.createElement('p');
       why.className = 'wa-chip__why';
-      why.textContent = view.reason;
+      why.textContent = reason;
       chip.append(why);
     }
     const actions = this.doc.createElement('div');
     actions.className = 'wa-chip__actions';
     actions.append(
-      this.button('Try it', 'primary', () => this.answer('accept')),
+      accept,
       this.button('Not now', 'secondary', () => this.answer('dismiss')),
     );
     chip.append(actions);
@@ -471,17 +514,37 @@ export class InPageLayer implements OverlayPort {
     chip.addEventListener('focusin', () => this.pauseOfferTimer());
     chip.addEventListener('focusout', () => this.resumeOfferTimer());
     this.chip = chip;
-    this.offerOp = view.op;
     this.stack?.append(chip);
     this.offerRemaining = OFFER_TIMEOUT_MS;
     this.resumeOfferTimer();
     this.avoidFocus();
     this.say(
-      this.withShortcut(
-        view.spoken,
-        this.config.shortcuts.focusLayer,
-        'answer',
-      ),
+      this.withShortcut(spoken, this.config.shortcuts.focusLayer, 'answer'),
+    );
+    return chip;
+  }
+
+  private renderOffer(view: OfferView): void {
+    this.renderChip(
+      view.question,
+      view.reason,
+      this.button('Try it', 'primary', () => this.answer('accept')),
+      view.spoken,
+    );
+    this.offerOp = view.op;
+  }
+
+  private renderFitViewChip(view: FitViewOfferView): void {
+    const open = this.button(FIT_VIEW_COPY.action, 'fit', () =>
+      this.answer('accept'),
+    );
+    open.prepend(glyph(this.doc, 'fitview', 20));
+    this.fitViewPlace = 'chip';
+    this.renderChip(
+      FIT_VIEW_COPY.question,
+      view.reason,
+      open,
+      FIT_VIEW_COPY.spoken,
     );
   }
 
@@ -514,8 +577,13 @@ export class InPageLayer implements OverlayPort {
 
   private answer(a: 'accept' | 'dismiss' | 'timeout'): void {
     const op = this.offerOp;
+    const fit = this.fitViewPlace === 'chip' ? this.fitView : null;
     this.hideOffer();
     if (op) this.events.offerAnswer(op, a);
+    else if (fit) {
+      if (a === 'accept') fit.open();
+      else fit.declined?.(a);
+    }
   }
 
   /** Remove the chip (or a held offer) without reporting an answer. */
@@ -532,8 +600,81 @@ export class InPageLayer implements OverlayPort {
     this.chip?.remove();
     this.chip = null;
     this.offerOp = null;
+    // A Fit view offer on the chip (or held for it) goes with the chip; one on the toast stays.
+    if (this.fitViewPlace === 'chip' || this.fitViewPlace === 'pending') {
+      this.fitView = null;
+      this.fitViewPlace = null;
+    }
     if (hadFocus) this.restoreFocus();
     this.collapse();
+  }
+
+  // ------------------------------------------------------------------ Fit view offer
+
+  /**
+   * Offer Fit view (docs/10 §7). With the first-visit toast showing, the
+   * toast gains a "Simplify this page" action: one combined surface. Otherwise a
+   * chip, held like any offer until the person is idle, with the same 20 s
+   * timeout. Never displaces a chip that is showing or waiting: returns null
+   * then, and the popup remains the way in.
+   */
+  offerFitView(view: FitViewOfferView): FitViewOfferPlace | null {
+    this.withdrawFitView();
+    if (this.toast) {
+      this.fitView = view;
+      this.fitViewPlace = 'toast';
+      this.addToastAction(this.toast, view);
+      return 'toast';
+    }
+    if (this.chip || this.pendingOffer) return null;
+    this.fitView = view;
+    this.fitViewPlace = 'pending';
+    this.activity ??= new InputActivity(this.doc);
+    this.showWhenIdle();
+    return this.fitViewPlace;
+  }
+
+  /** Take the Fit view offer back (it opened another way, or the page changed). Reports nothing. */
+  withdrawFitView(): void {
+    const place = this.fitViewPlace;
+    if (!place) return;
+    if (place === 'toast') {
+      this.toast?.querySelector('.wa-btn--fit-inverse')?.remove();
+      this.fitView = null;
+      this.fitViewPlace = null;
+      return;
+    }
+    this.hideOffer();
+  }
+
+  /** Where the Fit view offer shows now, or null. */
+  get fitViewOffer(): FitViewOfferPlace | null {
+    return this.fitViewPlace;
+  }
+
+  /**
+   * The toast becomes two rows: its line and Close, then Undo and Simplify
+   * this page. Document order follows the visual order.
+   */
+  private addToastAction(toast: HTMLElement, view: FitViewOfferView): void {
+    let actions = toast.querySelector<HTMLElement>('.wa-toast__actions');
+    if (!actions) {
+      actions = this.doc.createElement('div');
+      actions.className = 'wa-toast__actions';
+      const undo = toast.querySelector('.wa-btn--inverse');
+      if (undo) actions.append(undo);
+      toast.append(actions);
+      toast.classList.add('wa-toast--offer');
+    }
+    const open = this.button(FIT_VIEW_COPY.action, 'fit-inverse', () => {
+      this.fitView = null;
+      this.fitViewPlace = null;
+      this.hideToast();
+      view.open();
+    });
+    open.prepend(glyph(this.doc, 'fitview', 20));
+    actions.append(open);
+    this.say(`${this.toastMessage} ${FIT_VIEW_COPY.toastSpoken}`);
   }
 
   // ------------------------------------------------------------------ toast
@@ -559,9 +700,57 @@ export class InPageLayer implements OverlayPort {
     this.toast = toast;
     // The toast sits above the chip when both are shown.
     this.stack?.prepend(toast);
-    this.say(
-      this.withShortcut(view.message, this.config.shortcuts.undoAll, 'undo'),
+    this.toastMessage = this.withShortcut(
+      view.message,
+      this.config.shortcuts.undoAll,
+      'undo',
     );
+    this.say(this.toastMessage);
+  }
+
+  /** True while the toast (first-visit message or a notice) is on screen. */
+  get toastShown(): boolean {
+    return this.toast !== null;
+  }
+
+  /**
+   * One calm line in WebAble's own words ("Videos play best on the original
+   * page."), on the toast surface with only Close. It goes away by itself
+   * after NOTICE_MS unless the person is pointing at it or inside it.
+   */
+  notice(message: string): void {
+    this.hideToast();
+    this.ensure();
+    const toast = this.doc.createElement('div');
+    toast.className = 'wa-toast wa-toast--notice';
+    const msg = this.doc.createElement('p');
+    msg.className = 'wa-toast__msg';
+    msg.textContent = message;
+    toast.append(
+      markGlyph(this.doc),
+      msg,
+      this.closeButton('Close', () => this.hideToast()),
+    );
+    let timer: Timer | null = null;
+    const arm = (): void => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (this.toast === toast) this.hideToast();
+      }, NOTICE_MS);
+    };
+    const hold = (): void => {
+      if (timer) clearTimeout(timer);
+      timer = null;
+    };
+    toast.addEventListener('pointerenter', hold);
+    toast.addEventListener('focusin', hold);
+    toast.addEventListener('pointerleave', arm);
+    toast.addEventListener('focusout', arm);
+    this.toast = toast;
+    this.stack?.prepend(toast);
+    this.toastMessage = message;
+    this.say(message);
+    arm();
   }
 
   hideToast(): void {
@@ -571,6 +760,11 @@ export class InPageLayer implements OverlayPort {
       this.toast.contains(this.root.activeElement);
     this.toast?.remove();
     this.toast = null;
+    this.toastMessage = '';
+    if (this.fitViewPlace === 'toast') {
+      this.fitView = null;
+      this.fitViewPlace = null;
+    }
     if (hadFocus) this.restoreFocus();
     this.collapse();
   }
@@ -1005,6 +1199,7 @@ export class InPageLayer implements OverlayPort {
       tabIndexes: number[];
     } | null;
     offerPending: OpId | null;
+    fitViewOffer: FitViewOfferPlace | null;
     toast: { text: string; buttons: string[] } | null;
     outlines: number;
     ghosts: number;
@@ -1031,6 +1226,7 @@ export class InPageLayer implements OverlayPort {
           }
         : null,
       offerPending: this.offerPending,
+      fitViewOffer: this.fitViewPlace,
       toast: this.toast
         ? {
             text: this.toast.querySelector('.wa-toast__msg')?.textContent ?? '',
@@ -1068,10 +1264,13 @@ export class InPageLayer implements OverlayPort {
     if (this.holdTimer) clearTimeout(this.holdTimer);
     this.holdTimer = null;
     this.pendingOffer = null;
+    this.fitView = null;
+    this.fitViewPlace = null;
     this.activity?.dispose();
     this.activity = null;
     this.chip = null;
     this.toast = null;
+    this.toastMessage = '';
     this.marks = null;
     this.guide = null;
     this.guideBand = null;

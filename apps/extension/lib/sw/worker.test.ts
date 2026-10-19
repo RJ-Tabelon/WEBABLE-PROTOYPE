@@ -24,6 +24,7 @@ import type { BadgeState } from './badge';
 import type { AuthService } from './auth';
 import type { ChromePort } from './chrome';
 import { E2E_SUPABASE_ORIGIN, readConfig } from './config';
+import { ComposeInflight, FitViewStates } from './fitview';
 import { PageMemos } from './pages';
 import { TabRegistry } from './tabs';
 import { REASON_WINDOW_MS, UndoHold } from './undo';
@@ -155,6 +156,13 @@ function setup(opts: SetupOptions = {}) {
     async setZoom(tabId, factor) {
       zoom.set(tabId, factor);
     },
+    async releaseZoom(tabId, factor) {
+      if (factor === undefined) zoom.delete(tabId);
+      else zoom.set(tabId, factor);
+    },
+    async tabWidth() {
+      return 1280;
+    },
     async tabUrl() {
       return URL_A;
     },
@@ -176,6 +184,9 @@ function setup(opts: SetupOptions = {}) {
       injected.push(tabId);
       return true;
     },
+    async injectFitView() {
+      return true;
+    },
     async openTabs() {
       return [];
     },
@@ -190,6 +201,8 @@ function setup(opts: SetupOptions = {}) {
     tabs: new TabRegistry(memoryArea()),
     pages: new PageMemos(memoryArea()),
     undos: new UndoHold(memoryArea()),
+    fitViews: new FitViewStates(memoryArea()),
+    inflight: new ComposeInflight(memoryArea(), clock.now),
     port,
     registration,
     auth: opts.auth ?? null,
@@ -657,6 +670,7 @@ describe('page analysis', () => {
     userId: 'u1',
     email: 'person@example.com',
     cloudAnalysis: true,
+    aiLayout: false,
     productLearning: false,
     theme: 'system' as const,
     onboardingStep: 'connected' as const,

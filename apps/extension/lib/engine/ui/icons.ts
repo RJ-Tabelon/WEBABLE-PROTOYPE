@@ -29,6 +29,20 @@ const GLYPHS = {
       ['path', { d: 'M3 3v5h5' }],
     ],
   },
+  /** Fit view: a page with a top strip and a side column (Lucide panels-top-left). */
+  fitview: {
+    box: '0 0 24 24',
+    shapes: [
+      [
+        'path',
+        {
+          d: 'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
+        },
+      ],
+      ['path', { d: 'M3 9h18' }],
+      ['path', { d: 'M9 21V9' }],
+    ],
+  },
   /** Fit arrow: 12 x 8, a horizontal line with a 45 degree open head. */
   fit: {
     box: '0 0 12 8',

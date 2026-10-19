@@ -7,10 +7,11 @@ import { updateAccountAction } from '../../../lib/data/actions';
 import { DATA_ERROR_MESSAGES } from '../../../lib/data/result';
 import { nudgeExtension } from '../../../lib/extension/bridge';
 
-type Key = 'cloudAnalysis' | 'productLearning';
+type Key = 'cloudAnalysis' | 'aiLayout' | 'productLearning';
 
 export interface ConsentSwitchesProps {
   cloudAnalysis: boolean;
+  aiLayout: boolean;
   productLearning: boolean;
 }
 
@@ -45,6 +46,37 @@ export const CONSENT_FACTS: Record<
         'The server keeps a count of requests, to limit how often this runs. It doesn’t keep what was sent.',
     },
   ],
+  aiLayout: [
+    {
+      term: 'When',
+      detail:
+        'Only after you open Fit view, once per kind of page. Later visits use the plan saved on this device. Never on mail, chat, banking, health or government sites, checkout, or pages with password or payment fields.',
+    },
+    {
+      term: 'What is sent',
+      detail:
+        'An outline: what each part is, where it sits, its size, text size and roughly how long its text is. Up to 6 words per part, from a public list of common interface words like “menu” or “price”. Other words become “·”. No words from emails, products or other items in lists.',
+    },
+    {
+      term: 'To whom',
+      detail:
+        'WebAble’s server checks your account and limits, then sends the outline, without your account, to OpenAI. OpenAI returns a plan made only of fixed choices.',
+    },
+    {
+      term: 'Never sent',
+      detail:
+        'Other page words, anything you type, the address or title, your fit, or who you are.',
+    },
+    {
+      term: 'Worth knowing',
+      detail: 'The outline’s shape can show which site it came from.',
+    },
+    {
+      term: 'Kept',
+      detail:
+        'WebAble’s server keeps a count, not the outline. OpenAI doesn’t train on it and may keep it for up to 30 days for abuse checks. This device keeps the plan for 14 days.',
+    },
+  ],
   productLearning: [
     {
       term: 'What is sent',
@@ -73,14 +105,23 @@ export const CONSENT_FACTS: Record<
   ],
 };
 
+/** Toast names, with the verb each takes ("Page analysis is on."). */
+const NAMES: Record<Key, { name: string; verb: 'is' | 'are' }> = {
+  cloudAnalysis: { name: 'Page analysis', verb: 'is' },
+  aiLayout: { name: 'Better Fit view layouts', verb: 'are' },
+  productLearning: { name: 'Help improve WebAble', verb: 'is' },
+};
+
 /**
- * The two consents, each with exactly what it sends (design-final §13.1 rule 9).
- * Both are off by default. Switching one saves at once and tells the extension;
- * if saving fails the switch goes back and says why.
+ * The three consents, each with exactly what it sends and to whom
+ * (design-final §13.1 rule 9, docs/10 §8). All are off by default. Switching
+ * one saves at once and tells the extension; if saving fails the switch goes
+ * back and says why.
  */
 export function ConsentSwitches(initial: ConsentSwitchesProps) {
   const [values, setValues] = useState<Record<Key, boolean>>({
     cloudAnalysis: initial.cloudAnalysis,
+    aiLayout: initial.aiLayout,
     productLearning: initial.productLearning,
   });
   const [pending, setPending] = useState<Key | null>(null);
@@ -108,10 +149,9 @@ export function ConsentSwitches(initial: ConsentSwitchesProps) {
       return;
     }
     void nudgeExtension();
-    const name =
-      key === 'cloudAnalysis' ? 'Page analysis' : 'Help improve WebAble';
+    const { name, verb } = NAMES[key];
     toast.show({
-      message: `${name} is ${next ? 'on' : 'off'}.`,
+      message: `${name} ${verb} ${next ? 'on' : 'off'}.`,
       action: { label: 'Undo', onAction: () => void change(key, !next) },
     });
   }
@@ -122,6 +162,12 @@ export function ConsentSwitches(initial: ConsentSwitchesProps) {
       label: 'Page analysis',
       description:
         'Lets WebAble ask what unclear parts of a page are for, so it can soften ads and side panels.',
+    },
+    {
+      key: 'aiLayout',
+      label: 'Better Fit view layouts (OpenAI)',
+      description:
+        'When you open Fit view, lets WebAble ask OpenAI to plan a better layout for the page. Fit view works without it.',
     },
     {
       key: 'productLearning',

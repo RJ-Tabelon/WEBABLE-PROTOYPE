@@ -147,7 +147,7 @@ const receiptSchema = z.object({
   id: z.string().min(1).max(128),
   at: z.number().min(0),
   domain: z.string().max(253),
-  destination: z.literal('page_analysis'),
+  destination: z.enum(['page_analysis', 'layout_planning']),
   bytes: z.number().int().min(0),
   body: z.unknown(),
 });

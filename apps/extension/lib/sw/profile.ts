@@ -146,6 +146,11 @@ export async function ensureLearning(
       };
     // Upgrade existing saved fits whose old need-level gate seeded these
     // minimums as "none". Keep all blocks, feedback and learned levels.
+    // Still needed in v2: the saved fit is what lets text_floor and
+    // target_size apply automatically where triage finds a gap (page_zoom
+    // shares text_floor's authority in the policy). It no longer forces them
+    // onto every page: the policy's triage gate wins, so a need that fits
+    // gets nothing automatic (docs/10 §3.2).
     const ops = { ...cur.user.ops };
     let upgraded = false;
     for (const op of ['text_floor', 'target_size'] as const) {

@@ -1,6 +1,6 @@
 import { TextLink } from '@webable/ui';
 import { Payload } from '../home/Payload';
-import { ContactLine, DOCS_UPDATED } from './ContactLine';
+import { ContactLine, PRIVACY_UPDATED } from './ContactLine';
 import { DocPage, DocSection, Fact, type TocEntry } from './DocPage';
 
 const TOC: readonly TocEntry[] = [
@@ -8,6 +8,7 @@ const TOC: readonly TocEntry[] = [
   { id: 'stored', title: 'What your account holds' },
   { id: 'device', title: 'What stays on your device' },
   { id: 'what-webable-sends', title: 'What WebAble sends' },
+  { id: 'fit-view-layouts', title: 'Fit view layouts' },
   { id: 'product-learning', title: 'Product learning' },
   { id: 'choices', title: 'Download or delete' },
   { id: 'contact', title: 'Questions' },
@@ -15,13 +16,15 @@ const TOC: readonly TocEntry[] = [
 
 /**
  * Privacy in plain nouns (design-final §13.1 rule 9), consistent with
- * docs/08-System-Architecture.md §4 (data model) and §5 (page analysis) and the
- * core migration. Never "nothing leaves your device" while a cloud tier exists.
+ * docs/08-System-Architecture.md §4 (data model) and §5 (page analysis),
+ * docs/10-V2-Architecture.md §8 (Fit view layouts with OpenAI, page scale)
+ * and the migrations. Never "nothing leaves your device" while a cloud tier
+ * exists.
  */
 export function PrivacyDoc() {
   return (
     <DocPage
-      eyebrow={`Updated ${DOCS_UPDATED}`}
+      eyebrow={`Updated ${PRIVACY_UPDATED}`}
       title="Privacy, in plain words."
       deck="What WebAble keeps, where it keeps it, what it sends and when, and how to take all of it back."
       toc={TOC}
@@ -39,6 +42,14 @@ export function PrivacyDoc() {
           <li>
             Page analysis is off until you turn it on. When it is on, it sends
             page structure only.
+          </li>
+          <li>
+            Better Fit view layouts are off until you turn them on. When they
+            are on, a page outline goes to OpenAI, never page text.
+          </li>
+          <li>
+            Sites can tell a page is zoomed or restyled, as with Chrome’s own
+            zoom.
           </li>
           <li>
             You can download everything in your account, or delete it, at any
@@ -65,8 +76,8 @@ export function PrivacyDoc() {
             term="Account settings"
             meta="Kept until you delete your account."
           >
-            Your choices for page analysis and product learning, your theme, and
-            how far you are through setup.
+            Your choices for page analysis, Fit view layouts and product
+            learning, your theme, and how far you are through setup.
           </Fact>
           <Fact
             term="Your fit"
@@ -138,11 +149,18 @@ export function PrivacyDoc() {
             back to sites.
           </Fact>
           <Fact
+            term="Saved Fit view plans"
+            meta="In the extension’s storage in this browser, for up to 14 days."
+          >
+            Layout plans from OpenAI, filed the same way under a secret key, so
+            the next visit to that kind of page needs no request.
+          </Fact>
+          <Fact
             term="What was sent"
             meta="In the extension’s storage in this browser."
           >
-            A receipt for every page analysis request, which you can open from
-            the WebAble button in Chrome’s toolbar.
+            A receipt for every page analysis and layout planning request, which
+            you can open from the WebAble button in Chrome’s toolbar.
           </Fact>
           <Fact term="Tune answers" meta="In memory only, while you tune.">
             Each answer you give during Tune. When you finish, only the summary
@@ -201,6 +219,49 @@ export function PrivacyDoc() {
         </p>
       </DocSection>
 
+      <DocSection
+        id="fit-view-layouts"
+        title="Fit view layouts"
+        deck="Fit view shows a calmer copy of a busy page, laid out on your device. Better layouts let WebAble ask OpenAI to plan one instead. They are off until you turn them on, and they need you to be signed in."
+      >
+        <h3>When</h3>
+        <p>
+          Only after you open Fit view, once per kind of page. Later visits use
+          the plan saved on this device. Never on mail, chat, banking, health or
+          government sites, checkout, or pages with password or payment fields.
+        </p>
+        <h3>What is sent</h3>
+        <p>
+          An outline of the page: what each part is, where it sits, its size,
+          text size and roughly how long its text is. Up to 6 words per part,
+          from a public list of common interface words like “menu” or “price”.
+          Other words become “·”, and no words are sent from emails, products or
+          other items in lists.
+        </p>
+        <h3>Where it goes</h3>
+        <p>
+          WebAble’s server checks your account and limits, then sends the
+          outline, without your account, to OpenAI. OpenAI returns a plan made
+          only of fixed choices, such as which part is the main one. It never
+          writes text, code or styles, and it never sees your fit.
+        </p>
+        <h3>Never sent</h3>
+        <ul>
+          <li>Other page words, and anything you type</li>
+          <li>The page address or title</li>
+          <li>Your fit, or who you are</li>
+        </ul>
+        <h3>Worth knowing</h3>
+        <p>The outline’s shape can show which site it came from.</p>
+        <h3>What is kept</h3>
+        <p>
+          WebAble’s server keeps a count for each account, to limit how often
+          this runs, and deletes it after 2 days. It never keeps the outline.
+          OpenAI doesn’t use it for training and may keep it for up to 30 days
+          to check for abuse. This device keeps the plan for 14 days.
+        </p>
+      </DocSection>
+
       <DocSection id="product-learning" title="Product learning">
         <p>
           Off unless you turn it on. When it is on, the extension reports
@@ -230,7 +291,12 @@ export function PrivacyDoc() {
         </ul>
         <p>
           WebAble uses the data it handles only to fit pages to you. It is never
-          used for ads, sold, or used to judge anyone.
+          used for ads, sold, or used to judge anyone. Its use of information
+          from Chrome follows the{' '}
+          <TextLink href="https://developer.chrome.com/docs/webstore/program-policies/limited-use">
+            Chrome Web Store User Data Policy
+          </TextLink>
+          , including the Limited Use requirements.
         </p>
       </DocSection>
 

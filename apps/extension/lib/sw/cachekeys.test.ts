@@ -1,14 +1,25 @@
 // @vitest-environment node
+import { govuk } from '@webable/core/compose/__fixtures__/index';
 import type { PageContext, RegionEvidence } from '@webable/core/page/types';
+import { nameKey } from '@webable/core/skeleton/locate';
+import { pathShape } from '@webable/core/skeleton/template';
+import {
+  COMPOSE_PINNED_MODEL,
+  COMPOSE_SCHEMA_VERSION,
+} from '@webable/core/versions';
 import { describe, expect, it } from 'vitest';
 
 import { freshSecret } from '../storage/install';
 import { canonicalJson, hmacHex } from '../storage/crypto';
 import {
+  composeKey,
+  nameHash,
+  nameHasher,
   pageAnswerKey,
   pageSignature,
   regionAnswerKey,
   siteKey,
+  templateKey,
 } from './cachekeys';
 
 const PAGE: PageContext = {
@@ -123,5 +134,70 @@ describe('canonical JSON', () => {
     expect(
       canonicalJson({ b: 1, a: { d: [2, { z: 1, y: 2 }], c: undefined } }),
     ).toBe('{"a":{"d":[2,{"y":2,"z":1}]},"b":1}');
+  });
+});
+
+describe('v2 keys: templates, planner specs and names', () => {
+  it('keys a template by site and path shape, never by the URL itself', async () => {
+    const secret = freshSecret();
+    const site = await siteKey(secret, 'example.com');
+    const a = await templateKey(
+      secret,
+      site,
+      pathShape('https://example.com/wiki/Alan_Turing'),
+    );
+    const b = await templateKey(
+      secret,
+      site,
+      pathShape('https://example.com/wiki/Ada?x=1'),
+    );
+    const c = await templateKey(
+      secret,
+      site,
+      pathShape('https://example.com/search?q=x'),
+    );
+    expect(a).toMatch(/^[0-9a-f]{16}$/);
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
+    expect(await templateKey(freshSecret(), site, '/wiki/*')).not.toBe(a);
+  });
+
+  it('keys planner specs by site, path shape, schema and model', async () => {
+    const secret = freshSecret();
+    const site = await siteKey(secret, 'example.com');
+    const k = await composeKey(secret, site, '/wiki/*');
+    expect(k).toMatch(/^[0-9a-f]{32}$/);
+    expect(k).toBe(
+      await hmacHex(
+        secret,
+        [
+          'compose',
+          site,
+          '/wiki/*',
+          COMPOSE_SCHEMA_VERSION,
+          COMPOSE_PINNED_MODEL,
+        ],
+        16,
+      ),
+    );
+    expect(await composeKey(secret, site, '/wiki/*', 'other-model')).not.toBe(
+      k,
+    );
+    expect(await composeKey(secret, site, '/search')).not.toBe(k);
+    // Never the same as a template key for the same parts.
+    expect(k.startsWith(await templateKey(secret, site, '/wiki/*'))).toBe(
+      false,
+    );
+  });
+
+  it('hashes every label of a skeleton ahead of time, counts and case folded', async () => {
+    const secret = freshSecret();
+    const hash = await nameHasher(secret, govuk);
+    const labelled = govuk.nodes.find((n) => n.label && /\w/.test(n.label))!;
+    const key = nameKey(labelled.label!);
+    expect(hash(key)).toBe(await nameHash(secret, key));
+    expect(hash(key)).toMatch(/^[0-9a-f]{16}$/);
+    expect(hash('a label not on this page')).toBe('');
+    expect(nameKey('3 Items')).toBe(nameKey('12 items'));
   });
 });

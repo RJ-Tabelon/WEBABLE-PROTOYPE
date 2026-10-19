@@ -39,6 +39,29 @@ export * from './explain/templates';
 
 export * from './bridge/protocol';
 
+export * from './skeleton/constants';
+export * from './skeleton/types';
+export * from './skeleton/wire';
+export * from './skeleton/to-wire';
+export * from './skeleton/outline';
+export * from './skeleton/locate';
+export * from './skeleton/template';
+
+export * from './compose/constants';
+export * from './compose/spec';
+export * from './compose/wire';
+export * from './compose/validate';
+export * from './compose/heuristic';
+export * from './compose/prompt';
+
+export * from './fit/types';
+export * from './fit/typeramp';
+export * from './fit/solver';
+export * from './fit/structure';
+
+export * from './triage/types';
+export * from './triage/triage';
+
 export type {
   Database,
   Json,

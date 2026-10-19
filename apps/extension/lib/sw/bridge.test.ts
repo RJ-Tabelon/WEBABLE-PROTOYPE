@@ -7,7 +7,12 @@ import {
   senderAllowed,
   type BridgeHandlers,
 } from './bridge';
-import { E2E_SUPABASE_ORIGIN, originAllowed, readConfig } from './config';
+import {
+  E2E_SUPABASE_ORIGIN,
+  isLoopbackUrl,
+  originAllowed,
+  readConfig,
+} from './config';
 
 const PATTERNS = ['http://localhost:3000/*', 'https://app.webable.example/*'];
 const OK_SENDER = {
@@ -318,5 +323,66 @@ describe('build configuration', () => {
     expect(
       readConfig({ MODE: 'development' } as unknown as ImportMetaEnv).e2e,
     ).toBe(false);
+  });
+
+  it('calls the project’s compose function; only local builds take an override', () => {
+    const env = (patch: Record<string, string>) =>
+      readConfig({
+        WXT_SUPABASE_URL: 'https://x.supabase.co',
+        WXT_SUPABASE_PUBLISHABLE_KEY: 'pk',
+        ...patch,
+      } as unknown as ImportMetaEnv);
+    const prod = env({
+      MODE: 'production',
+      WXT_COMPOSE_URL: 'http://127.0.0.1:8788/compose',
+    });
+    expect(prod.composeUrl).toBe('https://x.supabase.co/functions/v1/compose');
+    expect(prod.devPlanner).toBe(false);
+    const prodOther = env({
+      MODE: 'production',
+      WXT_COMPOSE_URL: 'https://elsewhere.example/compose',
+    });
+    expect(prodOther.composeUrl).toBe(
+      'https://x.supabase.co/functions/v1/compose',
+    );
+
+    const dev = env({
+      MODE: 'development',
+      WXT_COMPOSE_URL: 'http://127.0.0.1:8788/compose/',
+    });
+    expect(dev.composeUrl).toBe('http://127.0.0.1:8788/compose');
+    expect(dev.devPlanner).toBe(true);
+    // A development build against a deployed function has no dev planner.
+    expect(env({ MODE: 'development' }).devPlanner).toBe(false);
+    expect(
+      env({ MODE: 'development', WXT_COMPOSE_URL: 'https://x.dev/compose' })
+        .devPlanner,
+    ).toBe(false);
+
+    const e2e = env({ MODE: 'e2e' });
+    expect(e2e.composeUrl).toBe(`${E2E_SUPABASE_ORIGIN}/functions/v1/compose`);
+    expect(e2e.devPlanner).toBe(false);
+    expect(
+      env({ MODE: 'e2e', WXT_COMPOSE_URL: 'http://127.0.0.1:4176/compose' })
+        .composeUrl,
+    ).toBe('http://127.0.0.1:4176/compose');
+  });
+
+  it('knows loopback hosts', () => {
+    for (const url of [
+      'http://localhost:8788/',
+      'http://dev.localhost/',
+      'http://127.0.0.1:1/x',
+      'http://127.10.0.3/',
+      'http://[::1]:8788/',
+    ])
+      expect(isLoopbackUrl(url), url).toBe(true);
+    for (const url of [
+      'https://x.supabase.co/',
+      'http://128.0.0.1/',
+      'http://localhost.example.com/',
+      'not a url',
+    ])
+      expect(isLoopbackUrl(url), url).toBe(false);
   });
 });
