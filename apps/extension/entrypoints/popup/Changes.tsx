@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Button, Disclosure, FitMark, Icon, IndexRule } from '@webable/ui';
 import { OP_CATALOG, type OpId } from '@webable/core/ops/catalog';
 
-import { COPY } from '@/lib/popup/copy';
+import { COPY, zoomLowered } from '@/lib/popup/copy';
 import { fitValue, redoableOps, targetLimited } from '@/lib/popup/format';
 import {
   reasonChips,
@@ -145,17 +145,32 @@ function Row({
 }) {
   const value = fitValue(row.change);
   const system = row.change.trace.source === 'system';
+  // Page zoom is the whole page (100% -> 150%): nothing to mark on it.
+  const zoom = row.op === 'page_zoom';
+  // A zoom the checks lowered one step and kept carries why (nav_hidden, overflow).
+  const lowered =
+    zoom && row.change.vcode ? zoomLowered(row.change.vcode) : null;
   return (
     <li className="pp-row">
-      <button
-        type="button"
-        id={`pp-row-${row.op}`}
-        className="pp-row__label"
-        onClick={() => onShow(row.op)}
-        aria-label={`${row.label}: show on page`}
-      >
-        {row.label}
-      </button>
+      {zoom ? (
+        <span
+          id={`pp-row-${row.op}`}
+          tabIndex={-1}
+          className="pp-row__label pp-row__label--static"
+        >
+          {row.label}
+        </span>
+      ) : (
+        <button
+          type="button"
+          id={`pp-row-${row.op}`}
+          className="pp-row__label"
+          onClick={() => onShow(row.op)}
+          aria-label={`${row.label}: show on page`}
+        >
+          {row.label}
+        </button>
+      )}
       <span className="pp-row__value">
         <FitMark {...value} />
         {system ? (
@@ -164,6 +179,7 @@ function Row({
         {targetLimited(row.change) ? (
           <span className="pp-row__source">{TARGET_LIMITED}</span>
         ) : null}
+        {lowered ? <span className="pp-row__source">{lowered}</span> : null}
       </span>
       <Button
         variant="ghost"

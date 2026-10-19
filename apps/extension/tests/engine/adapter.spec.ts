@@ -10,7 +10,7 @@ const hello = {
 };
 
 test.describe('content script flow (fake service worker)', () => {
-  test('a rejected fit does not flash on every unrelated update, and retries when the clipping box changes', async ({
+  test('text in boxes that would cut it off never flashes on unrelated updates, and grows once the site lifts the constraint', async ({
     page,
   }) => {
     await open(page, 'clip');
@@ -39,11 +39,12 @@ test.describe('content script flow (fake service worker)', () => {
       return sizes;
     });
     expect(Math.max(...sizes)).toBe(12);
-    await page.locator('.card').evaluateAll((cards) =>
-      cards.forEach((card) => {
-        (card as HTMLElement).style.height = '160px';
-      }),
-    );
+    // The site's own styles change (a stylesheet arrives): the page is read
+    // and decided again, and the cards, free to grow now, get the fit.
+    await page.addStyleTag({
+      content:
+        '.card { height: auto !important; overflow: visible !important; }',
+    });
     await expect
       .poll(() =>
         page.locator('#card-1 p').evaluate((p) => getComputedStyle(p).fontSize),
@@ -315,6 +316,33 @@ test.describe('content script flow (fake service worker)', () => {
     expect(
       await page.evaluate(() => document.querySelector('webable-ui') !== null),
     ).toBe(true);
+  });
+
+  test('an app shell read with no text asks for a reading once its text mounts, as one node', async ({
+    page,
+  }) => {
+    await open(page, 'shell');
+    await page.evaluate(
+      ([pl, h]) => window.__webableEngine.runAdapter(pl as never, h as never),
+      [plan([{ op: 'text_floor', level: 2 }]), hello] as const,
+    );
+    const readings = () =>
+      page.evaluate(() =>
+        window.__webableEngine
+          .sentMessages()
+          .filter((m) => m.type === 'cs:signals')
+          .map(
+            (m) =>
+              (m as { signals: { text: { mainFontPx: number | null } } })
+                .signals.text.mainFontPx,
+          ),
+      );
+    // At DOMContentLoaded the shell had nothing to read.
+    expect(await readings()).toEqual([null]);
+    // The app mounts its whole tree under one element: the page is read
+    // again (the worker decides the page scale from this reading).
+    await expect(page.locator('#story')).toBeAttached();
+    await expect.poll(readings, { timeout: 10_000 }).toEqual([null, 12]);
   });
 
   test('every worker message is answered in its reply shape', async ({

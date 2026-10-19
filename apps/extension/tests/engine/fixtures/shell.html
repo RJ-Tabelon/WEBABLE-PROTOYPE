@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Application shell</title>
+    <!--
+      A single-page app's shell (Gmail, YouTube): at DOMContentLoaded the
+      document holds an empty app root, and everything, navigation
+      included, renders from script afterwards, mounted as one node (as a
+      framework mounts its app). The first reading has no body text to
+      size; the page scale is decided once the text is there.
+    -->
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #222;
+        background: #fff;
+      }
+      header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 12px 24px;
+        border-bottom: 1px solid #ddd;
+      }
+      header a {
+        font-size: 14px;
+        color: #1a4d8f;
+      }
+      main {
+        max-width: 720px;
+        padding: 16px 24px;
+      }
+      main p {
+        font-size: 12px;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script>
+      setTimeout(() => {
+        document.getElementById('app').innerHTML =
+          '<div class="app"><header><nav aria-label="Primary"><a href="/inbox">Inbox</a> <a href="/sent">Sent</a> <a href="/drafts">Drafts</a></nav><input type="search" aria-label="Search mail" /></header>' +
+          '<main aria-label="Message"><h1>Rendered after load</h1>' +
+          '<p>This message arrived after the page itself had loaded, the way an application fills its shell from script. It is long enough to read as running text in the main content.</p>'.repeat(
+            3,
+          ) +
+          '</main></div>';
+        document.querySelector('main p').id = 'story';
+      }, 2000);
+    </script>
+  </body>
+</html>

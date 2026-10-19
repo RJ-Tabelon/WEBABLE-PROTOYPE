@@ -9,6 +9,7 @@ export type Database = {
           user_id: string
           onboarding_step: Database['public']['Enums']['onboarding_step']
           cloud_analysis: boolean
+          ai_layout: boolean
           product_learning: boolean
           theme: string
           created_at: string
@@ -19,6 +20,7 @@ export type Database = {
           user_id: string
           onboarding_step?: Database['public']['Enums']['onboarding_step']
           cloud_analysis?: boolean
+          ai_layout?: boolean
           product_learning?: boolean
           theme?: string
           created_at?: string
@@ -29,6 +31,7 @@ export type Database = {
           user_id?: string
           onboarding_step?: Database['public']['Enums']['onboarding_step']
           cloud_analysis?: boolean
+          ai_layout?: boolean
           product_learning?: boolean
           theme?: string
           created_at?: string
@@ -200,6 +203,7 @@ export type Database = {
     Views: { [_ in never]: never };
     Functions: {
       consume_ai_quota: { Args: { p_user: string }; Returns: Json };
+      consume_compose_quota: { Args: { p_user: string }; Returns: Json };
       delete_my_account: { Args: Record<PropertyKey, never>; Returns: undefined };
       export_my_data: { Args: Record<PropertyKey, never>; Returns: Json };
       ingest_agg_report: { Args: { p_user: string; p_tag: string; p_period: string; p_expires: string; p_limit: number; p_window: string; p_lib: string; p_cells: Json; p_retention_cutoff: string }; Returns: string };

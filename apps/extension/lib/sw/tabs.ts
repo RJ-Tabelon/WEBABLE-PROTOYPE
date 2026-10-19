@@ -9,6 +9,7 @@ import type {
 import type { PopupStatus } from '../protocol';
 import type { KvArea } from '../storage/area';
 import { KEYS } from '../storage/keys';
+import type { TriagePrior } from '../storage/sites';
 import { isRecord } from '../storage/store';
 
 /**
@@ -46,8 +47,42 @@ export interface TabRecord {
   appliedAt: Partial<Record<OpId, number>>;
   /** Friction likelihood ratios seen on this page, per op. */
   friction: Partial<Record<OpId, number>>;
-  /** Tab zoom WebAble applied (chrome.tabs.setZoom), to undo it exactly. */
-  zoom: { level: number; factor: number; previous: number } | null;
+  /**
+   * Tab zoom WebAble applied (chrome.tabs.setZoom, per-tab scope), to undo it
+   * exactly. Chrome resets per-tab zoom on navigation, so it lasts one page
+   * view at most.
+   */
+  zoom: TabZoom | null;
+  /**
+   * The page scale this page view decided at its first plan, frozen until
+   * Undo, a step-down or the person's own zoom (1 = none). Null until then.
+   */
+  scale: {
+    z: number;
+    /** The zoom guard stepped it down once already (at most once per page view). */
+    stepped: boolean;
+    /** The zoom guard passed this scale (its verifier event is recorded once). */
+    checked: boolean;
+  } | null;
+  /**
+   * Visible primary-nav links and search field as first read at WebAble's
+   * scale 1: the zoom guard's baseline. Null when the page was first read
+   * already scaled (a repeat visit), so only overflow is checked.
+   */
+  navBaseline: { links: number; search: boolean } | null;
+  /** This page's template (an HMAC key, never the path) and window-width bucket. */
+  template: { key: string; bucket: number | null } | null;
+  /**
+   * The template's triage prior as it stood when this page view first read
+   * that template. Hysteresis is between visits (docs/10 §3.2): later
+   * readings of this page view compare with it, never with an early reading
+   * of a page that was still loading (an SPA's empty shell). Null until read.
+   */
+  viewPrior: { key: string; prior: TriagePrior | null } | null;
+  /** When a layout-planning request last left the device from this tab. */
+  layoutSentAt: number | null;
+  /** The page is webmail or chat (from its host at hello): layout planning never runs here. */
+  personalSite: boolean;
   analysis: {
     calls: number;
     lastCallAt: number | null;
@@ -74,6 +109,44 @@ export interface TabRecord {
   } | null;
 }
 
+export interface TabZoom {
+  /** page_zoom's level index. */
+  level: number;
+  /** WebAble's page scale over the person's own zoom (a Chrome preset). */
+  z: number;
+  /** The tab factor WebAble set (previous x z). */
+  factor: number;
+  /** The person's own zoom before WebAble's: what Undo restores. */
+  previous: number;
+  /** Applied at hello from the page-scale cache, before this page view's first plan. */
+  early: boolean;
+  /** Fit view is open: the tab is at the person's own zoom until it closes. */
+  suspended: boolean;
+  /** Set by an older WebAble (no scale recorded): the first plan puts it back. */
+  legacy?: true;
+}
+
+/**
+ * A stored zoom record. One without `z` came from an older WebAble (a factor
+ * and the zoom before it); it is kept so the first plan can put it back.
+ */
+function normalizeZoom(raw: unknown): TabZoom | null {
+  if (!isRecord(raw)) return null;
+  const factor = typeof raw.factor === 'number' ? raw.factor : NaN;
+  const previous = typeof raw.previous === 'number' ? raw.previous : NaN;
+  if (!(factor > 0) || !(previous > 0)) return null;
+  const legacy = typeof raw.z !== 'number';
+  return {
+    level: typeof raw.level === 'number' ? raw.level : 0,
+    z: legacy ? factor / previous : (raw.z as number),
+    factor,
+    previous,
+    early: !legacy && raw.early === true,
+    suspended: !legacy && raw.suspended === true,
+    ...(legacy ? { legacy: true as const } : {}),
+  };
+}
+
 export function freshTab(tabId: number): TabRecord {
   return {
     tabId,
@@ -95,6 +168,12 @@ export function freshTab(tabId: number): TabRecord {
     appliedAt: {},
     friction: {},
     zoom: null,
+    scale: null,
+    navBaseline: null,
+    template: null,
+    viewPrior: null,
+    layoutSentAt: null,
+    personalSite: false,
     analysis: { calls: 0, lastCallAt: null, lastSentAt: null, used: false },
     interactedAt: null,
     levelEdits: {},
@@ -165,6 +244,7 @@ export class TabRegistry {
             this.tabs.set(tabId, {
               ...freshTab(tabId),
               ...(rec as Partial<TabRecord>),
+              zoom: normalizeZoom(rec.zoom),
               tabId,
             });
         }

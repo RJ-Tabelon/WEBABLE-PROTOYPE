@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Read: product cards</title>
+    <!--
+      Amazon-shaped result cards (eval B3, m2): each card holds a thumbnail,
+      a title link in a heading, stars drawn as an icon link named by its
+      label, a review count, a "bought" line, a price whose cents are drawn
+      apart (an opacity-0 offscreen copy "CAD 14.19", the decimal point
+      hidden, the cents raised), a row of badges, delivery lines, small icon
+      buttons, a promotion box and an "Add to cart" button: more parts than
+      an exemplar may keep, so level of detail has to choose. The price link
+      also holds a price per count and a struck "Typical" price, a coupon
+      says "Save CAD 1.00" (docs/11 polish: the record's price is the current
+      one), and the sort select has a drawn dropdown beside it.
+    -->
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      main {
+        padding: 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 280px);
+        gap: 16px;
+      }
+      .thumb img {
+        width: 256px;
+        height: 256px;
+        display: block;
+        background: #cdb;
+      }
+      .card h2 {
+        font-size: 16px;
+        margin: 6px 0;
+      }
+      .a-price {
+        position: relative;
+        font-size: 28px;
+      }
+      .a-offscreen {
+        position: absolute;
+        left: 0;
+        opacity: 0;
+      }
+      .a-price-symbol,
+      .a-price-fraction {
+        font-size: 13px;
+        position: relative;
+        top: -0.75em;
+      }
+      .a-price-decimal {
+        position: absolute;
+        opacity: 0;
+      }
+      .badges span,
+      .delivery span,
+      .promo span {
+        display: inline-block;
+        margin-right: 6px;
+        font-size: 12px;
+      }
+      .stars .icon {
+        display: inline-block;
+        width: 76px;
+        height: 16px;
+        background: #f90;
+      }
+      .a-button-dropdown {
+        display: inline-block;
+        padding: 2px 8px;
+        border: 1px solid #888;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .icons button {
+        width: 28px;
+        height: 28px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Results</h1>
+      <div class="bar">
+        <p>1-8 of over 3,000 results for "reading glasses"</p>
+        <form class="sort" data-qa="sort">
+          <span class="a-dropdown-container"
+            ><label for="s-sort" aria-hidden="true">Sort by:</label
+            ><select id="s-sort" aria-label="Sort by:">
+              <option selected>Featured</option>
+              <option>Price: Low to High</option>
+              <option>Price: High to Low</option></select
+            ><span class="a-button-dropdown" aria-hidden="true" tabindex="-1"
+              ><span class="a-button-text"
+                ><span class="a-dropdown-label">Sort by:</span
+                ><span class="a-dropdown-prompt">Featured</span></span
+              ></span
+            ></span
+          >
+        </form>
+      </div>
+      <div class="grid" data-qa="cards"></div>
+    </main>
+    <script>
+      var names = [
+        'Reading glasses for women and men, blue light blocking',
+        'Five pairs of spring hinge readers in black',
+        'Lightweight round readers with a case',
+        'Folding pocket readers, three pack',
+        'Computer glasses with anti-glare lenses',
+        'Metal frame readers with a cord',
+        'Oversized square readers in tortoise',
+        'Half-frame readers for close work',
+      ];
+      var grid = document.querySelector('.grid');
+      names.forEach(function (n, i) {
+        var cents = String(10 + i * 7).slice(-2);
+        var price = 14 + i;
+        var card = document.createElement('div');
+        card.className = 's-result';
+        card.setAttribute('data-asin', 'B0' + (1000 + i));
+        card.innerHTML =
+          '<div class="card">' +
+          '<a class="thumb" href="/dp/B0' +
+          (1000 + i) +
+          '"><img alt="' +
+          n +
+          '" src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></a>' +
+          '<div class="details">' +
+          '<h2><a href="/dp/B0' +
+          (1000 + i) +
+          '"><span>' +
+          n +
+          '</span></a></h2>' +
+          '<div class="rating"><a class="stars" href="#reviews" aria-label="4.' +
+          (i % 9) +
+          ' out of 5 stars, rating details"><i class="icon"></i></a>' +
+          '<a class="count" href="/dp/B0' +
+          (1000 + i) +
+          '#reviews">(2,4' +
+          i +
+          '1)</a></div>' +
+          '<div class="bought">1K+ bought in past month</div>' +
+          '<div class="price-line"><a class="price" href="/dp/B0' +
+          (1000 + i) +
+          '"><span class="a-price"><span class="a-offscreen">CAD&nbsp;' +
+          price +
+          '.' +
+          cents +
+          '</span><span aria-hidden="true"><span class="a-price-symbol">CAD</span><span class="a-price-whole">' +
+          price +
+          '<span class="a-price-decimal">.</span></span><span class="a-price-fraction">' +
+          cents +
+          '</span></span></span> <span class="unit">(<span class="a-price a-text-price"><span class="a-offscreen">CAD&nbsp;3.52</span><span aria-hidden="true">CAD3.52</span></span>/count)</span> <span class="typical">Typical: <span class="a-price a-text-price"><span class="a-offscreen">CAD&nbsp;19.99</span><s aria-hidden="true">CAD19.99</s></span></span></a></div>' +
+          '<div class="badges"><span>Best seller</span><span>Climate pledge</span><span>Small business</span></div>' +
+          '<div class="delivery"><span>FREE delivery</span><span>Mon, Oct 19</span><span>Ships to Canada</span></div>' +
+          '<div class="icons"><button aria-label="Share">s</button><button aria-label="Compare">c</button><button aria-label="Save">v</button><button aria-label="Report">r</button></div>' +
+          '<div class="promo"><span>Save CAD 1.00</span><span>with coupon</span><span>Terms</span><span>apply</span></div>' +
+          '<button type="button" class="add">Add to cart</button>' +
+          '</div></div>';
+        grid.appendChild(card);
+      });
+    </script>
+  </body>
+</html>

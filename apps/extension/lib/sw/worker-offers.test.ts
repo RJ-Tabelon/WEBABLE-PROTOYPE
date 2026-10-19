@@ -21,6 +21,7 @@ import { memoryArea } from '../storage/area';
 import { createStores } from '../storage';
 import type { ChromePort } from './chrome';
 import { readConfig } from './config';
+import { ComposeInflight, FitViewStates } from './fitview';
 import { PageMemos } from './pages';
 import { TabRegistry } from './tabs';
 import { REASON_WINDOW_MS, UndoHold } from './undo';
@@ -100,6 +101,13 @@ function setup() {
     async setZoom(tabId, factor) {
       zoom.set(tabId, factor);
     },
+    async releaseZoom(tabId, factor) {
+      if (factor === undefined) zoom.delete(tabId);
+      else zoom.set(tabId, factor);
+    },
+    async tabWidth() {
+      return 1280;
+    },
     async tabUrl() {
       return URL_A;
     },
@@ -117,6 +125,9 @@ function setup() {
     async inject() {
       return true;
     },
+    async injectFitView() {
+      return true;
+    },
     async openTabs() {
       return [];
     },
@@ -131,6 +142,8 @@ function setup() {
     tabs: new TabRegistry(memoryArea()),
     pages: new PageMemos(memoryArea()),
     undos: new UndoHold(memoryArea()),
+    fitViews: new FitViewStates(memoryArea()),
+    inflight: new ComposeInflight(memoryArea(), clock.now),
     port,
     registration,
     auth: null,
@@ -402,12 +415,14 @@ describe('hello', () => {
     expect((await env.worker.hello(TAB, 0, URL_A)).shortcuts).toEqual({
       focusLayer: '',
       undoAll: '',
+      fitView: '',
     });
     vi.stubGlobal('chrome', {
       commands: {
         getAll: async () => [
           { name: 'focus-layer', shortcut: 'Alt+Shift+W' },
           { name: 'undo-all', shortcut: '' },
+          { name: 'toggle-fit-view', shortcut: 'Alt+Shift+F' },
           { name: '_execute_action', shortcut: 'Alt+W' },
         ],
       },
@@ -418,6 +433,7 @@ describe('hello', () => {
     expect(hello.shortcuts).toEqual({
       focusLayer: 'Alt+Shift+W',
       undoAll: '',
+      fitView: 'Alt+Shift+F',
     });
   });
 });

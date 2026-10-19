@@ -54,6 +54,36 @@ function* cssRules(sheet: CSSStyleSheet, depth = 0): Generator<CSSStyleRule> {
   }
 }
 
+/**
+ * Selectors of elements a `:hover` or `:focus-within` rule reveals
+ * (`.row:hover .actions {display:flex}` -> `.row .actions`), from readable
+ * sheets only. Used to tell hover-only record actions (archive, ⋮) from
+ * content that is simply hidden.
+ */
+export function revealTargets(
+  sheets: Iterable<CSSStyleSheet>,
+  maxRules = 3000,
+): string[] {
+  const out = new Set<string>();
+  let seen = 0;
+  outer: for (const sheet of sheets) {
+    for (const rule of cssRules(sheet)) {
+      if (++seen > maxRules) break outer;
+      const sel = rule.selectorText;
+      if (!sel.includes(':hover') && !sel.includes(':focus-within')) continue;
+      if (!REVEAL_PROPS.test(rule.style.cssText)) continue;
+      for (const part of sel.split(',')) {
+        const target = hoverTargetSelector(
+          part.trim().replace(/:focus-within/g, ':hover'),
+        );
+        if (target) out.add(target);
+        if (out.size >= 400) break outer;
+      }
+    }
+  }
+  return [...out];
+}
+
 export function detectHoverMenus(doc: Document, maxRules = 3000): Element[] {
   const found = new Set<Element>();
   let seen = 0;

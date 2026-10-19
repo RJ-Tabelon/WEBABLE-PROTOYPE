@@ -411,6 +411,12 @@ verify_jwt = false
 enabled = true
 verify_jwt = false
 
+# Fit view layout planner (OpenAI). Holds OPENAI_API_KEY; the extension never sees it.
+# Sessions are verified inside the handler, as for decide.
+[functions.compose]
+enabled = true
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54327

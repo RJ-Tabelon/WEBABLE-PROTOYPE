@@ -1,3 +1,17 @@
+import { heuristicSpec } from '@webable/core/compose/heuristic';
+import type {
+  SpecEnvelope,
+  StoredSpec,
+  ValidatedSpec,
+} from '@webable/core/compose/spec';
+import {
+  validateSpec,
+  type ValidateSpecContext,
+} from '@webable/core/compose/validate';
+import { triageLine } from '@webable/core/explain/templates';
+import { solveFitLayout } from '@webable/core/fit/solver';
+import { structureNeed } from '@webable/core/fit/structure';
+import type { FitLayout } from '@webable/core/fit/types';
 import { levelValue, toDay } from '@webable/core/learning/learners';
 import { subtractCounts } from '@webable/core/learning/math';
 import { FRICTION_LR, K, W } from '@webable/core/learning/params';
@@ -14,16 +28,42 @@ import type {
   RegionVerdict,
 } from '@webable/core/policy/types';
 import { fitUiVars } from '@webable/core/profile/describe';
-import { fitProfileSchema } from '@webable/core/profile/schema';
+import {
+  fitProfileSchema,
+  type FitProfile,
+} from '@webable/core/profile/schema';
 import type { SystemSignals } from '@webable/core/profile/defaults';
+import { fromStoredSpec, toStoredSpec } from '@webable/core/skeleton/locate';
+import { pathShape } from '@webable/core/skeleton/template';
+import type { Skeleton } from '@webable/core/skeleton/types';
+import { triage } from '@webable/core/triage/triage';
+import type { TriageVerdict } from '@webable/core/triage/types';
+import {
+  COMPOSE_SCHEMA_VERSION,
+  SKELETON_VERSION,
+} from '@webable/core/versions';
 
-import type { ContentReplies, HelloReply, PageEvidence } from '../protocol';
+import type {
+  ContentReplies,
+  FitViewEvent,
+  FitViewOpenReason,
+  FitViewOpenReply,
+  FitViewUnavailable,
+  HelloReply,
+  PageEvidence,
+} from '../protocol';
 import { normalizeAccount, type AccountRecord } from '../storage/account';
 import { offersToday } from '../storage/activity';
 import { randomId } from '../storage/crypto';
+import { addDefect, addKeep } from '../storage/fitlearning';
 import type { LocalStores } from '../storage';
-import type { SiteRecord } from '../storage/sites';
-import type { Settings } from '../storage/settings';
+import { FIT_TEXT_STEPS_MAX, type Settings } from '../storage/settings';
+import {
+  pruneTemplates,
+  type SiteRecord,
+  type TemplateMemo,
+  type TriagePrior,
+} from '../storage/sites';
 import { JsonStore } from '../storage/store';
 import {
   analysisView,
@@ -45,12 +85,20 @@ import {
   type BreakerState,
 } from './breaker';
 import {
+  composeKey,
+  nameHasher,
   pageAnswerKey,
   pageSignature,
   regionAnswerKey,
   siteKey,
+  templateKey,
 } from './cachekeys';
 import type { ChromePort } from './chrome';
+import {
+  buildComposeRequest,
+  callCompose,
+  type ComposeOutcome,
+} from './compose';
 import type { SwConfig } from './config';
 import {
   applyRefinement,
@@ -60,7 +108,33 @@ import {
   refinementMode,
 } from './deadline';
 import { classifyUrl } from './domain';
-import { analysisConsumers, gate } from './gating';
+import {
+  autoArrival,
+  closeOutcome,
+  countsFor,
+  fitViewArrival,
+  fitViewTabState,
+  focusNode,
+  forPageView,
+  blockingOverlay,
+  hasPasswordField,
+  HARD_BLOCKERS,
+  personOpened,
+  regionRoles,
+  type ComposeInflight,
+  type FitViewState,
+  type FitViewStates,
+  type InflightWaiter,
+} from './fitview';
+import {
+  analysisConsumers,
+  CHECKOUT_P,
+  composeGate,
+  gate,
+  isMailOrChat,
+  PLANNER_UNAVAILABLE,
+  type ComposeGateInput,
+} from './gating';
 import { stabilizeLevels } from './levels';
 import { PageMemos, type PageMemo } from './pages';
 import {
@@ -82,6 +156,22 @@ import {
 } from './tabs';
 import type { Prefs, TabDetail, WelcomeState } from './ui';
 import { neededKeys, UndoHold, type HeldUndo, type UndoReason } from './undo';
+import {
+  firstScale,
+  fromPrior,
+  guardVerdict,
+  isZoomReset,
+  noBodyText,
+  OwnZoom,
+  sameFactor,
+  stepDown,
+  tabFactor,
+  toPrior,
+  widthBucket,
+  withScale,
+  zoomLevel,
+  type GuardReport,
+} from './zoom';
 import { KEYS } from '../storage/keys';
 
 /** Site-access and registration operations (lib/sw/permissions.ts in production). */
@@ -92,6 +182,11 @@ export interface Registration {
     pausedDomains: readonly string[],
   ): Promise<void>;
   inject(tabId: number, prePaint: readonly OpId[]): Promise<boolean>;
+  /**
+   * Fit view's renderer (isolated world) and key bridge (MAIN world) into the
+   * tab's top frame; false when either could not be injected.
+   */
+  injectFitView(tabId: number): Promise<boolean>;
   /** Tabs that are open now (id and URL). */
   openTabs(): Promise<Array<{ id: number; url: string | undefined }>>;
 }
@@ -103,12 +198,21 @@ export interface WorkerDeps {
   pages: PageMemos;
   /** Undo events held for the reason-chip window (storage.session). */
   undos: UndoHold;
+  /** Fit view state per tab (storage.session, one key per tab). */
+  fitViews: FitViewStates;
+  /** Layout-planner calls in flight, by cache key (storage.session). */
+  inflight: ComposeInflight;
   port: ChromePort;
   registration: Registration;
   auth: AuthService | null;
   sync: AccountSync | null;
   now: () => number;
   fetch?: typeof fetch;
+  /**
+   * Fit view's face, Atkinson Hyperlegible Next (woff2, base64), or null when
+   * the build has none. Sent once per document.
+   */
+  font?: () => string | null | Promise<string | null>;
 }
 
 interface Ctx {
@@ -137,6 +241,63 @@ const emptyPlan = (tabSession: string | null, now: number): AdaptationPlan => ({
   ops: [],
 });
 
+const pct = (factor: number): string => `${Math.round(factor * 100)}%`;
+
+/** A URL's host ('' when it has none). Used, never stored. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * The plan as the content script receives it. Its triage keeps what the page
+ * acts on (the verdict, whether the page can be re-presented, the page scale
+ * and the blockers); k, the need bands and the reasons derive from the fit,
+ * which never reaches the page (docs/10 §4.2), so they are blanked: k null,
+ * residual 1, every band 'fits', no reasons.
+ */
+export function toContent(plan: AdaptationPlan): AdaptationPlan {
+  const t = plan.triage;
+  if (!t) return plan;
+  const needs = Object.fromEntries(
+    Object.keys(t.needs).map((need) => [need, 'fits']),
+  ) as TriageVerdict['needs'];
+  return {
+    ...plan,
+    triage: {
+      version: t.version,
+      verdict: t.verdict,
+      k: null,
+      zoom: t.zoom,
+      zMax: t.zoom,
+      residual: 1,
+      needs,
+      reasons: [],
+      representable: t.representable,
+      blockers: [...t.blockers],
+    },
+  };
+}
+
+/** The fit with Fit view's own Text − / + override applied (docs/10 §7). */
+function withTextStep(profile: FitProfile, step: number): FitProfile {
+  const s = Math.max(
+    -FIT_TEXT_STEPS_MAX,
+    Math.min(FIT_TEXT_STEPS_MAX, Math.round(step)),
+  );
+  if (s === 0) return profile;
+  const p = structuredClone(profile);
+  p.vision.textMinPx.value =
+    Math.round(p.vision.textMinPx.value * FIT_TEXT_STEP_RATIO ** s * 2) / 2;
+  return p;
+}
+
+/** Each Text − / + press in Fit view (the view's own ratio). */
+const FIT_TEXT_STEP_RATIO = 1.125;
+
 /** The page-analysis label a change's decision rested on, if any. */
 function aiLabelOf(c: {
   trace: PlannedOp['trace'];
@@ -147,8 +308,31 @@ function aiLabelOf(c: {
   return undefined;
 }
 
-/** decide answered 503 without a retry time: pause page analysis this long. */
+/** decide or compose answered 503 without a retry time: back off this long. */
 const UNAVAILABLE_BACKOFF_MS = 5 * 60_000;
+
+/** A cached planner spec is reused only when this share of its locators resolve (docs/10 §6). */
+export const PLANNER_MIN_COVERAGE = 0.8;
+
+/** One planner call: the reading it plans and where its answer goes. */
+interface PlannerJob {
+  tabId: number;
+  tabSession: string;
+  domain: string;
+  /** HMAC site key (tags the cached spec for "Forget this site"). */
+  site: string;
+  /** Planner cache key of the template. */
+  key: string;
+  skeleton: Skeleton;
+  hash: (key: string) => string;
+  ctx: ValidateSpecContext;
+}
+
+interface PlannerResult {
+  stored: StoredSpec;
+  /** Validated against the job's own skeleton. */
+  validated: ValidatedSpec;
+}
 
 /** A tab is injected at most once in this window (several paths can ask at once). */
 const INJECT_DEDUPE_MS = 5_000;
@@ -205,11 +389,24 @@ async function commandShortcuts(): Promise<HelloReply['shortcuts']> {
   }
   const of = (name: string): string =>
     all.find((c) => c.name === name)?.shortcut ?? '';
-  return { focusLayer: of('focus-layer'), undoAll: of('undo-all') };
+  return {
+    focusLayer: of('focus-layer'),
+    undoAll: of('undo-all'),
+    fitView: of('toggle-fit-view'),
+  };
 }
 
 export class Worker {
   private readonly breaker: JsonStore<BreakerState>;
+  /** The layout planner's own breaker (an OpenAI outage never silences page analysis). */
+  private readonly composeBreaker: JsonStore<BreakerState>;
+  /** Zoom factors WebAble just set, so their onZoomChange is not the person's. */
+  private readonly ownZoom = new OwnZoom();
+  /**
+   * The last skeleton per tab (memory only): a planner spec that lands for
+   * another tab's extraction is re-bound to it here.
+   */
+  private readonly skeletons = new Map<number, Skeleton>();
   private allSitesCache: boolean | null = null;
   private lastRegistration = '';
   private undoTimer: ReturnType<typeof setTimeout> | null = null;
@@ -243,6 +440,11 @@ export class Worker {
       KEYS.breaker,
       normalizeBreaker,
     );
+    this.composeBreaker = new JsonStore(
+      d.stores.local,
+      KEYS.composeBreaker,
+      normalizeBreaker,
+    );
   }
 
   private get now(): number {
@@ -274,6 +476,8 @@ export class Worker {
     tab: TabRecord,
     signals: PageSignals,
     verdicts: Record<string, RegionVerdict>,
+    verdict: TriageVerdict | undefined,
+    scale: number,
   ): Promise<PolicyInput> {
     const budget = await this.d.stores.offers.read();
     return {
@@ -290,6 +494,8 @@ export class Worker {
       tabSession: tab.tabSession ?? 'none',
       now: c.now,
       profileConfidence: c.profile.confidence,
+      ...(verdict ? { triage: verdict } : {}),
+      scale,
     };
   }
 
@@ -310,23 +516,37 @@ export class Worker {
   /**
    * The plan for a page view: policy, then level hysteresis across page views
    * (the memo is saved when `persist`), then offers the person accepted here.
+   * The page scale is triage's for this page, frozen for the page view, never
+   * a learned level, so it takes no part in the level hysteresis. `scale` is
+   * WebAble's page scale when the page was read (PageMemo.scale).
    */
   private async planFor(
     c: Ctx,
     tab: TabRecord,
     view: AnalysisView,
     persist: boolean,
+    verdict: TriageVerdict | undefined,
+    scale: number,
   ): Promise<AdaptationPlan> {
     const raw = buildPlan(
-      await this.policyInput(c, tab, view.signals, view.verdicts),
+      await this.policyInput(
+        c,
+        tab,
+        view.signals,
+        view.verdicts,
+        verdict,
+        scale,
+      ),
     );
     const { plan, memo } = stabilizeLevels({
-      plan: raw,
+      plan: { ...raw, ops: raw.ops.filter((p) => p.op !== 'page_zoom') },
       memo: c.site.levelMemo,
       seed: c.profile.identity,
       tabSession: tab.tabSession ?? 'none',
       manual: c.rule.levels,
     });
+    const held = new Map(plan.ops.map((p) => [p.op, p] as const));
+    const ops = raw.ops.map((p) => held.get(p.op) ?? p);
     if (
       persist &&
       tab.domain &&
@@ -336,7 +556,347 @@ export class Worker {
         s.levelMemo = memo;
       });
     }
-    return this.withAccepted(plan, tab);
+    return this.withAccepted({ ...plan, ops }, tab);
+  }
+
+  // =========================================================================
+  // Triage and page scale (docs/10 §3, §5.1)
+  // =========================================================================
+
+  /**
+   * The cached verdict for this page's template, for hysteresis (same profile
+   * identity only): as it stood when this page view first read the template,
+   * so a reading taken while the page was still loading never holds back the
+   * readings after it.
+   */
+  private priorOf(c: Ctx, tab: TabRecord): TriageVerdict | null {
+    const key = tab.template?.key;
+    const prior =
+      key && tab.viewPrior?.key === key
+        ? tab.viewPrior.prior
+        : this.storedPrior(c, key);
+    return prior ? fromPrior(prior) : null;
+  }
+
+  private storedPrior(c: Ctx, key: string | undefined): TriagePrior | null {
+    const memo = key ? c.site.templates[key] : undefined;
+    return memo?.prior && memo.id === c.profile.identity ? memo.prior : null;
+  }
+
+  /**
+   * Triage for a reading of this page view. Once the page view has decided
+   * its page scale, every later plan carries that scale (frozen: no re-zoom
+   * on SPA routes or re-plans). Before that, a scale already on the tab
+   * (applied at hello on a repeat visit) is kept when triage's choice is
+   * within one preset of it. A page view whose scale waited for body text
+   * (an SPA shell, settleScale) and that the person has used since keeps
+   * the scale the tab shows: nothing jumps under their pointer.
+   */
+  private verdictFor(
+    c: Ctx,
+    tab: TabRecord,
+    signals: PageSignals,
+    scale: number,
+  ): TriageVerdict {
+    const raw = triage({
+      profile: c.profile.profile,
+      signals,
+      zoom: signals.viewport.zoom,
+      prior: this.priorOf(c, tab),
+      scale,
+    });
+    if (tab.scale) return withScale(raw, tab.scale.z);
+    const held = tab.zoom && !tab.zoom.legacy ? tab.zoom.z : null;
+    const waited = tab.plan !== null && noBodyText(tab.plan.triage);
+    if (waited && tab.interactedAt !== null) return withScale(raw, held ?? 1);
+    return withScale(raw, firstScale(raw.zoom, held));
+  }
+
+  /** A plan for the page view's last reading, with its triage (re-plans, friction, refinement). */
+  private async planMemo(
+    c: Ctx,
+    tab: TabRecord,
+    memo: PageMemo,
+    persist: boolean,
+  ): Promise<AdaptationPlan> {
+    const view = analysisView(
+      memo.signals,
+      memo.evidence.regions,
+      memo.answers,
+    );
+    const scale = memo.scale ?? 1;
+    const verdict = this.verdictFor(c, tab, view.signals, scale);
+    const plan = await this.planFor(c, tab, view, persist, verdict, scale);
+    return tab.scale ? this.withFrozenScale(plan, tab) : plan;
+  }
+
+  /**
+   * A later plan keeps the page view's scale. Triage already carries it; this
+   * covers a plan whose page_zoom changed mode for another reason (the scale
+   * stays as applied, or stays off).
+   */
+  private withFrozenScale(
+    plan: AdaptationPlan,
+    tab: TabRecord,
+  ): AdaptationPlan {
+    const z = tab.scale?.z ?? 1;
+    const auto = plan.ops.find(
+      (p) => p.op === 'page_zoom' && p.mode === 'auto',
+    );
+    if (z > 1 && tab.zoom && !auto) {
+      const prev = tab.plan?.ops.find((p) => p.op === 'page_zoom');
+      if (!prev) return plan;
+      return {
+        ...plan,
+        ops: [
+          ...plan.ops.filter((p) => p.op !== 'page_zoom'),
+          { ...prev, mode: 'auto' },
+        ],
+        zoom: z,
+      };
+    }
+    if (!(z > 1) && auto)
+      return {
+        ...plan,
+        ops: plan.ops.filter((p) => p.op !== 'page_zoom'),
+        zoom: 1,
+      };
+    return plan;
+  }
+
+  /**
+   * After a page view's first plan with body text (or a re-decision the
+   * person asked for): freeze its page scale and put it on the tab, or take
+   * a scale that no longer applies off. Later plans leave the tab's zoom
+   * alone, except that a frozen scale missing from the tab goes back on
+   * (reapplyScale).
+   */
+  private async settleScale(
+    tabId: number,
+    plan: AdaptationPlan,
+  ): Promise<AdaptationPlan> {
+    await this.reapplyScale(tabId, plan);
+    const tab = await this.d.tabs.get(tabId);
+    if (tab.scale) return this.withFrozenScale(plan, tab);
+    // Fit view holds the tab at the person's zoom: decide once it closes.
+    if (tab.zoom?.suspended) return plan;
+    // No body text yet (an SPA's shell, its content still to render): the
+    // scale is decided at the first reading that has some, never frozen at
+    // 1 by an empty page. A scale already on the tab (hello's, on a repeat
+    // visit) stays there undecided; the plan names none, so the page guards
+    // the scale once it is decided, with its content in place.
+    if (noBodyText(plan.triage))
+      return {
+        ...plan,
+        ops: plan.ops.filter((p) => p.op !== 'page_zoom'),
+        zoom: 1,
+      };
+    const op = plan.ops.find((p) => p.op === 'page_zoom' && p.mode === 'auto');
+    const z = op ? levelValue('page_zoom', op.level) : 1;
+    await this.d.tabs.update(tabId, (t) => {
+      t.scale = { z, stepped: false, checked: false };
+    });
+    if (op && z > 1) await this.applyZoom(tabId, op, z);
+    else if (tab.zoom) await this.restoreZoom(tabId);
+    return plan;
+  }
+
+  /**
+   * A page view's frozen scale that is not on the tab (pausing or turning
+   * WebAble off took it off, keeping the decision) goes back on, as `plan`
+   * applies it; without page_zoom in the plan it is 1 from now on.
+   */
+  private async reapplyScale(
+    tabId: number,
+    plan: AdaptationPlan | null,
+  ): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.scale || !(tab.scale.z > 1) || tab.zoom) return;
+    const op = plan?.ops.find((p) => p.op === 'page_zoom' && p.mode === 'auto');
+    if (op) await this.applyZoom(tabId, op, tab.scale.z);
+    await this.d.tabs.update(tabId, (t) => {
+      if (t.scale && !t.zoom) t.scale = { ...t.scale, z: 1, checked: false };
+    });
+  }
+
+  /**
+   * A page view about to open in Fit view (docs/10 §4.6, docs/11 §2): Fit
+   * view holds the tab at the person's own zoom, so the page scale is not put
+   * on the tab now. It stays undecided until the view closes (the next plan
+   * settles it); the plan carries the scale already on the tab, if any.
+   */
+  private async holdScale(
+    tabId: number,
+    plan: AdaptationPlan,
+  ): Promise<AdaptationPlan> {
+    const tab = await this.d.tabs.get(tabId);
+    if (tab.scale) return this.withFrozenScale(plan, tab);
+    // A scale already on the tab (hello's, on a repeat visit) stays there
+    // until the view suspends it.
+    if (tab.zoom && !tab.zoom.suspended) return { ...plan, zoom: tab.zoom.z };
+    return {
+      ...plan,
+      ops: plan.ops.filter((p) => p.op !== 'page_zoom'),
+      zoom: 1,
+    };
+  }
+
+  /**
+   * Remember this template's verdict (the next visit's hysteresis prior) and
+   * the page scale that holds here for this window width (applied at hello
+   * on the next visit). Kept for the profile identity they belong to.
+   */
+  private async rememberTemplate(
+    tabId: number,
+    identity: string,
+    verdict: TriageVerdict | undefined,
+  ): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    const template = tab.template;
+    if (!tab.domain || !template) return;
+    // A scale held for Fit view is triage's choice, not yet decided here.
+    const z = tab.scale?.z ?? verdict?.zoom ?? 1;
+    await this.d.stores.sites.update(tab.domain, (s) => {
+      const prev = s.templates[template.key];
+      const memo: TemplateMemo =
+        prev && prev.id === identity
+          ? { ...prev, at: this.now }
+          : { at: this.now, id: identity };
+      if (verdict) memo.prior = toPrior(withScale(verdict, z));
+      else if (memo.prior) memo.prior = { ...memo.prior, zoom: z };
+      if (template.bucket !== null) {
+        const zoom = { ...memo.zoom };
+        delete zoom[String(template.bucket)];
+        if (z > 1) zoom[String(template.bucket)] = z;
+        const kept = Object.entries(zoom).slice(-4);
+        if (kept.length > 0) memo.zoom = Object.fromEntries(kept);
+        else delete memo.zoom;
+      }
+      s.templates = pruneTemplates({ ...s.templates, [template.key]: memo });
+    });
+  }
+
+  /** This page's template key (site + path shape, hashed) and window-width bucket. */
+  private async templateOf(
+    domain: string,
+    url: string | undefined,
+    widthDip: number | null,
+  ): Promise<{ key: string; bucket: number | null }> {
+    const install = await this.d.stores.install.get();
+    const site = await siteKey(install.secret, domain);
+    const key = await templateKey(install.secret, site, pathShape(url ?? ''));
+    return { key, bucket: widthBucket(widthDip) };
+  }
+
+  /**
+   * Put a page scale on the tab: the person's own zoom times z, per tab.
+   * Records the page_zoom change (and its 'applied' event the first time).
+   */
+  private async applyZoom(
+    tabId: number,
+    planned: PlannedOp,
+    z: number,
+  ): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    const previous = tab.zoom?.previous ?? (await this.d.port.getZoom(tabId));
+    const factor = tabFactor(previous, z);
+    if (!tab.zoom || !sameFactor(tab.zoom.factor, factor)) {
+      this.ownZoom.expect(tabId, factor, this.now);
+      try {
+        await this.d.port.setZoom(tabId, factor);
+      } catch {
+        return;
+      }
+      this.zoomMessage(tabId, factor, 'webable', z);
+    }
+    const level = zoomLevel(z);
+    const change: AppliedChange = {
+      op: 'page_zoom',
+      level,
+      mode: planned.mode,
+      status: 'applied',
+      count: 1,
+      fit: { before: pct(previous), after: pct(factor) },
+      trace: { ...planned.trace, level },
+    };
+    const fresh = !tab.changes.some(
+      (c) => c.op === 'page_zoom' && c.status === 'applied',
+    );
+    await this.d.tabs.update(tabId, (t) => {
+      t.zoom = {
+        level,
+        z,
+        factor,
+        previous,
+        early: false,
+        suspended: false,
+      };
+      t.changes = [...t.changes.filter((c) => c.op !== 'page_zoom'), change];
+      if (fresh) t.appliedAt.page_zoom = this.now;
+    });
+    if (fresh)
+      await this.record(tab, [
+        {
+          cat: tab.category,
+          op: 'page_zoom',
+          level,
+          src: planned.mode === 'offer' ? 'offer' : planned.trace.source,
+          kind: 'applied',
+        },
+      ]);
+  }
+
+  /**
+   * The person changed what the page scale rests on (its level, the fit, a
+   * redo): the next plan of these tabs decides the scale again.
+   */
+  private async unfreezeScale(tabIds: readonly number[]): Promise<void> {
+    for (const id of tabIds)
+      await this.d.tabs.update(id, (t) => {
+        t.scale = null;
+      });
+  }
+
+  /**
+   * The person's own zoom in this tab: the tab's zoom without WebAble's page
+   * scale (their per-origin factor, the baseline the scale multiplies).
+   */
+  private async personZoom(tabId: number): Promise<number> {
+    const tab = await this.d.tabs.get(tabId);
+    return tab.zoom ? tab.zoom.previous : this.d.port.getZoom(tabId);
+  }
+
+  /**
+   * A plan as the page receives it (toContent), with the person's own zoom:
+   * the engine sizes effective-px levels against the tab's whole zoom,
+   * ownZoom x zoom, not WebAble's page scale alone (docs/10 §3.2, §5.2).
+   */
+  private async forPage(
+    tabId: number,
+    plan: AdaptationPlan,
+  ): Promise<AdaptationPlan> {
+    return { ...toContent(plan), ownZoom: await this.personZoom(tabId) };
+  }
+
+  /**
+   * Tell the page its zoom changed (Fit view re-sizes; Tailor measures
+   * again): the tab's absolute factor, and WebAble's page scale relative to
+   * the person's own zoom when this change set it (1: none on the tab).
+   */
+  private zoomMessage(
+    tabId: number,
+    zoom: number,
+    owner: 'webable' | 'person',
+    scale?: number,
+  ): void {
+    void this.d.port
+      .sendToTab(tabId, {
+        type: 'sw:zoom',
+        zoom,
+        owner,
+        ...(scale !== undefined ? { scale } : {}),
+      })
+      .catch(() => undefined);
   }
 
   async allSites(): Promise<boolean> {
@@ -412,6 +972,19 @@ export class Worker {
     const access = classifyUrl(url);
     const settings = await this.d.stores.settings.read();
     const domain = access.kind === 'web' ? access.domain : null;
+    // Chrome resets per-tab zoom when a tab navigates. A hello without that
+    // (a second injection into the same document) finds WebAble's scale
+    // still on the tab: keep track of it, for the first plan to confirm.
+    const before = await this.d.tabs.peek(tabId);
+    const old =
+      before?.zoom &&
+      !before.zoom.suspended &&
+      !before.zoom.legacy &&
+      before.domain === domain
+        ? before.zoom
+        : null;
+    const stillOn =
+      old !== null && sameFactor(await this.d.port.getZoom(tabId), old.factor);
     const site = domain ? await this.d.stores.sites.get(domain) : null;
     const paused = site?.rule.paused ?? false;
     const prePaint = await this.prePaintOps();
@@ -426,9 +999,20 @@ export class Worker {
         checkingSince: now,
         startedAt: now,
         needsReload: paused,
+        personalSite: url ? isMailOrChat(hostOf(url)) : false,
       });
+      if (stillOn && old) t.zoom = { ...old, early: true };
     });
     await this.d.pages.delete(tabId);
+    const live = settings.enabled && access.kind === 'web' && !paused;
+    let fitViewTab = false;
+    if (live && domain && site) {
+      const fit = await this.d.fitViews.get(tabId);
+      fitViewTab = fit.tabMode || site.rule.view === 'fit';
+      await this.earlyZoom(tabId, domain, url, site, fit).catch(
+        () => undefined,
+      );
+    }
     void this.refreshBadge(tabId);
     this.d.port.broadcast({ type: 'ui:changed', tabId });
     return {
@@ -437,7 +1021,96 @@ export class Worker {
       prePaint,
       tabSession,
       ...ui,
+      fitViewTab,
     };
+  }
+
+  /**
+   * A repeat visit: Chrome reset the tab's zoom on navigation, so the page
+   * scale that held for this template at this window width goes back on now,
+   * before the page is read (docs/10 §5.1). Also how a page restored from the
+   * back/forward cache or a prerender gets it back. The first plan confirms
+   * it (or takes it off).
+   */
+  private async earlyZoom(
+    tabId: number,
+    domain: string,
+    url: string | undefined,
+    site: SiteRecord,
+    fit: FitViewState,
+  ): Promise<void> {
+    const template = await this.templateOf(
+      domain,
+      url,
+      await this.d.port.tabWidth(tabId),
+    );
+    await this.d.tabs.update(tabId, (t) => {
+      t.template = template;
+    });
+    if (site.rule.blocks.includes('page_zoom') || template.bucket === null)
+      return;
+    const memo = site.templates[template.key];
+    const profile = await loadProfile(this.d.stores, this.now);
+    const z = memo?.zoom?.[String(template.bucket)];
+    if (!memo || memo.id !== profile.identity || !z || !(z > 1)) return;
+    // This page will most likely open in Fit view, which holds the tab at the
+    // person's own zoom: zooming first would only flash (docs/11 §2).
+    if (
+      memo.prior &&
+      (await this.arrivesInFitView(domain, site, fit, fromPrior(memo.prior)))
+    )
+      return;
+    const carried = (await this.d.tabs.get(tabId)).zoom;
+    const previous = carried?.previous ?? (await this.d.port.getZoom(tabId));
+    const factor = tabFactor(previous, z);
+    if (carried && sameFactor(carried.factor, factor)) return;
+    this.ownZoom.expect(tabId, factor, this.now);
+    await this.d.port.setZoom(tabId, factor);
+    await this.d.tabs.update(tabId, (t) => {
+      t.zoom = {
+        level: zoomLevel(z),
+        z,
+        factor,
+        previous,
+        early: true,
+        suspended: false,
+      };
+    });
+    this.zoomMessage(tabId, factor, 'webable', z);
+  }
+
+  /**
+   * Fit view will open on this page by itself, from this template's last
+   * verdict: tab mode or "Always here" on a page it can show, or an automatic
+   * restructure (docs/11 §2). Used at hello, before the page is read.
+   */
+  private async arrivesInFitView(
+    domain: string,
+    site: SiteRecord,
+    fit: FitViewState,
+    verdict: TriageVerdict,
+  ): Promise<boolean> {
+    if (isExcludedSite(domain) || !verdict.representable) return false;
+    if (fit.tabMode || site.rule.view === 'fit') return true;
+    const settings = await this.d.stores.settings.read();
+    const profile = await loadProfile(this.d.stores, this.now);
+    return autoArrival({
+      verdict,
+      structure: structureNeed(profile.profile).level,
+      autoSimplify: settings.autoSimplify,
+      excluded: false,
+      alwaysHere: false,
+      tabMode: false,
+      offerDeclined: fit.offerDeclined,
+      declinedHere: fit.declinedSite === domain,
+      autoDone: false,
+      offersThisPage: 0,
+      offersToday: 0,
+      offersPerDay: K.OFFERS_PER_DAY,
+      site: site.fitView,
+      pageType: undefined,
+      today: toDay(this.now),
+    });
   }
 
   /**
@@ -464,9 +1137,10 @@ export class Worker {
     frameId: number,
     signals: PageSignals,
     evidence: PageEvidence,
+    url?: string,
   ): Promise<ContentReplies['cs:signals'] & { announce: boolean }> {
     return this.serial(tabId, () =>
-      this.signalsNow(tabId, frameId, signals, evidence),
+      this.signalsNow(tabId, frameId, signals, evidence, url),
     );
   }
 
@@ -475,8 +1149,9 @@ export class Worker {
     frameId: number,
     signals: PageSignals,
     evidence: PageEvidence,
+    url: string | undefined,
   ): Promise<ContentReplies['cs:signals'] & { announce: boolean }> {
-    const tab = await this.d.tabs.get(tabId);
+    let tab = await this.d.tabs.get(tabId);
     if (frameId !== 0 || !tab.domain || !tab.tabSession)
       return { plan: emptyPlan(tab.tabSession, this.now), announce: false };
     const domain = tab.domain;
@@ -492,21 +1167,54 @@ export class Worker {
       return { plan: emptyPlan(tabSession, c.now), announce: false };
     }
 
-    // The engine sees only pinch zoom; the tab's own zoom (without WebAble's) comes from Chrome.
-    const browserZoom = tab.zoom
-      ? tab.zoom.previous
-      : await this.d.port.getZoom(tabId);
+    // A zoom an older WebAble set (it recorded no page scale) goes back now.
+    if (tab.zoom?.legacy) {
+      await this.restoreZoom(tabId);
+      tab = await this.d.tabs.get(tabId);
+    }
+
+    // The engine sees only pinch zoom. The person's own zoom is the tab's
+    // without WebAble's page scale; the scale in effect is triage's `scale`.
+    const own = tab.zoom ? tab.zoom.previous : await this.d.port.getZoom(tabId);
+    const scale = tab.zoom && !tab.zoom.suspended ? tab.zoom.z : 1;
     const pinch = signals.viewport.zoom > 0 ? signals.viewport.zoom : 1;
     const measured: PageSignals = {
       ...signals,
       viewport: {
         ...signals.viewport,
-        zoom: Math.round(browserZoom * pinch * 1000) / 1000,
+        zoom: Math.round(own * pinch * 1000) / 1000,
       },
     };
-    const memo = await this.lookup(domain, tabSession, measured, evidence);
+    const template = await this.templateOf(
+      domain,
+      url,
+      signals.viewport.width * own * scale,
+    );
+    const viewPrior =
+      tab.viewPrior?.key === template.key
+        ? tab.viewPrior
+        : { key: template.key, prior: this.storedPrior(c, template.key) };
+    tab = await this.d.tabs.update(tabId, (t) => {
+      t.template = template;
+      t.viewPrior = viewPrior;
+      if (url) t.personalSite = isMailOrChat(hostOf(url));
+      // The zoom guard compares with navigation as read at WebAble's scale 1,
+      // by the reading that decides the scale (an SPA shell's has none yet).
+      if (t.scale === null && scale === 1)
+        t.navBaseline = signals.layout
+          ? {
+              links: signals.layout.nav.primaryLinks,
+              search: signals.layout.nav.searchVisible,
+            }
+          : null;
+    });
+    const memo = {
+      ...(await this.lookup(domain, tabSession, measured, evidence)),
+      scale,
+    };
     const view = analysisView(measured, evidence.regions, memo.answers);
-    let plan = await this.planFor(c, tab, view, true);
+    const verdict = this.verdictFor(c, tab, view.signals, scale);
+    let plan = await this.planFor(c, tab, view, true, verdict, scale);
     if (
       tab.plan &&
       tab.signalsAt !== null &&
@@ -524,8 +1232,52 @@ export class Worker {
     }
     await this.d.pages.set(tabId, memo);
 
+    // How Fit view reaches this page (docs/11 §2), decided before Tailor's
+    // page scale so a page that opens in Fit view is never zoomed first.
+    const fit = forPageView(await this.d.fitViews.get(tabId), tabSession);
+    const [budget, learned] = await Promise.all([
+      this.d.stores.offers.read(),
+      this.d.stores.fitLearning.read(),
+    ]);
+    const excluded = isExcludedSite(domain);
+    const alwaysHere = c.site.rule.view === 'fit';
+    const arrival = fitViewArrival({
+      verdict: plan.triage,
+      structure: structureNeed(c.profile.profile).level,
+      autoSimplify: c.settings.autoSimplify,
+      excluded,
+      alwaysHere,
+      tabMode: fit.tabMode,
+      offerDeclined: fit.offerDeclined,
+      declinedHere: fit.declinedSite === domain,
+      autoDone: fit.autoSession === tabSession,
+      offersThisPage: tab.offersShown,
+      offersToday: offersToday(budget, toDay(c.now)),
+      offersPerDay: K.OFFERS_PER_DAY,
+      site: c.site.fitView,
+      pageType: countsFor(learned.pageTypes, view.signals.category),
+      today: toDay(c.now),
+    });
+    if (arrival === 'auto')
+      await this.d.fitViews.update(tabId, (s) => ({
+        ...forPageView(s, tabSession),
+        autoSession: tabSession,
+      }));
+    // Tab mode and "Always here" reopen Fit view on a page it can show.
+    const inFitView =
+      arrival === 'auto' ||
+      (!excluded &&
+        (fit.tabMode || alwaysHere) &&
+        plan.triage?.representable === true);
+
+    // The page scale is decided once per page view and put on the tab before
+    // the plan reaches the page; later plans (SPA routes, re-reads) keep it.
+    // A page about to open in Fit view decides it once the view closes.
+    plan = inFitView
+      ? await this.holdScale(tabId, plan)
+      : await this.settleScale(tabId, plan);
     const offer = plan.ops.find((p) => p.mode === 'offer') ?? null;
-    await this.d.tabs.update(tabId, (t) => {
+    tab = await this.d.tabs.update(tabId, (t) => {
       t.category = view.signals.category;
       t.plan = plan;
       t.signalsAt ??= c.now;
@@ -539,23 +1291,130 @@ export class Worker {
       )
         t.offer = offer;
     });
-
-    // WebAble never zooms the tab (page_zoom is retired in core). Undo a zoom
-    // an earlier version set.
-    await this.resetZoom(tabId);
+    // An empty reading (an SPA's shell) is no verdict for the template's
+    // next visit: it would hold that visit's scale at 1 too.
+    if (!noBodyText(verdict))
+      await this.rememberTemplate(tabId, c.profile.identity, verdict);
 
     void this.maybeAnalyze(tabId, tabSession, memo).catch(() => undefined);
     this.d.port.broadcast({ type: 'ui:changed', tabId });
-    return { plan, announce: !c.site.announced };
+    return {
+      plan: await this.forPage(tabId, plan),
+      announce: !c.site.announced,
+      ...(arrival === 'offer' ? { fitViewOffer: true } : {}),
+      ...(arrival === 'auto' ? { fitViewAuto: true } : {}),
+    };
   }
 
   async applied(
     tabId: number,
     frameId: number,
     changes: AppliedChange[],
+    viewport?: GuardReport,
   ): Promise<void> {
     if (frameId !== 0) return;
     await this.processChanges(tabId, changes);
+    if (viewport) await this.zoomGuard(tabId, viewport);
+  }
+
+  /**
+   * The zoom guard's report after a page scale settled (docs/10 §5.1). If the
+   * page now overflows sideways, or primary navigation or the search field
+   * disappeared compared with 100%, the scale steps down one preset (once per
+   * page view) and the page is planned again at the new scale. A scale that
+   * holds counts as the verifier passing it.
+   */
+  private async zoomGuard(tabId: number, report: GuardReport): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    const zoom = tab.zoom;
+    if (!zoom || zoom.suspended || !tab.scale || !tab.domain) return;
+    // A report about a scale that is no longer on the tab.
+    if (
+      !sameFactor(report.zoom, zoom.z) &&
+      !sameFactor(report.zoom, zoom.factor)
+    )
+      return;
+    const change = tab.changes.find(
+      (c) => c.op === 'page_zoom' && c.status === 'applied',
+    );
+    const base = change
+      ? {
+          cat: tab.category,
+          op: 'page_zoom' as const,
+          level: change.level,
+          src:
+            change.mode === 'offer' ? ('offer' as const) : change.trace.source,
+        }
+      : null;
+    const verdict = guardVerdict(report, tab.navBaseline);
+    if (verdict === 'ok') {
+      if (tab.scale.checked) return;
+      await this.d.tabs.update(tabId, (t) => {
+        if (t.scale) t.scale.checked = true;
+      });
+      if (base)
+        await this.record(tab, [{ ...base, kind: 'verifier', pass: true }]);
+      return;
+    }
+    if (tab.scale.stepped) return;
+    const next = stepDown(zoom.z);
+    await this.d.tabs.update(tabId, (t) => {
+      t.scale = { z: next, stepped: true, checked: false };
+    });
+    if (next > 1) {
+      const factor = tabFactor(zoom.previous, next);
+      const level = zoomLevel(next);
+      this.ownZoom.expect(tabId, factor, this.now);
+      await this.d.port.setZoom(tabId, factor).catch(() => undefined);
+      await this.d.tabs.update(tabId, (t) => {
+        t.zoom = { ...zoom, level, z: next, factor, early: false };
+        t.changes = t.changes.map((c) =>
+          c.op === 'page_zoom' && c.status === 'applied'
+            ? {
+                ...c,
+                level,
+                vcode: verdict,
+                fit: { before: pct(zoom.previous), after: pct(factor) },
+                trace: { ...c.trace, level },
+              }
+            : c,
+        );
+        // The plan's scale follows, so re-plans compare against it.
+        if (t.plan)
+          t.plan = {
+            ...t.plan,
+            zoom: next,
+            ops: t.plan.ops.map((p) =>
+              p.op === 'page_zoom'
+                ? { ...p, level, trace: { ...p.trace, level } }
+                : p,
+            ),
+          };
+      });
+      this.zoomMessage(tabId, factor, 'webable', next);
+    } else {
+      this.ownZoom.expect(tabId, zoom.previous, this.now);
+      await this.d.port
+        .releaseZoom(tabId, undefined, zoom.previous)
+        .catch(() => undefined);
+      await this.d.tabs.update(tabId, (t) => {
+        t.zoom = null;
+        t.changes = t.changes.map((c) =>
+          c.op === 'page_zoom' && c.status === 'applied'
+            ? { ...c, status: 'undone_by_checks', vcode: verdict }
+            : c,
+        );
+      });
+      this.zoomMessage(tabId, zoom.previous, 'webable', 1);
+    }
+    if (base)
+      await this.record(tab, [
+        { ...base, kind: 'verifier', pass: false, vcode: verdict },
+      ]);
+    const profile = await loadProfile(this.d.stores, this.now);
+    await this.rememberTemplate(tabId, profile.identity, undefined);
+    // Text and targets were planned for the larger scale: plan again.
+    if (!(await this.replan(tabId))) await this.afterChange(tabId);
   }
 
   async interacted(
@@ -610,7 +1469,7 @@ export class Worker {
     if (engineLeft.length === 0 && after.zoom) {
       const zoomChange = after.changes.find((c) => c.op === 'page_zoom');
       if (zoomChange) events.push(this.undoEvent(after, zoomChange));
-      await this.resetZoom(tabId);
+      await this.restoreZoom(tabId);
       await this.d.tabs.update(tabId, (t) => {
         if (!t.undoneByYou.includes('page_zoom'))
           t.undoneByYou.push('page_zoom');
@@ -638,7 +1497,7 @@ export class Worker {
     const targets = appliedChanges(tab.changes);
     if (targets.length === 0) return;
     const events = targets.map((c) => this.undoEvent(tab, c));
-    if (tab.zoom) await this.resetZoom(tabId);
+    if (tab.zoom) await this.restoreZoom(tabId);
     const undone = new Set(targets.map((c) => c.op));
     await this.d.tabs.update(tabId, (t) => {
       for (const o of undone)
@@ -673,12 +1532,7 @@ export class Worker {
     if (!memo) return { offer: null };
     const c = await this.context(tab.domain);
     if (!c.settings.enabled || c.rule.paused) return { offer: null };
-    const view = analysisView(
-      memo.signals,
-      memo.evidence.regions,
-      memo.answers,
-    );
-    const plan = await this.planFor(c, tab, view, false);
+    const plan = await this.planMemo(c, tab, memo, false);
     const offer = plan.ops.find(
       (p) =>
         p.mode === 'offer' &&
@@ -798,6 +1652,18 @@ export class Worker {
           }
         : t.plan;
     });
+    if (RETIRED_OPS.has(op)) return { plan: null };
+    if (op === 'page_zoom') {
+      // The person chose the page scale: it goes on the tab, frozen for this
+      // page view, and the page is planned again at it.
+      const z = levelValue('page_zoom', offer.level);
+      await this.d.tabs.update(tabId, (t) => {
+        t.scale = { z, stepped: false, checked: false };
+      });
+      await this.applyZoom(tabId, { ...offer, mode: 'offer' }, z);
+      if (!(await this.replan(tabId))) await this.afterChange(tabId);
+      return { plan: null };
+    }
     const plan: AdaptationPlan = {
       id: `plan-${tab.tabSession}-${Math.round(this.now)}-offer`,
       createdAt: this.now,
@@ -805,7 +1671,6 @@ export class Worker {
       basis: tab.plan?.basis ?? 'local',
       ops: [offer],
     };
-    if (RETIRED_OPS.has(op)) return { plan: null };
     if (via === 'page') return { plan };
     const reply = await this.d.port.sendToTab(tabId, {
       type: 'sw:plan',
@@ -910,7 +1775,7 @@ export class Worker {
         if (t.offer && ops.includes(t.offer.op)) t.offer = null;
       });
       for (const op of ops) {
-        if (op === 'page_zoom') await this.resetZoom(other.tabId);
+        if (op === 'page_zoom') await this.restoreZoom(other.tabId);
         else {
           const reply = await this.d.port.sendToTab(other.tabId, {
             type: 'sw:undo',
@@ -1013,9 +1878,14 @@ export class Worker {
     const now = this.now;
     const prevApplied = new Set(appliedChanges(tab.changes).map((c) => c.op));
     const prevUndone = new Set(undoneByChecks(tab.changes).map((c) => c.op));
-    const zoomChange = tab.zoom
-      ? tab.changes.find((c) => c.op === 'page_zoom' && c.status === 'applied')
-      : undefined;
+    // page_zoom is the worker's own change (the engine never reports it): it
+    // stays while the scale is on the tab, or as undone by the zoom guard.
+    const zoomChange = tab.changes.find(
+      (c) =>
+        c.op === 'page_zoom' &&
+        ((c.status === 'applied' && tab.zoom) ||
+          c.status === 'undone_by_checks'),
+    );
     const next = engineChanges.filter((c) => c.op !== 'page_zoom');
     if (zoomChange) next.push(zoomChange);
 
@@ -1066,15 +1936,127 @@ export class Worker {
     await this.afterChange(tabId);
   }
 
-  private async resetZoom(tabId: number): Promise<void> {
+  /**
+   * Take WebAble's page scale off the tab: Chrome's per-origin zoom comes
+   * back, which is the person's own (Undo restores their zoom, not 100%). The
+   * page view's scale becomes 1 for its later plans, unless `keep`: pausing
+   * or turning WebAble off is no Undo, so resuming puts the same scale back
+   * (reapplyScale).
+   */
+  private async restoreZoom(tabId: number, keep = false): Promise<void> {
     const tab = await this.d.tabs.get(tabId);
     if (!tab.zoom) return;
     const previous = tab.zoom.previous;
     await this.d.tabs.update(tabId, (t) => {
       t.zoom = null;
       t.changes = t.changes.filter((c) => c.op !== 'page_zoom');
+      if (t.scale && !keep) t.scale = { ...t.scale, z: 1, checked: false };
     });
-    await this.d.port.setZoom(tabId, previous).catch(() => undefined);
+    this.ownZoom.expect(tabId, previous, this.now);
+    await this.d.port
+      .releaseZoom(tabId, undefined, previous)
+      .catch(() => undefined);
+    this.zoomMessage(tabId, previous, 'webable', 1);
+  }
+
+  /**
+   * Fit view opened: the tab goes back to the person's own zoom while it is
+   * open (docs/10 §4.6; the reflow happens hidden under the view). Returns
+   * the tab's zoom factor now.
+   */
+  private async suspendZoom(tabId: number): Promise<number> {
+    const tab = await this.d.tabs.get(tabId);
+    const zoom = tab.zoom;
+    if (!zoom) return this.d.port.getZoom(tabId);
+    if (zoom.suspended) return zoom.previous;
+    this.ownZoom.expect(tabId, zoom.previous, this.now);
+    await this.d.port.setZoom(tabId, zoom.previous).catch(() => undefined);
+    await this.d.tabs.update(tabId, (t) => {
+      if (t.zoom) t.zoom.suspended = true;
+    });
+    this.zoomMessage(tabId, zoom.previous, 'webable', 1);
+    return zoom.previous;
+  }
+
+  /** Fit view closed: Tailor's page scale comes back. */
+  private async resumeZoom(tabId: number): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    const zoom = tab.zoom;
+    if (!zoom?.suspended) return;
+    this.ownZoom.expect(tabId, zoom.factor, this.now);
+    await this.d.port.setZoom(tabId, zoom.factor).catch(() => undefined);
+    await this.d.tabs.update(tabId, (t) => {
+      if (t.zoom) t.zoom.suspended = false;
+    });
+    this.zoomMessage(tabId, zoom.factor, 'webable', zoom.z);
+  }
+
+  /**
+   * Chrome reported a zoom change (tabs.onZoomChange). WebAble's own set
+   * calls are recognised and ignored; so is Chrome putting a site's zoom
+   * back on navigation. A change to any other factor while WebAble's scale
+   * is on the tab is the person's: Chrome's zoom-bubble Reset (or Ctrl+0)
+   * counts as Undo; any other factor means the person owns zoom here, so
+   * their factor is kept (per-origin, as Chrome would), and page_zoom stops
+   * on the site until they turn it on again.
+   */
+  async zoomChanged(
+    tabId: number,
+    oldFactor: number,
+    newFactor: number,
+    settings: { scope?: string; defaultZoomFactor?: number } = {},
+  ): Promise<void> {
+    if (!(newFactor > 0) || Math.abs(newFactor - oldFactor) < 0.005) return;
+    if (this.ownZoom.consume(tabId, newFactor, this.now)) return;
+    const tab = await this.d.tabs.peek(tabId);
+    if (!tab?.engine || !tab.tabSession || !tab.domain) return;
+    const zoom = tab.zoom;
+    if (!zoom) {
+      // WebAble's scale is not on this tab: the zoom is the person's own.
+      this.zoomMessage(tabId, newFactor, 'person');
+      return;
+    }
+    // Per-tab zoom is reset to the site's on navigation; the new page view
+    // starts without WebAble's scale.
+    if (settings.scope === 'per-origin') return;
+    const current = zoom.suspended ? zoom.previous : zoom.factor;
+    if (sameFactor(newFactor, current)) return;
+    const reset = isZoomReset(
+      newFactor,
+      zoom.previous,
+      settings.defaultZoomFactor,
+    );
+    const change = tab.changes.find(
+      (c) => c.op === 'page_zoom' && c.status === 'applied',
+    );
+    await this.d.tabs.update(tabId, (t) => {
+      t.zoom = null;
+      t.changes = t.changes.filter((c) => c.op !== 'page_zoom');
+      if (t.scale) t.scale = { ...t.scale, z: 1, checked: false };
+      if (reset && !t.undoneByYou.includes('page_zoom'))
+        t.undoneByYou.push('page_zoom');
+    });
+    // Their factor, for the site, as Chrome would keep it without WebAble.
+    this.ownZoom.expect(tabId, newFactor, this.now);
+    await this.d.port.releaseZoom(tabId, newFactor).catch(() => undefined);
+    if (reset && change) {
+      await this.holdUndos(tab, [this.undoEvent(tab, change)]);
+    } else {
+      await this.d.stores.sites.update(tab.domain, (s) => {
+        if (!s.rule.blocks.includes('page_zoom'))
+          s.rule.blocks.push('page_zoom');
+        s.rule.updatedAt = this.now;
+      });
+    }
+    const profile = await loadProfile(this.d.stores, this.now);
+    await this.rememberTemplate(tabId, profile.identity, undefined);
+    this.zoomMessage(tabId, newFactor, 'person', 1);
+    await this.syncSiteCount(tabId);
+    // The site's other pages lose WebAble's scale too.
+    await this.reflectSavedUndo(tab, ['page_zoom']);
+    // Text was planned for the scale: plan again at the person's zoom.
+    if (zoom.suspended || !(await this.replan(tabId)))
+      await this.afterChange(tabId);
   }
 
   /** Close the current page view: session_end and episode_end events. */
@@ -1125,6 +2107,16 @@ export class Worker {
     });
     await this.d.pages.delete(tabId);
     await this.record(closing, events).catch(() => undefined);
+    // Left the page while reading it in Fit view (through the view, most
+    // likely): Fit view was kept.
+    const fit = await this.d.fitViews.get(tabId);
+    if (fit.session === closing.tabSession && fit.open) {
+      await this.d.fitViews.update(tabId, (f) => {
+        f.open = false;
+      });
+      await this.noteFitOutcome(closing, 'keep').catch(() => undefined);
+    }
+    this.skeletons.delete(tabId);
   }
 
   /** A top-frame navigation committed (the new document may have no engine). */
@@ -1206,6 +2198,8 @@ export class Worker {
     await this.endPageView(tabId);
     await this.d.tabs.remove(tabId);
     await this.d.pages.delete(tabId);
+    await this.d.fitViews.delete(tabId);
+    this.ownZoom.forget(tabId);
   }
 
   private async afterChange(tabId: number): Promise<void> {
@@ -1489,7 +2483,18 @@ export class Worker {
       memo.evidence.regions,
       memo.answers,
     );
-    const refined = await this.planFor(c, tab, view, true);
+    const scale = memo.scale ?? 1;
+    const refined = this.withFrozenScale(
+      await this.planFor(
+        c,
+        tab,
+        view,
+        true,
+        this.verdictFor(c, tab, view.signals, scale),
+        scale,
+      ),
+      tab,
+    );
     const diff = diffRefinement(tab.plan, refined, mode, view.protectedKeys);
     for (const op of diff.undo) {
       const reply = await this.d.port.sendToTab(tabId, {
@@ -1502,7 +2507,7 @@ export class Worker {
     if (diff.ops.length > 0) {
       const reply = await this.d.port.sendToTab(tabId, {
         type: 'sw:plan',
-        plan: { ...refined, ops: diff.ops },
+        plan: await this.forPage(tabId, { ...refined, ops: diff.ops }),
         reason: 'refine',
         basePlanId: tab.plan.id,
       });
@@ -1523,6 +2528,669 @@ export class Worker {
   }
 
   // =========================================================================
+  // Fit view (docs/10 §4, §6, §7)
+  // =========================================================================
+
+  /** Fit view's face for a document that has not registered it yet. */
+  private async fontBytes(): Promise<string | null> {
+    try {
+      return (await this.d.font?.()) ?? null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The person's Fit view layout: solved from the fit, with Fit view's Text − / + override. */
+  private async fitLayout(
+    c: Ctx,
+    colorScheme: 'light' | 'dark' | undefined,
+  ): Promise<FitLayout> {
+    const scheme =
+      colorScheme ?? (await this.d.stores.system.read())?.colorScheme;
+    return solveFitLayout(
+      withTextStep(c.profile.profile, c.settings.fitTextStep),
+      scheme ? { colorScheme: scheme } : {},
+    );
+  }
+
+  /**
+   * A cached planner spec for this template that resolves on this page: the
+   * variant with the best locator coverage (at least 80%) that the validator
+   * accepts on this skeleton (docs/10 §6 "Cache").
+   */
+  private async cachedPlannerSpec(
+    key: string,
+    skeleton: Skeleton,
+    hash: (k: string) => string,
+    ctx: ValidateSpecContext,
+  ): Promise<{ validated: ValidatedSpec; stored: StoredSpec } | null> {
+    const ranked = (await this.d.stores.compose.get(key))
+      .map((stored) => ({ stored, ...fromStoredSpec(stored, skeleton, hash) }))
+      .filter((v) => v.coverage >= PLANNER_MIN_COVERAGE)
+      .sort((a, b) => b.coverage - a.coverage);
+    for (const v of ranked) {
+      const validated = validateSpec(v.spec, skeleton, ctx);
+      if (validated) return { validated, stored: v.stored };
+    }
+    return null;
+  }
+
+  /** The parts of the planner gate that do not depend on this open. */
+  private async plannerBase(
+    c: Ctx,
+    domain: string,
+    tab: TabRecord,
+    memo: PageMemo | null,
+  ): Promise<Omit<ComposeGateInput, 'personOpened' | 'cached'>> {
+    const signals = memo?.signals;
+    return {
+      mailOrChat: tab.personalSite,
+      excludedSite: isExcludedSite(domain),
+      sensitive:
+        signals !== undefined &&
+        (signals.forms.hasPassword ||
+          signals.forms.hasPayment ||
+          signals.layout?.kind.password === true ||
+          signals.layout?.kind.payment === true),
+      checkout:
+        signals !== undefined &&
+        signals.category === 'form_checkout' &&
+        signals.categoryConfidence >= CHECKOUT_P,
+      configured:
+        this.d.auth !== null &&
+        Boolean(this.d.config.composeUrl && this.d.config.publishableKey),
+      signedIn: c.account !== null,
+      needsReauth: c.account?.needsReauth ?? false,
+      aiLayout: c.account?.aiLayout ?? false,
+      devPlanner: this.d.config.devPlanner && c.settings.devPlanner,
+      breakerOpen: breakerOpen(await this.composeBreaker.read(), c.now),
+    };
+  }
+
+  /**
+   * cs:fitview-request: build or recall the spec for this reading, validate
+   * it, solve the layout from the fit (the fit stays here), put Fit view's
+   * scripts in the page, return the tab to the person's own zoom, then reply.
+   * A planner call, when one may run, starts after the reply.
+   */
+  async fitViewRequest(
+    tabId: number,
+    frameId: number,
+    skeleton: Skeleton,
+    reason: FitViewOpenReason,
+    url: string | undefined,
+  ): Promise<FitViewOpenReply> {
+    if (frameId !== 0) return { ok: false, why: 'error' };
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.domain || !tab.tabSession || !tab.engine)
+      return { ok: false, why: 'stale' };
+    const domain = tab.domain;
+    const tabSession = tab.tabSession;
+    const refuse = async (
+      why: FitViewUnavailable,
+    ): Promise<FitViewOpenReply> => {
+      await this.d.fitViews.update(tabId, (s) => ({
+        ...forPageView(s, tabSession),
+        why,
+      }));
+      this.d.port.broadcast({ type: 'ui:changed', tabId });
+      return { ok: false, why };
+    };
+    // A reading from an engine of another version is read again.
+    if (skeleton.version !== SKELETON_VERSION) return refuse('stale');
+    const c = await this.context(domain);
+    if (!c.settings.enabled || c.rule.paused || isExcludedSite(domain))
+      return refuse('excluded');
+    const memo = await this.d.pages.get(tabId, tabSession);
+    const blockers = tab.plan?.triage?.blockers ?? [];
+    if (
+      blockers.some((b) => HARD_BLOCKERS.has(b)) ||
+      memo?.signals.forms.hasPassword === true ||
+      memo?.signals.forms.hasPayment === true ||
+      hasPasswordField(skeleton)
+    )
+      return refuse('not_representable');
+    if (blockingOverlay(skeleton)) return refuse('blocked_overlay');
+
+    // The spec: a cached planner spec that resolves here, else the heuristic.
+    const install = await this.d.stores.install.get();
+    const site = await siteKey(install.secret, domain);
+    const key = await composeKey(install.secret, site, pathShape(url ?? ''));
+    const hash = await nameHasher(install.secret, skeleton);
+    const ctx: ValidateSpecContext = {
+      focusId: focusNode(skeleton),
+      siteHost: domain,
+    };
+    const cached = await this.cachedPlannerSpec(key, skeleton, hash, ctx).catch(
+      () => null,
+    );
+    let validated: ValidatedSpec | null = cached?.validated ?? null;
+    if (!validated) {
+      const view = memo
+        ? analysisView(memo.signals, memo.evidence.regions, memo.answers)
+        : null;
+      try {
+        validated = validateSpec(
+          heuristicSpec(skeleton, {
+            verdicts: view ? regionRoles(view.verdicts) : {},
+            ...(memo ? { signals: memo.evidence.page.signals } : {}),
+          }),
+          skeleton,
+          ctx,
+        );
+      } catch {
+        validated = null;
+      }
+    }
+    if (!validated) return refuse('not_representable');
+    const envelope: SpecEnvelope = {
+      source: cached ? 'planner' : 'heuristic',
+      extractionId: skeleton.extractionId,
+      validated,
+      ...(cached ? { model: cached.stored.model } : {}),
+      templateKey: key,
+      createdAt: cached ? cached.stored.createdAt : this.now,
+    };
+    const layout = await this.fitLayout(c, memo?.signals.env.colorScheme);
+
+    // Fit view's scripts are in the page before the reply, once per document.
+    const state = forPageView(await this.d.fitViews.get(tabId), tabSession);
+    if (
+      state.injected !== tabSession &&
+      !(await this.d.registration.injectFitView(tabId))
+    )
+      return refuse('error');
+    // The page may have moved on while this was prepared.
+    if ((await this.d.tabs.get(tabId)).tabSession !== tabSession)
+      return { ok: false, why: 'stale' };
+
+    // The person's own zoom while Fit view is open (docs/10 §4.6).
+    const zoom = await this.suspendZoom(tabId);
+    const base = await this.plannerBase(c, domain, tab, memo);
+    const planner = composeGate({
+      ...base,
+      checkout:
+        base.checkout || validated.spec.page_type === 'form_or_checkout',
+      personOpened: personOpened(reason, c.site.rule.view === 'fit'),
+      cached: cached !== null,
+    });
+    const font = state.font !== tabSession ? await this.fontBytes() : null;
+    await this.d.fitViews.update(tabId, (s) => {
+      const cur = forPageView(s, tabSession);
+      return {
+        ...cur,
+        extractionId: skeleton.extractionId,
+        templateKey: key,
+        variant: cached ? cached.stored.createdAt : null,
+        reason,
+        why: null,
+        injected: tabSession,
+        font: font ? tabSession : cur.font,
+        planner: cached
+          ? 'ready'
+          : planner.call
+            ? 'pending'
+            : cur.templateKey === key
+              ? cur.planner
+              : 'idle',
+      };
+    });
+    this.skeletons.set(tabId, skeleton);
+    if (planner.call) {
+      const job: PlannerJob = {
+        tabId,
+        tabSession,
+        domain,
+        site,
+        key,
+        skeleton,
+        hash,
+        ctx,
+      };
+      setTimeout(() => {
+        void this.runPlanner(job).catch(() => undefined);
+      }, 0);
+    }
+    this.d.port.broadcast({ type: 'ui:changed', tabId });
+    return {
+      ok: true,
+      envelope,
+      layout,
+      zoom,
+      // The eTLD+1 as the worker computed it (punycode shown raw).
+      site: { label: domain, secure: url?.startsWith('https:') === true },
+      plannerPending: planner.call,
+      // Excluded sites never get here, so every site may have "Always here".
+      alwaysHere: c.site.rule.view === 'fit',
+      // The first restructure WebAble ever makes on its own says what happened.
+      ...(reason === 'auto' && !c.settings.simplifyIntroShown
+        ? { intro: true }
+        : {}),
+      ...(font ? { font } : {}),
+    };
+  }
+
+  /**
+   * One planner call per template at a time (deduped in storage.session, so
+   * a worker restart does not repeat it); other tabs opening the same
+   * template meanwhile wait for it.
+   */
+  private async runPlanner(job: PlannerJob): Promise<void> {
+    const waiter: InflightWaiter = {
+      tabId: job.tabId,
+      extractionId: job.skeleton.extractionId,
+    };
+    if (!(await this.d.inflight.claim(job.key, waiter))) return;
+    let result: PlannerResult | null = null;
+    try {
+      result = await this.composeNow(job);
+    } catch {
+      result = null;
+    }
+    const waiters = await this.d.inflight.release(job.key);
+    for (const w of waiters.length > 0 ? waiters : [waiter])
+      await this.deliverPlanner(w, job, result).catch(() => undefined);
+  }
+
+  /**
+   * The planner call (docs/10 §6): the wire skeleton only; the receipt is
+   * written before anything leaves the device; the answer is validated
+   * against the skeleton it was planned from and cached as locators.
+   */
+  private async composeNow(job: PlannerJob): Promise<PlannerResult | null> {
+    const c = await this.context(job.domain);
+    const dev = this.d.config.devPlanner && c.settings.devPlanner;
+    const built = buildComposeRequest(job.skeleton);
+    if (!built) return null;
+    const token = dev ? null : ((await this.d.auth?.accessToken()) ?? null);
+    if (!dev && !token) return null;
+    // Only for the page view the skeleton came from.
+    if ((await this.d.tabs.peek(job.tabId))?.tabSession !== job.tabSession)
+      return null;
+
+    const sentAt = this.now;
+    await this.d.stores.receipts.add({
+      id: randomId(12),
+      at: sentAt,
+      domain: job.domain,
+      destination: 'layout_planning',
+      bytes: new TextEncoder().encode(built.body).byteLength,
+      body: JSON.parse(built.body) as unknown,
+    });
+    await this.d.tabs.update(job.tabId, (t) => {
+      t.layoutSentAt = sentAt;
+    });
+    this.d.port.broadcast({ type: 'ui:changed', tabId: job.tabId });
+
+    const outcome = await callCompose({
+      url: this.d.config.composeUrl,
+      ...(dev ? {} : { publishableKey: this.d.config.publishableKey }),
+      accessToken: token,
+      body: built.body,
+      ...(this.d.fetch ? { fetch: this.d.fetch } : {}),
+    });
+    if (!outcome.ok) {
+      await this.composeFailed(outcome, dev);
+      return null;
+    }
+    await this.composeBreaker.write(breakerSuccess());
+    const validated = validateSpec(outcome.data.spec, job.skeleton, job.ctx);
+    if (!validated) return null;
+    const stored = toStoredSpec(validated, job.skeleton, job.hash, {
+      schema: COMPOSE_SCHEMA_VERSION,
+      model: outcome.data.model,
+      createdAt: this.now,
+    });
+    await this.d.stores.compose.put(job.key, job.site, stored);
+    return { stored, validated };
+  }
+
+  /**
+   * compose said no. 401: refresh the session or ask to sign in again. 403
+   * consent_required: the consent is off on the server, so stop and pull the
+   * account. Anything else backs the planner off (its own breaker).
+   */
+  private async composeFailed(
+    outcome: Extract<ComposeOutcome, { ok: false }>,
+    dev: boolean,
+  ): Promise<void> {
+    if (!dev && outcome.reason === 'unauthorized') {
+      const refreshed = (await this.d.auth?.refreshNow()) ?? false;
+      if (!refreshed)
+        await this.d.stores.account.update((a) =>
+          a ? { ...a, needsReauth: true } : a,
+        );
+      await this.refreshAllBadges();
+      return;
+    }
+    if (!dev && outcome.reason === 'consent_required') {
+      await this.d.stores.account.update((a) =>
+        a ? { ...a, aiLayout: false } : a,
+      );
+      void this.d.sync?.refresh().catch(() => undefined);
+      return;
+    }
+    const retry =
+      outcome.retryAfterMs ??
+      (outcome.status === 503 ? UNAVAILABLE_BACKOFF_MS : undefined);
+    await this.composeBreaker.update((b) => breakerFailure(b, this.now, retry));
+  }
+
+  /**
+   * A planner answer for a tab that asked (or waited): if Fit view is still
+   * open on that very extraction, offer it ("A better layout is ready"); it
+   * never replaces a view under someone reading. Otherwise the cache keeps it
+   * for the next open.
+   */
+  private async deliverPlanner(
+    w: InflightWaiter,
+    job: PlannerJob,
+    result: PlannerResult | null,
+  ): Promise<void> {
+    const tab = await this.d.tabs.peek(w.tabId);
+    const state = await this.d.fitViews.get(w.tabId);
+    if (
+      !tab?.tabSession ||
+      !tab.domain ||
+      state.session !== tab.tabSession ||
+      state.templateKey !== job.key
+    )
+      return;
+    if (!result) {
+      if (state.planner === 'pending') {
+        await this.d.fitViews.update(w.tabId, (s) => ({
+          ...s,
+          planner: 'failed',
+        }));
+        this.d.port.broadcast({ type: 'ui:changed', tabId: w.tabId });
+      }
+      return;
+    }
+    const skeleton =
+      w.tabId === job.tabId && w.extractionId === job.skeleton.extractionId
+        ? job.skeleton
+        : this.skeletons.get(w.tabId);
+    let validated: ValidatedSpec | null = null;
+    if (
+      state.open &&
+      state.extractionId === w.extractionId &&
+      skeleton?.extractionId === w.extractionId
+    ) {
+      if (skeleton === job.skeleton) validated = result.validated;
+      else {
+        const install = await this.d.stores.install.get();
+        const hash = await nameHasher(install.secret, skeleton);
+        const { spec, coverage } = fromStoredSpec(
+          result.stored,
+          skeleton,
+          hash,
+        );
+        if (coverage >= PLANNER_MIN_COVERAGE)
+          validated = validateSpec(spec, skeleton, {
+            focusId: focusNode(skeleton),
+            siteHost: tab.domain,
+          });
+      }
+    }
+    await this.d.fitViews.update(w.tabId, (s) => ({ ...s, planner: 'ready' }));
+    if (validated)
+      await this.d.port.sendToTab(w.tabId, {
+        type: 'sw:fitview-spec',
+        envelope: {
+          source: 'planner',
+          extractionId: w.extractionId,
+          validated,
+          model: result.stored.model,
+          templateKey: job.key,
+          createdAt: result.stored.createdAt,
+        },
+      });
+    this.d.port.broadcast({ type: 'ui:changed', tabId: w.tabId });
+  }
+
+  /** Fit view kept or undone on a site and its page type (Beta-Bernoulli, local only). */
+  private async noteFitOutcome(
+    tab: TabRecord,
+    outcome: 'keep' | 'undo',
+  ): Promise<void> {
+    if (!tab.domain) return;
+    const kept = outcome === 'keep';
+    await this.d.stores.sites.update(tab.domain, (s) => {
+      s.fitView = { ...s.fitView, ...addKeep(s.fitView, kept) };
+    });
+    await this.d.stores.fitLearning.update((rec) => ({
+      ...rec,
+      pageTypes: {
+        ...rec.pageTypes,
+        [tab.category]: addKeep(countsFor(rec.pageTypes, tab.category), kept),
+      },
+    }));
+  }
+
+  /** cs:fitview-event: Fit view's lifecycle, offers and defects (docs/10 §7). */
+  async fitViewEvent(
+    tabId: number,
+    frameId: number,
+    event: FitViewEvent,
+  ): Promise<void> {
+    if (frameId !== 0) return;
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.domain || !tab.tabSession) return;
+    const domain = tab.domain;
+    const tabSession = tab.tabSession;
+    const state = forPageView(await this.d.fitViews.get(tabId), tabSession);
+    switch (event.kind) {
+      case 'opened':
+        await this.d.fitViews.update(tabId, (s) => ({
+          ...forPageView(s, tabSession),
+          open: true,
+          tabMode: true,
+          openedAt: this.now,
+          source: event.source,
+          reason: event.reason,
+          why: null,
+          declinedSite: null,
+        }));
+        // The one-time line has been seen once an automatic open rendered.
+        if (event.reason === 'auto')
+          await this.d.stores.settings.update((s) =>
+            s.simplifyIntroShown ? s : { ...s, simplifyIntroShown: true },
+          );
+        break;
+      case 'closed': {
+        // "Original page": this site is not simplified on its own again in
+        // this tab, and tab mode ends.
+        const original = event.reason === 'original';
+        await this.d.fitViews.update(tabId, (s) => ({
+          ...forPageView(s, tabSession),
+          open: false,
+          tabMode: original ? false : s.tabMode,
+          declinedSite: original ? domain : s.declinedSite,
+        }));
+        // Tailor's page scale comes back with Tailor.
+        await this.resumeZoom(tabId);
+        const outcome = closeOutcome(event);
+        if (outcome) await this.noteFitOutcome(tab, outcome);
+        // A planner spec the person left at once is not reused.
+        if (
+          outcome === 'undo' &&
+          state.source === 'planner' &&
+          state.templateKey
+        )
+          await this.d.stores.compose.evict(
+            state.templateKey,
+            state.variant ?? undefined,
+          );
+        break;
+      }
+      case 'peek':
+        return;
+      case 'proxy_failed':
+      case 'conservation_failed': {
+        const at = this.now;
+        await this.d.stores.fitLearning.update((rec) =>
+          addDefect(
+            rec,
+            {
+              at,
+              kind: event.kind,
+              source: state.source ?? 'heuristic',
+              cat: tab.category,
+              ...(event.kind === 'proxy_failed'
+                ? { role: event.role, why: event.why }
+                : { missing: event.missing }),
+            },
+            at,
+          ),
+        );
+        if (state.source === 'planner' && state.templateKey)
+          await this.d.stores.compose.evict(
+            state.templateKey,
+            state.variant ?? undefined,
+          );
+        break;
+      }
+      case 'offer': {
+        const today = toDay(this.now);
+        await this.d.stores.sites.update(domain, (s) => {
+          const sameDay = s.fitView.offerDay === today;
+          s.fitView = {
+            ...s.fitView,
+            offerDay: today,
+            offerAccepted:
+              event.answer === 'accept' || (sameDay && s.fitView.offerAccepted),
+          };
+        });
+        // v1's offer conventions: one in-page offer per page view, a few a day.
+        if (tab.offersShown === 0) {
+          await this.d.tabs.update(tabId, (t) => {
+            t.offersShown += 1;
+          });
+          await this.d.stores.offers.update((b) =>
+            b.day === today
+              ? { day: today, count: b.count + 1 }
+              : { day: today, count: 1 },
+          );
+        }
+        // "Not now": no more Fit view offers in this tab.
+        if (event.answer === 'dismiss')
+          await this.d.fitViews.update(tabId, (s) => ({
+            ...s,
+            offerDeclined: true,
+          }));
+        break;
+      }
+      case 'always':
+        // The top strip's "Always here": as the popup's, without reopening.
+        await this.setAlwaysHere(tabId, event.on, false);
+        break;
+      case 'text_nudge':
+        // Text − / + inside Fit view: kept as Fit view's own text override.
+        await this.d.stores.settings.update((s) => ({
+          ...s,
+          fitTextStep: Math.max(
+            -FIT_TEXT_STEPS_MAX,
+            Math.min(FIT_TEXT_STEPS_MAX, s.fitTextStep + event.step),
+          ),
+        }));
+        break;
+    }
+    await this.afterChange(tabId);
+  }
+
+  /**
+   * ui:fit-view. scope 'page': open or close Fit view in this tab (tab mode
+   * follows). scope 'site': "Always here" on or off; turning it on opens Fit
+   * view here too.
+   */
+  async fitView(
+    tabId: number,
+    on: boolean,
+    scope: 'page' | 'site',
+  ): Promise<void> {
+    if (scope === 'site') {
+      await this.setAlwaysHere(tabId, on, true);
+      await this.afterChange(tabId);
+      return;
+    }
+    if (on) await this.openFitView(tabId, 'popup');
+    else await this.closeFitView(tabId);
+    await this.afterChange(tabId);
+  }
+
+  /**
+   * "Always here" on or off for the tab's site. Turning it on opens Fit view
+   * here too when `open` asks for it and it is not open yet.
+   */
+  private async setAlwaysHere(
+    tabId: number,
+    on: boolean,
+    open: boolean,
+  ): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.domain || isExcludedSite(tab.domain)) return;
+    await this.d.stores.sites.update(tab.domain, (s) => {
+      if (on) s.rule.view = 'fit';
+      else delete s.rule.view;
+      s.rule.updatedAt = this.now;
+    });
+    const state = await this.d.fitViews.get(tabId);
+    if (open && on && !(state.open && state.session === tab.tabSession))
+      await this.openFitView(tabId, 'popup');
+  }
+
+  /** ui:fit-view-switch: take the planner layout that is ready ("Switch"). */
+  async fitViewSwitch(tabId: number): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    const state = await this.d.fitViews.get(tabId);
+    if (
+      !tab.tabSession ||
+      state.session !== tab.tabSession ||
+      !state.open ||
+      state.planner !== 'ready' ||
+      state.source === 'planner'
+    )
+      return;
+    await this.d.port.sendToTab(tabId, {
+      type: 'sw:fitview',
+      action: 'open',
+      reason: 'switch',
+    });
+  }
+
+  /** The toggle-fit-view command: open Fit view in the tab, or go back to the original page. */
+  async toggleFitView(tabId: number): Promise<void> {
+    const tab = await this.d.tabs.get(tabId);
+    if (!tab.engine || !tab.tabSession) return;
+    const state = forPageView(await this.d.fitViews.get(tabId), tab.tabSession);
+    if (state.open) await this.closeFitView(tabId);
+    else await this.openFitView(tabId, 'shortcut');
+    await this.afterChange(tabId);
+  }
+
+  private async openFitView(
+    tabId: number,
+    reason: FitViewOpenReason,
+  ): Promise<void> {
+    await this.d.fitViews.update(tabId, (s) => ({ ...s, tabMode: true }));
+    await this.d.port.sendToTab(tabId, {
+      type: 'sw:fitview',
+      action: 'open',
+      reason,
+    });
+  }
+
+  /** "Original page" from the popup or the shortcut: tab mode ends. */
+  private async closeFitView(tabId: number): Promise<void> {
+    await this.d.fitViews.update(tabId, (s) => ({ ...s, tabMode: false }));
+    await this.d.port.sendToTab(tabId, {
+      type: 'sw:fitview',
+      action: 'close',
+      reason: 'original',
+    });
+  }
+
+  // =========================================================================
   // Popup
   // =========================================================================
 
@@ -1535,6 +3203,9 @@ export class Worker {
       theme: settings.theme,
       reduceMotion: settings.reduceMotion,
       profile: profile?.profile ?? null,
+      devPlanner: this.d.config.devPlanner ? settings.devPlanner : null,
+      fitTextStep: settings.fitTextStep,
+      autoSimplify: settings.autoSimplify,
     };
   }
 
@@ -1650,6 +3321,10 @@ export class Worker {
     const level = (op: OpId, fallback: number): number =>
       rule?.levels[op] ?? settings.globalLevels[op] ?? planned(op) ?? fallback;
     const pins = (rule?.pins ?? []).filter((op) => !rule?.blocks.includes(op));
+    const fitView =
+      status === 'paused' || status === 'off'
+        ? undefined
+        : await this.fitViewFor(tab, site);
     const offer =
       tab.offer &&
       !tab.acceptedOps.includes(tab.offer.op) &&
@@ -1670,12 +3345,15 @@ export class Worker {
         email: account?.email ?? null,
         needsReauth: account?.needsReauth ?? false,
         cloudAnalysis: account?.cloudAnalysis ?? false,
+        aiLayout: account?.aiLayout ?? false,
         calibrated: profile.calibrated,
       },
       allSites,
       enabled: settings.enabled,
       analyzed: tab.analysis.used,
-      lastSentAt: tab.analysis.lastSentAt,
+      lastSentAt:
+        Math.max(tab.analysis.lastSentAt ?? 0, tab.layoutSentAt ?? 0) || null,
+      ...(fitView ? { fitView } : {}),
       undoneByYou: [...new Set([...tab.undoneByYou, ...(rule?.blocks ?? [])])],
       reasonOpen: await this.d.undos.openFor(tab.tabId, now),
       site: {
@@ -1714,13 +3392,47 @@ export class Worker {
       needsReload: tab.needsReload && !paused,
       onDeviceOnly:
         account === null || !account.cloudAnalysis || account.needsReauth,
+      triageLine:
+        tab.plan?.triage && status !== 'paused' && status !== 'off'
+          ? triageLine(tab.plan.triage)
+          : null,
       prefs: {
         theme: settings.theme,
         reduceMotion: settings.reduceMotion,
         profile: profile.profile,
+        devPlanner: this.d.config.devPlanner ? settings.devPlanner : null,
+        fitTextStep: settings.fitTextStep,
+        autoSimplify: settings.autoSimplify,
       },
       links: this.links(),
     };
+  }
+
+  /** The popup's Fit view block (absent while the page is still being read). */
+  private async fitViewFor(
+    tab: TabRecord,
+    site: SiteRecord | null,
+  ): Promise<TabDetail['fitView']> {
+    if (!tab.plan || !tab.tabSession || !tab.domain || !site) return undefined;
+    const [c, memo, state] = await Promise.all([
+      this.context(tab.domain),
+      this.d.pages.get(tab.tabId, tab.tabSession),
+      this.d.fitViews.get(tab.tabId),
+    ]);
+    const gate = composeGate({
+      ...(await this.plannerBase(c, tab.domain, tab, memo)),
+      personOpened: true,
+      cached: false,
+    });
+    return fitViewTabState({
+      state,
+      tabSession: tab.tabSession,
+      verdict: tab.plan.triage,
+      excluded: isExcludedSite(tab.domain),
+      alwaysHere: site.rule.view === 'fit',
+      plannerUnavailable: !gate.call && PLANNER_UNAVAILABLE.has(gate.reason),
+      needsConsent: !gate.call && gate.reason === 'no_consent',
+    });
   }
 
   async undo(tabId: number, op: OpId | 'all'): Promise<void> {
@@ -1733,7 +3445,8 @@ export class Worker {
     // Save the explicit site decision before any page message can cause a
     // re-plan. The optional reason window delays only the learning event.
     await this.holdUndos(tab, events);
-    if (targets.some((c) => c.op === 'page_zoom')) await this.resetZoom(tabId);
+    if (targets.some((c) => c.op === 'page_zoom'))
+      await this.restoreZoom(tabId);
     const engineTargets = targets.filter((c) => c.op !== 'page_zoom');
     let engineChanges: AppliedChange[] | null = null;
     if (engineTargets.length > 0) {
@@ -1758,6 +3471,12 @@ export class Worker {
     });
     await this.syncSiteCount(tabId);
     await this.reflectSavedUndo(tab, [...undone]);
+    // Text was sized for the page scale just undone: size it again without.
+    if (
+      undone.has('page_zoom') &&
+      appliedChanges((await this.d.tabs.get(tabId)).changes).length > 0
+    )
+      await this.replan(tabId);
     await this.afterChange(tabId);
   }
 
@@ -1768,19 +3487,15 @@ export class Worker {
     const memo = await this.d.pages.get(tabId, tab.tabSession);
     if (!memo) return false;
     const c = await this.context(tab.domain);
-    const view = analysisView(
-      memo.signals,
-      memo.evidence.regions,
-      memo.answers,
-    );
-    const plan = await this.planFor(c, tab, view, true);
+    let plan = await this.planMemo(c, tab, memo, true);
+    // A scale the person's own action released is decided again here.
+    plan = await this.settleScale(tabId, plan);
     await this.d.tabs.update(tabId, (t) => {
       t.plan = plan;
     });
-    await this.resetZoom(tabId);
     const reply = await this.d.port.sendToTab(tabId, {
       type: 'sw:plan',
-      plan,
+      plan: await this.forPage(tabId, plan),
       reason: 'settings',
     });
     if (reply) await this.processChanges(tabId, reply.changes);
@@ -1887,6 +3602,7 @@ export class Worker {
         })),
       ]);
     }
+    if (op === 'page_zoom') await this.unfreezeScale([tabId]);
     if (!(await this.replan(tabId)))
       await this.d.port.sendToTab(tabId, {
         type: 'sw:set-level',
@@ -1952,6 +3668,7 @@ export class Worker {
       await this.record(tab, events);
     }
     if (scope === 'everywhere') await this.reconcileRegistration();
+    if (ops.includes('page_zoom')) await this.unfreezeScale([tabId]);
     await this.replan(tabId);
     await this.afterChange(tabId);
   }
@@ -1999,7 +3716,7 @@ export class Worker {
       s.rule.updatedAt = this.now;
     });
     if (paused) {
-      await this.resetZoom(tabId);
+      await this.restoreZoom(tabId, true);
       await this.d.port.sendToTab(tabId, { type: 'sw:pause' });
       await this.d.tabs.update(tabId, (t) => {
         t.changes = [];
@@ -2035,6 +3752,8 @@ export class Worker {
    * fresh load; otherwise the page re-plans from its last reading.
    */
   private async resumeTab(tabId: number): Promise<void> {
+    // The page scale first, as on a first plan: text comes back on it.
+    await this.reapplyScale(tabId, (await this.d.tabs.get(tabId)).plan);
     const reply = await this.d.port.sendToTab(tabId, { type: 'sw:resume' });
     if (reply?.restarting) {
       await this.d.tabs.update(tabId, (t) => {
@@ -2114,6 +3833,10 @@ export class Worker {
     await this.d.tabs.update(tabId, (t) => {
       t.undoneByYou = t.undoneByYou.filter((o) => !ops.includes(o));
     });
+    if (ops.includes('page_zoom'))
+      await this.unfreezeScale(
+        (await this.domainTabs(tab.domain)).map((t) => t.tabId),
+      );
     await this.record(tab, [
       ...ops
         .filter((o) => !dropped.has(o))
@@ -2126,7 +3849,7 @@ export class Worker {
     if (!(await this.replan(tabId)) && tab.plan) {
       const reply = await this.d.port.sendToTab(tabId, {
         type: 'sw:plan',
-        plan: tab.plan,
+        plan: await this.forPage(tabId, tab.plan),
         reason: 'settings',
       });
       if (reply) await this.processChanges(tabId, reply.changes);
@@ -2180,7 +3903,7 @@ export class Worker {
   /** The site was paused from the web app: its open pages go back to the original. */
   async pauseDomain(domain: string): Promise<void> {
     for (const tab of await this.domainTabs(domain)) {
-      await this.resetZoom(tab.tabId);
+      await this.restoreZoom(tab.tabId, true);
       if (tab.engine)
         await this.d.port.sendToTab(tab.tabId, { type: 'sw:pause' });
       await this.d.tabs.update(tab.tabId, (t) => {
@@ -2217,7 +3940,7 @@ export class Worker {
         t.acceptedOps = t.acceptedOps.filter((o) => o !== op);
         if (t.offer?.op === op) t.offer = null;
       });
-      if (op === 'page_zoom') await this.resetZoom(tab.tabId);
+      if (op === 'page_zoom') await this.restoreZoom(tab.tabId);
       else {
         const reply = await this.d.port.sendToTab(tab.tabId, {
           type: 'sw:undo',
@@ -2244,7 +3967,7 @@ export class Worker {
     for (const tab of await this.d.tabs.all()) {
       if (!enabled) {
         if (!tab.engine) continue;
-        await this.resetZoom(tab.tabId);
+        await this.restoreZoom(tab.tabId, true);
         await this.d.port.sendToTab(tab.tabId, { type: 'sw:pause' });
         await this.d.tabs.update(tab.tabId, (t) => {
           t.changes = [];
@@ -2288,6 +4011,9 @@ export class Worker {
     theme?: Settings['theme'];
     reduceMotion?: boolean;
     hideAllSitesAsk?: boolean;
+    devPlanner?: boolean;
+    fitTextStep?: number;
+    autoSimplify?: boolean;
   }): Promise<Prefs> {
     await this.d.stores.settings.update((s) => ({
       ...s,
@@ -2297,6 +4023,21 @@ export class Worker {
         : {}),
       ...(typeof p.hideAllSitesAsk === 'boolean'
         ? { hideAllSitesAsk: p.hideAllSitesAsk }
+        : {}),
+      ...(typeof p.autoSimplify === 'boolean'
+        ? { autoSimplify: p.autoSimplify }
+        : {}),
+      // Only a build with a local dev planner has the switch.
+      ...(typeof p.devPlanner === 'boolean' && this.d.config.devPlanner
+        ? { devPlanner: p.devPlanner }
+        : {}),
+      ...(typeof p.fitTextStep === 'number' && Number.isFinite(p.fitTextStep)
+        ? {
+            fitTextStep: Math.max(
+              -FIT_TEXT_STEPS_MAX,
+              Math.min(FIT_TEXT_STEPS_MAX, Math.round(p.fitTextStep)),
+            ),
+          }
         : {}),
     }));
     this.d.port.broadcast({ type: 'ui:changed', tabId: null });
@@ -2420,9 +4161,11 @@ export class Worker {
     await ensureLearning(this.d.stores, profile, this.now);
     await this.reconcileRegistration();
     // A fit saved from Tune must take effect on pages already open. Previously
-    // only the badges changed, leaving their basic-fit plans in place.
+    // only the badges changed, leaving their basic-fit plans in place. The
+    // page scale derives from the fit, so it is decided again.
     for (const tab of await this.d.tabs.all()) {
       if (!tab.engine) continue;
+      await this.unfreezeScale([tab.tabId]);
       await this.replanLive(tab.tabId);
     }
     if (await this.allSites()) await this.grantedAllSites();
@@ -2452,10 +4195,15 @@ export class Worker {
         s.settings.clear(),
         s.account.clear(),
         s.answers.clear(),
+        s.compose.clear(),
+        s.fitLearning.clear(),
         s.receipts.clear(),
         s.activity.clear(),
         this.breaker.clear(),
+        this.composeBreaker.clear(),
         this.d.undos.clear(),
+        this.d.fitViews.clear(),
+        this.d.inflight.clear(),
         s.local.remove([KEYS.auth]),
       ]);
     }

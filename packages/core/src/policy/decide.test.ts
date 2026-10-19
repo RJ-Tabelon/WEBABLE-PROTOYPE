@@ -16,16 +16,24 @@ import {
   levelFor,
   offerProbability,
   planWithTraces,
+  triageBand,
+  zoomInEffect,
 } from './decide';
+import { TEXT_RESIDUAL_MIN } from '../triage/triage';
 import {
   articleSignals,
   FIXTURE_DAY,
   FIXTURE_NOW,
   focusProfile,
+  govukSignals,
+  largeTargetProfile,
+  largeTextProfile,
   makeInput,
   makeRegion,
   strongReaderProfile,
   tier0Profile,
+  triageFor,
+  wikipediaSignals,
 } from './fixtures';
 import type { RegionVerdict } from './types';
 
@@ -90,12 +98,10 @@ describe('applicability (measured facts)', () => {
     expect(applicability('text_floor', big).a).toBe(0);
   });
 
-  it('skips page zoom when the page is already zoomed enough', () => {
-    const zoomed = makeInput({
-      signals: articleSignals({ viewport: { zoom: 1.5 } }),
-    });
-    expect(applicability('page_zoom', zoomed).a).toBe(0);
-    expect(applicability('page_zoom', makeInput()).a).toBe(1);
+  it('never scales the page without triage', () => {
+    expect(applicability('page_zoom', makeInput()).a).toBe(0);
+    const { traces } = planWithTraces(makeInput());
+    expect(traces.find((t) => t.op === 'page_zoom')?.why).toBe('not_triaged');
   });
 
   it('counts contrast failures against the person’s floor and stays out of forced colours', () => {
@@ -373,41 +379,15 @@ describe('buildPlan', () => {
     expect(plan.category).toBe('article');
   });
 
-  it('never zooms the tab: when most text is small, a text floor applies (page_zoom is retired)', () => {
-    const { plan, traces } = planWithTraces(makeInput());
+  it('never scales the page without triage, even when the site pins page zoom', () => {
+    const { plan, traces } = planWithTraces(
+      makeInput({ patch: { site: site({ pins: ['page_zoom'] }) } }),
+    );
     expect(plan.ops.map((o) => o.op)).toContain('text_floor');
     expect(plan.ops.map((o) => o.op)).not.toContain('page_zoom');
-    expect(traces.find((t) => t.op === 'page_zoom')?.why).toBe('retired');
-  });
-
-  it('never zooms the tab, even when the site pins page zoom', () => {
-    const ops = buildPlan(
-      makeInput({ patch: { site: site({ pins: ['page_zoom'] }) } }),
-    ).ops.map((o) => o.op);
-    expect(ops).not.toContain('page_zoom');
-  });
-
-  it('picks a text floor over page zoom when only outliers are small', () => {
-    const signals = articleSignals({
-      text: {
-        histogram: [
-          [13, 800],
-          [22, 4200],
-        ],
-        mainFontPx: 22,
-      },
-    });
-    const ops = buildPlan(makeInput({ signals })).ops.map((o) => o.op);
-    expect(ops).toContain('text_floor');
-    expect(ops).not.toContain('page_zoom');
-  });
-
-  it('lets a pin override the strategy table', () => {
-    const ops = buildPlan(
-      makeInput({ patch: { site: site({ pins: ['text_floor'] }) } }),
-    ).ops.map((o) => o.op);
-    expect(ops).toContain('text_floor');
-    expect(ops).not.toContain('page_zoom');
+    expect(traces.find((t) => t.op === 'page_zoom')?.why).toBe('not_triaged');
+    expect(plan.zoom).toBe(1);
+    expect(plan.triage).toBeUndefined();
   });
 
   it('lets focus view supersede dimming', () => {
@@ -512,5 +492,293 @@ describe('buildPlan', () => {
     expect(buildPlan(makeInput({ profile: focusProfile() }))).toEqual(
       buildPlan(makeInput({ profile: focusProfile() })),
     );
+  });
+});
+
+describe('composition with triage (docs/10 §5.1-5.2)', () => {
+  /** Policy input with triage computed for the profile and page, as the worker does. */
+  const triaged = (
+    profile: ReturnType<typeof strongReaderProfile>,
+    signals: ReturnType<typeof articleSignals>,
+    opts: Omit<
+      Parameters<typeof makeInput>[0] & object,
+      'profile' | 'signals'
+    > = {},
+  ) =>
+    makeInput({
+      ...opts,
+      profile,
+      signals,
+      patch: { ...opts.patch, triage: triageFor(profile, signals) },
+    });
+  const op = (plan: { ops: Array<{ op: string }> }, id: string) =>
+    plan.ops.find((o) => o.op === id) as
+      (ReturnType<typeof buildPlan>['ops'][number] & object) | undefined;
+
+  it('scales the page to triage’s preset and lets text floor carry the residual', () => {
+    const input = triaged(largeTextProfile(28), wikipediaSignals());
+    const { plan, traces } = planWithTraces(input);
+    // k = 28 / 14 = 2, past the breakpoint-safe 1.6 (1280 px): 150%, residual 1.33.
+    expect(input.triage).toMatchObject({ k: 2, zoom: 1.5, residual: 1.333 });
+    expect(op(plan, 'page_zoom')).toMatchObject({ mode: 'auto', level: 2 });
+    expect(op(plan, 'page_zoom')?.trace.evidence).toEqual([
+      { kind: 'page_scale', zoom: 1.5, k: 2 },
+      { kind: 'small_text', share: 0.99, floorPx: 28, beforePx: 14 },
+    ]);
+    // The text floor keeps its effective 28 px; running text at 150% is 21 px.
+    expect(op(plan, 'text_floor')).toMatchObject({ mode: 'auto', level: 5 });
+    expect(op(plan, 'text_floor')?.trace.evidence).toEqual([
+      { kind: 'small_text', share: 0.99, floorPx: 28, beforePx: 21 },
+      { kind: 'page_scale', zoom: 1.5, k: 2 },
+    ]);
+    expect(plan.zoom).toBe(1.5);
+    expect(plan.triage).toBe(input.triage);
+    expect(traces.find((t) => t.op === 'page_zoom')?.why).toBe('saved_fit');
+  });
+
+  it('applies the page scale alone when it reaches the person’s size', () => {
+    const { plan, traces } = planWithTraces(
+      triaged(largeTextProfile(24), govukSignals()),
+    );
+    // k = 24 / 19 = 1.26: 125% leaves 1.01, inside 1.05.
+    expect(op(plan, 'page_zoom')).toMatchObject({ mode: 'auto', level: 1 });
+    expect(plan.zoom).toBe(1.25);
+    expect(op(plan, 'text_floor')).toBeUndefined();
+    expect(traces.find((t) => t.op === 'text_floor')?.why).toBe(
+      'not_applicable',
+    );
+  });
+
+  it('auto-applies text changes only past k = 1.15', () => {
+    // k = 21 / 17.5 = 1.2: 110% and a 1.09 residual, both automatic.
+    const past = buildPlan(
+      triaged(strongReaderProfile(), govukSignals({ bodyPx: 17.5 })),
+    );
+    expect(op(past, 'page_zoom')).toMatchObject({ mode: 'auto', level: 0 });
+    expect(op(past, 'text_floor')?.mode).toBe('auto');
+    expect(past.zoom).toBe(1.1);
+    // k = 21 / 19 = 1.11 fits: no page scale, and the small gap is only offered.
+    const fits = triaged(strongReaderProfile(), govukSignals());
+    expect(fits.triage?.needs.text).toBe('fits');
+    const plan = buildPlan(fits);
+    expect(op(plan, 'page_zoom')).toBeUndefined();
+    expect(op(plan, 'text_floor')?.mode).toBe('offer');
+    expect(plan.zoom).toBe(1);
+    // The same page without triage keeps v1's saved fit.
+    expect(
+      op(
+        buildPlan(
+          makeInput({
+            profile: strongReaderProfile(),
+            signals: govukSignals(),
+          }),
+        ),
+        'text_floor',
+      )?.mode,
+    ).toBe('auto');
+  });
+
+  it('gives a page that fits nothing automatic: the saved target size waits for friction', () => {
+    const signals = govukSignals(undefined, {
+      targets: { below: { '44': 3, '56': 5, '72': 8 } },
+    });
+    const input = triaged(strongReaderProfile(), signals);
+    expect(input.triage?.needs.targets).toBe('fits');
+    const { plan, traces } = planWithTraces(input);
+    expect(op(plan, 'target_size')).toBeUndefined();
+    expect(traces.find((t) => t.op === 'target_size')?.why).toBe('page_fits');
+    expect(
+      decideOp('target_size', { ...input, friction: { target_size: 3 } })
+        .planned?.mode,
+    ).toBe('offer');
+    expect(
+      op(buildPlan({ ...input, triage: undefined }), 'target_size')?.trace.why,
+    ).toBe('saved_fit');
+  });
+
+  it('keeps the person’s pins and site levels over a verdict of fits', () => {
+    const pinned = buildPlan(
+      triaged(strongReaderProfile(), govukSignals(), {
+        patch: { site: site({ pins: ['text_floor'] }) },
+      }),
+    );
+    expect(op(pinned, 'text_floor')).toMatchObject({ mode: 'auto', level: 3 });
+    const level = buildPlan(
+      triaged(strongReaderProfile(), govukSignals(), {
+        patch: { site: site({ levels: { text_floor: 5 } }) },
+      }),
+    );
+    expect(op(level, 'text_floor')).toMatchObject({ mode: 'auto', level: 5 });
+  });
+
+  it('lets a saved text size scale the page even where the need level alone would not', () => {
+    // A measured 16 px floor is need level 0; on a 12 px page k = 1.33.
+    const input = triaged(largeTargetProfile(56), govukSignals({ bodyPx: 12 }));
+    expect(input.learning.ops.page_zoom.src).toBe('none');
+    const plan = buildPlan(input);
+    expect(op(plan, 'page_zoom')).toMatchObject({ mode: 'auto', level: 1 });
+    expect(op(plan, 'page_zoom')?.trace.source).toBe('profile');
+    // 125% leaves 1.07 for the text floor.
+    expect(op(plan, 'text_floor')?.mode).toBe('auto');
+    // Without a saved size nothing scales the page.
+    const tier0 = tier0Profile();
+    expect(
+      op(buildPlan(triaged(tier0, govukSignals({ bodyPx: 12 }))), 'page_zoom'),
+    ).toBeUndefined();
+  });
+
+  it('lets text floor take the whole gap when the page scale is undone or only offered', () => {
+    const undone = undoOn(undefined, 'page_zoom');
+    const after = planWithTraces(
+      triaged(largeTextProfile(28), wikipediaSignals(), {
+        domain: undone.domain,
+      }),
+    );
+    expect(after.traces.find((t) => t.op === 'page_zoom')?.why).toBe(
+      'undone_this_session',
+    );
+    expect(after.plan.zoom).toBe(1);
+    expect(op(after.plan, 'text_floor')?.mode).toBe('auto');
+    expect(op(after.plan, 'text_floor')?.trace.evidence).toEqual([
+      { kind: 'small_text', share: 0.99, floorPx: 28, beforePx: 14 },
+    ]);
+
+    const demoted = emptyDomainState(FIXTURE_DAY);
+    demoted.ops.page_zoom = { s: 0, f: 2, t: FIXTURE_DAY, demoted: true };
+    const offered = planWithTraces(
+      triaged(largeTextProfile(28), wikipediaSignals(), { domain: demoted }),
+    );
+    expect(offered.traces.find((t) => t.op === 'page_zoom')?.mode).not.toBe(
+      'auto',
+    );
+    expect(offered.plan.zoom).toBe(1);
+    expect(op(offered.plan, 'text_floor')?.trace.evidence).toContainEqual({
+      kind: 'small_text',
+      share: 0.99,
+      floorPx: 28,
+      beforePx: 14,
+    });
+  });
+
+  it('compares target sizes at the CSS size that reaches the person’s size at the page scale', () => {
+    const p = largeTextProfile(28);
+    p.motor.minTargetPx = {
+      value: 44,
+      source: 'measured',
+      confidence: 0.8,
+      measured: 44,
+    };
+    const input = triaged(p, wikipediaSignals());
+    // 44 px at 150% is 29.3 CSS px: between the 24 (50) and 32 (58) counts.
+    expect(applicability('target_size', input).evidence).toEqual([
+      { kind: 'target_failures', count: 56, targetPx: 44 },
+    ]);
+    expect(
+      applicability('target_size', { ...input, triage: undefined }).evidence,
+    ).toEqual([{ kind: 'target_failures', count: 61, targetPx: 44 }]);
+  });
+
+  it('counts the page scale when deciding whether a pinned bar takes too much of the screen', () => {
+    const signals = wikipediaSignals(
+      { occlusion: 0.17 },
+      { sticky: { bars: 1, topBandPx: 140 } },
+    );
+    const input = triaged(largeTextProfile(28), signals);
+    expect(zoomInEffect(input)).toBe(1.5);
+    expect(applicability('unpin_bars', input)).toMatchObject({
+      regions: ['k-nav'],
+      evidence: [{ kind: 'sticky_bars', count: 1, heightPx: 140 }, {}],
+    });
+    expect(applicability('unpin_bars', { ...input, triage: undefined }).a).toBe(
+      0,
+    );
+  });
+
+  it('counts the page scale once for a page read with it already on (a repeat visit)', () => {
+    // A 100 px band: 19% of an 800 px screen at 150%, under the 20% line.
+    const first = wikipediaSignals(
+      { occlusion: 0.17 },
+      { sticky: { bars: 1, topBandPx: 100 } },
+    );
+    const input = triaged(largeTextProfile(28), first);
+    expect(zoomInEffect(input)).toBe(1.5);
+    expect(applicability('unpin_bars', input).a).toBe(0);
+    // The same page read at 150%: the band is the same 100 CSS px in a
+    // viewport of 533. Its share is the same, so the decision is too.
+    const repeat = wikipediaSignals(
+      { occlusion: 0.17 * 1.5 },
+      {
+        sticky: { bars: 1, topBandPx: 100 },
+        viewport: { width: 853, height: 533, dpr: 3, zoom: 1 },
+      },
+    );
+    const again = makeInput({
+      profile: largeTextProfile(28),
+      signals: repeat,
+      patch: {
+        triage: triageFor(largeTextProfile(28), repeat, { scale: 1.5 }),
+        scale: 1.5,
+      },
+    });
+    expect(zoomInEffect(again)).toBe(1.5);
+    expect(applicability('unpin_bars', again).a).toBe(0);
+    expect(
+      applicability('unpin_bars', { ...again, scale: 1 }).a,
+    ).toBeGreaterThan(0);
+  });
+
+  it('gates busy-page and pinned-bar ops only when layout features were measured', () => {
+    const withLayout = triaged(focusProfile(), wikipediaSignals());
+    expect(triageBand('dim_distractions', withLayout)).toBe('tailor');
+    const old = triaged(focusProfile(), articleSignals());
+    expect(old.triage?.needs.clutter).toBe('fits');
+    expect(triageBand('dim_distractions', old)).toBeNull();
+    expect(triageBand('unpin_bars', old)).toBeNull();
+    expect(triageBand('line_spacing', withLayout)).toBeNull();
+    // Without layout features: no page scale, text floor carries all of k (v1).
+    const plan = buildPlan(old);
+    expect(old.triage).toMatchObject({ zoom: 1, representable: false });
+    expect(op(plan, 'page_zoom')).toBeUndefined();
+    expect(op(plan, 'text_floor')?.trace.evidence).toEqual([
+      { kind: 'small_text', share: 0.94, floorPx: 21, beforePx: 13 },
+    ]);
+  });
+
+  it('takes page zoom’s level from triage, and the person’s site level over it', () => {
+    const input = triaged(largeTextProfile(28), wikipediaSignals());
+    expect(levelFor('page_zoom', input)).toBe(2);
+    expect(
+      levelFor('page_zoom', {
+        ...input,
+        site: site({ levels: { page_zoom: 1 } }),
+      }),
+    ).toBe(1);
+    // The text floor's level is effective px: the same with or without a page scale.
+    expect(levelFor('text_floor', input)).toBe(
+      levelFor('text_floor', { ...input, triage: undefined }),
+    );
+  });
+
+  it('keeps text floor’s residual past 1.05 at the scale in effect, for every persona and page', () => {
+    for (const px of [16, 18, 21, 24, 28, 32, 36, 40]) {
+      for (const signals of [govukSignals(), wikipediaSignals()]) {
+        const input = triaged(largeTextProfile(px), signals);
+        const plan = buildPlan(input);
+        const floor = op(plan, 'text_floor');
+        const scale = op(plan, 'page_zoom');
+        expect(plan.zoom).toBe(scale?.mode === 'auto' ? input.triage!.zoom : 1);
+        if (floor) {
+          const running = px / input.triage!.k!;
+          const levelPx = [14, 16, 18, 21, 24, 28, 32, 40, 48][floor.level]!;
+          expect(levelPx / (running * plan.zoom!)).toBeGreaterThan(
+            TEXT_RESIDUAL_MIN,
+          );
+        }
+        if (input.triage!.needs.text === 'fits') {
+          expect(scale).toBeUndefined();
+          expect(floor?.mode).not.toBe('auto');
+        }
+      }
+    }
   });
 });

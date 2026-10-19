@@ -35,12 +35,39 @@ export function payloadText(body: unknown): string {
   }
 }
 
+/** Where a request went, after its size: "812 bytes to page analysis". */
+export const RECEIPT_DESTINATION: Record<SentReceipt['destination'], string> = {
+  page_analysis: 'to page analysis',
+  layout_planning: 'to OpenAI, for a Fit view layout',
+};
+
+/** The line under an empty list: what would be sent, from the consents. */
+export function emptyReceiptsNote(consents: {
+  cloudAnalysis: boolean;
+  aiLayout: boolean;
+}): string {
+  if (consents.cloudAnalysis && consents.aiLayout)
+    return 'When WebAble sends page structure or a page outline, the exact request shows up here.';
+  if (consents.cloudAnalysis)
+    return 'When WebAble sends page structure for analysis, the exact request shows up here.';
+  if (consents.aiLayout)
+    return 'When WebAble sends a page outline for a Fit view layout, the exact request shows up here.';
+  return 'Page analysis and better Fit view layouts are off, so nothing will be sent.';
+}
+
 /**
- * "What was sent": every page-analysis request that left this browser, with the
- * exact body behind a disclosure. The receipts live in the extension; the site
- * name is shown from this browser only and was never part of what was sent.
+ * "What was sent": every request that left this browser (page analysis, and
+ * page outlines for Fit view layouts), with the exact body behind a
+ * disclosure. The receipts live in the extension; the site name is shown from
+ * this browser only and was never part of what was sent.
  */
-export function Receipts({ cloudAnalysis }: { cloudAnalysis: boolean }) {
+export function Receipts({
+  cloudAnalysis,
+  aiLayout,
+}: {
+  cloudAnalysis: boolean;
+  aiLayout: boolean;
+}) {
   const { state, recheck } = useExtension();
   const [load, setLoad] = useState<Load>({ phase: 'idle' });
   const [limit, setLimit] = useState(PAGE);
@@ -131,9 +158,7 @@ export function Receipts({ cloudAnalysis }: { cloudAnalysis: boolean }) {
         <div className="wa-app-prose">
           <p>Nothing has been sent from this browser.</p>
           <p className="wa-app-meta">
-            {cloudAnalysis
-              ? 'When WebAble sends page structure for analysis, the exact request shows up here.'
-              : 'Page analysis is off, so nothing will be sent.'}
+            {emptyReceiptsNote({ cloudAnalysis, aiLayout })}
           </p>
         </div>
       ) : (
@@ -156,7 +181,7 @@ export function Receipts({ cloudAnalysis }: { cloudAnalysis: boolean }) {
                     <time dateTime={new Date(receipt.at).toISOString()}>
                       {formatMoment(receipt.at)}
                     </time>
-                    {` · ${formatBytes(receipt.bytes)} to page analysis`}
+                    {` · ${formatBytes(receipt.bytes)} ${RECEIPT_DESTINATION[receipt.destination]}`}
                   </p>
                 </div>
                 <Disclosure

@@ -32,6 +32,8 @@ import {
   type RegionRole,
 } from '../page/types';
 import type { FitProfile, NeedLevels } from '../profile/schema';
+import { TEXT_RESIDUAL_MIN } from '../triage/triage';
+import type { TriageKind, TriageNeed, TriageVerdict } from '../triage/types';
 import {
   autoplaySources,
   contrastFailures,
@@ -45,7 +47,7 @@ import {
   STICKY_BAND_SHARE,
   stickyBandShare,
   targetKey,
-  ZOOM_STRATEGY_SHARE,
+  targetsBelow,
 } from './measure';
 import type {
   AdaptationPlan,
@@ -77,6 +79,73 @@ export interface PolicyInput {
   now: number;
   /** Profile calibration confidence, null when uncalibrated. */
   profileConfidence: number | null;
+  /**
+   * Triage for this page view (docs/10 §3). With it, page_zoom applies
+   * triage's page scale, text_floor carries the residual, and a need that
+   * fits gets no automatic change. Without it the v1 rules apply and the tab
+   * is never scaled.
+   */
+  triage?: TriageVerdict;
+  /**
+   * WebAble's page scale in effect when the signals were read (1 = none, as
+   * TriageInput.scale). A repeat visit is read with its scale already on, so
+   * viewport shares are taken back to 100% before the plan's scale applies.
+   */
+  scale?: number;
+}
+
+// ---------------------------------------------------------------------------
+// Triage (docs/10 §3.2, §5.1-5.2)
+// ---------------------------------------------------------------------------
+
+/** The triage need each op serves. Ops not listed keep the v1 rules. */
+const OP_NEED: Readonly<Partial<Record<OpId, TriageNeed>>> = {
+  text_floor: 'text',
+  page_zoom: 'text',
+  target_size: 'targets',
+  target_spacing: 'targets',
+  dim_distractions: 'clutter',
+  focus_view: 'clutter',
+  unpin_bars: 'occlusion',
+  contrast: 'contrast',
+  calm_motion: 'motion',
+  pause_media: 'motion',
+};
+
+/** Needs measured only from layout features: without them (an older engine) these ops keep the v1 rules. */
+const LAYOUT_NEEDS: ReadonlySet<TriageNeed> = new Set<TriageNeed>([
+  'clutter',
+  'occlusion',
+]);
+
+/** Triage's band for the need an op serves, or null when triage does not gate the op. */
+export function triageBand(op: OpId, input: PolicyInput): TriageKind | null {
+  const need = OP_NEED[op];
+  if (!input.triage || !need) return null;
+  if (LAYOUT_NEEDS.has(need) && !input.signals.layout) return null;
+  return input.triage.needs[need];
+}
+
+/** The person's own zoom (tab zoom without WebAble's page scale, times pinch), as the worker reports it. */
+function ownZoom(signals: PageSignals): number {
+  const z = signals.viewport.zoom;
+  return Number.isFinite(z) && z > 0 ? z : 1;
+}
+
+/** A level the person set for this op (on this site, or for every site). */
+const manualLevel = (op: OpId, input: PolicyInput): boolean =>
+  Number.isFinite(input.site?.levels[op]);
+
+/**
+ * The page scale this plan applies: page_zoom's level when it is decided
+ * automatically, else 1 (an offered scale is not in effect until accepted).
+ * text_floor carries the residual against it, and target sizes are compared
+ * at the CSS size that reaches the person's size at this scale.
+ */
+export function zoomInEffect(input: PolicyInput): number {
+  if (!input.triage) return 1;
+  const planned = decideDetailed('page_zoom', input).planned;
+  return planned?.mode === 'auto' ? levelValue('page_zoom', planned.level) : 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -101,15 +170,13 @@ export function levelFor(op: OpId, input: PolicyInput): number {
       return clampLevel(evidenceNeeds(input.profile, input.needs).targets);
     case 'menu_grace':
       return input.profile.motor.hoverGraceMs.value >= 700 ? 1 : 0;
-    default:
-      return chooseLevel(
-        input.learning,
-        input.domain,
-        op,
-        null,
-        toDay(input.now),
-      );
+    case 'page_zoom':
+      // Triage chose the scale for this page view; Learner B's zoom only fills in without one.
+      if (input.triage && input.triage.zoom > 1)
+        return nearestLevel('page_zoom', input.triage.zoom);
+      break;
   }
+  return chooseLevel(input.learning, input.domain, op, null, toDay(input.now));
 }
 
 // ---------------------------------------------------------------------------
@@ -227,9 +294,12 @@ function focusViewApplicability(input: PolicyInput): Applicability {
 
 function unpinApplicability(input: PolicyInput): Applicability {
   const { signals } = input;
-  // WebAble never zooms the tab (page_zoom is retired), so the bars take the
-  // share of the screen they take now.
-  if (stickyBandShare(signals, 1) <= STICKY_BAND_SHARE) return NONE;
+  // Pinned bars grow with the page scale while the screen keeps its size.
+  if (
+    stickyBandShare(signals, zoomInEffect(input), input.scale) <=
+    STICKY_BAND_SHARE
+  )
+    return NONE;
   const perRegion: Record<string, number> = {};
   const found: Array<{ key: string; a: number; by: 'rule' | 'page_analysis' }> =
     [];
@@ -269,6 +339,56 @@ function textFloorPx(input: PolicyInput): number {
 }
 
 /**
+ * text_floor with triage: running text in main goes to the level (effective
+ * px) only where the page scale in effect leaves it short by more than
+ * TEXT_RESIDUAL_MIN. The level never changes with the zoom; the engine aims
+ * at level / (the person's own zoom x the page scale) CSS px
+ * (AdaptationPlan.ownZoom x zoom).
+ */
+function textFloorWithTriage(
+  input: PolicyInput,
+  t: TriageVerdict,
+): Applicability {
+  if (t.k === null || !(t.k > 0)) return NONE;
+  const floorPx = textFloorPx(input);
+  const zoom = zoomInEffect(input);
+  // Running text as the person sees it at their own zoom (k = textMinPx / this).
+  const runningPx = input.profile.vision.textMinPx.value / t.k;
+  if (!(floorPx / (runningPx * zoom) > TEXT_RESIDUAL_MIN)) return NONE;
+  const scale = ownZoom(input.signals) * zoom;
+  const evidence: TraceEvidence[] = [
+    {
+      kind: 'small_text',
+      share: round2(smallText(input.signals, floorPx / scale).share),
+      floorPx,
+      beforePx: Math.round(runningPx * zoom),
+    },
+  ];
+  if (zoom > 1) evidence.push({ kind: 'page_scale', zoom, k: t.k });
+  return page(evidence);
+}
+
+/** page_zoom: triage's page scale, or one the person set for this site. Never without triage. */
+function pageZoomApplicability(input: PolicyInput): Applicability {
+  const t = input.triage;
+  if (!t || (!(t.zoom > 1) && !manualLevel('page_zoom', input))) return NONE;
+  const zoom = levelValue('page_zoom', levelFor('page_zoom', input));
+  if (t.k === null) return page([]);
+  const floorPx = input.profile.vision.textMinPx.value;
+  return page([
+    { kind: 'page_scale', zoom, k: t.k },
+    {
+      kind: 'small_text',
+      share: round2(
+        smallText(input.signals, floorPx / ownZoom(input.signals)).share,
+      ),
+      floorPx,
+      beforePx: Math.round(floorPx / t.k),
+    },
+  ]);
+}
+
+/**
  * Deterministic applicability A in [0, 1] of an op on this page
  * (ai-architecture.md 1 row 3): measured facts for page ops, verdict labels for
  * region ops. Returns the regions an op should target when region-scoped.
@@ -285,6 +405,7 @@ export function applicability(
   const { signals, profile } = input;
   switch (op) {
     case 'text_floor': {
+      if (input.triage) return textFloorWithTriage(input, input.triage);
       const t = smallText(signals, textFloorPx(input));
       if (t.share < SMALL_TEXT_MIN_SHARE) return NONE;
       return page([
@@ -296,23 +417,8 @@ export function applicability(
         },
       ]);
     }
-    case 'page_zoom': {
-      const t = smallText(signals, textFloorPx(input));
-      const zoom = levelValue('page_zoom', levelFor('page_zoom', input));
-      if (
-        t.share < SMALL_TEXT_MIN_SHARE ||
-        signals.viewport.zoom >= zoom - 0.01
-      )
-        return NONE;
-      return page([
-        {
-          kind: 'small_text',
-          share: round2(t.share),
-          floorPx: t.floorPx,
-          beforePx: t.beforePx,
-        },
-      ]);
-    }
+    case 'page_zoom':
+      return pageZoomApplicability(input);
     case 'line_spacing': {
       const current = signals.text.mainLineHeight;
       const target = levelValue(
@@ -366,7 +472,15 @@ export function applicability(
     }
     case 'target_size': {
       const px = levelValue('target_size', levelFor('target_size', input));
-      const count = signals.targets.below[targetKey(px)];
+      // With triage the level is effective px: compare at the CSS size that reaches it.
+      const count = input.triage
+        ? Math.round(
+            targetsBelow(
+              signals,
+              px / (ownZoom(signals) * zoomInEffect(input)),
+            ),
+          )
+        : signals.targets.below[targetKey(px)];
       if (count < 1) return NONE;
       return page([{ kind: 'target_failures', count, targetPx: px }]);
     }
@@ -469,7 +583,16 @@ function sourceOf(
   const sitePin =
     (input.site?.pins.includes(op) ?? false) ||
     input.domain?.ops[op]?.pin === true;
-  const src = input.learning.ops[op]?.src ?? 'none';
+  let src = input.learning.ops[op]?.src ?? 'none';
+  // A saved text size is page_zoom's authority as it is text_floor's: the
+  // two compose into one text change (docs/10 §5.1).
+  if (
+    op === 'page_zoom' &&
+    src === 'none' &&
+    input.triage &&
+    input.profile.vision.textMinPx.source !== 'default'
+  )
+    src = 'profile';
   const pinned = sitePin || src === 'pinned';
   return { source: pinned ? 'pinned' : src, pinned, sitePin };
 }
@@ -547,6 +670,8 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
   ) {
     return skip('undone_this_session');
   }
+  // Page scale needs triage: the breakpoint-safe zoom and the guard's baseline.
+  if (op === 'page_zoom' && !input.triage) return skip('not_triaged');
 
   const app = applicability(op, input);
   const evidence = [
@@ -571,10 +696,16 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
   // Page applicability, user blocks/undo and engine reliability still gate it.
   const savedMinimum =
     source === 'profile' &&
-    ((op === 'text_floor' &&
+    (((op === 'text_floor' || op === 'page_zoom') &&
       input.profile.vision.textMinPx.source !== 'default') ||
       (op === 'target_size' &&
         input.profile.motor.minTargetPx.source !== 'default'));
+
+  // A need that fits gets no automatic change, saved fit or not (docs/10
+  // §3.2): text auto only past k = 1.15. The person's pins and levels for a
+  // site still apply.
+  const fits =
+    triageBand(op, input) === 'fits' && !pinned && !manualLevel(op, input);
 
   const needs = evidenceNeeds(input.profile, input.needs);
   const theta = pinned
@@ -598,7 +729,12 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
     pinned ||
     ((source === 'profile' || source === 'system') && def.autoEligible);
   const matchesFit = savedMinimum && !snoozed;
-  if (autoSource && !demotedHere(d, op) && (matchesFit || euAuto(P, pOk) > 0)) {
+  if (
+    !fits &&
+    autoSource &&
+    !demotedHere(d, op) &&
+    (matchesFit || euAuto(P, pOk) > 0)
+  ) {
     const regions =
       def.scope === 'region'
         ? app.regions.filter(
@@ -631,6 +767,11 @@ function decideDetailed(op: OpId, input: PolicyInput): OpDecision {
 
   const lr = Math.max(1, input.friction[op] ?? 1);
   const pOffer = offerProbability(P, lr);
+  // Where the need fits, only friction raises an offer. text_floor's
+  // low-benefit band (residual past 1.05 with k up to 1.15) is offered,
+  // never applied.
+  if (fits && op !== 'text_floor' && !(lr > 1))
+    return skip('page_fits', { p: round2(P), pOk: round2(pOk), evidence });
   if (pOffer < K.TAU_OFFER)
     return skip('below_threshold', {
       p: round2(P),
@@ -706,13 +847,6 @@ function demote(decision: OpDecision, why: string): OpDecision {
   };
 }
 
-/** Rank for choosing between alternatives: pinned beats unpinned, auto beats offer. */
-const altRank = (x: OpDecision): number =>
-  x.planned === null
-    ? -1
-    : (x.trace.source === 'pinned' ? 2 : 0) +
-      (x.planned.mode === 'auto' ? 1 : 0);
-
 /**
  * The plan and every op's trace (including skips), for the debug panel and
  * "What WebAble learned". `buildPlan` returns only the plan.
@@ -727,6 +861,8 @@ export function planWithTraces(input: PolicyInput): {
     category: input.signals.category,
     basis: 'local',
     ops: [],
+    zoom: 1,
+    ...(input.triage ? { triage: input.triage } : {}),
   };
   if (input.site?.paused) {
     return {
@@ -739,22 +875,9 @@ export function planWithTraces(input: PolicyInput): {
   for (const op of OP_IDS) decisions.set(op, decideDetailed(op, input));
   const get = (op: OpId) => decisions.get(op)!;
 
-  // Page zoom and a text floor are alternatives: measured strategy first (3.7), user authority over it.
-  const zoom = get('page_zoom');
-  const floor = get('text_floor');
-  if (zoom.planned && floor.planned) {
-    const share = smallText(input.signals, textFloorPx(input)).share;
-    const preferred: OpId =
-      share >= ZOOM_STRATEGY_SHARE ? 'page_zoom' : 'text_floor';
-    const keep: OpId =
-      altRank(zoom) === altRank(floor)
-        ? preferred
-        : altRank(zoom) > altRank(floor)
-          ? 'page_zoom'
-          : 'text_floor';
-    const drop: OpId = keep === 'page_zoom' ? 'text_floor' : 'page_zoom';
-    decisions.set(drop, demote(get(drop), `alternative_${keep}`));
-  }
+  // Page scale and text floor compose (docs/10 §5.2): page_zoom applies
+  // triage's scale, and text_floor, decided against that scale, carries only
+  // the residual.
 
   // Focus view supersedes dimming, unless dimming is on automatically and focus view is only offered.
   const focus = get('focus_view');
@@ -784,6 +907,8 @@ export function planWithTraces(input: PolicyInput): {
     const planned = get(op).planned;
     if (planned) plan.ops.push(planned);
   }
+  const scale = plan.ops.find((p) => p.op === 'page_zoom' && p.mode === 'auto');
+  plan.zoom = scale ? levelValue('page_zoom', scale.level) : 1;
   plan.basis = plan.ops.some((p) =>
     p.trace.evidence.some(
       (e) => e.kind === 'region_role' && e.by === 'page_analysis',
@@ -796,8 +921,9 @@ export function planWithTraces(input: PolicyInput): {
 
 /**
  * Full plan for a page: every op decided, at most one offer (budgeted), conflict
- * rules applied (page_zoom and text_floor are alternatives; focus_view supersedes
- * dim_distractions on the same page; paused sites return an empty plan).
+ * rules applied (page_zoom and text_floor compose, with plan.zoom the scale in
+ * effect; focus_view supersedes dim_distractions on the same page; paused sites
+ * return an empty plan).
  */
 export function buildPlan(input: PolicyInput): AdaptationPlan {
   return planWithTraces(input).plan;

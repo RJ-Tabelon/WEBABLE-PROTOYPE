@@ -9,6 +9,10 @@ import { open, plan } from './helpers';
  * ad that pushes content down. Sampled every frame while the person scrolls
  * with the wheel. Adapted text must never fall back to its native size, new
  * content must arrive adapted, and the page must never scroll against them.
+ *
+ * text_floor works on main content only (docs/10 §5.2): the trending rail
+ * beside it is never resized, nor are the carousel's slides and the clamped
+ * teasers, whose boxes would cut text off.
  */
 
 const hello = {
@@ -28,6 +32,8 @@ interface Report {
   spacingLosses: string[];
   /** Clamped teasers seen enlarged (and therefore cut off). */
   clampsShown: string[];
+  /** Text outside main content, or in boxes that clip, seen resized. */
+  touched: string[];
   /** Sizes caught mid-animation between native and fitted. */
   animating: string[];
   /** Story paragraphs first seen without the fitted line spacing. */
@@ -49,6 +55,7 @@ async function sample(page: Page): Promise<void> {
       late: [],
       spacingLosses: [],
       clampsShown: [],
+      touched: [],
       animating: [],
       unspaced: [],
       yanks: [],
@@ -59,7 +66,12 @@ async function sample(page: Page): Promise<void> {
     let next = 0;
     let lastY = scrollY;
     const tracked =
-      'main.story > p:not(.byline):not(.ticker), .feed .card p.teaser, #trending a, .slide.is-active p';
+      'main.story > p:not(.byline):not(.ticker), .feed .card p.teaser';
+    // Never resized: the rail beside main, and slides in a clipping carousel.
+    const untouched: Array<[string, number]> = [
+      ['#trending a', 12],
+      ['.slide p', 13],
+    ];
     const frame = (): void => {
       report.frames++;
       if (scrollY < lastY - 4) report.yanks.push(Math.round(lastY - scrollY));
@@ -88,6 +100,12 @@ async function sample(page: Page): Promise<void> {
         t.adapted = adapted;
         t.spaced = spaced;
       }
+      for (const [q, native] of untouched)
+        for (const el of document.querySelectorAll(q)) {
+          const size = parseFloat(getComputedStyle(el).fontSize);
+          if (Math.abs(size - native) > 0.01)
+            report.touched.push(`${q} @${size}px`);
+        }
       for (const el of document.querySelectorAll('.card .clamp')) {
         const r = el.getBoundingClientRect();
         if (r.bottom < 60 || r.top > innerHeight) continue;
@@ -157,6 +175,7 @@ test.describe('stability on a changing page', () => {
     expect(report.yanks).toEqual([]);
     // Teasers with a fixed height would be cut off: they keep their size.
     expect([...new Set(report.clampsShown)]).toEqual([]);
+    expect([...new Set(report.touched)]).toEqual([]);
     const ops = await page.evaluate(() =>
       window.__webableEngine
         .adapterChanges()

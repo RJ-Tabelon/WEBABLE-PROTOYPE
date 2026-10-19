@@ -14,13 +14,10 @@ import { componentKey, sanitizedTokens } from '../util/hash';
 import { normText } from './main';
 import type { MotionInventory } from './motion';
 import {
-  AD_MARKUP_SELECTOR,
-  CHAT_SELECTOR,
-  CMP_SELECTOR,
-  RECS_VENDOR_SELECTOR,
   iframeKindOfHost,
   knownRoots,
   ruleFor,
+  type KnownRoots,
 } from './rules';
 
 /**
@@ -154,7 +151,7 @@ function headingOf(el: Element): string {
 }
 
 /** Collect region roots; order encodes priority for the cap. */
-function candidates(input: SegmentInput): Element[] {
+function candidates(input: SegmentInput, known: KnownRoots): Element[] {
   const { doc, main } = input;
   const out: Element[] = [];
   const seen = new Set<Element>();
@@ -170,11 +167,11 @@ function candidates(input: SegmentInput): Element[] {
     seen.add(el);
     out.push(el);
   };
-  // 1. Known third-party roots (decided by rules).
-  for (const sel of [CMP_SELECTOR, CHAT_SELECTOR, RECS_VENDOR_SELECTOR]) {
-    for (const el of doc.querySelectorAll(sel)) add(el);
-  }
-  for (const el of doc.querySelectorAll(AD_MARKUP_SELECTOR)) {
+  // 1. Known third-party roots (decided by rules), from the one sweep the
+  //    rules read too (each selector list costs ~1-2 ms on a large page).
+  for (const list of [known.cmp, known.chat, known.recs])
+    for (const [el] of list) add(el);
+  for (const [el] of known.ad) {
     // Mark the slot container, not the inner <ins>/<div> that has no box yet.
     const block =
       el.closest('aside, section, figure, [class*="ad" i], [id*="ad" i]') ?? el;
@@ -236,7 +233,7 @@ export function segmentRegions(input: SegmentInput): RegionFact[] {
   const known = knownRoots(doc);
   const facts: RegionFact[] = [];
 
-  for (const el of candidates(input)) {
+  for (const el of candidates(input, known)) {
     if (
       el.localName === HOST_TAG ||
       el.localName === 'script' ||

@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Editor fixture</title>
+    <!--
+      A document editor app: a menubar, a formatting toolbar with toggle
+      buttons (aria-pressed), a file list in a side panel, a large
+      contenteditable document (role=textbox, multiline) holding typed text,
+      a comment field, and a fixed status bar. Not re-presentable: the
+      editor flag must be set.
+    -->
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #1f1f1f;
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+        background: #f9fbfd;
+      }
+      .menubar {
+        display: flex;
+        gap: 2px;
+        padding: 4px 12px;
+      }
+      .menubar [role='menuitem'] {
+        padding: 2px 8px;
+        border-radius: 4px;
+        cursor: default;
+      }
+      .toolbar {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+        margin: 0 12px;
+        padding: 4px 8px;
+        background: #edf2fa;
+        border-radius: 20px;
+      }
+      .toolbar button {
+        width: 28px;
+        height: 28px;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        font-weight: 700;
+      }
+      .toolbar button[aria-pressed='true'] {
+        background: #d3e3fd;
+      }
+      .toolbar select {
+        height: 28px;
+      }
+      .workspace {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 16px;
+        padding: 12px;
+        min-height: 0;
+      }
+      .files ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .files a {
+        display: block;
+        padding: 6px 8px;
+        border-radius: 4px;
+        color: inherit;
+        text-decoration: none;
+      }
+      .files a[aria-current='page'] {
+        background: #e3e3e3;
+      }
+      .doc {
+        background: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        padding: 48px 72px;
+        min-height: 560px;
+        font-family: Georgia, serif;
+        font-size: 16px;
+        line-height: 1.5;
+        outline: none;
+      }
+      .comment-box {
+        margin-top: 12px;
+      }
+      .comment-box textarea {
+        width: 100%;
+        height: 60px;
+      }
+      .status {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 24px;
+        display: flex;
+        gap: 24px;
+        align-items: center;
+        padding: 0 16px;
+        background: #eee;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="menubar" role="menubar" aria-label="Menu" data-qa="menubar">
+      <div role="menuitem" tabindex="0" aria-haspopup="menu">File</div>
+      <div role="menuitem" tabindex="-1" aria-haspopup="menu">Edit</div>
+      <div role="menuitem" tabindex="-1" aria-haspopup="menu">View</div>
+      <div role="menuitem" tabindex="-1" aria-haspopup="menu">Insert</div>
+      <div role="menuitem" tabindex="-1" aria-haspopup="menu">Format</div>
+      <div role="menuitem" tabindex="-1" aria-haspopup="menu">Help</div>
+    </div>
+    <div
+      class="toolbar"
+      role="toolbar"
+      aria-label="Formatting"
+      data-qa="toolbar"
+    >
+      <button aria-label="Undo">↶</button>
+      <button aria-label="Redo">↷</button>
+      <select aria-label="Styles">
+        <option>Normal text</option>
+        <option>Title</option>
+        <option>Heading 1</option>
+        <option>Heading 2</option>
+      </select>
+      <button aria-label="Bold" aria-pressed="true">B</button>
+      <button aria-label="Italic" aria-pressed="false"><i>I</i></button>
+      <button aria-label="Underline" aria-pressed="false"><u>U</u></button>
+      <button aria-label="Insert link">🔗</button>
+      <button aria-label="Bulleted list" aria-pressed="false">•</button>
+    </div>
+    <div class="workspace">
+      <nav class="files" aria-label="Documents" data-qa="files">
+        <ul>
+          <li><a href="/doc/1" aria-current="page">Trail notes</a></li>
+          <li><a href="/doc/2">Bench inventory</a></li>
+          <li><a href="/doc/3">Volunteer rota</a></li>
+          <li><a href="/doc/4">Grant application</a></li>
+          <li><a href="/doc/5">Minutes, October</a></li>
+        </ul>
+      </nav>
+      <div>
+        <div
+          class="doc"
+          contenteditable="true"
+          role="textbox"
+          aria-multiline="true"
+          aria-label="Document"
+          data-qa="editor"
+        >
+          <p>Trail notes for the zebulon crossing, first draft.</p>
+          <p>
+            The bench at the third bend needs a new plank before the market
+            weekend.
+          </p>
+          <p>
+            Ask the library about keeping the notebooks on display until spring.
+          </p>
+        </div>
+        <div class="comment-box">
+          <label for="comment">Comment</label>
+          <textarea id="comment" data-qa="comment"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="status" role="status" data-qa="status">
+      <span>212 words</span><span>All changes saved</span>
+    </div>
+  </body>
+</html>

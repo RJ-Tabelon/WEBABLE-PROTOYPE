@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Article fixture</title>
+    <!--
+      A long news article: a site header with navigation and search, the
+      article (headline, byline, time, a figure, many long paragraphs, a
+      quote, a list, a data table and section headings), ad slots (a GPT div
+      with an iframe, an adsbygoogle ins, a sponsored rail box), a related
+      links rail, a comments list, a small cookie banner pinned to the bottom
+      (not a wall) and NewsArticle JSON-LD that is free to read.
+    -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "NewsArticle",
+        "headline": "The quarry road reopens after a summer of volunteer repairs",
+        "isAccessibleForFree": true,
+        "datePublished": "2026-10-12T08:00:00Z"
+      }
+    </script>
+    <meta property="og:type" content="article" />
+    <style>
+      body {
+        margin: 0;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 17px;
+        line-height: 1.6;
+        color: #222;
+      }
+      .site-header {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 12px 32px;
+        border-bottom: 1px solid #ddd;
+        font-family: Arial, sans-serif;
+      }
+      .site-header .brand {
+        font-size: 26px;
+        font-weight: 700;
+        color: #111;
+        text-decoration: none;
+      }
+      .site-header nav ul {
+        display: flex;
+        gap: 18px;
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        font-size: 14px;
+      }
+      .site-header nav a {
+        color: #333;
+        text-decoration: none;
+      }
+      .site-header form {
+        margin-left: auto;
+      }
+      .site-header input {
+        width: 180px;
+        height: 30px;
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 680px) 300px;
+        gap: 48px;
+        justify-content: center;
+        padding: 24px 32px;
+      }
+      h1 {
+        font-size: 40px;
+        line-height: 1.15;
+        margin: 0 0 12px;
+      }
+      .byline {
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+        color: #555;
+      }
+      figure {
+        margin: 24px 0;
+      }
+      figure img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      figcaption {
+        font-size: 13px;
+        color: #666;
+      }
+      blockquote {
+        border-left: 4px solid #ccc;
+        margin: 24px 0;
+        padding-left: 16px;
+        font-style: italic;
+      }
+      table {
+        border-collapse: collapse;
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 4px 10px;
+      }
+      .ad-slot {
+        margin: 24px 0;
+        min-height: 90px;
+        background: #f4f4f4;
+        text-align: center;
+        font-family: Arial, sans-serif;
+        font-size: 11px;
+      }
+      .ad-slot iframe {
+        width: 728px;
+        max-width: 100%;
+        height: 90px;
+        border: 0;
+      }
+      aside {
+        font-family: Arial, sans-serif;
+        font-size: 14px;
+      }
+      aside h2 {
+        font-size: 18px;
+      }
+      .related ol {
+        padding-left: 18px;
+      }
+      .related li {
+        margin: 8px 0;
+      }
+      .sponsor {
+        margin-top: 24px;
+        padding: 12px;
+        border: 1px solid #eee;
+      }
+      .comments {
+        margin-top: 40px;
+        font-family: Arial, sans-serif;
+        font-size: 15px;
+      }
+      .comment {
+        padding: 12px 0;
+        border-top: 1px solid #eee;
+      }
+      .comment .who {
+        font-weight: 700;
+      }
+      .comment time {
+        color: #777;
+        font-size: 13px;
+        margin-left: 8px;
+      }
+      .comment button {
+        font-size: 13px;
+      }
+      .site-footer {
+        padding: 24px 32px;
+        background: #222;
+        color: #ccc;
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+      }
+      .site-footer a {
+        color: #ccc;
+        margin-right: 16px;
+      }
+      #onetrust-banner-sdk {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px 32px;
+        background: #fff;
+        box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+        font-family: Arial, sans-serif;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header" data-qa="header">
+      <a class="brand" href="/">The Valley Ledger</a>
+      <nav aria-label="Sections" data-qa="sections">
+        <ul>
+          <li><a href="/news">News</a></li>
+          <li><a href="/local">Local</a></li>
+          <li><a href="/opinion">Opinion</a></li>
+          <li><a href="/sport">Sport</a></li>
+          <li><a href="/culture">Culture</a></li>
+          <li><a href="/weather">Weather</a></li>
+        </ul>
+      </nav>
+      <form role="search" action="/search" data-qa="search">
+        <input
+          type="search"
+          name="q"
+          aria-label="Search the Ledger"
+          placeholder="Search"
+        />
+      </form>
+    </header>
+    <div class="layout">
+      <main data-qa="main">
+        <article data-qa="article">
+          <h1>The quarry road reopens after a summer of volunteer repairs</h1>
+          <p class="byline">
+            By <a href="/authors/ada-north" rel="author">Ada North</a> ·
+            <time datetime="2026-10-12">October 12, 2026</time>
+          </p>
+          <figure data-qa="figure">
+            <img
+              alt="Volunteers resurfacing the quarry road at dawn"
+              width="680"
+              height="380"
+              src="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%27680%27 height=%27380%27%3E%3Crect width=%27680%27 height=%27380%27 fill=%27%23c9d3c0%27/%3E%3C/svg%3E"
+            />
+            <figcaption>
+              Volunteers worked from June to September, mostly before the heat
+              of the day.
+            </figcaption>
+          </figure>
+          <p>
+            The quarry road, closed since a rockfall in the spring, reopened on
+            Saturday morning after a summer in which more than two hundred
+            volunteers carried gravel, rebuilt drainage channels and replaced
+            every one of the road's forty-one benches. The council had estimated
+            that the repairs would take two years and cost more than the town's
+            entire maintenance budget; instead, the work was finished in a
+            single season.
+          </p>
+          <p>
+            Organisers kept a careful record of every basket of gravel and every
+            hour worked. By their count, volunteers moved just over nine hundred
+            tonnes of stone by hand and wheelbarrow, most of it in the early
+            mornings before the heat made the slope dangerous. The record, kept
+            in a set of notebooks at the trailhead, is now on display at the
+            library.
+          </p>
+          <div class="ad-slot" id="div-gpt-ad-1234567-0" data-qa="ad-gpt">
+            Advertisement
+            <iframe
+              title="Advertisement"
+              srcdoc="&lt;p&gt;ad&lt;/p&gt;"
+            ></iframe>
+          </div>
+          <h2>A road with a long memory</h2>
+          <p>
+            The road was cut in the eighteen-nineties to carry stone from the
+            quarry to the railway. When the quarry closed, the road became a
+            walking route, and over the following century it gathered the
+            benches, shelters and small bridges that people now associate with
+            it. Several of the benches carry plaques for families who have
+            walked the road for generations.
+          </p>
+          <p>
+            Restoring those benches was the most delicate part of the work. Each
+            one was taken apart, its timber checked and treated, and its
+            ironwork cleaned by hand. Where a plank could not be saved,
+            volunteers matched the original wood as closely as they could, using
+            oak from a fallen tree in the park.
+          </p>
+          <blockquote>
+            <p>
+              We wanted people to come back and find their bench exactly where
+              they left it, only stronger.
+            </p>
+          </blockquote>
+          <p>
+            The drainage work, by contrast, was largely invisible. Engineers who
+            advised the volunteers said that water running under the road
+            surface had caused the rockfall in the first place, and that without
+            new channels the same thing would happen again within a decade. The
+            new channels follow the line of the original Victorian drains, which
+            were rediscovered when the old surface was lifted.
+          </p>
+          <ins
+            class="adsbygoogle"
+            style="display: block; height: 90px"
+            data-ad-client="ca-pub-000"
+            data-ad-slot="111"
+            data-qa="ad-ins"
+          ></ins>
+          <h2>What the numbers say</h2>
+          <p>
+            The volunteers' notebooks make it possible to compare this summer's
+            work with earlier repairs, which were recorded by the council. The
+            table below shows the totals for the three largest projects on the
+            road since records began.
+          </p>
+          <table data-qa="table">
+            <caption>
+              Repairs on the quarry road
+            </caption>
+            <thead>
+              <tr>
+                <th>Year</th>
+                <th>Stone moved (t)</th>
+                <th>Benches</th>
+                <th>Weeks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>1978</td>
+                <td>310</td>
+                <td>12</td>
+                <td>30</td>
+              </tr>
+              <tr>
+                <td>2004</td>
+                <td>540</td>
+                <td>20</td>
+                <td>44</td>
+              </tr>
+              <tr>
+                <td>2026</td>
+                <td>905</td>
+                <td>41</td>
+                <td>15</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>
+            The difference, organisers say, is partly the number of people and
+            partly the notebooks themselves: when everyone could see how much
+            had been done, more people turned up the next morning. Several
+            volunteers said the daily totals, chalked on a board at the
+            trailhead, were the reason they kept coming.
+          </p>
+          <ul>
+            <li>More than 200 volunteers took part.</li>
+            <li>Every one of the 41 benches was restored.</li>
+            <li>
+              The road reopened eight weeks ahead of the revised schedule.
+            </li>
+          </ul>
+          <h2>What comes next</h2>
+          <p>
+            The council has agreed to fund the upkeep of the new drainage
+            channels, and the volunteers plan to meet once a month to clear
+            leaves and check the benches. A smaller group has already started on
+            the footbridge at the far end of the road, which has been closed to
+            walkers for three years and needs new handrails.
+          </p>
+          <p>
+            For now, the road is busy again. On Saturday, the first walkers
+            arrived before the ribbon was cut, and by the afternoon every bench
+            had someone sitting on it. The notebooks, open on a table at the
+            library, already have a new page: a list of names of people who
+            would like to help with the bridge.
+          </p>
+        </article>
+        <section class="comments" aria-label="Comments" data-qa="comments">
+          <h2>Comments</h2>
+          <div class="comment">
+            <span class="who">Marmalade Fox</span><time>2 hours ago</time>
+            <p>Walked it this morning. The benches look wonderful.</p>
+            <button type="button">Reply</button>
+          </div>
+          <div class="comment">
+            <span class="who">Quartzite Lane</span><time>3 hours ago</time>
+            <p>Thank you to everyone who carried gravel all summer.</p>
+            <button type="button">Reply</button>
+          </div>
+          <div class="comment">
+            <span class="who">Bench Fan</span><time>5 hours ago</time>
+            <p>Is the footbridge going to be done before winter?</p>
+            <button type="button">Reply</button>
+          </div>
+          <div class="comment">
+            <span class="who">River Path</span><time>6 hours ago</time>
+            <p>The drainage story is fascinating, more of this please.</p>
+            <button type="button">Reply</button>
+          </div>
+        </section>
+      </main>
+      <aside data-qa="aside">
+        <section class="related" aria-labelledby="rel-h">
+          <h2 id="rel-h">Related stories</h2>
+          <ol>
+            <li>
+              <a href="/local/footbridge"
+                >Footbridge repairs to start in spring</a
+              >
+            </li>
+            <li>
+              <a href="/local/library-notebooks"
+                >The notebooks that kept the count</a
+              >
+            </li>
+            <li>
+              <a href="/culture/benches">A history of the road's benches</a>
+            </li>
+            <li>
+              <a href="/local/drains">Victorian drains found under the road</a>
+            </li>
+            <li>
+              <a href="/opinion/volunteers"
+                >Opinion: what volunteers teach councils</a
+              >
+            </li>
+          </ol>
+        </section>
+        <div class="sponsor ad-container" data-qa="sponsor">
+          <span>Sponsored</span>
+          <p>
+            <a href="https://travel.example.net/hills"
+              >Weekend breaks in the northern hills</a
+            >
+          </p>
+        </div>
+      </aside>
+    </div>
+    <footer class="site-footer" data-qa="footer">
+      <a href="/about">About us</a><a href="/contact">Contact</a
+      ><a href="/privacy">Privacy</a><a href="/terms">Terms</a>
+    </footer>
+    <div
+      id="onetrust-banner-sdk"
+      role="region"
+      aria-label="Cookie banner"
+      data-qa="cookie"
+    >
+      <p>We use cookies to understand how the Ledger is read.</p>
+      <button type="button">Accept all</button>
+      <button type="button">Reject all</button>
+    </div>
+  </body>
+</html>

@@ -144,6 +144,27 @@ const TYPE_PAIRS = {
   OpId: 'O.OpId',
   VerifyCode: 'T.VerifyCode',
   AggReport: 'z.infer<typeof E.aggReportSchema>',
+  WireNode: 'SW.WireNode',
+  WirePage: 'SW.WirePage',
+  WireSkeleton: 'SW.WireSkeleton',
+  ComposeRequest: 'CW.ComposeRequest',
+  ComposeResponse: 'CW.ComposeResponse',
+  ComposeOk: 'Extract<CW.ComposeResponse, { ok: true }>',
+  ComposeDegraded: 'Extract<CW.ComposeResponse, { ok: false }>',
+  ComposeDegradedReason: 'CW.ComposeDegradedReason',
+  PageSpec: 'CS.PageSpec',
+  SpecSection: 'CS.SpecSection',
+  SpecCollection: 'CS.SpecCollection',
+  SpecField: 'CS.SpecField',
+  PageType: 'CC.PageType',
+  PrimaryTask: 'CC.PrimaryTask',
+  SectionKind: 'CC.SectionKind',
+  Importance: 'CC.Importance',
+  SectionLayout: 'CC.SectionLayout',
+  ItemKind: 'CC.ItemKind',
+  FieldRole: 'CC.FieldRole',
+  FieldShow: 'CC.FieldShow',
+  PlannerRequestOptions: 'CP.PlannerRequestOptions',
 };
 
 function conformanceSource(tmp) {
@@ -171,6 +192,11 @@ import type * as J from '${core('jev/client')}';
 import type * as P from '${core('page/types')}';
 import type * as O from '${core('ops/catalog')}';
 import type * as T from '${core('policy/types')}';
+import type * as SW from '${core('skeleton/wire')}';
+import type * as CW from '${core('compose/wire')}';
+import type * as CS from '${core('compose/spec')}';
+import type * as CC from '${core('compose/constants')}';
+import type * as CP from '${core('compose/prompt')}';
 
 type Assert<T extends true> = T;
 type IsAny<T> = 0 extends 1 & T ? true : false;

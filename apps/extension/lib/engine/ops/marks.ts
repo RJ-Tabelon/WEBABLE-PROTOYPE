@@ -48,7 +48,9 @@ export const sel = (token: string): string =>
   `[${MARK_ATTR}~="${opaque(token)}"]`;
 
 const TOKEN_RULES: ReadonlyArray<readonly [RegExp, OpId]> = [
-  [/^tf[a-z0-9]*$/, 'text_floor'],
+  // text_floor: tfs<quarter px> size buckets, tflh<ratio> line heights,
+  // tfa font-size-adjust ('tf' alone is the v1 floor token).
+  [/^tf(?:s\d+|lh\d+|a)?$/, 'text_floor'],
   [/^ls$/, 'line_spacing'],
   [/^ll$/, 'line_length'],
   [/^ct\d+$/, 'contrast'],

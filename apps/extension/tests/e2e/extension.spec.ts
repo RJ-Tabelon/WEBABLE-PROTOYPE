@@ -22,6 +22,37 @@ import { fakeSession, startDecideStub } from './supabase-stub';
 
 const STORY = 'main.story p:not(.byline)';
 
+/** The reader's half pixel: sizes closer than this are one size (ops/rank.ts SIZE_EPS). */
+const HALF_PX = 0.5;
+
+/**
+ * A text size as the person sees it: computed CSS px times the tab's zoom.
+ * WebAble's page scale composes with the residual text change (docs/10 §5),
+ * so the CSS px alone are the fit divided by the scale.
+ */
+async function seenPx(
+  ext: Extension,
+  at: { page: Page; tabId: number },
+  selector: string,
+): Promise<number> {
+  const css = parseFloat(await computed(at.page, selector, 'font-size'));
+  return css * (await tabZoom(ext, at.tabId));
+}
+
+/** Text in `selector` is seen at `px`, the fit's size, within the reader's half pixel. */
+async function expectSeenAt(
+  ext: Extension,
+  at: { page: Page; tabId: number },
+  selector: string,
+  px: number,
+  timeout?: number,
+): Promise<void> {
+  await expect
+    .poll(() => seenPx(ext, at, selector), timeout ? { timeout } : {})
+    .toBeGreaterThanOrEqual(px - HALF_PX);
+  expect(await seenPx(ext, at, selector)).toBeLessThanOrEqual(px + HALF_PX);
+}
+
 test('an existing install recovers its saved fit after old verifier failures without losing site choices', async ({
   ext,
 }) => {
@@ -73,7 +104,7 @@ test('an existing install recovers its saved fit after old verifier failures wit
     });
   });
   const { page, tabId } = await ext.openFixture('article');
-  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  await expectSeenAt(ext, { page, tabId }, STORY, 16);
   const view = await ext.send<{
     site: { blocks: string[] };
     undoneByYou: string[];
@@ -100,34 +131,43 @@ test('the saved fit stays adapted on every frame through continuous rendering an
 }) => {
   await ext.seed({ profile: ordinaryFit() });
   const { page, tabId } = await ext.openFixture('article');
-  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  await expectSeenAt(ext, { page, tabId }, STORY, 16);
+  const fitted = parseFloat(await computed(page, STORY, 'font-size'));
+  const zoom = await tabZoom(ext, tabId);
   await page.addStyleTag({
     content: 'main.story p { transition: font-size 400ms, line-height 400ms; }',
   });
   await page.waitForTimeout(1000);
-  const sizes = await page.evaluate(async () => {
+  const frames = await page.evaluate(async () => {
     const story = document.querySelector('main.story p:not(.byline)')!;
     const ticker = document.createElement('span');
     document.body.append(ticker);
     const timer = setInterval(() => {
       ticker.textContent = String(Date.now());
     }, 180);
-    const sizes: number[] = [];
+    const frames: Array<{ px: number; dpr: number }> = [];
     const start = performance.now();
     await new Promise<void>((resolve) => {
       const sample = () => {
-        sizes.push(parseFloat(getComputedStyle(story).fontSize));
+        frames.push({
+          px: parseFloat(getComputedStyle(story).fontSize),
+          dpr: devicePixelRatio,
+        });
         if (performance.now() - start < 4500) requestAnimationFrame(sample);
         else resolve();
       };
       requestAnimationFrame(sample);
     });
     clearInterval(timer);
-    return sizes;
+    return frames;
   });
-  expect(sizes.length).toBeGreaterThan(30);
-  expect(Math.min(...sizes)).toBe(16);
-  expect(Math.max(...sizes)).toBe(16);
+  expect(frames.length).toBeGreaterThan(30);
+  // Every frame shows the same text size at the same page scale.
+  const sizes = frames.map((f) => f.px);
+  expect(Math.min(...sizes)).toBe(fitted);
+  expect(Math.max(...sizes)).toBe(fitted);
+  expect(new Set(frames.map((f) => f.dpr)).size).toBe(1);
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
   await expect
     .poll(async () =>
       (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
@@ -141,31 +181,40 @@ test('a saved ordinary fit adapts delayed rendering, reused nodes and changed st
   await ext.seed({ profile: ordinaryFit() });
   const { page, tabId } = await ext.openFixture('hydration');
   await expect(page.locator('#story').first()).toBeAttached();
-  await expect
-    .poll(() => computed(page, '#story', 'font-size'), { timeout: 15_000 })
-    .toBe('16px');
+  // The 24 px "+" keeps its default 13.33 px label: no ceiling for the text.
+  await expectSeenAt(ext, { page, tabId }, '#story', 16, 15_000);
+  const fitted = await computed(page, '#story', 'font-size');
+  // The page scale is decided once the text has arrived (12 px against 16:
+  // 125%), and the "+" grows with it, to 30 px of the fit's 32 (within the
+  // 2 px a side target_size leaves alone).
   await expect
     .poll(async () =>
       (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
     )
-    .toContainEqual(['target_size', 'applied']);
+    .toContainEqual(['page_zoom', 'applied']);
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
 
-  // A framework reuses its node, then CSS switches back to small text.
+  // A framework reuses its node, then CSS switches back to small text. The
+  // node takes the host's new size as the fit maps it (one monotone map:
+  // larger text grows less, never below its own size), not WebAble's
+  // earlier size for it.
   await page
     .locator('p')
     .evaluateAll((ps) => ps.forEach((p) => p.classList.add('large')));
-  await expect.poll(() => computed(page, '#story', 'font-size')).toBe('24px');
+  await expect
+    .poll(async () => parseFloat(await computed(page, '#story', 'font-size')))
+    .toBeGreaterThanOrEqual(24);
   await page
     .locator('p')
     .evaluateAll((ps) => ps.forEach((p) => p.classList.remove('large')));
-  await expect.poll(() => computed(page, '#story', 'font-size')).toBe('16px');
+  await expect.poll(() => computed(page, '#story', 'font-size')).toBe(fitted);
 
-  // A fresh decision must measure the host CSS, not WebAble's own 16px rule.
+  // A fresh decision must measure the host CSS, not WebAble's own rule.
   await page.locator('#story').evaluate((p) => {
     p.firstChild!.textContent += ' Content updated again.';
   });
   await page.waitForTimeout(1200);
-  expect(await computed(page, '#story', 'font-size')).toBe('16px');
+  expect(await computed(page, '#story', 'font-size')).toBe(fitted);
 
   const popup = await ext.openPopup(tabId);
   const rows = await changeRows(popup);
@@ -185,27 +234,99 @@ test('an ordinary saved fit applies on an initial document and a full navigation
   ext,
 }) => {
   await ext.seed({ profile: ordinaryFit() });
-  const { page } = await ext.openFixture('article');
-  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  const { page, tabId } = await ext.openFixture('article');
+  await expectSeenAt(ext, { page, tabId }, STORY, 16);
   await page.goto(`${FIXTURE_ORIGIN}/engine/hydration.html`);
   await expect(page.locator('#story').first()).toBeAttached();
+  await expectSeenAt(ext, { page, tabId }, '#story', 16, 15_000);
+});
+
+test('a page whose text renders after it loads gets its page scale once the text is there, and from the start on the next visit', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  // An application shell: nothing to size at DOMContentLoaded, so nothing
+  // is decided (or remembered) yet.
+  const { page, tabId } = await ext.openFixture('shell');
+  expect(await page.locator('#story').count()).toBe(0);
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+  // Its 12 px text arrives against a 16 px fit (k = 1.33): 125%, and the
+  // text carries the rest.
+  await expect(page.locator('#story')).toBeAttached({ timeout: 15_000 });
   await expect
-    .poll(() => computed(page, '#story', 'font-size'), { timeout: 15_000 })
-    .toBe('16px');
+    .poll(() => tabZoom(ext, tabId), { timeout: 15_000 })
+    .toBeCloseTo(1.25, 2);
+  await expectSeenAt(ext, { page, tabId }, '#story', 16, 15_000);
+
+  // The next visit has the scale from hello on, through the empty shell.
+  const session = (await ext.tabState(tabId))?.tabSession;
+  await page.reload();
+  await expect
+    .poll(async () => {
+      const t = await ext.tabState(tabId);
+      return t?.tabSession !== session && t?.phase === 'ready';
+    })
+    .toBe(true);
+  expect(await page.locator('#story').count()).toBe(0);
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
+  await expect(page.locator('#story')).toBeAttached({ timeout: 15_000 });
+  await expectSeenAt(ext, { page, tabId }, '#story', 16, 15_000);
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(1.25, 2);
+});
+
+test('text is sized for the person’s own browser zoom: at 150% the fit is seen at its size, not half as large again', async ({
+  ext,
+}) => {
+  // The person zoomed this site to 150% before WebAble saw their fit.
+  const before = await ext.openFixture('article');
+  await setSiteZoom(ext, before.tabId, 1.5);
+  try {
+    const profile = strongReaderProfile();
+    profile.vision.textMinPx.value = 28;
+    await ext.seed({ profile });
+    const { page, tabId } = await ext.openFixture('article');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1.5, 2);
+    // 13 px at 150% is 19.5 px against a 28 px fit (k = 1.44). At 150% the
+    // layout is 853 px wide, too narrow for a page scale (zMax 1.07): the
+    // text carries the fit, 28 / 1.5 CSS px.
+    await expectSeenAt(ext, { page, tabId }, STORY, 28);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1.5, 2);
+  } finally {
+    await setSiteZoom(ext, before.tabId, 0);
+  }
+});
+
+test('a control’s "+" never holds running text below the fit', async ({
+  ext,
+}) => {
+  await ext.seed({ profile: ordinaryFit() });
+  // 780 px wide: no page scale keeps the desktop layout (zMax 1), so the
+  // text carries the whole fit, past the 24 px "+" button's label at the
+  // browser's default 13.33 px.
+  const { page, tabId } = await ext.openFixture('hydration', {
+    viewport: { width: 780, height: 800 },
+  });
+  await expect(page.locator('#story').first()).toBeAttached();
+  await expectSeenAt(ext, { page, tabId }, '#story', 16, 15_000);
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+  expect(
+    parseFloat(await computed(page, 'main button', 'font-size')),
+  ).toBeCloseTo(13.33, 1);
 });
 
 test('saving a fit updates a page that was already open without a popup or reload', async ({
   ext,
 }) => {
-  const { page } = await ext.openFixture('article');
+  const { page, tabId } = await ext.openFixture('article');
   expect(await computed(page, STORY, 'font-size')).toBe('13px');
+  expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
   const result = await ext.send<{ ok: boolean }>({
     type: 'e2e:seed',
     profile: ordinaryFit(),
     reset: false,
   });
   expect(result.ok).toBe(true);
-  await expect.poll(() => computed(page, STORY, 'font-size')).toBe('16px');
+  await expectSeenAt(ext, { page, tabId }, STORY, 16);
 });
 
 test('a calmer page stays calm through automatic refreshes', async ({
@@ -290,6 +411,37 @@ async function changeRows(popup: Page) {
     .getByRole('listitem');
 }
 
+/** The person's own zoom for the tab's site (per-origin, as Ctrl+/- sets it); 0 is Chrome's default. */
+async function setSiteZoom(
+  ext: Extension,
+  tabId: number,
+  factor: number,
+): Promise<void> {
+  await ext.control.evaluate(
+    async ([id, f]) => {
+      const tabs = (
+        globalThis as unknown as {
+          chrome: {
+            tabs: {
+              setZoomSettings(
+                id: number,
+                s: { mode: string; scope: string },
+              ): Promise<void>;
+              setZoom(id: number, f: number): Promise<void>;
+            };
+          };
+        }
+      ).chrome.tabs;
+      await tabs.setZoomSettings(id, {
+        mode: 'automatic',
+        scope: 'per-origin',
+      });
+      await tabs.setZoom(id, f);
+    },
+    [tabId, factor] as const,
+  );
+}
+
 async function tabZoom(ext: Extension, tabId: number): Promise<number> {
   return ext.control.evaluate(
     (id) =>
@@ -330,19 +482,23 @@ test.describe('popup', () => {
     await expectNoAxeViolations(popup);
   });
 
-  test('adapts a page without zooming it, lists the change, and undo and redo work', async ({
+  test('adapts a page with a page scale and the rest in its text, lists both, and undo and redo work', async ({
     ext,
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
 
-    // Most text here is 13 px against a larger fit: the text grows, and the
-    // tab's zoom is never touched.
-    await expect
-      .poll(() => computed(page, STORY, 'font-size'))
-      .not.toBe('13px');
+    // Most text here is 13 px against a 21 px fit (k = 1.6): the tab is
+    // zoomed to the largest preset that keeps the desktop layout (150% at
+    // 1280 px), and running text carries the rest, so the person sees 21 px.
+    await expectSeenAt(ext, { page, tabId }, STORY, 21);
     const fitted = await computed(page, STORY, 'font-size');
-    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+    const zoom = await tabZoom(ext, tabId);
+    expect(zoom).toBeCloseTo(1.5, 2);
+    // The heading stays above running text.
+    expect(
+      parseFloat(await computed(page, 'main.story h1', 'font-size')),
+    ).toBeGreaterThan(parseFloat(fitted));
 
     const popup = await ext.openPopup(tabId);
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
@@ -351,14 +507,18 @@ test.describe('popup', () => {
     const rows = await changeRows(popup);
     const text = rows.filter({ hasText: 'Text size' });
     await expect(text).toHaveCount(1);
-    // The fit mark carries the measured values, and says them in words.
-    await expect(text).toContainText(`13 to ${parseInt(fitted, 10)} pixels`);
-    await expect(rows.filter({ hasText: 'Page zoom' })).toHaveCount(0);
+    // The fit mark carries the sizes as seen at the page scale, in words.
+    await expect(text).toContainText(`${Math.round(13 * zoom)} to 21 pixels`);
+    const scale = rows.filter({ hasText: 'Page zoom' });
+    await expect(scale).toHaveCount(1);
+    await expect(scale).toContainText('100% to 150%');
 
     await expectNoAxeViolations(popup);
 
+    // Undo takes back the text change only; the page scale is its own row.
     await text.getByRole('button', { name: 'Undo text size' }).click();
     await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
     // The optional reason; the row stays until the popup closes.
     const reason = popup.getByRole('group', { name: 'Text size was undone' });
     await expect(reason).toBeVisible();
@@ -373,10 +533,10 @@ test.describe('popup', () => {
       ),
     ).toEqual([]);
 
-    // Redo puts it back.
+    // Redo puts it back, on the same page scale.
     await reason.getByRole('button', { name: 'Redo text size' }).click();
     await expect.poll(() => computed(page, STORY, 'font-size')).toBe(fitted);
-    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
   });
 
   test('Undo is saved without answering a reason and survives reload, a new tab, and a worker restart', async ({
@@ -447,9 +607,11 @@ test.describe('popup', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
-    await expect
-      .poll(() => computed(page, STORY, 'font-size'))
-      .not.toBe('13px');
+    await expectSeenAt(ext, { page, tabId }, STORY, 21);
+    const zoom = await tabZoom(ext, tabId);
+    const size = async (q: string) =>
+      parseFloat(await computed(page, q, 'font-size'));
+    const [body0, heading0] = [await size(STORY), await size('main.story h1')];
     const popup = await ext.openPopup(tabId);
 
     await popup.getByRole('button', { name: 'Adjust for this site' }).click();
@@ -462,17 +624,22 @@ test.describe('popup', () => {
       10,
     );
 
-    // The size the person chose applies on the page; the tab is never zoomed.
-    await expect
-      .poll(() => computed(page, STORY, 'font-size'))
-      .toBe(`${chosen}px`);
-    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
-    expect(await computed(page, 'main.story h1', 'font-size')).toBe('32px');
+    // The size the person chose is the size they see. The page keeps its
+    // scale (decided once per page view); running text carries the change.
+    await expectSeenAt(ext, { page, tabId }, STORY, chosen);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
+    // One order-preserving map: the heading stays above running text and
+    // grows by less.
+    const [body, heading] = [await size(STORY), await size('main.story h1')];
+    expect(heading).toBeGreaterThan(body);
+    expect(heading / heading0).toBeLessThan(body / body0);
 
     const rows = await changeRows(popup);
     const text = rows.filter({ hasText: 'Text size' });
     await expect(text).toHaveCount(1);
-    await expect(text).toContainText(`13 to ${chosen} pixels`);
+    await expect(text).toContainText(
+      `${Math.round(13 * zoom)} to ${chosen} pixels`,
+    );
     await text.getByRole('button', { name: 'Undo text size' }).click();
     await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
     await expect(
@@ -494,12 +661,25 @@ test.describe('popup', () => {
       .filter({ hasText: 'Click targets' })
       .getByRole('button', { name: 'Undo click targets' })
       .click();
+    // The next visit is read with its page scale already on (put back at
+    // hello): it must decide as the first visit did, the scale counted once.
+    // The popup shows the new page view's offer, not the last one's.
+    const session = (await ext.tabState(tabId))?.tabSession;
     await page.reload();
+    await expect
+      .poll(async () => {
+        const t = await ext.tabState(tabId);
+        return t?.tabSession !== session && t?.phase === 'ready';
+      })
+      .toBe(true);
 
     const offer = popup.getByRole('region', {
       name: /Add space between them\?/,
     });
     await expect(offer).toBeVisible();
+    await expect
+      .poll(async () => (await ext.tabState(tabId))?.offer?.op)
+      .toBe('target_spacing');
     const accept = offer.getByRole('button', { name: 'Try it' });
     const decline = offer.getByRole('button', { name: 'Not now' });
     // Declining costs the same as accepting.
@@ -531,13 +711,17 @@ test.describe('popup', () => {
   test('a text change that clips is undone by the checks and shown as a neutral row', async ({
     ext,
   }) => {
-    const { page, tabId } = await ext.openFixture('clip');
+    // Notes in a panel whose clipping box is sized four levels up: nothing
+    // near the text says it cannot grow, so the change is made and only the
+    // checks after it find the clip. (Text in a box that announces it, the
+    // 'clip' fixture's cards, is never enlarged at all.)
+    const { page, tabId } = await ext.openFixture('constraint');
     const popup = await ext.openPopup(tabId);
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
       'Basic fit is on',
     );
 
-    // "Larger text" pins an 18 px floor for this site; 12 px captions in fixed boxes would clip.
+    // "Larger text" pins an 18 px floor for this site; the 12 px notes clip.
     await popup.getByRole('switch', { name: 'Larger text' }).click();
     // The switch tells the truth: the checks undid it here, so it reads Off
     // (the pin for this site is kept).
@@ -551,8 +735,15 @@ test.describe('popup', () => {
     await expect(
       popup.getByRole('status').getByText(/is on for this site/),
     ).toHaveCount(0);
-    // The page is exactly as the site made it.
-    expect(await computed(page, '#card-1 p', 'font-size')).toBe('12px');
+    // Undone whole: the page is exactly as the site made it, the paragraph
+    // outside the panel included.
+    await expect
+      .poll(async () =>
+        (await ext.tabState(tabId))?.changes.map((c) => [c.op, c.status]),
+      )
+      .toContainEqual(['text_floor', 'undone_by_checks']);
+    expect(await computed(page, '#note-1', 'font-size')).toBe('12px');
+    expect(await computed(page, '#free', 'font-size')).toBe('12px');
     // Not an error: no alert, and "Why?" explains the checks.
     await popup.getByRole('button', { name: 'Why?' }).first().click();
     await expect(
@@ -569,9 +760,7 @@ test.describe('popup', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
-    await expect
-      .poll(() => computed(page, STORY, 'font-size'))
-      .not.toBe('13px');
+    await expectSeenAt(ext, { page, tabId }, STORY, 21);
 
     const popup = await ext.openPopup(tabId);
     const siteSwitch = popup.getByRole('switch', {
@@ -587,13 +776,17 @@ test.describe('popup', () => {
       popup.getByText('127.0.0.1 looks the way the site made it.'),
     ).toBeVisible();
     await expect(siteSwitch).toHaveAttribute('aria-checked', 'false');
+    // The original page: its own text at the site's own zoom.
     await expect.poll(() => computed(page, STORY, 'font-size')).toBe('13px');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
     await expectNoAxeViolations(popup);
 
-    // A reload stays untouched: the engine is not even registered for this site.
+    // A reload stays untouched: the engine is not even registered for this
+    // site, and the page scale did not become the site's zoom.
     await page.reload({ waitUntil: 'load' });
     await page.waitForTimeout(500);
     expect(await computed(page, STORY, 'font-size')).toBe('13px');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
     expect(await page.locator('html').getAttribute('data-wa-off')).toBeNull();
 
     // Resume from the popup.
@@ -603,9 +796,7 @@ test.describe('popup', () => {
     );
     await popup.getByRole('button', { name: 'Resume on this site' }).focus();
     await popup.keyboard.press('Enter');
-    await expect
-      .poll(() => computed(page, STORY, 'font-size'), { timeout: 15_000 })
-      .not.toBe('13px');
+    await expectSeenAt(ext, { page, tabId }, STORY, 21, 15_000);
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
       /^Adapted/,
     );
@@ -716,12 +907,21 @@ test.describe('page analysis', () => {
           ).chrome.storage.local.set({ 'wa.auth': JSON.stringify(session) }),
         fakeSession(),
       );
-      const { tabId } = await ext.openFixture('article');
+      const { page, tabId } = await ext.openFixture('article');
       await expect.poll(() => stub.bodies.length, { timeout: 10_000 }).toBe(1);
       expect(stub.authorizations[0]).toBe('Bearer e2e-access-token');
       const sent = stub.bodies[0]!;
       for (const word of PRIVATE)
         expect(sent.toLowerCase()).not.toContain(word);
+
+      // This fit's structure need is level 2, but the article is not busy
+      // for it: Fit view opens by itself only on busy pages (docs/11 §2).
+      const view = await ext.send<{ fitView: { open: boolean } | null }>({
+        type: 'ui:view',
+        tabId,
+      });
+      expect(view.fitView?.open).toBe(false);
+      await expect(page.locator('[data-webable="fit-view"]')).toHaveCount(0);
 
       const popup = await ext.openPopup(tabId);
       await expect(
@@ -837,14 +1037,19 @@ test.describe('turning WebAble off and on', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
-    await expect.poll(() => fontOf(page)).not.toBe('13px');
+    await expectSeenAt(ext, { page, tabId }, STORY, 21);
     const fitted = await fontOf(page);
+    const zoom = await tabZoom(ext, tabId);
 
+    // Off is the original page: its own text at the site's own zoom.
     await ext.send({ type: 'ui:enabled', enabled: false });
     await expect.poll(() => fontOf(page)).toBe('13px');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
 
+    // On again is the same adaptation: the page scale and the text on it.
     await ext.send({ type: 'ui:enabled', enabled: true });
     await expect.poll(() => fontOf(page)).toBe(fitted);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
     await expect
       .poll(async () => (await ext.tabState(tabId))?.phase)
       .toBe('ready');
@@ -875,16 +1080,20 @@ test.describe('turning WebAble off and on', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const { page, tabId } = await ext.openFixture('article');
-    await expect.poll(() => fontOf(page)).not.toBe('13px');
+    await expectSeenAt(ext, { page, tabId }, STORY, 21);
     const fitted = await fontOf(page);
+    const zoom = await tabZoom(ext, tabId);
     const popup = await ext.openPopup(tabId);
     const siteSwitch = popup.getByRole('switch', {
       name: 'WebAble on this site',
     });
     await siteSwitch.click();
     await expect.poll(() => fontOf(page)).toBe('13px');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
+    // Pausing is no Undo: resuming puts the same page scale back.
     await siteSwitch.click();
     await expect.poll(() => fontOf(page)).toBe(fitted);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
     await expect(popup.getByRole('heading', { level: 1 })).toHaveText(
       /^Adapted/,
     );
@@ -995,8 +1204,9 @@ test.describe('turning WebAble off and on', () => {
   }) => {
     await ext.seed({ profile: strongReaderProfile() });
     const first = await ext.openFixture('article');
-    await expect.poll(() => fontOf(first.page)).not.toBe('13px');
+    await expectSeenAt(ext, first, STORY, 21);
     const fitted = await fontOf(first.page);
+    const zoom = await tabZoom(ext, first.tabId);
     await ext.send({
       type: 'ui:pause-site',
       tabId: first.tabId,
@@ -1004,11 +1214,15 @@ test.describe('turning WebAble off and on', () => {
     });
     await first.page.close();
 
+    // Paused, a new page on the site is the original: its own text at the
+    // site's own zoom (WebAble's page scale never becomes the site's zoom).
     const { page, tabId } = await ext.openFixture('article', { settle: false });
     await page.waitForTimeout(800);
     expect(await fontOf(page)).toBe('13px');
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(1, 2);
     await ext.send({ type: 'ui:pause-site', tabId, paused: false });
     await expect.poll(() => fontOf(page)).toBe(fitted);
+    expect(await tabZoom(ext, tabId)).toBeCloseTo(zoom, 2);
     await expect
       .poll(async () => (await ext.tabState(tabId))?.phase)
       .toBe('ready');

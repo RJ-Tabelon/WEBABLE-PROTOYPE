@@ -34,8 +34,15 @@ import {
   type DesirabilityContext,
 } from './learners';
 import { kalmanPoint, probitUpdate } from './math';
+import { OP_LIBRARY_VERSION } from '../versions';
 import { K, W } from './params';
-import { BASE_PRIOR, ENGINE_PRIOR, PIN_THETA, PRIOR_TABLE } from './priors';
+import {
+  BASE_PRIOR,
+  ENGINE_PRIOR,
+  OP_IMPL_VERSION,
+  PIN_THETA,
+  PRIOR_TABLE,
+} from './priors';
 import {
   learnDeltaSchema,
   type AdaptEvent,
@@ -166,7 +173,7 @@ describe('initialLearningState', () => {
     expect(src('calm_motion')).toBe('none');
     expect(src('steady_clicks')).toBe('none');
     expect(src('dim_distractions')).toBe('none');
-    expect(u.libVer).toBe('ops-1.0.0');
+    expect(u.libVer).toBe(OP_LIBRARY_VERSION);
     expect(u.labels).toEqual({});
   });
 
@@ -651,9 +658,14 @@ describe('applyEvent routing', () => {
       event('rating', { rating: 'helped' }),
       event('rating', { rating: 'helped' }),
     ]);
-    const next = applyEvent(s.user, s.domain, event('applied', { opVer: 2 }));
+    const bumped = OP_IMPL_VERSION.text_floor + 1;
+    const next = applyEvent(
+      s.user,
+      s.domain,
+      event('applied', { opVer: bumped }),
+    );
     expect(next.user.ops.text_floor.c.s).toBeCloseTo(1, 9);
-    expect(next.user.ops.text_floor.opVer).toBe(2);
+    expect(next.user.ops.text_floor.opVer).toBe(bumped);
   });
 
   it('never mutates its inputs and emits valid, domain-free deltas', () => {

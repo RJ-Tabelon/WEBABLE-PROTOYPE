@@ -26,6 +26,22 @@ export interface OpEnv {
   prePaint: ReadonlySet<OpId>;
   /** Elements for a plan scope ('page' resolves to []). */
   resolve(scope: PlannedOp['scope']): Element[];
+  /**
+   * The tab's whole zoom the plan sizes for: the person's own zoom times
+   * WebAble's page scale (AdaptationPlan.ownZoom x zoom, 1 = neither).
+   * Levels are effective px, so text_floor aims for level / zoom CSS px and
+   * target_size for its level / zoom.
+   */
+  zoom: number;
+  /** WebAble's page scale alone (AdaptationPlan.zoom, 1 = none): what page_zoom reports. */
+  scale: number;
+  /**
+   * Run `read` with every op's CSS removed (the site's own styles),
+   * synchronously, and restore before returning. Nests.
+   */
+  measured<T>(read: () => T): T;
+  /** Template classes `op` dropped on this page view: never marked again. */
+  held(op: OpId): ReadonlySet<string>;
 }
 
 export interface Prepared {
@@ -43,6 +59,19 @@ export interface Prepared {
   fitBox?: (el: Element, box: Box) => Box;
   /** Why the op did nothing, for logs and tests. */
   reason?: string;
+  /**
+   * Elements this prepare measured, marked or not. At write time their stale
+   * tokens are dropped; tokens elsewhere (content that arrived after the
+   * extraction) are kept. Default: the extraction's text.
+   */
+  covers?: (el: Element) => boolean;
+  /**
+   * Template class of a marked element. Ops that decide per class roll back
+   * per class too: every instance together, never one element at a time.
+   */
+  classOf?: (el: Element) => string | null;
+  /** Whether a failing class may be dropped on its own, keeping the rest of the op. */
+  droppable?: (cls: string) => boolean;
 }
 
 /** What an imperative op leaves behind: its undo, and how to treat new content. */
@@ -64,6 +93,8 @@ export interface AppliedOp {
   /** Document-coordinate rects before the write, for ghost outlines. */
   before: Map<Element, Box>;
   appliedAt: number;
+  /** The tab's zoom it was prepared under (OpEnv.zoom). */
+  zoom: number;
 }
 
 export interface OpImpl {
@@ -81,6 +112,17 @@ export interface OpImpl {
     applied: AppliedOp,
     roots: readonly Element[],
   ): Array<[Element, string]>;
+  /**
+   * Like `incremental`, but the complete set of this op's tokens for every
+   * element examined (empty: none), so restyled content never keeps a stale
+   * value. May replace `applied.prepared.css` when new content needs a rule
+   * the block lacks; the engine re-installs the block.
+   */
+  retoken?(
+    env: OpEnv,
+    applied: AppliedOp,
+    roots: readonly Element[],
+  ): Array<[Element, string[]]>;
 }
 
 export const notNeeded = (reason: string): Prepared => ({

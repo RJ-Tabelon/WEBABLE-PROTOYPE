@@ -23,14 +23,16 @@ type NeedRow = readonly [need0: number, need1: number, need2: number];
  *   (text, targets, motion) and lower (0.55-0.75) for changes that alter what
  *   the page shows (dimming, focus view, reading guide), because a wrong
  *   dim costs more than a missed one.
- * - page_zoom sits slightly below text_floor: zoom rescales the whole layout,
- *   including images, and is chosen over text_floor by measurement, not taste.
+ * - page_zoom shares text_floor's row: since v2 the two compose into one text
+ *   change (docs/10 §5.1). Triage decides when the page scale is the right
+ *   mechanism (k past 1.15, within the breakpoint-safe zoom), so taste does
+ *   not need to discount it.
  * - calm_motion and pause_media are highest: stopping motion is almost never
  *   unwanted by someone whose fit (or OS setting) asks for less of it.
  */
 export const BASE_PRIOR: Readonly<Record<OpId, NeedRow>> = {
   text_floor: [0.15, 0.6, 0.85],
-  page_zoom: [0.12, 0.55, 0.8],
+  page_zoom: [0.15, 0.6, 0.85],
   line_spacing: [0.15, 0.5, 0.75],
   line_length: [0.15, 0.5, 0.75],
   contrast: [0.1, 0.5, 0.8],
@@ -250,10 +252,19 @@ export const ENGINE_PRIOR = buildEnginePrior();
  */
 export const PIN_THETA = 0.95;
 
-/** Implementation version per op. Bump when an op's behaviour changes materially: counts halve. */
-export const OP_IMPL_VERSION: Readonly<Record<OpId, number>> = Object.freeze(
-  Object.fromEntries(OP_IDS.map((op) => [op, 1])) as Record<OpId, number>,
-);
+/**
+ * Implementation version per op. Bump when an op's behaviour changes
+ * materially: counts halve. v2 (docs/10 §5): page_zoom 2 is triage's
+ * breakpoint-safe page scale, replacing the retired whole-tab zoom;
+ * text_floor 2 scales only main-region running text with one monotone map;
+ * target_size 2 decides per target template and clamps vertical growth.
+ */
+export const OP_IMPL_VERSION: Readonly<Record<OpId, number>> = Object.freeze({
+  ...(Object.fromEntries(OP_IDS.map((op) => [op, 1])) as Record<OpId, number>),
+  page_zoom: 2,
+  text_floor: 2,
+  target_size: 2,
+});
 
 /**
  * Learner B calibration spread (log units) at full confidence, per dimension

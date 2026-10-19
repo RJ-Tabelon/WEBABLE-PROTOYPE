@@ -10,9 +10,11 @@ import type {
 
 import type { EngineStatus } from '../protocol';
 import { extract } from './extract';
+import type { ViewportGuard } from './fitview/types';
 import { LayerManager } from './ops/layer';
 import { hasToken, MarkBook, setOffGate, tokenOp, tokensOf } from './ops/marks';
 import { BISECT_ORDER, levelValue, OPS } from './ops/registry';
+import { textPlanSummary, textScope } from './ops/text';
 import {
   notNeeded,
   type AppliedOp,
@@ -38,13 +40,16 @@ import {
 } from './util/dom';
 import type { Box } from './util/geometry';
 import { Mutex, settle, whenIdle, yieldToMain } from './util/schedule';
-import { readingAnchor, restoreAnchor } from './verify/anchor';
+import { readingAnchor, restoreAnchor, type Anchor } from './verify/anchor';
 import {
   buildProbes,
   clippingContainers,
   diffSnapshots,
   isClipped,
+  regionRootsOf,
   takeSnapshot,
+  templateKey,
+  viewportGuard,
   type Failure,
   type Snapshot,
 } from './verify/checks';
@@ -119,6 +124,8 @@ export interface EnginePerf {
   extract: Extraction['perf'] | null;
   /** Busy time of the last verification (snapshots + diffs), ms. */
   verifyMs: number;
+  /** ...split into probe building, the baseline, diffs and page-wide sweeps, ms. */
+  verifyPhases: { probes: number; base: number; diff: number; sweep: number };
   /** Script time of the last write phase (marks, one replaceSync per layer, effects), ms. */
   writeMs: number;
   /** The single style and layout pass the write caused, ms. */
@@ -127,6 +134,7 @@ export interface EnginePerf {
 
 /** Order used to pick the toast's headline change. */
 const TOAST_ORDER: readonly OpId[] = [
+  'page_zoom',
   'text_floor',
   'target_size',
   'contrast',
@@ -196,7 +204,8 @@ const TOAST_LINE: Record<
   (fit: { before: string; after: string }, count: number) => string
 > = {
   text_floor: (f) => `WebAble set text to ${f.after} here.`,
-  page_zoom: (f) => `WebAble zoomed this site to ${f.after}.`,
+  // docs/10 §7: the scale's toast is also where Fit view is offered.
+  page_zoom: () => 'Made this page bigger for your fit.',
   line_spacing: (f) => `WebAble set line spacing to ${f.after} here.`,
   line_length: (f) => `WebAble kept lines to ${f.after} here.`,
   contrast: (f) => `WebAble raised text contrast to ${f.after} here.`,
@@ -225,14 +234,46 @@ const TARGET_OPS: ReadonlySet<OpId> = new Set([
 /**
  * Ops that fit around a failure: when one card clips or one line overflows,
  * only the elements involved are put back and the rest of the fit stays.
+ * text_floor is not one of them (docs/10 §5.2): it decides per template
+ * field, so a failure rolls the whole op back and nothing is left as a
+ * patchwork. Ops whose prepare names droppable classes (target_size) roll
+ * back one class at a time instead.
  */
-const PARTIAL_OPS: ReadonlySet<OpId> = new Set([
-  'text_floor',
-  'line_spacing',
-  'line_length',
-]);
+const PARTIAL_OPS: ReadonlySet<OpId> = new Set(['line_spacing', 'line_length']);
 /** Ops whose new content is marked inside the MutationObserver callback, before it paints. */
 const SYNC_OPS: ReadonlySet<OpId> = new Set(['text_floor', 'line_spacing']);
+/** Ops whose fit depends on the tab's zoom (page scale x own zoom): a new zoom measures them again. */
+const SCALED_OPS: ReadonlySet<OpId> = new Set([
+  'text_floor',
+  'target_size',
+  'page_zoom',
+]);
+/** Ops whose marks are checked for clipping across the whole page, not just near the viewport. */
+const SWEPT_OPS: ReadonlySet<OpId> = new Set(['text_floor', 'target_size']);
+/** Failures only a change of layout can cause (paint ops are never suspects). */
+const LAYOUT_CODES: ReadonlySet<VerifyCode> = new Set([
+  'overflow',
+  'clip',
+  'overlap',
+  'truncation',
+  'hierarchy',
+  'inconsistent',
+]);
+/** Failures only a change of text size can cause. */
+const SIZE_CODES: ReadonlySet<VerifyCode> = new Set([
+  'hierarchy',
+  'inconsistent',
+]);
+/** Failures whose boxes are remembered, so an unchanged page does not retry the fit. */
+const REMEMBERED_CODES: ReadonlySet<VerifyCode> = new Set([
+  'clip',
+  'overflow',
+  'overlap',
+  'truncation',
+  'hierarchy',
+  'inconsistent',
+]);
+const EMPTY: ReadonlySet<string> = new Set();
 /** Busy time allowed per MutationObserver callback for pre-paint marking, ms. */
 const SYNC_BUDGET_MS = 6;
 /** Quiet time after the last scroll before measuring or verifying again, ms. */
@@ -358,6 +399,7 @@ export class Engine {
   readonly perf: EnginePerf = {
     extract: null,
     verifyMs: 0,
+    verifyPhases: { probes: 0, base: 0, diff: 0, sweep: 0 },
     writeMs: 0,
     layoutMs: 0,
   };
@@ -385,6 +427,22 @@ export class Engine {
   private replanWanted: 'eager' | 'normal' | null = null;
   private replanTimer: ReturnType<typeof setTimeout> | null = null;
   private lastWidth = 0;
+  /** Fit view is open (docs/10 §4.6): Tailor stays applied but untouched. */
+  private frozen = false;
+  /** Levels the person set while frozen, applied when it thaws. */
+  private readonly pendingLevels = new Map<OpId, number>();
+  /** The page changed while frozen: a full pass is owed when it thaws. */
+  private missedWhileFrozen = false;
+  /** A plan that arrived while frozen, applied when it thaws (the latest wins). */
+  private deferred: { plan: AdaptationPlan; options: ApplyOptions } | null =
+    null;
+  /** Nesting depth of measure mode (extraction, Fit view reads, native reads). */
+  private measureDepth = 0;
+  /**
+   * Template classes each op dropped on this page view (class-level
+   * rollback): never marked again until the viewport width or route changes.
+   */
+  private readonly dropped = new Map<OpId, Set<string>>();
 
   constructor(private readonly opts: EngineOptions) {
     this.doc = opts.doc ?? document;
@@ -456,17 +514,17 @@ export class Engine {
   }
 
   private async extractNow(): Promise<Extraction> {
-    const anchor = readingAnchor(this.doc, this.facts?.main ?? null);
+    const anchor = this.anchor();
     const offGate = this.doc.documentElement.getAttribute('data-wa-off');
     // Re-reading our own overrides would make policy conclude that the page
     // no longer needs them and oscillate between on and off.
     const measure = () => {
-      this.layers.measure(true);
+      this.measureOn();
       if (this.prePaint.has('calm_motion'))
         setOffGate(this.doc, 'calm_motion', true);
     };
     const restore = () => {
-      this.layers.measure(false);
+      this.measureOff();
       if (this.doc.documentElement.getAttribute('data-wa-off') === offGate)
         return;
       if (offGate === null)
@@ -509,8 +567,42 @@ export class Engine {
     }
   }
 
+  /** Enter measure mode (every op's CSS removed, synchronously); nests. */
+  private measureOn(): void {
+    if (this.measureDepth++ === 0) this.layers.measure(true);
+  }
+
+  private measureOff(): void {
+    if (this.measureDepth === 0) return;
+    if (--this.measureDepth === 0) this.layers.measure(false);
+  }
+
+  /**
+   * Run `fn` with measure mode on (every op's CSS block removed, so reads see
+   * the site's own styles), synchronously, restoring before returning.
+   * Fit view's skeleton reads use it (docs/10 §4.6).
+   */
+  measured<T>(fn: () => T): T {
+    this.measureOn();
+    try {
+      return fn();
+    } finally {
+      this.measureOff();
+    }
+  }
+
+  /**
+   * The reader's place before a write. At the very top of the page the top
+   * is the place: nothing is anchored, so growing text below never scrolls
+   * the page's header out of view.
+   */
+  private anchor(main = this.facts?.main ?? null): Anchor | null {
+    if (this.view.scrollY <= 0) return null;
+    return readingAnchor(this.doc, main);
+  }
+
   /** Keep the reader's place after a write, unless they scrolled since. */
-  private restore(anchor: ReturnType<typeof readingAnchor>): number {
+  private restore(anchor: Anchor | null): number {
     return restoreAnchor(this.doc, anchor, this.lastUserScrollAt);
   }
 
@@ -576,6 +668,26 @@ export class Engine {
   ): Promise<AppliedChange[]> {
     return this.mutex.run(async () => {
       if (this.destroyed) return [];
+      if (this.frozen) {
+        // Fit view covers the page: verification would be blind. Apply when
+        // it closes; a fresh decision replaces an earlier deferred one.
+        const prev = this.deferred;
+        this.deferred =
+          prev && !options.replace
+            ? {
+                plan: mergePlans(prev.plan, plan),
+                options: {
+                  acceptOffers:
+                    prev.options.acceptOffers || options.acceptOffers,
+                  replace: prev.options.replace,
+                  refresh: prev.options.refresh || options.refresh,
+                  announce: prev.options.announce || options.announce,
+                  sticky: prev.options.sticky && options.sticky,
+                },
+              }
+            : { plan, options };
+        return this.changes();
+      }
       const sticky = options.sticky === true && !options.replace;
       this.lastPlan =
         options.replace || !this.lastPlan
@@ -607,6 +719,12 @@ export class Engine {
       if (options.replace)
         for (const op of this.applied.keys())
           if (!wantedIds.has(op)) removals.push(op);
+      // A step-down of the page scale (or a new zoom of the person's) keeps
+      // the person's fit: ops sized in effective px are measured again at the
+      // tab's new zoom, same level.
+      const zoom = this.zoom();
+      const rescaled = (a: AppliedOp): boolean =>
+        SCALED_OPS.has(a.op) && Math.abs(a.zoom - zoom) > 0.001;
       const toApply: PlannedOp[] = [];
       for (const p of wanted) {
         const cur = this.applied.get(p.op);
@@ -614,6 +732,7 @@ export class Engine {
           // The page changed, not the person's fit: keep this op as applied.
           if (cur.level === p.level && sameScope(cur.planned.scope, p.scope))
             cur.planned = p;
+          if (rescaled(cur)) toApply.push(cur.planned);
           continue;
         }
         if (
@@ -640,7 +759,8 @@ export class Engine {
               'focus_outline',
             ].includes(p.op)) &&
           cur.level === p.level &&
-          sameScope(cur.planned.scope, p.scope)
+          sameScope(cur.planned.scope, p.scope) &&
+          !rescaled(cur)
         ) {
           cur.planned = p; // keep the newest trace
           continue;
@@ -648,7 +768,7 @@ export class Engine {
         toApply.push(p);
       }
       if (removals.length) {
-        const anchor = readingAnchor(this.doc, this.facts?.main ?? null);
+        const anchor = this.anchor();
         for (const op of removals) {
           this.removeOp(op);
           this.reports.delete(op);
@@ -679,7 +799,39 @@ export class Engine {
       overlay: this.ui,
       prePaint: this.prePaint,
       resolve: (scope) => this.resolve(scope),
+      zoom: this.zoom(),
+      scale: this.scale(),
+      measured: (read) => this.measured(read),
+      held: (op) => this.dropped.get(op) ?? EMPTY,
     };
+  }
+
+  /** WebAble's page scale in effect for this page view (AdaptationPlan.zoom). */
+  private scale(): number {
+    const z = this.lastPlan?.zoom;
+    return typeof z === 'number' && Number.isFinite(z) && z > 0 ? z : 1;
+  }
+
+  /**
+   * The tab's whole zoom the plan sizes for: the person's own zoom times
+   * WebAble's page scale (AdaptationPlan.ownZoom x zoom). Levels are
+   * effective px, so text_floor and target_size aim for level / this CSS px:
+   * at 150% browser zoom an 18 px fit is 12 CSS px (docs/10 §3.2, §5.2).
+   */
+  private zoom(): number {
+    const own = this.lastPlan?.ownZoom;
+    const person =
+      typeof own === 'number' && Number.isFinite(own) && own > 0 ? own : 1;
+    return person * this.scale();
+  }
+
+  /** Roots whose text sizes are ranked: text_floor's scope. */
+  private textScope(env: OpEnv): Element[] {
+    const planned =
+      this.applied.get('text_floor')?.planned.scope ??
+      this.lastPlan?.ops.find((p) => p.op === 'text_floor')?.scope ??
+      'page';
+    return textScope(env, planned).roots;
   }
 
   /** Native constraints of a rejected fit; no text content is retained. */
@@ -697,6 +849,8 @@ export class Engine {
       cs.lineHeight,
       cs.padding,
       cs.whiteSpace,
+      cs.overflowWrap,
+      cs.wordBreak,
       cs.display,
       cs.maxWidth,
       cs.wordSpacing,
@@ -799,6 +953,7 @@ export class Engine {
           handle: null,
           before,
           appliedAt: now,
+          zoom: env.zoom,
         };
       }
       let verifyBusy = 0;
@@ -815,10 +970,20 @@ export class Engine {
             .filter((it) => it.p.op === 'contrast')
             .flatMap((it) => (it.prepared?.marks ?? []).map(([el]) => el)),
         ],
+        peers: env.facts.text.map((f) => f.el),
+        textScope: this.textScope(env),
+        regions: regionRootsOf(env.facts.regions),
       });
+      const phases = {
+        probes: performance.now() - t,
+        base: 0,
+        diff: 0,
+        sweep: 0,
+      };
       const base = takeSnapshot(this.doc, probes);
       verifyBusy += performance.now() - t;
-      const anchor = readingAnchor(this.doc, env.facts.main);
+      phases.base = verifyBusy - phases.probes;
+      const anchor = this.anchor(env.facts.main);
 
       this.layers.measure(false);
 
@@ -835,10 +1000,11 @@ export class Engine {
         const a = it.applied as AppliedOp;
         if (a.prepared.css) this.layers.set(a.op, a.prepared.css);
         else this.layers.drop(a.op);
+        const covers = a.prepared.covers ?? ((el: Element) => scanned.has(el));
         this.marks.replaceOp(
           a.op,
           a.prepared.marks ?? [],
-          SYNC_OPS.has(a.op) ? (el) => !scanned.has(el) : undefined,
+          SYNC_OPS.has(a.op) ? (el) => !covers(el) : undefined,
         );
         this.applied.set(a.op, a);
       }
@@ -872,6 +1038,7 @@ export class Engine {
           ? (this.applied.get('contrast')?.value ?? 4.5)
           : 4.5,
         marked: this.marks.all(300),
+        zoom: this.zoom(),
       });
       const diff = (): Failure[] => {
         const s = performance.now();
@@ -879,6 +1046,7 @@ export class Engine {
           return diffSnapshots(this.doc, probes, base, ctx());
         } finally {
           verifyBusy += performance.now() - s;
+          phases.diff += performance.now() - s;
         }
       };
       let fails: Failure[];
@@ -905,12 +1073,10 @@ export class Engine {
             // Fit around the failure first: one clipped card or overflowing
             // line puts back only its own elements; the rest of the fit stays.
             if (this.fitAround(op, caused, diff) > 0) continue;
+            // Ops that decide per template class drop the failing class.
+            if (this.dropClasses(op, caused, diff) > 0) continue;
             for (const f of caused)
-              if (
-                f.code === 'clip' ||
-                f.code === 'overflow' ||
-                f.code === 'overlap'
-              ) {
+              if (REMEMBERED_CODES.has(f.code)) {
                 let boxes = rejected.get(op);
                 if (!boxes) rejected.set(op, (boxes = new Set()));
                 boxes.add(f.el);
@@ -955,15 +1121,40 @@ export class Engine {
           this.removeOp(op);
           emptied = true;
         }
+        // Ops that are never fitted around element by element: anything they
+        // clip anywhere drops its class, or the whole op.
+        for (const it of live()) {
+          const op = it.p.op;
+          if (!SWEPT_OPS.has(op)) continue;
+          const fixed = this.sweepClip(op);
+          if (fixed.length === 0) continue;
+          const caused: Failure[] = fixed.map((el) => ({
+            code: 'clip',
+            el,
+            ops: new Set([op]),
+          }));
+          const recheck = (): Failure[] =>
+            caused.filter((f) => isClipped(f.el, this.view));
+          if (this.dropClasses(op, caused, recheck) > 0) continue;
+          it.vcode = 'clip';
+          let set = rejected.get(op);
+          if (!set) rejected.set(op, (set = new Set()));
+          for (const b of fixed) set.add(b);
+          this.rollbacks.set(op, (this.rollbacks.get(op) ?? 0) + 1);
+          this.removeOp(op);
+          emptied = true;
+        }
         if (emptied) {
           this.layers.flush();
           this.restore(anchor);
         }
         verifyBusy += performance.now() - t2;
+        phases.sweep = performance.now() - t2;
       } catch {
         // measurement only
       }
       this.perf.verifyMs = verifyBusy;
+      this.perf.verifyPhases = phases;
       this.restore(anchor);
 
       // ---- Real after-values ----
@@ -1035,7 +1226,7 @@ export class Engine {
     diff: () => Failure[],
     trials: Map<string, Failure[]>,
   ): OpId[] {
-    const geometry = ['overflow', 'clip', 'overlap'].includes(failure.code);
+    const geometry = LAYOUT_CODES.has(failure.code);
     const candidates = BISECT_ORDER.filter(
       (op) =>
         (!geometry ||
@@ -1065,6 +1256,89 @@ export class Engine {
       if (!remains(trial)) disabled = trial;
     }
     return disabled;
+  }
+
+  /**
+   * Clipping containers anywhere on the page that clip only because of `op`:
+   * one counterfactual for the whole set, nothing painted in between.
+   */
+  private sweepClip(op: OpId): Element[] {
+    const marked = this.marks
+      .elementsFor(op)
+      .filter((el) => el.isConnected)
+      .slice(0, 300);
+    if (marked.length === 0) return [];
+    const clipped = clippingContainers(marked, this.view, 300).filter((c) =>
+      isClipped(c, this.view),
+    );
+    if (clipped.length === 0) return [];
+    return this.layers.without([op], () =>
+      clipped.filter((c) => !isClipped(c, this.view)),
+    );
+  }
+
+  /**
+   * Class-level rollback (docs/10 §5.2): put back every instance of the
+   * template classes the failures involve, keeping the rest of the op. Only
+   * for ops whose prepare names droppable classes. Returns the number of
+   * elements put back, or 0 when that does not clear every failure (or would
+   * put back the whole op), so the caller rolls the whole op back.
+   * Synchronous: nothing is painted between trial and verdict.
+   */
+  private dropClasses(
+    op: OpId,
+    caused: readonly Failure[],
+    diff: () => Failure[],
+  ): number {
+    const p = this.applied.get(op)?.prepared;
+    if (!p?.classOf || !p.droppable) return 0;
+    const marked = this.marks.elementsFor(op).filter((el) => el.isConnected);
+    if (marked.length === 0) return 0;
+    const classes = new Set<string>();
+    for (const f of caused) {
+      const els = this.involved(f, marked);
+      if (els.length === 0) return 0;
+      for (const el of els) {
+        const cls = p.classOf(el);
+        if (cls === null || !p.droppable(cls)) return 0;
+        classes.add(cls);
+      }
+    }
+    const removed: Array<[Element, string]> = [];
+    let kept = 0;
+    for (const el of marked) {
+      const toks = tokensOf(el).filter((t) => tokenOp(t) === op);
+      const cls = p.classOf(el);
+      if (cls !== null && classes.has(cls))
+        for (const t of toks) removed.push([el, t]);
+      else if (toks.length) kept++;
+    }
+    // Dropping every class is not a class rollback.
+    if (removed.length === 0 || kept === 0) return 0;
+    for (const [el, t] of removed) this.marks.unmark(el, t);
+    this.layers.finishOwnedTransitions();
+    let after: Failure[];
+    try {
+      after = diff();
+    } catch {
+      after = [...caused];
+    }
+    const cleared = caused.every(
+      (f) =>
+        !after.some(
+          (g) => g.code === f.code && (f.code === 'overflow' || g.el === f.el),
+        ),
+    );
+    if (!cleared) {
+      for (const [el, t] of removed) this.marks.mark(el, t);
+      this.layers.finishOwnedTransitions();
+      return 0;
+    }
+    let set = this.dropped.get(op);
+    if (!set) this.dropped.set(op, (set = new Set()));
+    for (const cls of classes) set.add(cls);
+    for (const [el] of removed) this.unverified.delete(el);
+    return new Set(removed.map(([el]) => el)).size;
   }
 
   /** Every [element, token] `op` has marked on connected elements. */
@@ -1235,7 +1509,14 @@ export class Engine {
           .slice(0, 40);
       }
       case 'overlap':
+      case 'truncation':
+      case 'hierarchy':
         return marked.filter((el) => near(el, f.el));
+      case 'inconsistent': {
+        // An instance of a field ended at another size: the field's class.
+        const key = templateKey(f.el);
+        return marked.filter((el) => near(el, f.el) || templateKey(el) === key);
+      }
       case 'control_collapsed':
       case 'focus_hidden':
         return marked.filter(
@@ -1319,10 +1600,15 @@ export class Engine {
     fit?: Prepared['fit'];
     reason?: string;
     tokens: string[];
+    /** text_floor: the curve it would use (body, floor, exponents, classes). */
+    text?: ReturnType<typeof textPlanSummary>;
   }> {
     return this.mutex.run(async () => {
       if (!this.facts) await this.extractNow();
-      const p = OPS[op].prepare(this.env(), levelValue(op, level), scope);
+      // Against the site's own styles, as a batch reads them.
+      const p = this.measured(() =>
+        OPS[op].prepare(this.env(), levelValue(op, level), scope),
+      );
       return {
         status: p.status,
         count: p.count,
@@ -1331,6 +1617,7 @@ export class Engine {
         tokens: (p.marks ?? []).map(
           ([el, t]) => `${el.localName}${el.id ? `#${el.id}` : ''}:${t}`,
         ),
+        ...(op === 'text_floor' ? { text: textPlanSummary(p) } : {}),
       };
     });
   }
@@ -1346,9 +1633,10 @@ export class Engine {
   async verify(): Promise<VerifyReport> {
     return this.mutex.run(async () => {
       const ops = [...this.applied.values()];
-      if (ops.length === 0 || !this.facts)
+      // Under Fit view every hit test is blind: verified when it closes.
+      if (ops.length === 0 || !this.facts || this.frozen)
         return { failures: [], rolledBack: [], busyMs: 0 };
-      const anchor = readingAnchor(this.doc, this.facts.main);
+      const anchor = this.anchor(this.facts.main);
       const planned = ops.map((a) => a.planned);
       const results = await this.batch(planned);
       this.restore(anchor);
@@ -1375,7 +1663,7 @@ export class Engine {
 
   private undoNow(op: OpId | 'all'): AppliedChange[] {
     const ids = op === 'all' ? [...this.applied.keys()] : [op];
-    const anchor = readingAnchor(this.doc, this.facts?.main ?? null);
+    const anchor = this.anchor();
     for (const id of ids) {
       this.removeOp(id);
       this.reports.delete(id);
@@ -1408,6 +1696,10 @@ export class Engine {
 
   async setLevel(op: OpId, level: number): Promise<AppliedChange[]> {
     return this.mutex.run(async () => {
+      if (this.frozen) {
+        this.pendingLevels.set(op, level);
+        return this.changes();
+      }
       const cur = this.applied.get(op);
       const planned: PlannedOp | undefined =
         cur?.planned ??
@@ -1572,6 +1864,8 @@ export class Engine {
    */
   offer(planned: PlannedOp): boolean {
     if (this.paused || this.destroyed || this.offerShownOnce) return false;
+    // Fit view covers the page: a chip under it would be shown to nobody.
+    if (this.frozen) return false;
     if (this.applied.has(planned.op)) return false;
     const copy = offerCopy(planned);
     const show = (): void => {
@@ -1598,8 +1892,78 @@ export class Engine {
     return this.ui.focusLayer();
   }
 
+  // ======================================================================
+  // Fit view seams (fitview/types.ts)
+  // ======================================================================
+
+  /**
+   * Fit view opened (true) or closed (false) (docs/10 §4.6). While frozen,
+   * Tailor stays applied but untouched: no replans, no marks on arriving
+   * content, no verification (its hit tests would be blind under the view),
+   * no offers or friction. Plans and level changes that arrive meanwhile
+   * wait. Thawing re-verifies once, applies what waited, and catches up with
+   * content that arrived.
+   */
+  freeze(on: boolean): void {
+    if (this.destroyed || on === this.frozen) return;
+    this.frozen = on;
+    if (!on) {
+      void this.thaw().catch(() => undefined);
+      return;
+    }
+    if (this.replanTimer) clearTimeout(this.replanTimer);
+    this.replanTimer = null;
+    if (this.offerWait) {
+      clearTimeout(this.offerWait.timer);
+      this.offerWait = null;
+    }
+  }
+
+  get isFrozen(): boolean {
+    return this.frozen;
+  }
+
+  private async thaw(): Promise<void> {
+    if (this.paused || this.destroyed || this.frozen) return;
+    await this.verify();
+    const levels = [...this.pendingLevels];
+    this.pendingLevels.clear();
+    for (const [op, level] of levels) {
+      if (this.frozen) return;
+      await this.setLevel(op, level);
+    }
+    const pending = this.deferred;
+    this.deferred = null;
+    if (pending && !this.frozen)
+      await this.apply(pending.plan, pending.options);
+    if (this.frozen || this.paused || this.destroyed) return;
+    if (this.missedWhileFrozen) {
+      this.missedWhileFrozen = false;
+      this.scheduler?.requestAll();
+    }
+    if (this.replanWanted) this.requestReplan(this.replanWanted);
+  }
+
+  /**
+   * The zoom guard's reading (docs/10 §5.1), taken after a page-scale change
+   * settles: horizontal overflow, visible primary-nav links and whether a
+   * search field is visible.
+   */
+  viewportGuard(): ViewportGuard {
+    return viewportGuard(this.doc);
+  }
+
+  /** Component key per region root element from the last extraction (for the skeleton reader). */
+  regionKeys(): Map<Element, string> {
+    const out = new Map<Element, string>();
+    for (const [key, list] of this.facts?.regions ?? [])
+      for (const f of list) if (f.el.isConnected) out.set(f.el, key);
+    return out;
+  }
+
   /** Show the first-time toast for the headline automatic change. */
   announce(results: AppliedChange[] = this.changes()): void {
+    if (this.frozen) return;
     const auto = results.filter(
       (c) => c.status === 'applied' && c.mode === 'auto',
     );
@@ -1638,13 +2002,15 @@ export class Engine {
         this.ui.hideOffer();
         // A new view may fit what the last one could not.
         this.rollbacks.clear();
+        this.dropped.clear();
         this.opts.events.routeChanged();
       });
     }
     if (!this.friction) {
-      const detector = new FrictionDetector((signal, ops) =>
-        this.opts.events.friction(signal, ops),
-      );
+      const detector = new FrictionDetector((signal, ops) => {
+        // While Fit view is open the person is working in it, not the page.
+        if (!this.frozen) this.opts.events.friction(signal, ops);
+      });
       this.friction = installFriction(this.view, detector);
     }
     if (!this.offPageChanges) {
@@ -1657,6 +2023,7 @@ export class Engine {
         this.lastWidth = width;
         this.exempt.clear();
         this.rollbacks.clear();
+        this.dropped.clear();
         changed();
       };
       const loaded = (e: Event): void => {
@@ -1719,6 +2086,81 @@ export class Engine {
   }
 
   /**
+   * Marks for content under `roots` from the given applied ops: everything
+   * read first, then written once (no layout thrash). Ops with `retoken`
+   * give every element they examine its complete token set, so restyled
+   * content never keeps a stale size; the others only add. An op whose block
+   * gained a rule for new content gets its block re-installed first.
+   * Returns the elements whose marks changed.
+   */
+  private extend(
+    roots: readonly Element[],
+    ops: readonly AppliedOp[],
+    budget?: { start: number; ms: number },
+  ): Set<Element> {
+    const changed = new Set<Element>();
+    if (roots.length === 0 || ops.length === 0) return changed;
+    const env = this.env();
+    const adds: Array<[Element, string, OpId]> = [];
+    const sets: Array<[Element, string[], OpId]> = [];
+    const blocks = new Map<AppliedOp, Prepared['css']>();
+    for (const a of ops) {
+      const impl = OPS[a.op];
+      blocks.set(a, a.prepared.css);
+      try {
+        if (impl.retoken)
+          for (const [el, toks] of impl.retoken(env, a, roots))
+            sets.push([el, toks, a.op]);
+        else
+          for (const [el, tok] of impl.incremental?.(env, a, roots) ?? [])
+            adds.push([el, tok, a.op]);
+      } catch {
+        // Best effort: a later pass covers anything missed here.
+      }
+      if (budget && performance.now() - budget.start > budget.ms) break;
+    }
+    let restyled = false;
+    for (const [a, css] of blocks)
+      if (
+        a.prepared.css &&
+        a.prepared.css !== css &&
+        this.applied.get(a.op) === a
+      ) {
+        this.layers.set(a.op, a.prepared.css);
+        restyled = true;
+      }
+    if (restyled) this.layers.flush();
+    for (const [el, tok, op] of adds) {
+      if (this.isExempt(op, el) || hasToken(el, tok)) continue;
+      this.marks.mark(el, tok);
+      this.unverified.add(el);
+      changed.add(el);
+    }
+    for (const [el, toks, op] of sets) {
+      if (this.isExempt(op, el)) continue;
+      const cur = tokensOf(el).filter((t) => tokenOp(t) === op);
+      if (cur.length === toks.length && cur.every((t) => toks.includes(t)))
+        continue;
+      for (const t of cur) if (!toks.includes(t)) this.marks.unmark(el, t);
+      for (const t of toks) if (!cur.includes(t)) this.marks.mark(el, t);
+      if (toks.length) this.unverified.add(el);
+      else this.unverified.delete(el);
+      changed.add(el);
+    }
+    return changed;
+  }
+
+  /** Applied ops that mark content arriving after them. */
+  private extending(filter?: (op: OpId) => boolean): AppliedOp[] {
+    return [...this.applied.values()].filter(
+      (a) =>
+        (OPS[a.op].retoken !== undefined ||
+          OPS[a.op].incremental !== undefined) &&
+        (!filter || filter(a.op)),
+    );
+  }
+
+  /**
    * Inside the MutationObserver callback, before the browser renders the
    * change: new and re-rendered content gets the applied fit straight away,
    * so it never paints at its native size first. Bounded; anything left is
@@ -1728,10 +2170,8 @@ export class Engine {
     added: readonly Element[],
     restyled: readonly Element[],
   ): void {
-    if (this.paused || this.destroyed || !this.facts) return;
-    const ops = [...this.applied.values()].filter(
-      (a) => SYNC_OPS.has(a.op) && OPS[a.op].incremental,
-    );
+    if (this.paused || this.destroyed || this.frozen || !this.facts) return;
+    const ops = this.extending((op) => SYNC_OPS.has(op));
     if (ops.length === 0) return;
     const start = performance.now();
     const roots: Element[] = [];
@@ -1742,59 +2182,59 @@ export class Engine {
       if (roots.length >= 80) break;
     }
     if (roots.length === 0) return;
-    const env = this.env();
-    // Read everything first, then write once: no layout thrash.
-    const incoming: Array<[Element, string]> = [];
-    for (const a of ops) {
-      try {
-        for (const [el, tok] of OPS[a.op].incremental?.(env, a, roots) ?? [])
-          if (!this.isExempt(a.op, el)) incoming.push([el, tok]);
-      } catch {
-        // Best effort: the debounced pass covers anything missed here.
-      }
-      if (performance.now() - start > SYNC_BUDGET_MS) break;
-    }
-    const fresh: Array<[Element, string]> = [];
-    for (const [el, tok] of incoming) {
-      if (hasToken(el, tok)) continue;
-      this.marks.mark(el, tok);
-      this.unverified.add(el);
-      fresh.push([el, tok]);
-    }
-    if (fresh.length === 0) return;
+    const fresh = this.extend(roots, ops, { start, ms: SYNC_BUDGET_MS });
+    if (fresh.size === 0) return;
     // Reading the native size gave the browser a "before" value: a page
     // transition (`transition: all` on links) would animate from it.
-    this.layers.finishTransitionsOn(new Set(fresh.map(([el]) => el)));
-    if (fresh.length <= 160 && performance.now() - start < SYNC_BUDGET_MS)
-      this.clipSweep(fresh);
+    this.layers.finishTransitionsOn(fresh);
+    // Ops fitted element by element put back clipped elements at once;
+    // text_floor's new marks are checked whole in the debounced pass.
+    const partial: Array<[Element, string]> = [];
+    for (const el of fresh)
+      for (const t of tokensOf(el)) {
+        const op = tokenOp(t);
+        if (op && PARTIAL_OPS.has(op)) partial.push([el, t]);
+      }
+    if (
+      partial.length &&
+      partial.length <= 160 &&
+      performance.now() - start < SYNC_BUDGET_MS
+    )
+      this.clipSweep(partial);
   }
 
   /**
    * Check marks added after their op was verified, counterfactually and
    * synchronously (nothing paints in between): read the page with the new
-   * marks, then without them. Elements whose marks cause a failure are put
-   * back, and their op fits around them for the rest of this page view.
+   * marks, then without them. Ops fitted element by element put back the
+   * elements whose marks cause a failure and fit around them for the rest
+   * of this page view. text_floor never does: a class first seen in the new
+   * content is dropped as a class, and anything else rolls the whole op back.
    */
   private verifyNew(): void {
-    if (this.unverified.size === 0) return;
+    if (this.frozen || this.unverified.size === 0) return;
     const els = [...this.unverified]
       .filter((el) => el.isConnected)
       .slice(0, 150);
     this.unverified.clear();
+    const checked = (op: OpId | null): op is OpId =>
+      op !== null &&
+      this.applied.has(op) &&
+      (PARTIAL_OPS.has(op) || OPS[op].retoken !== undefined);
     const collect = (): Array<[Element, string]> => {
       const out: Array<[Element, string]> = [];
       for (const el of els)
-        for (const t of tokensOf(el)) {
-          const op = tokenOp(t);
-          if (op && PARTIAL_OPS.has(op) && this.applied.has(op))
-            out.push([el, t]);
-        }
+        for (const t of tokensOf(el))
+          if (checked(tokenOp(t))) out.push([el, t]);
       return out;
     };
     // Clipping anywhere on the page first, then the viewport's full checks.
-    this.clipSweep(collect());
+    this.clipSweep(
+      collect().filter(([, t]) => PARTIAL_OPS.has(tokenOp(t) as OpId)),
+    );
     const pairs = collect();
-    if (pairs.length === 0) return;
+    if (pairs.length === 0 || !this.facts) return;
+    const env = this.env();
     const probes = buildProbes({
       doc: this.doc,
       view: this.view,
@@ -1802,27 +2242,51 @@ export class Engine {
       existing: [],
       targets: [],
       contrast: [],
+      peers: [...this.facts.text.map((t) => t.el), ...els],
+      textScope: this.textScope(env),
+      regions: regionRootsOf(this.facts.regions),
     });
+    const sizedPairs = pairs.filter(
+      ([, t]) => !PARTIAL_OPS.has(tokenOp(t) as OpId),
+    );
+    // Resized text anywhere on the page (new cards preloaded far below) must
+    // not start clipping either.
+    const far = clippingContainers(
+      sizedPairs.map(([el]) => el),
+      this.view,
+      150,
+    ).filter((c) => isClipped(c, this.view));
     let base: Snapshot;
+    let unclipped: Element[] = [];
     for (const [el, t] of pairs) this.marks.unmark(el, t);
     try {
       base = takeSnapshot(this.doc, probes);
+      unclipped = far.filter((c) => !isClipped(c, this.view));
     } finally {
       for (const [el, t] of pairs) this.marks.mark(el, t);
       this.layers.finishOwnedTransitions();
     }
+    const ctx = {
+      contrastTarget: 4.5,
+      marked: pairs.map(([el]) => el),
+      zoom: this.zoom(),
+    };
+    const diff = (): Failure[] => [
+      ...diffSnapshots(this.doc, probes, base, ctx),
+      ...unclipped
+        .filter((c) => isClipped(c, this.view))
+        .map((el): Failure => ({ code: 'clip', el, ops: new Set() })),
+    ];
     let fails: Failure[];
     try {
-      fails = diffSnapshots(this.doc, probes, base, {
-        contrastTarget: 4.5,
-        marked: pairs.map(([el]) => el),
-      });
+      fails = diff();
     } catch {
       return;
     }
     if (fails.length === 0) return;
     const docEl = this.doc.documentElement;
     const width = docEl.clientWidth;
+    const resized: Failure[] = [];
     for (const f of fails) {
       const hit = pairs.filter(([el]) => {
         if (f.code === 'overflow' && f.el === docEl) {
@@ -1840,59 +2304,104 @@ export class Engine {
         );
       });
       // An overflow none of the new elements explains: put them all back.
-      const back = hit.length || f.code !== 'overflow' ? hit : pairs;
-      for (const [el, t] of back) {
+      // Size order and consistency only change with sizes.
+      const own = hit.length
+        ? hit
+        : f.code === 'overflow'
+          ? pairs
+          : SIZE_CODES.has(f.code)
+            ? sizedPairs
+            : [];
+      for (const [el, t] of own) {
         const op = tokenOp(t);
+        if (!op || !PARTIAL_OPS.has(op)) continue;
         this.marks.unmark(el, t);
-        if (op) this.exemptAdd(op, el);
+        this.exemptAdd(op, el);
       }
+      if (own.some(([, t]) => tokenOp(t) === 'text_floor')) resized.push(f);
     }
     this.layers.finishOwnedTransitions();
+    if (resized.length && this.applied.has('text_floor')) {
+      if (this.dropClasses('text_floor', resized, diff) === 0)
+        this.rollbackLive('text_floor', resized);
+    }
+  }
+
+  /**
+   * Roll back an applied op whose later marks failed their check: the whole
+   * op, reported as undone by checks. The failing boxes are remembered, so a
+   * fresh decision does not re-apply it while they stay as they are; asking
+   * for one tells the service worker.
+   */
+  private rollbackLive(op: OpId, caused: readonly Failure[]): void {
+    const a = this.applied.get(op);
+    if (!a) return;
+    const anchor = this.anchor();
+    const count = a.prepared.count;
+    this.removeOp(op);
+    this.layers.flush();
+    this.restore(anchor);
+    const vcode = caused[0]?.code ?? 'clip';
+    this.rollbacks.set(op, (this.rollbacks.get(op) ?? 0) + 1);
+    const p = a.planned;
+    this.reports.set(op, {
+      op,
+      level: p.level,
+      mode: p.mode,
+      trace: p.trace,
+      status: 'undone_by_checks',
+      vcode,
+      count,
+    });
+    const boxes = caused
+      .filter((f) => REMEMBERED_CODES.has(f.code))
+      .map((f) => f.el)
+      .filter((el) => el.isConnected && el !== this.doc.documentElement);
+    if (boxes.length)
+      this.measured(() =>
+        this.rejectedFits.set(op, {
+          level: p.level,
+          scope: p.scope,
+          code: vcode,
+          checks: new Map(boxes.map((el) => [el, this.rejectionKey(el)])),
+        }),
+      );
+    this.ui.refresh();
+    this.requestReplan('eager');
   }
 
   /**
    * Extend applied ops to text they do not cover yet (content that arrived,
-   * or text a restyle made smaller), without unmarking anything, then check
-   * just the new marks. Covers the last extraction's text and its subtrees.
+   * or text a restyle changed), then check just the new marks. Covers the
+   * last extraction's text and its subtrees.
    */
   private topUp(skip: ReadonlySet<OpId>): void {
-    if (!this.facts) return;
-    const ops = [...this.applied.values()].filter(
-      (a) => !skip.has(a.op) && OPS[a.op].incremental,
-    );
+    if (!this.facts || this.frozen) return;
+    const ops = this.extending((op) => !skip.has(op));
     if (ops.length === 0) return;
-    const env = this.env();
     const roots = this.facts.text
       .map((t) => t.el)
       .filter((el) => el.isConnected);
-    const incoming: Array<[Element, string, OpId]> = [];
-    for (const a of ops) {
-      for (let i = 0; i < roots.length; i += 200) {
-        try {
-          for (const [el, tok] of OPS[a.op].incremental?.(
-            env,
-            a,
-            roots.slice(i, i + 200),
-          ) ?? [])
-            incoming.push([el, tok, a.op]);
-        } catch {
-          // best effort
-        }
-      }
-    }
     const marked = new Set<Element>();
-    for (const [el, tok, op] of incoming) {
-      if (this.isExempt(op, el) || hasToken(el, tok)) continue;
-      this.marks.mark(el, tok);
-      this.unverified.add(el);
-      marked.add(el);
+    for (const a of ops) {
+      // retoken reads native sizes in one measure pass per chunk.
+      const chunk = OPS[a.op].retoken ? 1000 : 200;
+      for (let i = 0; i < roots.length; i += chunk)
+        for (const el of this.extend(roots.slice(i, i + chunk), [a]))
+          marked.add(el);
     }
     if (marked.size) {
       this.layers.finishTransitionsOn(marked);
       this.verifyNew();
     }
-    for (const a of ops)
-      if (PARTIAL_OPS.has(a.op)) a.prepared.count = this.marks.countFor(a.op);
+    this.recount();
+  }
+
+  /** Counts move as later content is marked. */
+  private recount(): void {
+    for (const a of this.applied.values())
+      if (PARTIAL_OPS.has(a.op) || OPS[a.op].retoken)
+        a.prepared.count = this.marks.countFor(a.op);
   }
 
   /**
@@ -1904,6 +2413,11 @@ export class Engine {
   private async onMutations(rootsIn: FlushRoots, added = 0): Promise<void> {
     if (this.paused || this.destroyed || !this.facts) return;
     this.addedSincePlan += added;
+    if (this.frozen) {
+      // Fit view is open: catch up in one full pass when it closes.
+      this.missedWhileFrozen = true;
+      return;
+    }
     const now = performance.now();
     if (this.scrolling(now)) {
       if (!this.deferredSince) this.deferredSince = now;
@@ -1932,29 +2446,11 @@ export class Engine {
     }
     this.layers.flush();
 
-    const env = this.env();
     const deep =
       all || roots.some((r) => r.getElementsByTagName('*').length > 400);
     if (deep) this.topUp(new Set());
     if (!all) {
-      const incoming: Array<[Element, string, OpId]> = [];
-      for (const a of this.applied.values()) {
-        const impl = OPS[a.op];
-        if (!impl.incremental) continue;
-        try {
-          for (const [el, tok] of impl.incremental(env, a, roots))
-            incoming.push([el, tok, a.op]);
-        } catch {
-          // Incremental marking is best effort; the op stays as it was.
-        }
-      }
-      const marked = new Set<Element>();
-      for (const [el, tok, op] of incoming) {
-        if (this.isExempt(op, el) || hasToken(el, tok)) continue;
-        this.marks.mark(el, tok);
-        this.unverified.add(el);
-        marked.add(el);
-      }
+      const marked = this.extend(roots, this.extending());
       if (marked.size) this.layers.finishTransitionsOn(marked);
     }
     this.verifyNew();
@@ -1964,8 +2460,8 @@ export class Engine {
       } catch {
         // ignore: the page removed what it inserted
       }
-      if (PARTIAL_OPS.has(a.op)) a.prepared.count = this.marks.countFor(a.op);
     }
+    this.recount();
     this.ui.refresh();
 
     // A fresh decision when content arrived, a rejected fit's box changed,
@@ -1982,7 +2478,14 @@ export class Engine {
           ),
         ),
       );
-    if (all || rejectedMoved || this.wantsContent())
+    // The last reading found no text at all (an app shell before its
+    // content renders): text arriving is worth a reading at once, however
+    // few nodes carry it (a framework mounts its whole app as one).
+    const firstText =
+      !all &&
+      !this.facts.text.some((t) => !t.icon) &&
+      roots.some((r) => /\S/.test(r.textContent ?? ''));
+    if (all || rejectedMoved || firstText || this.wantsContent())
       this.requestReplan('eager');
     else if (this.addedSincePlan >= REPLAN_MIN_ADDED)
       this.requestReplan('normal');
@@ -2004,12 +2507,15 @@ export class Engine {
   private requestReplan(kind: 'eager' | 'normal'): void {
     if (!this.opts.events.pageChanged || this.paused || this.destroyed) return;
     if (this.replanWanted !== 'eager') this.replanWanted = kind;
+    // Fit view is open: the decision is owed, and asked for when it closes.
+    if (this.frozen) return;
     const due =
       this.lastPlanAt +
       (this.replanWanted === 'eager' ? REPLAN_EAGER_MS : REPLAN_MIN_MS);
     const fire = (): void => {
       this.replanTimer = null;
-      if (this.paused || this.destroyed || !this.replanWanted) return;
+      if (this.paused || this.destroyed || this.frozen || !this.replanWanted)
+        return;
       if (this.scrolling()) {
         this.replanTimer = setTimeout(fire, SCROLL_QUIET_MS);
         return;
@@ -2058,14 +2564,25 @@ function sameScope(a: PlannedOp['scope'], b: PlannedOp['scope']): boolean {
   );
 }
 
-/** A refine/offer plan updates the ops it names and keeps the rest. */
+/**
+ * A refine/offer plan updates the ops it names and keeps the rest. The page
+ * scale is the page view's, and the person's own zoom the last one the
+ * worker sent: a plan that does not name them keeps them.
+ */
 export function mergePlans(
   prev: AdaptationPlan,
   next: AdaptationPlan,
 ): AdaptationPlan {
   const ops = new Map(prev.ops.map((p) => [p.op, p] as const));
   for (const p of next.ops) ops.set(p.op, p);
-  return { ...next, ops: [...ops.values()] };
+  const zoom = next.zoom ?? prev.zoom;
+  const ownZoom = next.ownZoom ?? prev.ownZoom;
+  return {
+    ...next,
+    ...(zoom !== undefined ? { zoom } : {}),
+    ...(ownZoom !== undefined ? { ownZoom } : {}),
+    ops: [...ops.values()],
+  };
 }
 
 export const __test = { offerCopy, sameScope, TOAST_LINE };

@@ -73,9 +73,14 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
     id: 'text_floor',
     label: OP_LABELS.text_floor,
     description:
-      'Raises small text to your comfortable size. Text that is already large stays as it is.',
+      'Enlarges running text in the main content to your size; the page scale handles the rest.',
     areas: ['text'],
     dim: 'textPx',
+    /**
+     * Effective px for running text (CSS px at 100% page zoom, the unit Tune
+     * measures in). With a page scale the engine aims at level / zoom CSS px,
+     * so the person sees the level (docs/10 §5.2).
+     */
     levels: [14, 16, 18, 21, 24, 28, 32, 40, 48],
     unit: 'px',
     risk: 'layout',
@@ -87,9 +92,11 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
   page_zoom: {
     id: 'page_zoom',
     label: OP_LABELS.page_zoom,
-    description: 'Zooms this tab so the whole layout grows together.',
+    description:
+      'Scales this page so its text comes closer to your size. Text, buttons and images grow together.',
     areas: ['text'],
     dim: 'zoom',
+    /** Chrome's zoom presets (110-200%): the scale triage chooses, never above the breakpoint-safe zoom. */
     levels: [1.1, 1.25, 1.5, 1.75, 2],
     unit: 'x',
     risk: 'layout',
@@ -306,11 +313,12 @@ export const OP_CATALOG: Readonly<Record<OpId, OpDefinition>> = {
 
 /**
  * Ops kept in the catalog (stored learning, history and old plans still name
- * them) that WebAble no longer applies. page_zoom: text size, spacing and the
- * other ops already cover it, and zooming the person's tab changes the whole
- * layout of a site they didn't ask to change.
+ * them) that WebAble no longer applies. None today: page_zoom, retired on
+ * 2026-09-30, came back in v2 as the page scale that composes with
+ * text_floor, chosen by triage within the breakpoint-safe zoom
+ * (docs/10 §5.1).
  */
-export const RETIRED_OPS: ReadonlySet<OpId> = new Set<OpId>(['page_zoom']);
+export const RETIRED_OPS: ReadonlySet<OpId> = new Set<OpId>();
 
 export const opDefinition = (id: OpId): OpDefinition => OP_CATALOG[id];
 

@@ -1,3 +1,4 @@
+import { isProxyEvent } from '../fitview/firewall';
 import {
   ACTIVATABLE_SELECTOR,
   HANDS_OFF_SELECTOR,
@@ -13,7 +14,9 @@ import { notNeeded, type OpImpl } from './types';
  * pointer is captured, so a slip before release still produces a trusted
  * click on the control (Chrome >= 135 dispatches click to the capture
  * target). Pointer events only: keyboard input is never observed or changed.
- * Sliders, drag sources, text fields and selections are left alone.
+ * Sliders, drag sources, text fields and selections are left alone. Only the
+ * person's own (trusted) pointer is steadied: synthetic events, Fit view's
+ * proxied clicks among them (isProxyEvent), never start, move or end a press.
  */
 
 export interface StabilizerParams {
@@ -52,8 +55,11 @@ export function installClickStabilizer(
     t: number;
   } | null = null;
 
+  /** A real press: never a page script's or WebAble's own synthetic event. */
+  const person = (e: PointerEvent): boolean => e.isTrusted && !isProxyEvent(e);
   const down = (e: PointerEvent): void => {
     if (
+      !person(e) ||
       (e.pointerType !== 'mouse' && e.pointerType !== 'pen') ||
       e.button !== 0 ||
       !e.isPrimary
@@ -77,7 +83,7 @@ export function installClickStabilizer(
     }
   };
   const move = (e: PointerEvent): void => {
-    if (!press || e.pointerId !== press.id) return;
+    if (!press || e.pointerId !== press.id || !person(e)) return;
     const d = Math.hypot(e.clientX - press.x, e.clientY - press.y);
     if (shouldRelease(p, d, e.timeStamp - press.t)) {
       try {
@@ -89,8 +95,8 @@ export function installClickStabilizer(
       press = null;
     }
   };
-  const end = (): void => {
-    press = null;
+  const end = (e: PointerEvent): void => {
+    if (person(e)) press = null;
   };
   // No accidental text selection while a stabilised press is held.
   const selectStart = (e: Event): void => {

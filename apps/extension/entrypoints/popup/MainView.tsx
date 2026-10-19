@@ -21,10 +21,16 @@ import { COPY } from '@/lib/popup/copy';
 import {
   originOf,
   popupModel,
+  type FitViewModel,
   type PopupModel,
   type PrimaryAction,
   type QuickRow,
 } from '@/lib/popup/model';
+import {
+  dismissedNotices,
+  dismissNotice,
+  wantsFitViewNotice,
+} from '@/lib/popup/notices';
 import type { TabDetail } from '@/lib/sw/ui';
 
 import { AdjustPanel } from './Adjust';
@@ -40,12 +46,14 @@ export interface MainViewProps {
 }
 
 /**
- * Block order: domain, state line, sentence, state body, What changed,
- * (offer), Adjust or the quick switches, the all-sites line, notes. What
- * changed and Show on page stay in view whatever the offer does.
+ * Block order: domain, state line, sentence, state body, (the one-time
+ * notice), Fit view, What changed, (offer), Adjust or the quick switches,
+ * the all-sites line, notes. What changed and Show on page stay in view
+ * whatever the offer does.
  */
 export function MainView({ view, api, titleRef }: MainViewProps) {
   const model = popupModel(view);
+  const notice = useFitViewNotice(view, titleRef);
   return (
     <>
       <section className="pp-state">
@@ -96,6 +104,22 @@ export function MainView({ view, api, titleRef }: MainViewProps) {
         ) : null}
       </section>
 
+      {notice.show ? (
+        <div className="pp-notice">
+          <p className="pp-notice__text">{COPY.fitViewNotice}</p>
+          <IconButton
+            icon="x"
+            label={COPY.hideNotice}
+            tooltipPlacement="top"
+            onClick={notice.dismiss}
+          />
+        </div>
+      ) : null}
+
+      {model.fitView ? (
+        <FitViewSection model={model.fitView} view={view} api={api} />
+      ) : null}
+
       {model.changes.length > 0 ||
       model.undone.length > 0 ||
       view.undoneByYou.length > 0 ||
@@ -141,6 +165,108 @@ export function MainView({ view, api, titleRef }: MainViewProps) {
         </div>
       ) : null}
     </>
+  );
+}
+
+/**
+ * The one-time v2 notice (docs/10 §8), until the person hides it. Its ✕
+ * disappears with it, so keyboard focus goes back to the state title.
+ */
+function useFitViewNotice(
+  view: TabDetail,
+  titleRef: RefObject<HTMLHeadingElement | null>,
+): { show: boolean; dismiss: () => void } {
+  // null while the dismissal is being read: never flash the notice.
+  const [dismissed, setDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let live = true;
+    void dismissedNotices().then((ids) => {
+      if (live) setDismissed(ids.has('fit_view'));
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+  return {
+    show: dismissed === false && wantsFitViewNotice(view),
+    dismiss: () => {
+      setDismissed(true);
+      void dismissNotice('fit_view');
+      requestAnimationFrame(() => titleRef.current?.focus());
+    },
+  };
+}
+
+/**
+ * Fit view for this tab: the switch (open or close it here, and keep it on
+ * as this tab moves on), "Always here" for the site, and the planner's
+ * state. A page Fit view can't show gets one plain line instead.
+ */
+function FitViewSection({
+  model,
+  view,
+  api,
+}: {
+  model: FitViewModel;
+  view: TabDetail;
+  api: PopupApi;
+}) {
+  const { toggle, always } = model;
+  return (
+    <section className="pp-section pp-fitview">
+      {toggle ? (
+        <SwitchRow
+          label={COPY.fitView}
+          description={toggle.description ?? undefined}
+          changesPage
+          checked={toggle.on}
+          onCheckedChange={(on) =>
+            void api.act({ type: 'ui:fit-view', on, scope: 'page' })
+          }
+        />
+      ) : null}
+      {/* Planning, then "A better layout is ready", are said as they arrive. */}
+      <div className="pp-fitview__live" aria-live="polite">
+        {model.line ? <p className="pp-note">{model.line}</p> : null}
+        {model.better ? (
+          <div className="pp-fitview__better">
+            <p className="pp-fitview__ready">{COPY.betterReady}</p>
+            <Button
+              variant="secondary"
+              size="md"
+              aria-label={COPY.switchLayoutLabel}
+              onClick={() => void api.act({ type: 'ui:fit-view-switch' })}
+            >
+              {COPY.switchLayout}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {always ? (
+        <SwitchRow
+          label={COPY.alwaysHere}
+          description={COPY.alwaysHereDesc}
+          changesPage
+          checked={always.on}
+          onCheckedChange={(on) =>
+            void api.act({ type: 'ui:fit-view', on, scope: 'site' })
+          }
+        />
+      ) : null}
+      {model.consent ? (
+        <div className="pp-fitview__consent">
+          <p className="pp-note">{COPY.betterLayoutsNote}</p>
+          <Button
+            variant="ghost"
+            size="md"
+            href={`${view.links.privacy}#sharing`}
+            arrow="external"
+          >
+            {COPY.betterLayouts}
+          </Button>
+        </div>
+      ) : null}
+    </section>
   );
 }
 

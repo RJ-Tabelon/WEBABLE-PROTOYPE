@@ -4,6 +4,13 @@ import { formatOpValue } from '@webable/core/ops/catalog';
 import { Button, Icon, SegmentedControl, SwitchRow } from '@webable/ui';
 
 import { COPY } from '@/lib/popup/copy';
+import {
+  autoSimplifySwitch,
+  devPlannerSwitch,
+  fitTextLine,
+  fitTextStep,
+  RESET_FIT_TEXT,
+} from '@/lib/popup/model';
 import type { Theme } from '@/lib/storage/settings';
 import type { TabDetail } from '@/lib/sw/ui';
 
@@ -29,8 +36,9 @@ const STALE_SYNC_MS = 24 * 60 * 60 * 1000;
 /**
  * Settings (design-final 10.3), in groups split by hairlines: WebAble's own
  * theme and motion; links to the person's fit and help (and the browser-wide
- * sizes, if any); site access while it is limited; the account on this
- * device; and "Turn WebAble off everywhere" with an inline confirmation
+ * sizes and Fit view's own text size, if any); site access while it is
+ * limited; the account on this device; the local dev planner in development
+ * builds; and "Turn WebAble off everywhere" with an inline confirmation
  * (never a modal).
  */
 export function SettingsView({
@@ -70,8 +78,14 @@ export function SettingsView({
       pairRef.current?.scrollIntoView({ block: 'end' });
     } else el.focus();
   });
-  const setPrefs = (p: { theme?: Theme; reduceMotion?: boolean }) =>
-    void api.call({ type: 'ui:set-prefs', ...p });
+  const setPrefs = (p: {
+    theme?: Theme;
+    reduceMotion?: boolean;
+    devPlanner?: boolean;
+    autoSimplify?: boolean;
+  }) => void api.call({ type: 'ui:set-prefs', ...p });
+  const devPlanner = devPlannerSwitch(view.prefs);
+  const fitText = fitTextLine(fitTextStep(view.prefs));
 
   const overrides = (
     Object.entries(view.globalOverrides) as Array<[GlobalOp, number]>
@@ -115,6 +129,12 @@ export function SettingsView({
       </div>
 
       <div className="pp-set__group" role="group" aria-label="Your fit">
+        <SwitchRow
+          label={COPY.autoSimplify}
+          description={COPY.autoSimplifyDesc}
+          checked={autoSimplifySwitch(view.prefs)}
+          onCheckedChange={(autoSimplify) => setPrefs({ autoSimplify })}
+        />
         <div className="pp-set__rows">
           <LinkRow ref={fitRef} href={view.links.fit}>
             Your fit
@@ -140,6 +160,21 @@ export function SettingsView({
               }}
             >
               Go back to your fit
+            </Button>
+          </div>
+        ) : null}
+        {fitText ? (
+          <div className="pp-set__block">
+            <p className="pp-note">{fitText}</p>
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={() => {
+                focusNext.current = 'fit';
+                void api.call(RESET_FIT_TEXT);
+              }}
+            >
+              {COPY.fitTextReset}
             </Button>
           </div>
         ) : null}
@@ -206,6 +241,17 @@ export function SettingsView({
           )}
         </div>
       </div>
+
+      {devPlanner !== null ? (
+        <div className="pp-set__group" role="group" aria-label="Development">
+          <SwitchRow
+            label={COPY.devPlanner}
+            description={COPY.devPlannerDesc}
+            checked={devPlanner}
+            onCheckedChange={(on) => setPrefs({ devPlanner: on })}
+          />
+        </div>
+      ) : null}
 
       <div className="pp-set__group" role="group" aria-label="Turn off">
         {!view.enabled ? (

@@ -4,6 +4,8 @@ import { needLevels } from '../profile/needs';
 import type { FitProfile } from '../profile/schema';
 import { initialLearningState, toDay } from '../learning/learners';
 import type { DomainState, UserLearningState } from '../learning/types';
+import { triage, type TriageInput } from '../triage/triage';
+import type { LayoutFeatures, TriageVerdict } from '../triage/types';
 import type { PolicyInput } from './decide';
 
 /**
@@ -87,6 +89,68 @@ export function focusProfile(): FitProfile {
     sd: 0.1,
     confidence: 0.8,
     sources: ['behavior'],
+  };
+  return p;
+}
+
+/**
+ * Corpus persona "large text" (docs/10 §10): a measured reading floor of
+ * `px` (24-36 in the release gates) and typical (24 px) targets.
+ */
+export function largeTextProfile(px = 28): FitProfile {
+  const p = strongReaderProfile();
+  p.vision.textMinPx = {
+    value: px,
+    source: 'measured',
+    confidence: 0.85,
+    measured: px,
+  };
+  p.motor.minTargetPx = {
+    value: 24,
+    source: 'measured',
+    confidence: 0.8,
+    measured: 24,
+  };
+  return p;
+}
+
+/** Corpus persona "large targets": measured T (56 or more) with a typical 16 px reading floor. */
+export function largeTargetProfile(
+  targetPx: FitProfile['motor']['minTargetPx']['value'] = 56,
+): FitProfile {
+  const p = strongReaderProfile();
+  p.vision.textMinPx = {
+    value: 16,
+    source: 'measured',
+    confidence: 0.85,
+    measured: 16,
+  };
+  p.motor.minTargetPx = {
+    value: targetPx,
+    source: 'measured',
+    confidence: 0.8,
+    measured: targetPx,
+  };
+  return p;
+}
+
+/**
+ * Corpus persona "high distraction": P(distraction benefit > 0) far above
+ * 0.8, with a typical 16 px reading floor and 24 px targets.
+ */
+export function highDistractionProfile(): FitProfile {
+  const p = focusProfile();
+  p.vision.textMinPx = {
+    value: 16,
+    source: 'measured',
+    confidence: 0.85,
+    measured: 16,
+  };
+  p.motor.minTargetPx = {
+    value: 24,
+    source: 'measured',
+    confidence: 0.8,
+    measured: 24,
   };
   return p;
 }
@@ -199,6 +263,259 @@ export function articleSignals(
     env: { reducedMotion: false, forcedColors: false, colorScheme: 'light' },
   };
   return merge(base, patch);
+}
+
+/** Person-independent layout features (docs/10 §3.1) of a plain, calm page. */
+export function layoutFeatures(
+  patch?: DeepPartial<LayoutFeatures>,
+): LayoutFeatures {
+  const base: LayoutFeatures = {
+    bodyPx: 16,
+    slack: {
+      rowSlackMin: 1.6,
+      clipRiskShare: 0.05,
+      fixedHeightTextShare: 0.02,
+      overlayTextShare: 0,
+    },
+    occlusion: 0.08,
+    density: { leafPer100k: 20, corners: 60, fontSizes: 5, regions: 2 },
+    records: { count: 0, largest: 0, mainShare: 0 },
+    readerable: 0,
+    kind: {
+      product: false,
+      editor: false,
+      application: false,
+      canvas: false,
+      videoPlayer: false,
+      paywall: false,
+      blockingOverlay: false,
+      password: false,
+      payment: false,
+    },
+    nav: { primaryLinks: 6, searchVisible: true },
+  };
+  return merge(base, patch);
+}
+
+const STILL: PageSignals['motion'] = {
+  running: 0,
+  infinite: 0,
+  autoplayMedia: 0,
+  carousels: 0,
+  animatedImages: 0,
+};
+
+/**
+ * A gov.uk-like guidance page: 19 px body text, calm, readerable, large
+ * clickable areas. Fits a typical reader; F = 36 needs more than page scale.
+ */
+export function govukSignals(
+  layout?: DeepPartial<LayoutFeatures>,
+  patch?: DeepPartial<PageSignals>,
+): PageSignals {
+  return merge(
+    articleSignals(
+      {
+        category: 'article',
+        text: {
+          histogram: [
+            [19, 4200],
+            [16, 500],
+            [27, 200],
+            [36, 60],
+          ],
+          totalChars: 4960,
+          mainFontPx: 19,
+          mainLineHeight: 1.32,
+          mainLineCh: 68,
+        },
+        contrast: { sampled: 90, below45: 0, below7: 2 },
+        targets: {
+          count: 40,
+          below: { '24': 1, '32': 6, '44': 20, '56': 30, '72': 36 },
+          crowded: 2,
+        },
+        motion: STILL,
+        sticky: { bars: 0, topBandPx: 0 },
+        hoverMenus: 0,
+      },
+      [],
+    ),
+    {
+      ...patch,
+      layout: merge(
+        layoutFeatures({
+          bodyPx: 19,
+          occlusion: 0,
+          // GOV.UK measures 1.2-1.8 leaf boxes per 100k px² (eval corpus).
+          density: { leafPer100k: 1.5, corners: 35, fontSizes: 4, regions: 1 },
+          readerable: 62,
+          nav: { primaryLinks: 4, searchVisible: true },
+        }),
+        layout,
+      ),
+    },
+  );
+}
+
+/** A Wikipedia-like article: 14 px body, readerable, dense links and a sticky header. */
+export function wikipediaSignals(
+  layout?: DeepPartial<LayoutFeatures>,
+  patch?: DeepPartial<PageSignals>,
+): PageSignals {
+  return merge(
+    articleSignals({
+      category: 'docs_reference',
+      text: {
+        histogram: [
+          [14, 9000],
+          [12, 1500],
+          [16, 400],
+          [28, 80],
+        ],
+        totalChars: 10_980,
+        mainFontPx: 14,
+        mainLineHeight: 1.6,
+        mainLineCh: 110,
+      },
+      contrast: { sampled: 140, below45: 1, below7: 6 },
+      targets: {
+        count: 75,
+        below: { '24': 50, '32': 58, '44': 61, '56': 66, '72': 70 },
+        crowded: 58,
+      },
+      motion: STILL,
+      sticky: { bars: 1, topBandPx: 50 },
+    }),
+    {
+      ...patch,
+      layout: merge(
+        layoutFeatures({
+          bodyPx: 14,
+          slack: { rowSlackMin: 1.3, clipRiskShare: 0.04 },
+          occlusion: 0.07,
+          density: { leafPer100k: 42, corners: 130, fontSizes: 8, regions: 4 },
+          records: { count: 1, largest: 8, mainShare: 0.08 },
+          readerable: 140,
+          nav: { primaryLinks: 5, searchVisible: true },
+        }),
+        layout,
+      ),
+    },
+  );
+}
+
+/**
+ * A YouTube-like results grid: 14 px titles and metadata in clamped,
+ * fixed-height cards (clip risk), many small and crowded controls, dense,
+ * with a large records collection covering main.
+ */
+export function youtubeSignals(
+  layout?: DeepPartial<LayoutFeatures>,
+  patch?: DeepPartial<PageSignals>,
+): PageSignals {
+  return merge(
+    articleSignals(
+      {
+        category: 'search_results',
+        text: {
+          histogram: [
+            [14, 900],
+            [12, 600],
+            [16, 300],
+          ],
+          totalChars: 1800,
+          mainFontPx: 14,
+          mainLineHeight: 1.4,
+          mainLineCh: 40,
+        },
+        contrast: { sampled: 80, below45: 12, below7: 30 },
+        targets: {
+          count: 120,
+          below: { '24': 30, '32': 50, '44': 80, '56': 100, '72': 110 },
+          crowded: 70,
+        },
+        motion: {
+          running: 2,
+          infinite: 1,
+          autoplayMedia: 1,
+          carousels: 0,
+          animatedImages: 0,
+        },
+        sticky: { bars: 1, topBandPx: 56 },
+      },
+      [],
+    ),
+    {
+      ...patch,
+      layout: merge(
+        layoutFeatures({
+          bodyPx: 14,
+          slack: {
+            rowSlackMin: 1.02,
+            clipRiskShare: 0.55,
+            fixedHeightTextShare: 0.3,
+            overlayTextShare: 0.1,
+          },
+          occlusion: 0.12,
+          density: { leafPer100k: 80, corners: 300, fontSizes: 13, regions: 9 },
+          records: { count: 3, largest: 24, mainShare: 0.85 },
+          readerable: 0,
+          nav: { primaryLinks: 8, searchVisible: true },
+        }),
+        layout,
+      ),
+    },
+  );
+}
+
+/** A document editor: small UI text, an editable canvas, role=application. */
+export function editorSignals(
+  layout?: DeepPartial<LayoutFeatures>,
+  patch?: DeepPartial<PageSignals>,
+): PageSignals {
+  return merge(
+    articleSignals(
+      {
+        category: 'web_app',
+        text: {
+          histogram: [
+            [11, 2000],
+            [13, 600],
+          ],
+          totalChars: 2600,
+          mainFontPx: 11,
+          mainLineHeight: 1.15,
+          mainLineCh: 90,
+        },
+        motion: STILL,
+      },
+      [],
+    ),
+    {
+      ...patch,
+      layout: merge(
+        layoutFeatures({
+          bodyPx: 11,
+          slack: { rowSlackMin: 1.05, clipRiskShare: 0.3 },
+          occlusion: 0.18,
+          density: { leafPer100k: 55, corners: 160, fontSizes: 7, regions: 5 },
+          readerable: 0,
+          kind: { editor: true, application: true, canvas: true },
+        }),
+        layout,
+      ),
+    },
+  );
+}
+
+/** Triage for a fixture page at 100% (the worker's call, with the person's own zoom from the signals). */
+export function triageFor(
+  profile: FitProfile,
+  signals: PageSignals,
+  patch: Partial<Omit<TriageInput, 'profile' | 'signals'>> = {},
+): TriageVerdict {
+  return triage({ profile, signals, zoom: signals.viewport.zoom, ...patch });
 }
 
 export function makeInput(

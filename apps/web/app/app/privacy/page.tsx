@@ -11,9 +11,10 @@ import { connection } from 'next/server';
 export const metadata: Metadata = { title: 'Privacy' };
 
 /**
- * /app/privacy: what WebAble may send (two consents, both off by default, with
- * exactly what each sends), what this browser actually sent (receipts from the
- * extension, with the exact bodies), and the person's data: download or delete.
+ * /app/privacy: what WebAble may send (three consents, all off by default,
+ * with exactly what each sends and to whom), what this browser actually sent
+ * (receipts from the extension, with the exact bodies), and the person's
+ * data: download or delete.
  */
 export default async function PrivacyPage() {
   await connection();
@@ -29,12 +30,13 @@ export default async function PrivacyPage() {
       <AppSection
         id="sharing"
         title="What WebAble may send"
-        eyebrow="Both are off unless you turn them on"
-        deck="Your fit works without either. Each one says exactly what it sends and to whom."
+        eyebrow="Each is off unless you turn it on"
+        deck="Your fit works without any of them. Each one says exactly what it sends and to whom."
       >
         {account.ok ? (
           <ConsentSwitches
             cloudAnalysis={account.data.cloudAnalysis}
+            aiLayout={account.data.aiLayout}
             productLearning={account.data.productLearning}
           />
         ) : (
@@ -60,10 +62,11 @@ export default async function PrivacyPage() {
         id="what-was-sent"
         title="What was sent"
         eyebrow="From this browser"
-        deck="Every request that left this browser for page analysis, with its exact contents."
+        deck="Every request that left this browser for page analysis or Fit view layouts, with its exact contents."
       >
         <Receipts
           cloudAnalysis={account.ok ? account.data.cloudAnalysis : false}
+          aiLayout={account.ok ? account.data.aiLayout : false}
         />
       </AppSection>
 

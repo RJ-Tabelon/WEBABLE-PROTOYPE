@@ -183,6 +183,8 @@ export function regionEvidence(
     .filter((word, i, all) => all.indexOf(word) === i)
     .slice(0, 6);
   const controls = [...el.querySelectorAll(CONTROL_SELECTOR)].slice(0, 4);
+  // The region's text once: its amount and its link share (eval M9).
+  const chars = normText(el).length;
   const controlWords = controls
     .map((c) => vocabPhrase(ctx.vocab, controlName(c), 4, 100))
     .filter((s) => s.length > 0)
@@ -203,8 +205,8 @@ export function regionEvidence(
     links: countToBucket(
       el.querySelectorAll('a[href]').length + (el.matches('a[href]') ? 1 : 0),
     ),
-    link_density: linkDensityBucket(linkDensity(el)),
-    text_amount: regionTextBucket(normText(el).length),
+    link_density: linkDensityBucket(linkDensity(el, chars, 0.6)),
+    text_amount: regionTextBucket(chars),
     buttons: countToBucket(el.querySelectorAll(BUTTON_SELECTOR).length),
     inputs: countToBucket(el.querySelectorAll(INPUT_SELECTOR).length),
     required_fields: fact.hasRequiredFields,

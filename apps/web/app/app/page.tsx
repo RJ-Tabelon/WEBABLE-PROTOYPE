@@ -98,7 +98,7 @@ export default async function YourFitPage() {
           <PageHead
             eyebrow={`Version ${fit.version} · saved ${formatDay(fit.createdAt)}`}
             title="Your fit"
-            deck="Here’s what WebAble changes on pages for you, and why. You can adjust any of it."
+            deck="Here’s what WebAble changes on pages for you, and why. Pages with small text are zoomed toward your size, and busy pages can open in Fit view. You can adjust any of it."
           >
             <div className="wa-page-head__status">
               <BrowserStatus email={email} />

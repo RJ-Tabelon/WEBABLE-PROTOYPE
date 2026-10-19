@@ -19,7 +19,9 @@ import {
 } from './activity';
 import { AnswerCache } from './answers';
 import type { KvArea } from './area';
+import { ComposeCache } from './compose';
 import { EventLog } from './events';
+import { fitLearningStore, type FitLearningRecord } from './fitlearning';
 import { InstallStore } from './install';
 import {
   emptyLearningRecord,
@@ -35,8 +37,10 @@ export * from './account';
 export * from './activity';
 export * from './answers';
 export * from './area';
+export * from './compose';
 export * from './crypto';
 export * from './events';
+export * from './fitlearning';
 export * from './install';
 export * from './keys';
 export * from './learning';
@@ -54,6 +58,10 @@ export interface LocalStores {
   sites: SiteStore;
   events: EventLog;
   answers: AnswerCache;
+  /** Layout-planner specs per page template (docs/10 §6). */
+  compose: ComposeCache;
+  /** Fit view keep/undo per page type and defects (local only). */
+  fitLearning: JsonStore<FitLearningRecord>;
   receipts: ReceiptLog;
   learning: JsonStore<LearningRecord>;
   account: JsonStore<AccountRecord | null>;
@@ -74,6 +82,8 @@ export function createStores(
     sites: new SiteStore(local, now),
     events: new EventLog(local, now),
     answers: new AnswerCache(local, now),
+    compose: new ComposeCache(local, now),
+    fitLearning: fitLearningStore(local),
     receipts: new ReceiptLog(local, now),
     learning: learningStore(local),
     account: accountStore(local),
@@ -86,11 +96,12 @@ export function createStores(
 
 /**
  * "Clear data on this device" (bridge wa:clear-local): per-site records, the
- * event log, the answer cache, the receipts, the learning state with its
- * pending deltas, the weekly counts and the profile go (the profile falls back
- * to the tier-0 default), and the install secret is rotated so any HMAC key
- * derived before is meaningless. The session and the account mirror stay: when
- * signed in, the next sync brings back what the account holds.
+ * event log, the answer cache, the layout-planner cache, Fit view's local
+ * learning, the receipts, the learning state with its pending deltas, the
+ * weekly counts and the profile go (the profile falls back to the tier-0
+ * default), and the install secret is rotated so any HMAC key derived before
+ * is meaningless. The session and the account mirror stay: when signed in,
+ * the next sync brings back what the account holds.
  */
 export async function clearLocalData(
   stores: LocalStores,
@@ -101,6 +112,8 @@ export async function clearLocalData(
     stores.sites.clear(),
     stores.events.clear(),
     stores.answers.clear(),
+    stores.compose.clear(),
+    stores.fitLearning.clear(),
     stores.receipts.clear(),
     stores.offers.clear(),
     resetPersonalData(stores, userId, now),

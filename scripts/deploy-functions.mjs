@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Deploy the Edge Functions (decide, extension-link, ingest) and their secrets.
+// Deploy the Edge Functions (decide, extension-link, ingest, compose) and their secrets.
 //
 //   SUPABASE_ACCESS_TOKEN=<token> pnpm deploy:functions
 //
@@ -13,7 +13,11 @@
 //   EXTENSION_ORIGINS  EXTENSION_ORIGINS, else the development extension id
 //   INGEST_TAG_SECRET  generated once; never rotated here (rotating destroys every period salt)
 //   TYPESAFE_API_KEY   only when set in .env (without it, page analysis stays on-device)
+//   OPENAI_API_KEY     only when set in .env (without it, Fit view keeps its on-device layout).
+//                      COMPOSE_OPENAI_API_KEY, when set, is used instead: a dedicated key for
+//                      the planner, separate from the one research scripts use.
 // Values go through a temporary 0600 env file, never the command line, and are never printed.
+// The planner's kill switch is not set here: `supabase secrets set COMPOSE_DISABLED=1`.
 
 import { spawnSync } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
@@ -25,7 +29,7 @@ import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const FUNCTIONS = ['decide', 'extension-link', 'ingest'];
+const FUNCTIONS = ['decide', 'extension-link', 'ingest', 'compose'];
 const DEV_EXTENSION_ORIGIN =
   'chrome-extension://bbnblnlbgcccbbbbihngngbecbobedie';
 
@@ -115,6 +119,10 @@ if (!existingNames.has('INGEST_TAG_SECRET'))
   secrets.INGEST_TAG_SECRET = randomBytes(36).toString('base64url');
 if (process.env.TYPESAFE_API_KEY)
   secrets.TYPESAFE_API_KEY = process.env.TYPESAFE_API_KEY;
+const openaiKey =
+  process.env.COMPOSE_OPENAI_API_KEY?.trim() ||
+  process.env.OPENAI_API_KEY?.trim();
+if (openaiKey) secrets.OPENAI_API_KEY = openaiKey;
 
 const dir = mkdtempSync(join(tmpdir(), 'webable-secrets-'));
 const envFile = join(dir, 'secrets.env');
@@ -147,6 +155,10 @@ console.log(`  WEB_ORIGINS=${secrets.WEB_ORIGINS}`);
 console.log(`  EXTENSION_ORIGINS=${secrets.EXTENSION_ORIGINS}`);
 if (!process.env.TYPESAFE_API_KEY && !existingNames.has('TYPESAFE_API_KEY'))
   console.log('  TYPESAFE_API_KEY not set: page analysis stays on-device.');
+if (!openaiKey && !existingNames.has('OPENAI_API_KEY'))
+  console.log(
+    '  OPENAI_API_KEY not set: Fit view keeps its on-device layouts.',
+  );
 
 // 3. Deploy (bundled server-side; no Docker needed). verify_jwt comes from config.toml.
 const deploy = supabase([

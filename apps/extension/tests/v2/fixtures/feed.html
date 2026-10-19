@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Feed fixture</title>
+    <!--
+      A video home feed shaped like YouTube's: a fixed masthead with search,
+      a fixed mini guide, a row of filter chips and a grid of video cards.
+      Each card has a thumbnail link with a duration badge drawn over it
+      (some thumbnails lazy, some background images), an avatar link, a
+      line-clamped title link with screen-reader-only text, channel and
+      stats, and a "More actions" button that only shows on hover or focus.
+      An ad card sits inside the grid. window.fixture re-renders, reorders
+      and extends the grid the way a single-page app does.
+    -->
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 14px;
+        color: #0f0f0f;
+        background: #fff;
+      }
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      .skip {
+        position: absolute;
+        left: -9999px;
+        top: 0;
+      }
+      .masthead {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 56px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        background: #fff;
+        z-index: 10;
+      }
+      .masthead .start,
+      .masthead .end {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        padding: 8px;
+      }
+      .icon-btn svg {
+        width: 24px;
+        height: 24px;
+        display: block;
+      }
+      .logo {
+        display: flex;
+        align-items: center;
+        width: 90px;
+        height: 24px;
+        color: #0f0f0f;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      .search {
+        display: flex;
+        flex: 0 1 600px;
+        margin: 0 40px;
+      }
+      .search input {
+        flex: 1;
+        height: 40px;
+        box-sizing: border-box;
+        font-size: 16px;
+        padding: 0 16px;
+        border: 1px solid #ccc;
+        border-radius: 20px 0 0 20px;
+      }
+      .search button {
+        width: 64px;
+        height: 40px;
+        border: 1px solid #ccc;
+        border-left: 0;
+        border-radius: 0 20px 20px 0;
+        background: #f8f8f8;
+      }
+      .signin {
+        display: inline-flex;
+        align-items: center;
+        height: 36px;
+        padding: 0 15px;
+        border: 1px solid #ccc;
+        border-radius: 18px;
+        color: #065fd4;
+        text-decoration: none;
+        font-weight: 500;
+      }
+      .guide {
+        position: fixed;
+        top: 56px;
+        left: 0;
+        bottom: 0;
+        width: 72px;
+        padding-top: 4px;
+        background: #fff;
+      }
+      .guide a {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+        padding: 16px 0 14px;
+        color: inherit;
+        text-decoration: none;
+      }
+      .guide a svg {
+        width: 24px;
+        height: 24px;
+      }
+      main {
+        margin-left: 72px;
+        padding: 56px 24px 40px;
+      }
+      .chips {
+        display: flex;
+        gap: 12px;
+        overflow: hidden;
+        white-space: nowrap;
+        padding: 12px 0 24px;
+      }
+      .chip {
+        flex: none;
+        height: 32px;
+        padding: 0 12px;
+        border: 0;
+        border-radius: 8px;
+        background: #f2f2f2;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .chip[aria-selected='true'] {
+        background: #0f0f0f;
+        color: #fff;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 40px 16px;
+      }
+      .item {
+        position: relative;
+        min-width: 0;
+      }
+      .thumb {
+        display: block;
+        position: relative;
+        aspect-ratio: 16 / 9;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #e5e5e5;
+      }
+      .thumb img,
+      .thumb .bgthumb {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        background-size: cover;
+        background-position: center;
+      }
+      .duration {
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        font-size: 12px;
+        font-weight: 500;
+        padding: 1px 4px;
+        border-radius: 4px;
+      }
+      .details {
+        display: flex;
+        gap: 12px;
+        margin-top: 12px;
+        padding-right: 24px;
+      }
+      .avatar-link {
+        flex: none;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: block;
+      }
+      .meta {
+        flex: 1;
+        min-width: 0;
+      }
+      .title {
+        margin: 0 0 4px;
+        font-size: 16px;
+        line-height: 22px;
+        font-weight: 500;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .title a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .channel a {
+        color: #606060;
+        text-decoration: none;
+      }
+      .channel,
+      .stats {
+        font-size: 14px;
+        line-height: 20px;
+        color: #606060;
+      }
+      .stats span + span::before {
+        content: ' • ';
+      }
+      .menu {
+        position: absolute;
+        right: -12px;
+        top: calc(56.25% + 4px);
+        width: 40px;
+        height: 40px;
+        border: 0;
+        border-radius: 50%;
+        background: transparent;
+        opacity: 0;
+      }
+      .item:hover .menu,
+      .item:focus-within .menu {
+        opacity: 1;
+      }
+      .ad-slot {
+        border: 1px solid #e5e5e5;
+        border-radius: 12px;
+        padding: 12px;
+      }
+      .ad-slot .label {
+        font-size: 12px;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#content" data-qa="skip">Skip navigation</a>
+    <header class="masthead" data-qa="masthead">
+      <div class="start">
+        <button class="icon-btn" aria-label="Guide" data-qa="guide-btn">
+          <svg viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" stroke="#000" />
+          </svg>
+        </button>
+        <a class="logo" href="/" aria-label="Home" data-qa="logo">
+          <svg viewBox="0 0 24 24" width="24" height="24">
+            <rect width="24" height="24" fill="#f00" />
+          </svg>
+        </a>
+      </div>
+      <form class="search" role="search" action="/results" data-qa="search">
+        <input
+          type="text"
+          name="search_query"
+          placeholder="Search"
+          aria-label="Search"
+          autocomplete="off"
+          data-qa="search-input"
+        />
+        <button type="submit" aria-label="Search" data-qa="search-btn">
+          <svg viewBox="0 0 24 24" width="24" height="24">
+            <circle cx="10" cy="10" r="6" stroke="#000" fill="none" />
+          </svg>
+        </button>
+      </form>
+      <div class="end">
+        <button class="icon-btn" aria-label="Settings" aria-haspopup="menu">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /></svg>
+        </button>
+        <a class="signin" href="/signin" data-qa="signin">Sign in</a>
+      </div>
+    </header>
+    <nav class="guide" aria-label="Guide" data-qa="guide">
+      <a href="/" aria-current="page"
+        ><svg viewBox="0 0 24 24"><path d="M4 10l8-6 8 6v10H4z" /></svg
+        ><span>Home</span></a
+      >
+      <a href="/shorts"
+        ><svg viewBox="0 0 24 24">
+          <rect x="6" y="3" width="12" height="18" /></svg
+        ><span>Shorts</span></a
+      >
+      <a href="/subscriptions"
+        ><svg viewBox="0 0 24 24">
+          <rect x="3" y="6" width="18" height="12" /></svg
+        ><span>Subscriptions</span></a
+      >
+      <a href="/you"
+        ><svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="4" /></svg
+        ><span>You</span></a
+      >
+      <a href="/history"
+        ><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" /></svg
+        ><span>History</span></a
+      >
+    </nav>
+    <main id="content" data-qa="main">
+      <div class="chips" role="tablist" aria-label="Topics" data-qa="chips">
+        <button class="chip" role="tab" aria-selected="true">All</button>
+        <button class="chip" role="tab" aria-selected="false">Music</button>
+        <button class="chip" role="tab" aria-selected="false">Gaming</button>
+        <button class="chip" role="tab" aria-selected="false">News</button>
+        <button class="chip" role="tab" aria-selected="false">Live</button>
+        <button class="chip" role="tab" aria-selected="false">Cooking</button>
+        <button class="chip" role="tab" aria-selected="false">
+          Recently uploaded
+        </button>
+        <button class="chip" role="tab" aria-selected="false">Watched</button>
+        <button class="chip" role="tab" aria-selected="false">
+          New to you
+        </button>
+      </div>
+      <div class="grid" id="grid" data-qa="grid"></div>
+    </main>
+    <script>
+      (function () {
+        var colors = [
+          'a0b4c8',
+          'c8a0b4',
+          'b4c8a0',
+          'e0c090',
+          '90c0e0',
+          'c090e0',
+        ];
+        var svg = function (c) {
+          return (
+            'data:image/svg+xml,' +
+            encodeURIComponent(
+              "<svg xmlns='http://www.w3.org/2000/svg' width='160' height='90'><rect width='160' height='90' fill='#" +
+                c +
+                "'/></svg>",
+            )
+          );
+        };
+        var blank =
+          'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+        var titles = [
+          'How the quarry road became the longest volunteer trail in the valley',
+          'Ten minute bread you can bake tonight',
+          'The absurd engineering behind a tiny clock',
+          'Live: Saturday market from the old station',
+          'Why every bench in the park faces west',
+          'Building a canoe from a single cedar log, part three of a long series',
+          'A quiet walk along the river at dawn',
+          'Fixing the oldest bicycle in town',
+          'What the beekeepers keep in their notebooks',
+          'Reading the clouds: a field guide',
+          'Night train to the coast, every stop',
+          'The basket weavers of the northern hills',
+        ];
+        var channels = [
+          'Valley Trails',
+          'Kitchen Hour',
+          'Tiny Mechanisms',
+          'Old Station',
+          'Park Notes',
+          'Cedar Craft',
+        ];
+        var stats = [
+          ['1.2M views', '3 days ago'],
+          ['45K views', '2 weeks ago'],
+          ['870K views', '1 month ago'],
+          ['12K watching', 'Streamed 2 hours ago'],
+          ['230K views', '5 days ago'],
+          ['3.4M views', '1 year ago'],
+        ];
+        var durations = ['12:34', '8:02', '1:02:45', '45:10', '6:18', '22:07'];
+        window.fixtureData = [];
+        for (var i = 0; i < 24; i++) {
+          var id = 'vid' + String(1000 + i);
+          window.fixtureData.push({
+            id: id,
+            title:
+              titles[i % titles.length] +
+              (i >= titles.length ? ' (' + (i + 1) + ')' : ''),
+            channel: channels[i % channels.length],
+            handle:
+              '@' +
+              channels[i % channels.length].toLowerCase().replace(/\s+/g, ''),
+            stats: stats[i % stats.length],
+            duration: durations[i % durations.length],
+            color: colors[i % colors.length],
+            thumb:
+              i % 8 === 5
+                ? 'lazy'
+                : i % 8 === 6
+                  ? 'bg'
+                  : i % 8 === 7
+                    ? 'lazynosrc'
+                    : 'img',
+          });
+        }
+        function card(d) {
+          var item = document.createElement('div');
+          item.className = 'item';
+          item.setAttribute('data-video-id', d.id);
+          item.setAttribute('data-qa', 'item-' + d.id);
+          var thumb;
+          if (d.thumb === 'img') {
+            thumb =
+              '<img alt="" src="' +
+              svg(d.color) +
+              '" data-qa="thumb-img-' +
+              d.id +
+              '">';
+          } else if (d.thumb === 'lazy') {
+            thumb =
+              '<img alt="" loading="lazy" src="' +
+              blank +
+              '" data-src="/thumbs/' +
+              d.id +
+              '.jpg" data-srcset="/thumbs/' +
+              d.id +
+              '.jpg 1x, /thumbs/' +
+              d.id +
+              '@2x.jpg 2x" data-qa="thumb-img-' +
+              d.id +
+              '">';
+          } else if (d.thumb === 'lazynosrc') {
+            thumb =
+              '<img alt="" loading="lazy" data-src="/thumbs/' +
+              d.id +
+              '.webp" data-qa="thumb-img-' +
+              d.id +
+              '">';
+          } else {
+            thumb =
+              '<div class="bgthumb" role="img" aria-label="Thumbnail" style="background-image:url(&quot;' +
+              svg(d.color) +
+              '&quot;)" data-qa="thumb-bg-' +
+              d.id +
+              '"></div>';
+          }
+          item.innerHTML =
+            '<a class="thumb" href="/watch?v=' +
+            d.id +
+            '&amp;pp=sAQA" tabindex="-1" aria-hidden="true" data-qa="thumb-' +
+            d.id +
+            '">' +
+            thumb +
+            '<span class="duration" aria-hidden="true">' +
+            d.duration +
+            '</span></a>' +
+            '<div class="details">' +
+            '<a class="avatar-link" href="/' +
+            d.handle +
+            '"><img class="avatar" alt="' +
+            d.channel +
+            ' avatar" src="' +
+            svg('606060') +
+            '"></a>' +
+            '<div class="meta"><h3 class="title"><a href="/watch?v=' +
+            d.id +
+            '" title="' +
+            d.title +
+            '" data-qa="title-' +
+            d.id +
+            '"><span class="sr-only">Video: </span>' +
+            d.title +
+            '</a></h3>' +
+            '<div class="channel"><a href="/' +
+            d.handle +
+            '">' +
+            d.channel +
+            '</a></div>' +
+            '<div class="stats"><span>' +
+            d.stats[0] +
+            '</span><span>' +
+            d.stats[1] +
+            '</span></div></div></div>' +
+            '<button class="menu" aria-label="More actions" aria-haspopup="menu" data-qa="menu-' +
+            d.id +
+            '"><svg viewBox="0 0 24 24" width="24" height="24"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>';
+          return item;
+        }
+        function ad() {
+          var a = document.createElement('div');
+          a.className = 'ad-slot';
+          a.setAttribute('data-qa', 'ad');
+          a.innerHTML =
+            '<span class="label">Sponsored</span><p>Fresh coffee beans, roasted this week.</p><a href="https://shop.example.net/beans">Shop now</a>';
+          return a;
+        }
+        var grid = document.getElementById('grid');
+        function render(list) {
+          grid.textContent = '';
+          list.forEach(function (d, i) {
+            if (i === 5) grid.appendChild(ad());
+            grid.appendChild(card(d));
+          });
+        }
+        render(window.fixtureData);
+        window.fixture = {
+          /** Replace every card with a fresh node, in reverse order (an SPA re-render). */
+          rerender: function () {
+            render(window.fixtureData.slice().reverse());
+          },
+          /** Move existing card nodes around (a reorder without re-render). */
+          shuffle: function () {
+            var items = Array.prototype.slice.call(
+              grid.querySelectorAll('.item'),
+            );
+            items.reverse().forEach(function (n) {
+              grid.appendChild(n);
+            });
+          },
+          /** Append cards (infinite scroll). */
+          more: function (n) {
+            for (var k = 0; k < n; k++) {
+              var d = Object.assign({}, window.fixtureData[k], {
+                id: 'vid' + (2000 + k),
+                title: 'More: ' + window.fixtureData[k].title,
+              });
+              grid.appendChild(card(d));
+            }
+          },
+        };
+      })();
+    </script>
+  </body>
+</html>

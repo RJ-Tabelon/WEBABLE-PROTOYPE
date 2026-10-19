@@ -241,7 +241,7 @@ export function YourFit({
       <p className="tn-deck">
         {comparing
           ? 'Here’s what changed since your last fit. Keep the new value or the old one.'
-          : 'Here’s what WebAble will change, and why. You can adjust any of it.'}
+          : 'Here’s what WebAble will change, and why. Pages with small text are zoomed toward your size, and busy pages can open in Fit view. You can adjust any of it.'}
       </p>
 
       {mainRows.length > 0 ? (

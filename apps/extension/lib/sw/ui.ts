@@ -48,6 +48,12 @@ export interface TabDetail extends TabView {
   needsReload: boolean;
   /** Suggestions run on this device only (signed out, no consent, or analysis unavailable). */
   onDeviceOnly: boolean;
+  /**
+   * One line on what this page needs for the fit, from triage (core
+   * `triageLine`: "This page already fits you.", "Small text for your fit.");
+   * null while the page is being read or on pages WebAble does not run on.
+   */
+  triageLine?: string | null;
   prefs: Prefs;
   links: Links;
 }
@@ -57,6 +63,19 @@ export interface Prefs {
   reduceMotion: boolean;
   /** The fit profile, for WebAble's own text scale and targets (fitUiVars). */
   profile: FitProfile | null;
+  /**
+   * The local dev planner switch (settings.devPlanner): its value in a
+   * development build whose compose URL is loopback, null in every other
+   * build (nothing to show).
+   */
+  devPlanner?: boolean | null;
+  /**
+   * Fit view's own Text − / + override (settings.fitTextStep): whole steps
+   * of 1.125x from the fit's size, 0 when Fit view uses the fit as is.
+   */
+  fitTextStep?: number;
+  /** "Simplify busy pages automatically" (settings.autoSimplify). */
+  autoSimplify?: boolean;
 }
 
 export interface Links {
@@ -84,6 +103,12 @@ export type UiExtra =
       reduceMotion?: boolean;
       /** Hide the "Allow on all sites" line in the main view (it stays in Settings). */
       hideAllSitesAsk?: boolean;
+      /** Development builds only: plan Fit view layouts with the local dev planner. */
+      devPlanner?: boolean;
+      /** Fit view's text override, in whole steps within ±FIT_TEXT_STEPS_MAX (0 resets it). */
+      fitTextStep?: number;
+      /** "Simplify busy pages automatically" (docs/11 §2). */
+      autoSimplify?: boolean;
     }
   /** matchMedia results from an extension page (the worker has no window). */
   | { type: 'ui:system'; signals: SystemSignals }

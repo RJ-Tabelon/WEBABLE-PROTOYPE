@@ -12,6 +12,10 @@ import type { OpId } from '@webable/core/ops/catalog';
 
 export const ENGINE_SCRIPT_ID = 'webable-engine';
 export const ENGINE_JS = 'content-scripts/engine.js';
+/** Fit view's renderer and live layer, injected the first time it opens in a document. */
+export const FITVIEW_JS = 'content-scripts/fitview.js';
+/** Fit view's key bridge, in the page's MAIN world (a file, so page CSP allows it). */
+export const KEYBRIDGE_JS = 'content-scripts/keybridge.js';
 export const ALL_SITES = ['<all_urls>'] as const;
 
 /** Reviewed pre-paint stylesheets (public/prepaint), one per op. */
@@ -116,6 +120,31 @@ export async function injectTab(
     return true;
   } catch {
     // Restricted page, discarded tab, or no access: nothing to do.
+    return false;
+  }
+}
+
+/**
+ * Fit view's scripts in the top frame of one tab (docs/10 §4.3): the
+ * renderer in the engine's isolated world, then the key bridge in the page's
+ * MAIN world. Both guard against running twice in a document. False when
+ * either could not be injected (no access, a restricted or discarded tab).
+ */
+export async function injectFitView(tabId: number): Promise<boolean> {
+  try {
+    await browser.scripting.executeScript({
+      target: { tabId, frameIds: [0] },
+      files: [`/${FITVIEW_JS}` as const],
+      injectImmediately: true,
+    });
+    await browser.scripting.executeScript({
+      target: { tabId, frameIds: [0] },
+      files: [`/${KEYBRIDGE_JS}` as const],
+      world: 'MAIN',
+      injectImmediately: true,
+    });
+    return true;
+  } catch {
     return false;
   }
 }

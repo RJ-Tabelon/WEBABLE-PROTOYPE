@@ -24,6 +24,8 @@ export interface AccountRecord {
   userId: string;
   email: string;
   cloudAnalysis: boolean;
+  /** Consent to layout planning with OpenAI (`accounts.ai_layout`, "Better Fit view layouts"). */
+  aiLayout: boolean;
   productLearning: boolean;
   theme: 'system' | 'light' | 'dark';
   onboardingStep: 'new' | 'tuning' | 'tuned' | 'connected';
@@ -56,6 +58,7 @@ export function normalizeAccount(raw: unknown): AccountRecord | null {
     userId,
     email,
     cloudAnalysis: bool(raw.cloudAnalysis, false),
+    aiLayout: bool(raw.aiLayout, false),
     productLearning: bool(raw.productLearning, false),
     theme,
     onboardingStep: step,

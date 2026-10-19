@@ -2,15 +2,16 @@ import { useEffect, useState, type RefObject } from 'react';
 import type { SentReceipt } from '@webable/core/bridge/protocol';
 import { Button, Disclosure } from '@webable/ui';
 
-import { clockTime, structureSummary } from '@/lib/popup/format';
+import { receiptForPage, sentCopy } from '@/lib/popup/sent';
 import type { TabDetail } from '@/lib/sw/ui';
 
 import type { PopupApi } from './usePopup';
 
 /**
- * "What was sent" (design-final 10.3, ai-architecture 9): the exact request
- * body that left the device for this page, in plain words first and then as
- * data. Receipts live on this device only (last 50 or 7 days).
+ * "What was sent" (design-final 10.3, ai-architecture 9, docs/10 §8): the
+ * exact request body that left the device for this page, page analysis or
+ * Fit view layout planning, in plain words first and then as data. Receipts
+ * live on this device only (last 50 or 7 days).
  */
 export function SentView({
   view,
@@ -33,16 +34,8 @@ export function SentView({
     };
   }, [api.client]);
 
-  const forPage =
-    receipts && view.domain
-      ? (receipts.find(
-          (r) => r.domain === view.domain && r.at === view.lastSentAt,
-        ) ??
-        (view.lastSentAt !== null
-          ? receipts.find((r) => r.domain === view.domain)
-          : undefined))
-      : undefined;
-  const summary = forPage ? structureSummary(forPage.body) : null;
+  const forPage = receiptForPage(receipts, view);
+  const copy = sentCopy(view, forPage);
 
   return (
     <section className="pp-sub" aria-labelledby="pp-sent-title">
@@ -54,29 +47,14 @@ export function SentView({
       >
         What was sent
       </h1>
-      <p className="pp-note">
-        {forPage
-          ? `Last sent ${clockTime(forPage.at)} to WebAble’s server`
-          : 'Nothing was sent from this page.'}
-      </p>
+      <p className="pp-note">{copy.lead}</p>
 
       <div className="pp-sent__lines">
-        {forPage ? (
-          <p>
-            <strong className="pp-sent__key">Sent:</strong>{' '}
-            {summary ? `page structure — ${summary}.` : 'page structure.'}
-          </p>
-        ) : (
-          <p>
-            <strong className="pp-sent__key">Sent:</strong>{' '}
-            {view.onDeviceOnly
-              ? 'nothing. Suggestions run on this device only.'
-              : 'page structure only, when WebAble is unsure what part of a page is for.'}
-          </p>
-        )}
         <p>
-          <strong className="pp-sent__key">Not sent:</strong> page text,
-          anything you typed, your browsing history.
+          <strong className="pp-sent__key">Sent:</strong> {copy.sent}
+        </p>
+        <p>
+          <strong className="pp-sent__key">Not sent:</strong> {copy.notSent}
         </p>
       </div>
 

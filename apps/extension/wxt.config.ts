@@ -79,6 +79,10 @@ export default defineConfig({
         suggested_key: { default: 'Alt+Shift+U' },
         description: 'Undo all WebAble changes on this page',
       },
+      'toggle-fit-view': {
+        suggested_key: { default: 'Alt+Shift+F' },
+        description: 'Open Fit view on this page, or go back to the original',
+      },
     },
     action: { default_title: 'WebAble' },
   }),

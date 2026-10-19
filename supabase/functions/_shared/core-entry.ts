@@ -4,7 +4,7 @@
 // imports, extensionless relative paths), so scripts/build-functions.mjs bundles
 // this file, the core modules it names and zod into `core.bundle.js`: plain ESM
 // with no imports, runnable in Deno and Node alike (the local Jev mock server
-// uses it too). Types come from the hand-maintained `core.bundle.d.ts`;
+// and the local dev planner use it too). Types come from the hand-maintained `core.bundle.d.ts`;
 // `pnpm build:functions --check` fails when the committed bundle is stale or
 // the declarations drift from these exports.
 //
@@ -12,6 +12,12 @@
 
 import { z } from 'zod';
 
+import { plannerRequestBody } from '@webable/core/compose/prompt';
+import {
+  composeRequestSchema,
+  composeResponseSchema,
+  pageSpecSchema,
+} from '@webable/core/compose/wire';
 import {
   buildQuestions,
   MAX_REGIONS_PER_CALL,
@@ -46,8 +52,12 @@ import {
   vocabularyViolations,
 } from '@webable/core/page/vocab-check';
 import { VERIFY_CODES } from '@webable/core/policy/types';
+import { wireOutline } from '@webable/core/skeleton/outline';
 import {
   CATALOG_VERSION,
+  COMPOSE_FALLBACK_MODEL,
+  COMPOSE_PINNED_MODEL,
+  COMPOSE_SCHEMA_VERSION,
   JEV_PINNED_MODEL,
   OP_LIBRARY_VERSION,
 } from '@webable/core/versions';
@@ -56,6 +66,11 @@ export {
   buildQuestions,
   callJev,
   CATALOG_VERSION,
+  COMPOSE_FALLBACK_MODEL,
+  COMPOSE_PINNED_MODEL,
+  COMPOSE_SCHEMA_VERSION,
+  composeRequestSchema,
+  composeResponseSchema,
   createMockJevFetch,
   decideRequestSchema,
   decideResponseSchema,
@@ -73,11 +88,14 @@ export {
   OP_IDS,
   OP_LIBRARY_VERSION,
   PAGE_CATEGORIES,
+  pageSpecSchema,
+  plannerRequestBody,
   REGION_ROLES,
   unknownEvidenceWords,
   VERIFY_CODES,
   VOCAB_V1,
   vocabularyViolations,
+  wireOutline,
 };
 
 type DecideOk = Extract<DecideResponse, { ok: true }>;

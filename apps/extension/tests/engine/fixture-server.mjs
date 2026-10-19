@@ -3,6 +3,8 @@
 //   /engine/assets/anim.gif  a small animated GIF, encoded here (no binary assets in git)
 //   /__engine.js             the engine test bundle (built by global-setup)
 //   /healthz                 readiness probe for Playwright's webServer
+//   /v2/<name>.html          v2 fixture pages (tests/v2/fixtures)
+//   /__v2/<name>.js          v2 harness bundles (tests/v2/entries, built by global-setup)
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, join, normalize } from 'node:path';
@@ -18,6 +20,15 @@ const bundle = join(
   '.cache',
   'webable-engine',
   'engine.iife.js',
+);
+const v2Fixtures = join(here, '..', 'v2', 'fixtures');
+const v2Bundles = join(
+  here,
+  '..',
+  '..',
+  'node_modules',
+  '.cache',
+  'webable-v2',
 );
 const port = Number(process.env.ENGINE_FIXTURE_PORT ?? 4173);
 
@@ -200,6 +211,20 @@ createServer(async (req, res) => {
           'cache-control': 'no-store',
         })
         .end(await readFile(bundle));
+      return;
+    }
+    if (url.pathname.startsWith('/__v2/') || url.pathname.startsWith('/v2/')) {
+      const bundleReq = url.pathname.startsWith('/__v2/');
+      const rel = normalize(url.pathname.slice(bundleReq ? 6 : 4));
+      if (rel.startsWith('..') || rel.includes('/..'))
+        throw Object.assign(new Error('forbidden'), { code: 'EACCES' });
+      const file = join(bundleReq ? v2Bundles : v2Fixtures, rel);
+      const ext = file.slice(file.lastIndexOf('.'));
+      res.writeHead(200, {
+        'content-type': types[ext] ?? 'application/octet-stream',
+        'cache-control': 'no-store',
+      });
+      res.end(await readFile(file));
       return;
     }
     if (url.pathname.startsWith('/engine/')) {

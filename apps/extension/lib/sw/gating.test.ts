@@ -12,9 +12,13 @@ import { describe, expect, it } from 'vitest';
 import {
   analysisConsumers,
   ANALYSIS_OPS,
+  composeGate,
   gate,
+  isMailOrChat,
+  PLANNER_UNAVAILABLE,
   TAB_MAX_CALLS,
   TAB_MIN_INTERVAL_MS,
+  type ComposeGateInput,
   type GateInput,
 } from './gating';
 
@@ -206,5 +210,87 @@ describe('ops that consume page analysis (G2)', () => {
       },
     });
     expect(pinned).toContain('dim_distractions');
+  });
+});
+
+describe('layout planning gate (docs/10 §6)', () => {
+  const ready: ComposeGateInput = {
+    mailOrChat: false,
+    excludedSite: false,
+    sensitive: false,
+    checkout: false,
+    personOpened: true,
+    cached: false,
+    configured: true,
+    signedIn: true,
+    needsReauth: false,
+    aiLayout: true,
+    devPlanner: false,
+    breakerOpen: false,
+  };
+  const reason = (patch: Partial<ComposeGateInput>) => {
+    const r = composeGate({ ...ready, ...patch });
+    return r.call ? null : r.reason;
+  };
+
+  it('calls only for an opened, uncached page with consent', () => {
+    expect(composeGate(ready)).toEqual({ call: true });
+    expect(reason({ personOpened: false })).toBe('not_opened');
+    expect(reason({ cached: true })).toBe('cached');
+    expect(reason({ configured: false })).toBe('unconfigured');
+    expect(reason({ signedIn: false })).toBe('not_signed_in');
+    expect(reason({ needsReauth: true })).toBe('needs_reauth');
+    expect(reason({ aiLayout: false })).toBe('no_consent');
+    expect(reason({ breakerOpen: true })).toBe('breaker_open');
+  });
+
+  it('privacy gates come first, and hold for the dev planner too', () => {
+    const dev = { devPlanner: true, configured: false, signedIn: false };
+    expect(composeGate({ ...ready, ...dev, aiLayout: false })).toEqual({
+      call: true,
+    });
+    expect(reason({ ...dev, excludedSite: true })).toBe('excluded_site');
+    expect(reason({ ...dev, mailOrChat: true })).toBe('mail_or_chat');
+    expect(reason({ ...dev, sensitive: true })).toBe('sensitive_page');
+    expect(reason({ ...dev, checkout: true })).toBe('checkout');
+    expect(reason({ ...dev, breakerOpen: true })).toBe('breaker_open');
+    // Excluded beats everything, cached or not.
+    expect(reason({ excludedSite: true, cached: true, aiLayout: false })).toBe(
+      'excluded_site',
+    );
+    for (const r of ['excluded_site', 'no_consent', 'mail_or_chat'] as const)
+      expect(PLANNER_UNAVAILABLE.has(r)).toBe(true);
+    expect(PLANNER_UNAVAILABLE.has('cached')).toBe(false);
+    expect(PLANNER_UNAVAILABLE.has('not_opened')).toBe(false);
+  });
+
+  it('knows webmail and chat by host', () => {
+    for (const host of [
+      'mail.google.com',
+      'outlook.live.com',
+      'outlook.office.com',
+      'outlook.office365.com',
+      'mail.yahoo.com',
+      'mail.proton.me',
+      'web.whatsapp.com',
+      'www.messenger.com',
+      'messenger.com',
+      'discord.com',
+      'ptb.discord.com',
+      'acme.slack.com',
+      'app.slack.com',
+      'MAIL.GOOGLE.COM.',
+    ])
+      expect(isMailOrChat(host), host).toBe(true);
+    for (const host of [
+      'www.google.com',
+      'docs.google.com',
+      'yahoo.com',
+      'proton.me',
+      'whatsapp.com',
+      'notslack.com',
+      'example.com',
+    ])
+      expect(isMailOrChat(host), host).toBe(false);
   });
 });

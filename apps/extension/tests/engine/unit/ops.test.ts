@@ -30,7 +30,7 @@ import {
   levelValue,
   OPS,
 } from '../../../lib/engine/ops/registry';
-import { padBucket } from '../../../lib/engine/ops/targets';
+import { insetFor, padBucket } from '../../../lib/engine/ops/targets';
 import { ch, px, wordSpacingFor } from '../../../lib/engine/ops/text';
 import { fitParts, fitSpoken } from '../../../lib/engine/ui/layer';
 import { LAYER_TOKENS } from '../../../lib/engine/ui/styles';
@@ -267,6 +267,20 @@ describe('geometry: WCAG 2.5.8 spacing', () => {
     expect(padBucket(13)).toBe(12);
     expect(padBucket(100)).toBe(28);
   });
+
+  it('rounds an inset up to reach the size when the class has room', () => {
+    // Need 5 px beyond the border box: 6 px fits in 10, not in 5.
+    expect(insetFor(5, 10, 0)).toBe(6);
+    expect(insetFor(5, 5, 0)).toBe(4);
+    // A 1 px border is added back to the padding-box inset.
+    expect(insetFor(5, 10, 1)).toBe(6);
+    expect(insetFor(12, 12, 1)).toBe(12);
+    // Nothing needed: the inset only covers the border.
+    expect(insetFor(0, 20, 0)).toBe(0);
+    expect(insetFor(0, 20, 1)).toBe(1);
+    // Past the largest bucket: the largest within the room.
+    expect(insetFor(40, 40, 0)).toBe(28);
+  });
 });
 
 describe('copy helpers', () => {
@@ -336,6 +350,19 @@ describe('plans', () => {
       ['text_floor', 2],
       ['contrast', 0],
     ]);
+    // The page scale is the page view's: a plan without one keeps it, a
+    // step-down replaces it.
+    expect(merged.zoom).toBeUndefined();
+    expect(mergePlans({ ...prev, zoom: 1.5 }, next).zoom).toBe(1.5);
+    expect(
+      mergePlans({ ...prev, zoom: 1.5 }, { ...next, zoom: 1.25 }).zoom,
+    ).toBe(1.25);
+  });
+
+  it('words the page-scale toast for the Fit view offer beside it', () => {
+    expect(
+      __test.TOAST_LINE.page_zoom({ before: '100%', after: '150%' }, 1),
+    ).toBe('Made this page bigger for your fit.');
   });
 
   it('compares scopes by region set', () => {

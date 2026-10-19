@@ -14,6 +14,7 @@ import { createStores, type LocalStores } from '../storage';
 import { listLocalSites, resetRule, SiteStore } from '../storage/sites';
 import type { ChromePort } from './chrome';
 import { readConfig } from './config';
+import { ComposeInflight, FitViewStates } from './fitview';
 import { PageMemos } from './pages';
 import { TabRegistry } from './tabs';
 import { REASON_WINDOW_MS, UndoHold } from './undo';
@@ -92,6 +93,10 @@ function setup() {
       return 1;
     },
     async setZoom() {},
+    async releaseZoom() {},
+    async tabWidth() {
+      return 1280;
+    },
     async tabUrl() {
       return url;
     },
@@ -110,6 +115,9 @@ function setup() {
       injected.push(tabId);
       return true;
     },
+    async injectFitView() {
+      return true;
+    },
     async openTabs() {
       return [];
     },
@@ -120,6 +128,8 @@ function setup() {
     tabs: new TabRegistry(memoryArea()),
     pages: new PageMemos(memoryArea()),
     undos: new UndoHold(memoryArea()),
+    fitViews: new FitViewStates(memoryArea()),
+    inflight: new ComposeInflight(memoryArea(), clock.now),
     port,
     registration,
     auth: null,
@@ -179,6 +189,7 @@ describe('popup view contract', () => {
       userId: 'u1',
       email: 'a@b.co',
       cloudAnalysis: false,
+      aiLayout: false,
       productLearning: false,
       theme: 'system',
       onboardingStep: 'connected',

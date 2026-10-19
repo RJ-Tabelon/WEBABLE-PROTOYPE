@@ -91,6 +91,7 @@ export class AccountSync {
       userId,
       email,
       cloudAnalysis: samePerson ? previous.cloudAnalysis : false,
+      aiLayout: samePerson ? previous.aiLayout : false,
       productLearning: samePerson ? previous.productLearning : false,
       theme: samePerson ? previous.theme : 'system',
       onboardingStep: samePerson ? previous.onboardingStep : 'new',
@@ -183,7 +184,9 @@ export class AccountSync {
   ): Promise<{ account: AccountRecord | null; ok: boolean }> {
     const { data, error } = await this.db
       .from('accounts')
-      .select('cloud_analysis, product_learning, theme, onboarding_step')
+      .select(
+        'cloud_analysis, ai_layout, product_learning, theme, onboarding_step',
+      )
       .eq('user_id', userId)
       .maybeSingle();
     const account = await this.deps.stores.account.update((cur) => {
@@ -194,6 +197,7 @@ export class AccountSync {
               userId,
               email,
               cloudAnalysis: false,
+              aiLayout: false,
               productLearning: false,
               theme: 'system',
               onboardingStep: 'new',
@@ -209,6 +213,7 @@ export class AccountSync {
         ...base,
         email: email || base.email,
         cloudAnalysis: data.cloud_analysis,
+        aiLayout: data.ai_layout === true,
         productLearning: data.product_learning,
         theme,
         onboardingStep: data.onboarding_step,

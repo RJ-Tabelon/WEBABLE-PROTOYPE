@@ -19,6 +19,8 @@ export interface PageMemo {
   signals: PageSignals;
   evidence: PageEvidence;
   answers: KeyedAnswers | null;
+  /** WebAble's page scale in effect when the page was read (1 = none). */
+  scale?: number;
   /** Answer-cache keys for this page (component key -> HMAC key). */
   cacheKeys: {
     /** HMAC site key (tags cached answers for "Forget this site"). */
@@ -71,6 +73,7 @@ function fromStored(raw: unknown): PageMemo | null {
     id: s.id,
     signals: s.signals,
     evidence: s.evidence,
+    ...(typeof s.scale === 'number' && s.scale > 0 ? { scale: s.scale } : {}),
     cacheKeys: s.cacheKeys,
     answers: s.answers
       ? {

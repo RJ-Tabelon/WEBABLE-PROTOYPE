@@ -43,6 +43,22 @@ export default defineConfig({
       },
     },
     {
+      // v2 (docs/10): skeleton, Fit view and proxies on fixture pages. Each
+      // tests/v2/entries/<name>.ts is bundled by global-setup and served at
+      // /__v2/<name>.js; fixtures are served at /v2/<name>.html.
+      name: 'v2',
+      testDir: './tests/v2',
+      testMatch: /.*\.spec\.ts$/,
+      use: {
+        channel: channel === 'chromium' ? undefined : channel,
+        headless: true,
+        viewport: { width: 1280, height: 800 },
+        baseURL: 'http://127.0.0.1:4173',
+        colorScheme: 'light',
+        reducedMotion: 'no-preference',
+      },
+    },
+    {
       name: 'extension-build',
       testDir: './tests/e2e',
       testMatch: /build\.setup\.ts$/,

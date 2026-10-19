@@ -32,3 +32,6 @@ export const PLACE = 'this browser';
 
 /** The fit WebAble starts from before Tune: "WebAble is using a basic fit." */
 export const BASIC_FIT = 'basic fit';
+
+/** WebAble's own re-presentation of a page (docs/10 §4): "Open Fit view". */
+export const FIT_VIEW = 'Fit view';

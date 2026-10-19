@@ -43,7 +43,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @webable/extension exec playwright install --with-deps chromium
-      - run: pnpm --filter @webable/extension exec playwright test --project=engine
+      - run: pnpm --filter @webable/extension exec playwright test --project=engine --project=v2
         env:
           PW_CHANNEL: chromium
 

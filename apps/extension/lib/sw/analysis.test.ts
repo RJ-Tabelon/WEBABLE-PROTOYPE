@@ -343,7 +343,11 @@ describe('excluded sites', () => {
     const here = dirname(fileURLToPath(import.meta.url));
     const worker = readFileSync(join(here, 'worker.ts'), 'utf8');
     const uses = worker.match(/excludedSite:\s*([^,\n]+)/g) ?? [];
-    expect(uses).toEqual(['excludedSite: isExcludedSite(domain)']);
+    // Page analysis (G3) and layout planning both ask the list.
+    expect(uses.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(uses)).toEqual(
+      new Set(['excludedSite: isExcludedSite(domain)']),
+    );
     expect(isExcludedSite('chase.com')).toBe(true);
     expect(isExcludedSite('example.com')).toBe(false);
   });

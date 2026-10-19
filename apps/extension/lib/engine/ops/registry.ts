@@ -56,10 +56,22 @@ const readingGuide: OpImpl = {
   },
 };
 
-/** page_zoom is the service worker's (chrome.tabs.setZoom); nothing to do in the page. */
+/**
+ * page_zoom: the service worker zooms the tab (chrome.tabs.setZoom, docs/10
+ * §5.1); the page gets no CSS. The op reports the scale in effect so the
+ * change list, the toast and Undo cover it like any other change.
+ */
 const pageZoom: OpImpl = {
   id: 'page_zoom',
-  prepare: () => notNeeded('the service worker zooms the tab'),
+  prepare(env, value) {
+    const zoom = env.scale > 1.001 ? env.scale : value;
+    if (!(zoom > 1.001)) return notNeeded('no page scale for this page');
+    return {
+      status: 'ready',
+      count: 1,
+      fit: { before: '100%', after: `${Math.round(zoom * 100)}%` },
+    };
+  },
 };
 
 export const OPS: Readonly<Record<OpId, OpImpl>> = {
@@ -90,7 +102,10 @@ export function levelValue(op: OpId, level: number): number {
 
 /**
  * Rollback order when a failure cannot be attributed (engine.md 4.2):
- * riskiest layout ops first, then paint ops that can reorder stacking.
+ * riskiest layout ops first, then paint ops that can reorder stacking: every
+ * op whose block can move or cover content. layer.ts's measure mode removes
+ * the same set, plus calm_motion so reads see the page's own motion. page_zoom
+ * has no block: the service worker owns it and its zoom guard.
  */
 export const BISECT_ORDER: readonly OpId[] = [
   'text_floor',

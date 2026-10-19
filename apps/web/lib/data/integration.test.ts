@@ -83,6 +83,7 @@ describe.skipIf(!enabled)('data layer against the live project', () => {
       .update({
         onboarding_step: 'new',
         cloud_analysis: false,
+        ai_layout: false,
         product_learning: false,
         theme: 'system',
       })
@@ -131,7 +132,7 @@ describe.skipIf(!enabled)('data layer against the live project', () => {
     const account = await getAccount();
     expect(account).toMatchObject({
       ok: true,
-      data: { onboardingStep: 'new', cloudAnalysis: false },
+      data: { onboardingStep: 'new', cloudAnalysis: false, aiLayout: false },
     });
     const updated = await updateAccount({ cloudAnalysis: true, theme: 'dark' });
     expect(updated).toMatchObject({

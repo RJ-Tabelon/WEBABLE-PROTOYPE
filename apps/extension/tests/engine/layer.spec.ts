@@ -98,6 +98,43 @@ test.describe('in-page layer', () => {
     );
   });
 
+  test('the Fit view offer says "Simplify this page" on the toast (docs/11 §2)', async ({
+    page,
+  }, info) => {
+    await open(page, 'article');
+    expect(
+      await page.evaluate(() =>
+        window.__webableEngine.fitViewOffer(
+          'Made this page bigger for your fit.',
+          'This page is busy.',
+        ),
+      ),
+    ).toBe('toast');
+    await frames(page);
+    const layer = await page.evaluate(() => window.__webableEngine.layer());
+    expect(layer.toast?.buttons).toEqual([
+      'Close',
+      'Undo',
+      'Simplify this page',
+    ]);
+    expect(layer.live).toContain('You can also simplify this page.');
+    // The layer's shadow root is closed: the longer action is looked at in
+    // this screenshot (the toast's second row: Undo, Simplify this page).
+    await page.screenshot({
+      path: info.outputPath('fit-view-offer-toast.png'),
+    });
+    expect(
+      await page.evaluate(() =>
+        window.__webableEngine.press('Simplify this page'),
+      ),
+    ).toBe(true);
+    expect(
+      (await page.evaluate(() => window.__webableEngine.events())).map(
+        (e) => e.type,
+      ),
+    ).toContain('fitViewOpen');
+  });
+
   test('offer chip: held while typing, shown once idle, with a WebAble source line', async ({
     page,
   }) => {

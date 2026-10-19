@@ -12,7 +12,13 @@ test.describe('runtime', () => {
       (p) => window.__webableEngine.apply(p),
       plan([{ op: 'focus_outline' }]),
     );
+    // A document anchor: an element on the page has that id. (A bare name
+    // with no such element is a Gmail-style route, docs/10 §4.5.)
     await page.evaluate(() => {
+      const target = document.createElement('h2');
+      target.id = 'section';
+      target.textContent = 'A section heading';
+      document.querySelector('main')?.append(target);
       location.hash = '#section';
     });
     await page.waitForTimeout(700);
@@ -55,10 +61,15 @@ test.describe('runtime', () => {
       undefined,
       { timeout: 3000 },
     );
-    const count =
-      (await page.evaluate(() => window.__webableEngine.changes()))[0]?.count ??
-      0;
-    expect(count).toBeGreaterThanOrEqual(5);
+    // Counted once the debounced pass has checked them: two paragraphs, the
+    // heading and the button at first, then the three late items.
+    await expect
+      .poll(
+        async () =>
+          (await page.evaluate(() => window.__webableEngine.changes()))[0]
+            ?.count ?? 0,
+      )
+      .toBe(7);
   });
 
   test('SPA: a route change is reported once the DOM settles', async ({

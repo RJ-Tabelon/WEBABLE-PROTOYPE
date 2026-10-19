@@ -60,5 +60,36 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // The in-page engine and Fit view run on every page: no zod, no wire
+    // schemas (docs/10 §9). Validation happens in the service worker; types
+    // may still be imported.
+    files: [
+      'apps/extension/lib/engine/**/*.ts',
+      'apps/extension/entrypoints/*.content.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            { name: 'zod', message: 'No zod in content scripts.' },
+            {
+              name: '@webable/core',
+              allowTypeImports: true,
+              message: 'Import values from a zod-free @webable/core subpath.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['@webable/core/*/wire', '@webable/core/decide/*'],
+              allowTypeImports: true,
+              message: 'Wire schemas use zod; validate in the service worker.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   prettier,
 );
