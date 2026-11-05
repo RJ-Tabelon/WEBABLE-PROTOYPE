@@ -1,0 +1,11 @@
+# Jev vs gpt-6-sol: the two demo pages and 8 real pages across news, health, government, shopping, reference and recipes.
+http://127.0.0.1:41741/demo/alderra/refill.html?reset=1
+http://127.0.0.1:41741/demo/benefits/apply.html
+https://www.cnn.com/
+https://www.drugs.com/metformin.html
+https://www.mayoclinic.org/diseases-conditions/high-blood-pressure/symptoms-causes/syc-20373410
+https://www.irs.gov/
+https://www.medicare.gov/
+https://www.target.com/
+https://en.wikipedia.org/wiki/Gainesville,_Florida
+https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/

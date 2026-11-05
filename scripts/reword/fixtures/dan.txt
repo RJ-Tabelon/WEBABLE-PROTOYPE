@@ -1,0 +1,13 @@
+Based on our conversations, here's how you like things explained:
+
+1. Topics you know well: You work as a financial analyst, and you're fluent in tax and finance terminology: AGI, MAGI, marginal vs. effective rates, estimated payments, Form 1040 schedules, accrual vs. cash accounting, amortization, basis points, DCF models. You routinely use these terms yourself and never need them defined. You also know Excel and SQL well.
+
+2. Topics that are new to you: Medicine and biology. When we discussed a study on sleep, you asked what "cohort" and "confidence interval" meant in that specific context, and you wanted the clinical terms explained briefly but precisely.
+
+3. Shorter or more detail: You prefer precise detail over brevity. You've told me more than once "don't simplify this, I need the exact rule", and you ask for thresholds, dates, and exceptions to be stated exactly.
+
+4. Layout: You want the direct answer first, then the supporting detail. You've said "lead with the answer" when I opened with background. You're fine with dense paragraphs as long as they're accurate; you don't need bullet points.
+
+5. Pushback: You pushed back when I rounded numbers or paraphrased IRS rules loosely — you said a vague summary is worse than the original wording. You also dislike filler like "great question" and long introductions.
+
+6. Other: English is your first language, and you read long technical documents comfortably.

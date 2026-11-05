@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lakeshore County Family Services</title>
+<link rel="stylesheet" href="benefits.css">
+</head>
+<body>
+<div class="topbar"><div class="wrap topbar-row"><span>A Lakeshore County service · Demo site, not a real agency</span></div></div>
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="brand" href="apply.html">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="21" fill="#1B3A5C"/><circle cx="22" cy="22" r="17" fill="none" stroke="#F2B134" stroke-width="1.5"/><path d="M9 26c4.5-3.5 8.5-3.5 13 0s8.5 3.5 13 0" stroke="#7FB8E6" stroke-width="2.2" fill="none"/><circle cx="22" cy="16" r="5" fill="#F2B134"/></svg>
+      <span class="brand-text"><span class="brand-name">Lakeshore County</span><span class="brand-sub">Family Services</span></span>
+    </a>
+  </div>
+</header>
+<div class="wrap">
+  <main class="info-main" id="main">
+    <p class="eyebrow">Demo site</p>
+    <h1 data-info-title>This page isn't part of the demo</h1>
+    <p>Lakeshore County Family Services is a fictional site built to show how WebAble handles a long form with popups. Only the application page works.</p>
+    <a class="btn btn-primary" href="apply.html">← Back to the application</a>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="wrap footer-row">
+    <p class="footer-disclaimer">Lakeshore County Family Services is a fictional demo site built for Gator Hack V. No real applications are sent.</p>
+  </div>
+</footer>
+<script>
+  (function () {
+    var p = new URLSearchParams(location.search).get('p') || '';
+    var words = p.replace(/[^a-z0-9-]/gi, '').split('-').filter(Boolean);
+    if (!words.length) return;
+    var name = words.join(' ');
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    document.querySelector('[data-info-title]').textContent = name + " isn't part of the demo";
+    document.title = name + ' | Lakeshore County Family Services';
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# Vercel link and prebuilt output (scripts/build-vercel.mjs)
+.vercel
+.env*

@@ -1,0 +1,68 @@
+{
+  "demo": [
+    {
+      "name": "alderra-refill",
+      "url": "http://127.0.0.1:41741/demo/alderra/refill.html?reset=1",
+      "note": "Main demo: tiny grey Confirm refill below the fold, carousel, upsells, cookie banner, chat at 4 s.",
+      "settleMs": 5500
+    },
+    {
+      "name": "benefits-apply",
+      "url": "http://127.0.0.1:41741/demo/benefits/apply.html",
+      "note": "Session-timeout warning (keep_popup) and a survey popup (fold).",
+      "settleMs": 2500
+    }
+  ],
+  "real": [
+    {
+      "name": "cnn-home",
+      "url": "https://www.cnn.com/",
+      "note": "Wide news home page: at high zoom it fills the screen edge to edge (Caden's 3.webp). Survey and ad chips at the bottom right. A fresh profile gets a Legal Terms gate: the harness hides it for the shots (never clicks Agree).",
+      "settleMs": 7000,
+      "evalHide": ["Legal Terms and Privacy"],
+      "evalHideBlocks": [["DRM System Not Supported", "Help Center"]]
+    },
+    {
+      "name": "drugs-metformin",
+      "url": "https://www.drugs.com/metformin.html",
+      "note": "186 controls, 74% under 24 px; 403 to the HeadlessChrome user agent.",
+      "settleMs": 6000
+    },
+    {
+      "name": "wcjb",
+      "url": "https://www.wcjb.com/",
+      "note": "Local news: 262 controls, 24 ad slots, sticky ads.",
+      "settleMs": 6000
+    },
+    {
+      "name": "fpl",
+      "url": "https://www.fpl.com/",
+      "note": "Storm banner, region-picker modal, cookie notice. Never dismiss the modal automatically.",
+      "settleMs": 6000
+    },
+    {
+      "name": "cvs-pharmacy",
+      "url": "https://www.cvs.com/pharmacy",
+      "note": "Cookie banner 17%, three refill links. Bot protection can challenge automated loads.",
+      "settleMs": 6000
+    },
+    {
+      "name": "walgreens-refill",
+      "url": "https://www.walgreens.com/rx-checkout/guest-express-refill",
+      "note": "Continue button below the fold, chat widget. Never submit the form.",
+      "settleMs": 6000
+    },
+    {
+      "name": "disasterassistance",
+      "url": "https://www.disasterassistance.gov/",
+      "note": "Alert slide-in, chat bubble, stacked sticky bars. Help and chat must stay.",
+      "settleMs": 6000
+    },
+    {
+      "name": "fl-dcf-snap",
+      "url": "https://www.myflfamilies.com/services/public-assistance/supplemental-nutrition-assistance-program-snap",
+      "note": "Banner and hero fill the first screen.",
+      "settleMs": 6000
+    }
+  ]
+}

@@ -1,40 +1,25 @@
 {
   "name": "@webable/extension",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "wxt build",
     "dev": "wxt",
+    "build": "wxt build",
     "postinstall": "wxt prepare",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "wxt build --mode e2e && playwright test",
-    "typecheck": "tsc --noEmit",
-    "zip": "wxt zip"
+    "test": "vitest run --passWithNoTests",
+    "typecheck": "tsc -p . --noEmit"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.2",
     "@webable/core": "workspace:*",
-    "@webable/tokens": "workspace:*",
-    "@webable/ui": "workspace:*",
-    "lucide-react": "1.48.0",
-    "react": "19.3.0",
-    "react-aria-components": "1.21.1",
-    "react-dom": "19.3.0"
+    "lucide": "1.61.0",
+    "preact": "10.29.8"
   },
   "devDependencies": {
-    "@axe-core/playwright": "^4.10.2",
-    "@playwright/test": "^1.63.0",
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
-    "@wxt-dev/module-react": "^1.2.2",
-    "axe-core": "^4.10.3",
-    "jsdom": "^27.0.0",
-    "typescript": "^5.9.2",
-    "vite": "^8.3.0",
-    "vitest": "^5.0.1",
-    "web-ext": "^10.7.0",
-    "wxt": "^0.21.4"
+    "@playwright/test": "1.64.1",
+    "@preact/preset-vite": "2.10.6",
+    "@types/chrome": "0.3.6",
+    "happy-dom": "21.0.4",
+    "wxt": "0.21.4"
   }
 }

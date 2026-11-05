@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebAble</title>
+<meta name="description" content="A Chrome extension that fits every website to the person using it, without asking what's wrong with you.">
+<link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
+<link rel="apple-touch-icon" href="brand/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@700&family=Atkinson+Hyperlegible+Next:wght@400;700&display=swap">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+
+<header class="top">
+  <div class="wrap top-row">
+    <a class="brand" href="./" aria-label="WebAble home">
+      <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="brand/logo-white.svg">
+        <img src="brand/logo.svg" width="44" height="30" alt="">
+      </picture>
+      <span>WebAble</span>
+    </a>
+    <nav aria-label="On this page">
+      <a href="#what">What it does</a>
+      <a href="#try">Try it</a>
+      <a href="#demos">Demo websites</a>
+      <a href="https://github.com/RJ-Tabelon/WEBABLE-PROTOYPE">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+  <section class="hero wrap">
+    <p class="kicker">A Chrome extension</p>
+    <h1>Fits every website to the person using it, without asking what's wrong with you.</h1>
+    <p class="lede">Accessibility standards are fixed. People aren't. WebAble learns what gets in your way on the web, like small text, faint words, small buttons, busy pages and hard paragraphs. Then it changes every page to fit you.</p>
+    <div class="actions">
+      <a class="button primary" href="webable-extension.zip" download>Download the extension</a>
+      <a class="button" href="https://github.com/RJ-Tabelon/WEBABLE-PROTOYPE">See the code</a>
+    </div>
+    <p class="small">Free and open source. Needs Chrome 135 or newer, and WebAble's server running on your own computer. <a href="#try">How to set it up</a>.</p>
+    <figure class="shot hero-shot">
+      <img src="images/webable-page.png" width="1600" height="1000" alt="A real government page about credit scores, laid out by WebAble: an icon grid of the four things that affect a score, a list of plain definitions, and number tiles for the score range">
+      <figcaption>A real page from consumerfinance.gov, the US government's consumer finance agency, laid out by WebAble for someone who is new to money terms and likes short steps.</figcaption>
+    </figure>
+  </section>
+
+  <section id="what" class="band">
+    <div class="wrap">
+      <p class="kicker">What it does</p>
+      <h2>Four things, on every page</h2>
+      <div class="features">
+        <article class="feature">
+          <img src="images/results.png" width="1600" height="1000" loading="lazy" alt="Results: what WebAble took from the person's AI answer, each point with a quote and an on/off switch, next to a chart of what gets in their way">
+          <h3>1. Learns how you read</h3>
+          <p>A short setup measures a comfortable text size, whether faint words are hard to see, how precisely you click, and how much busy pages slow you down, on three real websites. Then it asks the AI assistant you already use how you like things explained.</p>
+        </article>
+        <article class="feature">
+          <img src="images/rewritten-in-place.png" width="1600" height="1000" loading="lazy" alt="A page with three paragraphs rewritten in place, each marked with a thin green line; one became a bulleted list">
+          <h3>2. Rewrites hard paragraphs for you</h3>
+          <p>Jev, a fast decision model, scores each paragraph: is it harder than it needs to be for you? The ones it picks are rewritten in place, with a thin green line beside them. Click the line to see the original.</p>
+        </article>
+        <article class="feature">
+          <img src="images/webable-page-top.png" width="1600" height="1000" loading="lazy" alt="The WebAble page for a credit score article: rewritten paragraphs, a bulleted list and the start of an icon grid">
+          <h3>3. Lays out reading pages the way you like</h3>
+          <p>Busy reading pages become a clean page built from the site's own content: steps, key facts, number tiles, tables and definitions. The page's links still work, and any section can go back to the page's own words.</p>
+        </article>
+        <article class="feature">
+          <img src="images/jev-view.png" width="1600" height="1000" loading="lazy" alt="The Jev view: 175 decisions in 534 milliseconds for $0.0038, with role labels on page elements and a side panel listing each paragraph">
+          <h3>4. Shows its work</h3>
+          <p>The Jev view shows every decision on the page, what it cost and how long it took. Every change is checked first. Anything that breaks the page, drops a number or adds a claim is undone.</p>
+        </article>
+      </div>
+      <p class="also">It also fits text size, contrast, click areas and motion in place on every site.</p>
+    </div>
+  </section>
+
+  <section class="wrap">
+    <p class="kicker">What we've measured</p>
+    <h2>Numbers from automated test runs</h2>
+    <ul class="stats">
+      <li><strong>32 of 50</strong><span>popular sites got larger text with nothing left broken</span></li>
+      <li><strong>22</strong><span>of its own changes undone on 15 sites, after a check failed</span></li>
+      <li><strong>430 ms</strong><span>median time for Jev to read a page, at $0.0034 a page</span></li>
+      <li><strong>125</strong><span>kinds of page element, with 86–92% accuracy on pages it was never tuned on</span></li>
+    </ul>
+    <p class="small">These come from our own runs on real sites and from simulations, not from tests with people. The details and how to run them again are in <a href="https://github.com/RJ-Tabelon/WEBABLE-PROTOYPE/blob/main/docs/CLAIMS.md">docs/CLAIMS.md</a>.</p>
+  </section>
+
+  <section id="try" class="band">
+    <div class="wrap">
+      <p class="kicker">Try it</p>
+      <h2>Set it up on your computer</h2>
+      <p class="lede narrow">WebAble has two parts: the Chrome extension, and a small server that runs on your computer. The server holds the API keys and talks to the AI models. There's no hosted version yet.</p>
+      <ol class="steps">
+        <li>
+          <h3>Get the code and the keys</h3>
+          <p>You'll need Node 24, pnpm 10, Google Chrome, a TypeSafe API key for Jev and an OpenAI API key.</p>
+          <pre><code>git clone https://github.com/RJ-Tabelon/WEBABLE-PROTOYPE.git webable
+cd webable
+pnpm install</code></pre>
+        </li>
+        <li>
+          <h3>Add your keys</h3>
+          <p>Create a file called <code>.env</code> in the folder:</p>
+          <pre><code>TYPESAFE_API_KEY=your-typesafe-key
+OPENAI_API_KEY=your-openai-key
+OPENAI_BUDGET_USD=15</code></pre>
+        </li>
+        <li>
+          <h3>Start the server</h3>
+          <pre><code>pnpm dev:server</code></pre>
+          <p>It answers only on your own computer, at <code>127.0.0.1:41741</code>.</p>
+        </li>
+        <li>
+          <h3>Add the extension to Chrome</h3>
+          <p><a href="webable-extension.zip" download>Download the extension</a> and unzip it, or build it with <code>pnpm --filter @webable/extension build</code>. Open <code>chrome://extensions</code>, turn on <strong>Developer mode</strong>, click <strong>Load unpacked</strong> and pick the unzipped folder. The setup opens in a new tab.</p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section id="demos" class="wrap">
+    <p class="kicker">Demo websites</p>
+    <h2>Two made-up websites that are hard to use on purpose</h2>
+    <p class="lede narrow">They're plain HTML, CSS and JavaScript, with nothing written for WebAble. Open them with WebAble on, then off, and compare.</p>
+    <div class="demos">
+      <a class="demo" href="demo/alderra/refill.html">
+        <span class="tag">Main demo</span>
+        <h3>Alderra Pharmacy: refill a prescription</h3>
+        <p>The real action, "Confirm refill", is a small grey button below a loud "Continue shopping". There's a carousel that never stops, upsells inside the form, tiny grey fine print and a chat window that opens by itself.</p>
+        <span class="go">Open the refill page →</span>
+      </a>
+      <a class="demo" href="demo/benefits/apply.html">
+        <span class="tag">Popups</span>
+        <h3>Lakeshore County: apply for benefits</h3>
+        <p>A long form with a session-timeout warning that has to stay on screen, and a survey popup that can be put away.</p>
+        <span class="go">Open the application →</span>
+      </a>
+    </div>
+    <p class="small">More options for each page are on the <a href="demo/">demo index</a>.</p>
+  </section>
+
+  <section class="band">
+    <div class="wrap two">
+      <div>
+        <p class="kicker">Privacy</p>
+        <h2>What it learns about you stays on your computer</h2>
+      </div>
+      <ul class="plain">
+        <li>Your settings, and what WebAble learns as you browse, live in Chrome's own storage on your computer.</li>
+        <li>To read a page, Jev gets only the page's structure: roles, sizes and positions, with interface labels like "Search" or "Next".</li>
+        <li>To rewrite or lay out a page, that page's paragraph text and the points you left switched on go to the server and the models.</li>
+        <li>WebAble never rewrites pages with password or payment fields, or mail, chat and banking sites.</li>
+        <li>It never names or guesses a condition. It talks about what gets in your way, not about you.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="wrap two team">
+    <div>
+      <p class="kicker">Team</p>
+      <h2>Who builds WebAble</h2>
+    </div>
+    <div>
+      <p>WebAble is our CIS 4914 senior project at the University of Florida.</p>
+      <ul class="names">
+        <li>Caden Shokat</li>
+        <li>RJ Tabelon</li>
+        <li>Katie Boetig</li>
+        <li>Fernando Fiallos</li>
+        <li>Belal Mansour</li>
+      </ul>
+      <p class="small">Advisor: Dr. Dung Tran. This version of WebAble started at Gator Hack V, UF's AI Days hackathon, in October 2026.</p>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>WebAble uses Jev by TypeSafe AI and models from OpenAI. Icons from <a href="https://lucide.dev">Lucide</a>. The screenshots show public US government pages (consumerfinance.gov). Made-up names on the demo websites are not real businesses.</p>
+  </div>
+</footer>
+</body>
+</html>

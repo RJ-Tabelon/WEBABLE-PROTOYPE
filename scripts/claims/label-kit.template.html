@@ -1,0 +1,509 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebAble labels</title>
+<!-- Built by scripts/claims/label-kit.mjs. Self-contained: open by double-clicking; pictures load from ./images. -->
+<style>
+:root {
+  --bg: #f5f5f7; --card: #ffffff; --ink: #1d1d1f; --muted: #6e6e73; --line: #d2d2d7; --blue: #0071e3;
+  --yes: #1f7a3a; --no: #3a3a3c; --cant: #b25e00; --red: #ff1a1a; --focus: rgba(0, 113, 227, 0.18);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--ink); font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+button { font: inherit; color: inherit; cursor: pointer; }
+kbd { display: inline-block; min-width: 1.6em; padding: 0 0.35em; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px;
+  background: #fff; color: var(--muted); font: 600 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; text-align: center; }
+.muted { color: var(--muted); }
+.hidden { display: none !important; }
+
+header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 16px; height: 60px; padding: 0 20px;
+  background: rgba(255, 255, 255, 0.92); backdrop-filter: saturate(180%) blur(12px); border-bottom: 1px solid var(--line); }
+header .brand { font-weight: 600; white-space: nowrap; }
+header .prog { flex: 1; min-width: 160px; }
+header .prog .where { font-weight: 600; }
+header .bar { height: 6px; margin-top: 4px; border-radius: 3px; background: #e8e8ed; overflow: hidden; }
+header .bar > div { height: 100%; width: 0; background: var(--blue); transition: width 0.2s; }
+header .tools { display: flex; gap: 8px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+.btn:hover { border-color: #a1a1a6; }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn.big { min-height: 56px; padding: 0 22px; font-size: 18px; border-radius: 14px; }
+.btn:focus-visible, .ans:focus-visible, .hs:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.warn { margin: 12px 20px 0; padding: 10px 14px; border-radius: 10px; background: #fff4e5; border: 1px solid #f5c37a; }
+
+main { padding: 16px 20px 20px; }
+
+/* intro and finish */
+.sheet { max-width: 760px; margin: 24px auto; padding: 32px 36px; background: var(--card); border-radius: 18px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.sheet h1 { margin: 0 0 12px; font-size: 30px; line-height: 1.15; letter-spacing: -0.01em; }
+.sheet ol { padding-left: 1.3em; font-size: 18px; }
+.sheet li { margin: 8px 0; }
+.sheet .row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+.dl.done { background: var(--yes); border-color: var(--yes); color: #fff; }
+.linkish { border: 0; background: none; padding: 0; color: var(--blue); text-decoration: underline; }
+
+/* element view */
+.el { display: grid; grid-template-columns: 190px minmax(0, 1fr) 420px; gap: 18px; height: calc(100vh - 96px); min-height: 560px; }
+.panel { background: var(--card); border-radius: 16px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); }
+.map { display: flex; flex-direction: column; overflow: hidden; }
+.map .cap { padding: 10px 12px 6px; font-size: 13px; color: var(--muted); }
+.map .scroll { position: relative; flex: 1; overflow: auto; padding: 0 12px 12px; }
+.map .inner { position: relative; cursor: zoom-in; }
+.map img { display: block; width: 100%; border: 1px solid var(--line); }
+.mark { position: absolute; border: 2px solid var(--red); background: rgba(255, 26, 26, 0.22); box-shadow: 0 0 0 1px #fff; min-width: 8px; min-height: 8px; pointer-events: none; }
+.mark.pin::before { content: ""; position: absolute; left: -12px; top: 50%; width: 8px; height: 2px; background: var(--red); }
+.center { display: flex; flex-direction: column; min-height: 0; padding: 16px; gap: 12px; }
+.crop { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #ececf0; border-radius: 12px; overflow: hidden; }
+.crop img { display: block; width: 100%; height: 100%; object-fit: contain; cursor: zoom-in; }
+.crop .none { padding: 24px; text-align: center; color: var(--muted); font-size: 17px; max-width: 520px; }
+.facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; font-size: 15px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.facts .says { font-size: 17px; font-weight: 500; }
+.note { padding: 8px 12px; border-radius: 10px; background: #fff4e5; font-size: 14px; }
+.qs { display: flex; flex-direction: column; gap: 12px; padding: 14px; overflow: auto; }
+.q { padding: 14px; border: 2px solid transparent; border-radius: 14px; background: #fafafc; }
+.q.active { border-color: var(--blue); background: #fff; box-shadow: 0 0 0 4px var(--focus); }
+.q h3 { margin: 0 0 4px; font-size: 18px; line-height: 1.3; }
+.q h3 .n { color: var(--muted); font-weight: 500; margin-right: 6px; }
+.q p { margin: 0 0 10px; font-size: 13.5px; color: var(--muted); }
+.q .opts { display: grid; grid-template-columns: 1fr 1fr 1.25fr; gap: 8px; }
+.ans { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 54px; border: 1.5px solid var(--line); border-radius: 12px; background: #fff; font-size: 18px; font-weight: 600; }
+.ans:hover { border-color: #86868b; }
+.ans kbd { font-size: 12px; }
+.ans.on.y { background: var(--yes); border-color: var(--yes); color: #fff; }
+.ans.on.n { background: var(--no); border-color: var(--no); color: #fff; }
+.ans.on.c { background: var(--cant); border-color: var(--cant); color: #fff; }
+.ans.on kbd { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.6); }
+.keys { font-size: 13px; color: var(--muted); line-height: 2; }
+.navrow { display: flex; gap: 8px; }
+.navrow .btn { flex: 1; justify-content: center; }
+
+/* page view */
+.pg { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 18px; height: calc(100vh - 96px); min-height: 560px; }
+.shot { overflow: auto; padding: 12px; }
+.shot .inner { position: relative; max-width: 1100px; margin: 0 auto; }
+.shot img { display: block; width: 100%; border: 1px solid var(--line); }
+.hs { position: absolute; padding: 0; border: 0; background: transparent; border-radius: 3px; }
+.hs:hover { background: rgba(0, 113, 227, 0.15); box-shadow: 0 0 0 2px var(--blue); }
+.hs.sel { background: rgba(255, 26, 26, 0.18); box-shadow: 0 0 0 3px var(--red); }
+.pq { display: flex; flex-direction: column; gap: 14px; padding: 20px; overflow: auto; }
+.pq h2 { margin: 0; font-size: 22px; line-height: 1.25; }
+.pq .site { font-size: 15px; }
+.pq input[type=text] { width: 100%; min-height: 52px; padding: 0 14px; border: 1.5px solid var(--line); border-radius: 12px; font: inherit; font-size: 18px; }
+.pq input[type=text]:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 4px var(--focus); }
+.pq .chosen { font-size: 15px; }
+
+/* full-page viewer */
+.viewer { position: fixed; inset: 0; z-index: 20; display: flex; flex-direction: column; background: rgba(20, 20, 22, 0.94); }
+.viewer .btn { color: var(--ink); }
+.viewer .top { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; color: #fff; }
+.viewer .scroll { flex: 1; overflow: auto; padding: 0 16px 16px; }
+.viewer .inner { position: relative; width: min(1280px, 100%); margin: 0 auto; }
+.viewer img { display: block; width: 100%; }
+.viewer .mark { border-width: 4px; background: transparent; box-shadow: 0 0 0 2px #fff, 0 0 0 9999px rgba(0, 0, 0, 0.25); }
+
+@media (max-height: 860px) {
+  .qs { gap: 8px; padding: 10px; }
+  .q { padding: 10px 12px; }
+  .q h3 { font-size: 16.5px; }
+  .q p { font-size: 12.5px; margin-bottom: 8px; }
+  .ans { min-height: 46px; font-size: 17px; }
+  .keys { line-height: 1.8; font-size: 12px; }
+}
+@media (max-width: 1150px) {
+  .el { grid-template-columns: minmax(0, 1fr) 380px; }
+  .el .map { display: none; }
+  .pg { grid-template-columns: minmax(0, 1fr) 340px; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">WebAble labels</div>
+  <div class="prog"><div><span class="where" id="where"></span> <span class="muted" id="counts"></span></div><div class="bar"><div id="bar"></div></div></div>
+  <div class="tools">
+    <button class="btn" id="hBack" title="Back (← key)">← Back</button>
+    <button class="btn" id="hSkip" title="Skip (→ key)">Skip →</button>
+    <button class="btn primary" id="hFinish">Finish &amp; download CSV</button>
+  </div>
+</header>
+<div class="warn hidden" id="noSave">This browser won't keep your answers by itself. Press <b>Finish &amp; download CSV</b> before you close this page.</div>
+<main id="view"></main>
+<div class="viewer hidden" id="viewer">
+  <div class="top"><span id="vTitle"></span><button class="btn" id="vClose">Close <kbd>Esc</kbd></button></div>
+  <div class="scroll" id="vScroll"><div class="inner"><img id="vImg" alt=""><div class="mark" id="vMark"></div></div></div>
+</div>
+<script id="kit" type="application/json">/*__KIT_DATA__*/null</script>
+<script>
+'use strict';
+const KIT = JSON.parse(document.getElementById('kit').textContent || 'null');
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const view = $('view');
+
+if (!KIT) { view.innerHTML = '<div class="sheet"><h1>No labels in this file</h1><p>Build it with scripts/claims/label-kit.mjs.</p></div>'; throw new Error('no kit data'); }
+
+const ROWS = KIT.rows;                       // to-label.csv rows, in the sheet's (shuffled) order
+const PAGES = KIT.pages;                     // pages-blind.csv rows
+const SHOTS = KIT.shots || {};
+const QUESTIONS = [
+  { h: 'Is this an ad, a promotion, a teaser for other content, or a popup?',
+    p: 'Yes for ads, sales and offers, “you may also like” or links to other stories and products, sign-up, cookie or survey popups. No for menus and the page’s own content.' },
+  { h: 'Is this a way to get help or contact someone?',
+    p: 'Yes for phone numbers, chat, “Contact us”, help, FAQ or customer service.' },
+  { h: 'Does someone need this to do the page’s main task?', p: '' },
+];
+const CODE = { y: 'y', n: 'n', c: '?' };      // what the CSV gets: y / n / ? (can't tell; score.mjs skips it)
+const SEQ = [...PAGES.map((_, i) => ({ kind: 'page', i })), ...ROWS.map((_, i) => ({ kind: 'el', i }))];
+const keyOf = (r) => `${r[0]}|${r[2]}`;
+
+/* ---------- saved answers (localStorage, best effort) ---------- */
+const STORE = `webable-labels:${KIT.kit}`;
+let canSave = true;
+let S = { v: 1, pos: -1, el: {}, pg: {} };
+try {
+  const raw = localStorage.getItem(STORE);
+  if (raw) { const got = JSON.parse(raw); if (got && got.v === 1) S = { ...S, ...got }; }
+  localStorage.setItem(`${STORE}:probe`, '1'); localStorage.removeItem(`${STORE}:probe`);
+} catch { canSave = false; }
+// Answers already in the sheets count as a starting point (only where nothing is saved here).
+ROWS.forEach((r) => { const k = keyOf(r); if (!S.el[k]) { const a = [r[7], r[8], r[9]].map(fromCsv); if (a.some(Boolean)) S.el[k] = a; } });
+PAGES.forEach((p) => { if (S.pg[p[0]] == null && p[2]) S.pg[p[0]] = p[2]; });
+function fromCsv(v) { v = String(v || '').trim().toLowerCase(); return v.startsWith('y') ? 'y' : v.startsWith('n') ? 'n' : v.startsWith('?') || v.startsWith('c') ? 'c' : ''; }
+function save() {
+  if (!canSave) return;
+  try { localStorage.setItem(STORE, JSON.stringify(S)); } catch { canSave = false; $('noSave').classList.remove('hidden'); }
+}
+if (!canSave) $('noSave').classList.remove('hidden');
+
+const answersOf = (i) => S.el[keyOf(ROWS[i])] || ['', '', ''];
+const complete = (i) => answersOf(i).every(Boolean);
+const elDone = () => ROWS.reduce((n, _, i) => n + (complete(i) ? 1 : 0), 0);
+const pgDone = () => PAGES.reduce((n, p) => n + (S.pg[p[0]] ? 1 : 0), 0);
+
+/* ---------- CSV out: the exact sheets score.mjs reads ---------- */
+const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+const toCsv = (rows) => `${rows.map((r) => r.map(q).join(',')).join('\n')}\n`;
+function download(name, text) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+}
+const elementCsv = () => toCsv([KIT.head, ...ROWS.map((r, i) => [...r.slice(0, 7), ...answersOf(i).map((a) => CODE[a] || '')])]);
+const pagesCsv = () => toCsv([KIT.pagesHead, ...PAGES.map((p) => [p[0], p[1], S.pg[p[0]] || ''])]);
+
+/* ---------- helpers ---------- */
+const shotOf = (page) => SHOTS[page] || null;
+function pageName(page) {
+  const s = shotOf(page);
+  const url = (PAGES.find((p) => p[0] === page) || ROWS.find((r) => r[0] === page) || [])[1] || '';
+  let host = s?.host || '';
+  try { host = host || new URL(url).host; } catch {}
+  return { title: s?.title || host || page, host };
+}
+const KIND = { a: 'link', button: 'button', input: 'text box', select: 'drop-down list', textarea: 'text box', img: 'picture', iframe: 'embedded frame',
+  nav: 'menu', li: 'list item', ul: 'list', ol: 'list', form: 'form', summary: 'heading that opens', details: 'section that opens', h1: 'heading', h2: 'heading',
+  h3: 'heading', h4: 'heading', p: 'text', header: 'top of the page', footer: 'bottom of the page', aside: 'side box', dialog: 'popup box', video: 'video', label: 'text' };
+function kindOf(tag, role, type) {
+  if (tag === 'input' && /^(submit|button|reset|image)$/.test(type)) return 'button';
+  if (tag === 'input' && /^(checkbox|radio)$/.test(type)) return type === 'radio' ? 'choice' : 'checkbox';
+  if (role === 'button') return 'button';
+  if (role === 'link') return 'link';
+  if (role === 'dialog' || role === 'alertdialog') return 'popup box';
+  return KIND[tag] || 'area';
+}
+function placeMark(mark, rect, w, h) {
+  if (!rect) { mark.classList.add('hidden'); return null; }
+  mark.classList.remove('hidden');
+  const y = Math.min(Math.max(rect[1], 0), h - 6);
+  mark.style.left = `${(Math.max(rect[0], 0) / w) * 100}%`;
+  mark.style.top = `${(y / h) * 100}%`;
+  mark.style.width = `${(Math.max(6, Math.min(rect[2], w - Math.max(rect[0], 0))) / w) * 100}%`;
+  mark.style.height = `${(Math.max(6, Math.min(rect[3], h - y)) / h) * 100}%`;
+  return y / h;
+}
+
+/* ---------- header ---------- */
+function header() {
+  const it = SEQ[S.pos];
+  $('where').textContent = !it ? (S.pos < 0 ? 'Start' : 'Finish') : it.kind === 'page' ? `Page ${it.i + 1} of ${PAGES.length}` : `Part ${it.i + 1} of ${ROWS.length}`;
+  const d = elDone(), p = pgDone();
+  $('counts').textContent = `· ${p} of ${PAGES.length} pages · ${d} of ${ROWS.length} parts done`;
+  $('bar').style.width = `${((p + d) / Math.max(1, PAGES.length + ROWS.length)) * 100}%`;
+  $('hBack').disabled = S.pos < 0;
+  $('hSkip').disabled = !it;
+}
+
+/* ---------- screens ---------- */
+let render = () => {};
+let activeQ = 0;
+let elTimer = null;
+
+function go(pos) {
+  clearTimeout(elTimer);
+  S.pos = Math.max(-1, Math.min(SEQ.length, pos));
+  save();
+  window.scrollTo(0, 0);
+  const it = SEQ[S.pos];
+  if (S.pos < 0) intro();
+  else if (!it) finish();
+  else if (it.kind === 'page') pageQuestion(it.i);
+  else element(it.i);
+  header();
+}
+const next = () => go(S.pos + 1);
+const back = () => go(S.pos - 1);
+
+function intro() {
+  render = () => {};
+  view.innerHTML = `<div class="sheet">
+    <h1>Label parts of web pages</h1>
+    <p class="muted">${PAGES.length} pages, then ${ROWS.length} parts of them. About 90 minutes. Go with your first impression.</p>
+    <ol>
+      <li>First, for each page: <b>click its main button</b> in the picture (what people come to the page to do), or press <b>None</b>.</li>
+      <li>Then, one part at a time (it has a <b style="color:#d00">red box</b>): answer three questions with <kbd>Y</kbd> yes, <kbd>N</kbd> no or <kbd>C</kbd> can’t tell. It moves on by itself.</li>
+      <li>Made a mistake? Press <kbd>←</kbd> to go back. Not sure at all? <kbd>C</kbd> is fine.</li>
+      <li>Click the small page picture on the left to see the whole page.</li>
+      <li>Your answers save in this browser as you go, so you can close it and come back.</li>
+      <li>At the end press <b>Finish &amp; download CSV</b> and send Caden both files.</li>
+    </ol>
+    <div class="row"><button class="btn primary big" id="start">${S.pos >= 0 || pgDone() || elDone() ? 'Continue' : 'Start'} <kbd style="background:transparent;color:#fff">Enter</kbd></button></div>
+  </div>`;
+  $('start').onclick = () => go(firstOpen());
+  $('start').focus();
+}
+
+function firstOpen() {
+  for (let k = 0; k < SEQ.length; k++) {
+    const it = SEQ[k];
+    if (it.kind === 'page' ? !S.pg[PAGES[it.i][0]] : !complete(it.i)) return k;
+  }
+  return SEQ.length;
+}
+
+function pageQuestion(i) {
+  const [page, url] = PAGES[i];
+  const s = shotOf(page);
+  const { title, host } = pageName(page);
+  const labels = [...new Set((s?.hotspots || []).map((h) => h[4]))];
+  view.innerHTML = `<div class="pg">
+    <div class="panel shot" id="shot">${s ? `<div class="inner" id="inner"><img src="${esc(s.img.page)}" alt="The whole page"></div>` : `<div class="crop"><div class="none">No picture of this page. Type its main button’s words, or press None.<br><br>${esc(url)}</div></div>`}</div>
+    <div class="panel pq">
+      <div class="muted">Page ${i + 1} of ${PAGES.length}</div>
+      <div class="site"><b>${esc(title)}</b><br><span class="muted">${esc(host)}</span></div>
+      <h2>What is the main thing people come to this page to do?</h2>
+      <p class="muted" style="margin:0">Click that button or link in the picture. Can’t find it? Type its words. If the page has no main button, press None.</p>
+      ${s && s.popupsHidden ? '<div class="note">Popups and bars that float over the page (cookie notices, chat buttons) are left out of this picture.</div>' : ''}
+      <input type="text" id="ans" list="labels" autocomplete="off" placeholder="Click it in the picture, or type here">
+      <datalist id="labels">${labels.map((l) => `<option value="${esc(l)}">`).join('')}</datalist>
+      <div class="chosen" id="chosen"></div>
+      <div class="navrow"><button class="btn big" id="none">None</button><button class="btn big primary" id="pnext">Next <kbd style="background:transparent;color:#fff">Enter</kbd></button></div>
+      <div class="navrow"><button class="btn" id="pback">← Back</button><button class="btn" id="pskip">Skip →</button></div>
+    </div></div>`;
+  const ans = $('ans');
+  ans.value = S.pg[page] || '';
+  const set = (v) => {
+    ans.value = v;
+    if (v.trim()) S.pg[page] = v.trim(); else delete S.pg[page];
+    save(); header(); mark();
+  };
+  const mark = () => {
+    const v = ans.value.trim().toLowerCase();
+    let first = null;
+    document.querySelectorAll('.hs').forEach((b) => { const on = !!v && b.dataset.label.toLowerCase() === v; b.classList.toggle('sel', on); if (on && !first) first = b; });
+    $('chosen').innerHTML = !v ? '<span class="muted">Nothing chosen yet.</span>' : v === 'none' ? 'Your answer: <b>None</b> (no main button)' : `Your answer: <b>${esc(ans.value.trim())}</b>`;
+    return first;
+  };
+  if (s) {
+    const inner = $('inner');
+    for (const h of s.hotspots) {
+      const [x, y, w, hh, label] = h;
+      const b = document.createElement('button');
+      b.className = 'hs';
+      b.title = label;
+      b.dataset.label = label;
+      b.setAttribute('aria-label', label);
+      Object.assign(b.style, { left: `${(x / s.img.w) * 100}%`, top: `${(y / s.img.h) * 100}%`, width: `${(w / s.img.w) * 100}%`, height: `${(hh / s.img.h) * 100}%` });
+      b.onclick = (ev) => { ev.preventDefault(); set(label); $('pnext').focus({ preventScroll: true }); };
+      inner.appendChild(b);
+    }
+  }
+  ans.oninput = () => set(ans.value);
+  ans.onkeydown = (ev) => { if (ev.key === 'Enter') { ev.preventDefault(); next(); } else if (ev.key === 'Escape') ans.blur(); };
+  $('none').onclick = () => { set('none'); setTimeout(next, 250); };
+  $('pnext').onclick = next;
+  $('pback').onclick = back;
+  $('pskip').onclick = next;
+  const sel = mark();
+  if (sel) setTimeout(() => sel.scrollIntoView({ block: 'center' }), 50);
+  render = () => {};
+}
+
+function element(i) {
+  const r = ROWS[i];
+  const [page, , id, tag, label, position] = r;
+  const s = shotOf(page);
+  const info = s?.els?.[id] || { status: 'gone' };
+  const { title, host } = pageName(page);
+  const main = S.pg[page];
+  const says = info.text || info.more || label || '';
+  const kind = kindOf(info.tag || tag, info.role || '', info.type || '');
+  const notes = [];
+  if (info.status === 'hidden') notes.push('This part is hidden on the page right now (for example inside a closed menu). The dashed box shows the area it sits in.');
+  if (info.status === 'offscreen') notes.push('This part is off to the side right now (for example a slide that isn’t showing). The dashed box shows the area it sits in.');
+  if (info.status === 'gone' || info.status === 'error') notes.push('There is no picture of this part. Judge from its words, or choose Can’t tell.');
+  if (info.cut) notes.push('This is a big area: it carries on below the picture. Click the page picture on the left to see all of it.');
+  if (info.moved) notes.push('A popup that covered this part was moved out of the way for this picture.');
+  if (s && info.pageRect && info.pageRect[1] >= s.img.h - 6) notes.push('It sits further down the page than the small page picture goes.');
+  const facts = [
+    ['Page', `<b>${esc(title)}</b> <span class="muted">${esc(host)}</span>`],
+    ['It says', says ? `<span class="says">${esc(says.length > 300 ? `${says.slice(0, 300)}…` : says)}</span>` : '<span class="muted">(no words)</span>'],
+    info.more && info.more !== says ? ['Also', esc(info.more)] : null,
+    ['What it is', `${esc(kind)}${info.href ? ` · goes to <span class="muted">${esc(info.href)}</span>` : ''}`],
+    position ? ['Where', esc(position)] : null,
+  ].filter(Boolean);
+  QUESTIONS[2].p = main && main.toLowerCase() !== 'none'
+    ? `The main task you picked for this page: “${esc(main)}”. Yes if people would be stuck or slowed down without this.`
+    : 'Think of what people come to this page to do. Yes if they would be stuck or slowed down without this.';
+  view.innerHTML = `<div class="el">
+    <div class="panel map">
+      <div class="cap">Where it is on the page<br><span style="font-size:12px">(click to see the whole page)</span></div>
+      <div class="scroll" id="mapScroll">${s ? `<div class="inner" id="mapInner"><img src="${esc(s.img.thumb)}" alt="Small picture of the whole page"><div class="mark pin" id="mapMark"></div></div>` : '<p class="muted">No picture.</p>'}</div>
+    </div>
+    <div class="panel center">
+      <div class="crop">${info.crop ? `<img id="cropImg" src="${esc(info.crop)}" alt="The part to judge, in a red box">` : `<div class="none">No picture of this part.</div>`}</div>
+      ${notes.map((n) => `<div class="note">${esc(n)}</div>`).join('')}
+      <dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>
+    </div>
+    <div class="panel qs">
+      ${QUESTIONS.map((qq, k) => `<div class="q" id="q${k}"><h3><span class="n">${k + 1}</span>${qq.h}</h3><p>${qq.p}</p>
+        <div class="opts">
+          <button class="ans y" data-q="${k}" data-a="y">Yes <kbd>Y</kbd></button>
+          <button class="ans n" data-q="${k}" data-a="n">No <kbd>N</kbd></button>
+          <button class="ans c" data-q="${k}" data-a="c">Can’t tell <kbd>C</kbd></button>
+        </div></div>`).join('')}
+      <div class="keys"><kbd>Y</kbd> yes · <kbd>N</kbd> no · <kbd>C</kbd> can’t tell · <kbd>↑</kbd><kbd>↓</kbd> change question · <kbd>←</kbd> back · <kbd>→</kbd> skip · <kbd>V</kbd> whole page</div>
+      <div class="navrow"><button class="btn" id="eback">← Back</button><button class="btn" id="eskip">Skip →</button></div>
+    </div></div>`;
+  const a = answersOf(i);
+  activeQ = Math.max(0, a.findIndex((x) => !x));
+  if (a.every(Boolean)) activeQ = 0;
+  render = () => {
+    const cur = answersOf(i);
+    document.querySelectorAll('.ans').forEach((b) => b.classList.toggle('on', cur[+b.dataset.q] === b.dataset.a));
+    for (let k = 0; k < 3; k++) $(`q${k}`).classList.toggle('active', k === activeQ);
+  };
+  document.querySelectorAll('.ans').forEach((b) => { b.onclick = () => answer(i, +b.dataset.q, b.dataset.a); });
+  $('eback').onclick = back;
+  $('eskip').onclick = next;
+  if (s) {
+    const y = placeMark($('mapMark'), info.pageRect, s.img.w, s.img.h);
+    const img = $('mapInner').querySelector('img');
+    const centre = () => { if (y != null) $('mapScroll').scrollTop = y * img.clientHeight - $('mapScroll').clientHeight / 2; };
+    if (img.complete) centre(); else img.onload = centre;
+    $('mapInner').onclick = () => openViewer(page, info.pageRect);
+  }
+  if ($('cropImg')) $('cropImg').onclick = () => s && openViewer(page, info.pageRect);
+  render();
+  // Warm the next pictures so the next part shows at once.
+  for (const k of [i + 1, i + 2]) { const nr = ROWS[k]; const ni = nr && shotOf(nr[0])?.els?.[nr[2]]; if (ni?.crop) new Image().src = ni.crop; }
+}
+
+function answer(i, qn, a) {
+  const k = keyOf(ROWS[i]);
+  const cur = [...answersOf(i)];
+  const wasComplete = cur.every(Boolean);
+  cur[qn] = a;
+  S.el[k] = cur;
+  save();
+  const open = cur.findIndex((x) => !x);
+  const later = cur.findIndex((x, j) => j > qn && !x);
+  activeQ = later >= 0 ? later : open >= 0 ? open : Math.min(2, qn + 1);
+  render();
+  header();
+  clearTimeout(elTimer);
+  if (!wasComplete && open < 0) elTimer = setTimeout(next, 220); // just finished this part: on to the next
+}
+
+function finish() {
+  render = () => {};
+  const d = elDone(), p = pgDone();
+  const open = firstOpen();
+  view.innerHTML = `<div class="sheet">
+    <h1>Download your answers</h1>
+    <p>You answered <b>${p} of ${PAGES.length}</b> pages and <b>${d} of ${ROWS.length}</b> parts.${open < SEQ.length ? ` <button class="linkish" id="gofirst">Go to the first one still open</button>` : ''}</p>
+    <p class="muted">Press both buttons. Your browser saves two files (to-label.csv and pages-blind.csv), usually in Downloads. Send both to Caden as they are; don’t open and re-save them in Excel or Numbers.</p>
+    <div class="row">
+      <button class="btn big primary dl" id="dl1">1. Download to-label.csv</button>
+      <button class="btn big primary dl" id="dl2">2. Download pages-blind.csv</button>
+    </div>
+    <p class="muted" style="margin-top:24px">Your answers stay saved in this browser, so you can go back, change some, and download again.</p>
+    <div class="row"><button class="btn" id="fback">← Back to the last part</button></div>
+    <p style="margin-top:36px"><button class="linkish muted" id="wipe">Clear every answer in this browser…</button></p>
+  </div>`;
+  $('dl1').onclick = () => { download('to-label.csv', elementCsv()); $('dl1').classList.add('done'); $('dl1').textContent = '✓ to-label.csv downloaded'; };
+  $('dl2').onclick = () => { download('pages-blind.csv', pagesCsv()); $('dl2').classList.add('done'); $('dl2').textContent = '✓ pages-blind.csv downloaded'; };
+  $('fback').onclick = back;
+  if ($('gofirst')) $('gofirst').onclick = () => go(open);
+  $('wipe').onclick = () => {
+    if (!confirm('Delete every answer saved in this browser? This cannot be undone.')) return;
+    S = { v: 1, pos: -1, el: {}, pg: {} };
+    try { localStorage.removeItem(STORE); } catch {}
+    go(-1);
+  };
+}
+
+/* ---------- full-page viewer ---------- */
+function openViewer(page, rect) {
+  const s = shotOf(page);
+  if (!s) return;
+  $('vTitle').textContent = pageName(page).title;
+  $('vImg').src = s.img.page;
+  $('viewer').classList.remove('hidden');
+  const y = placeMark($('vMark'), rect, s.img.w, s.img.h);
+  const centre = () => { if (y != null) $('vScroll').scrollTop = y * $('vImg').clientHeight - $('vScroll').clientHeight / 2 + 10; };
+  if ($('vImg').complete) centre(); else $('vImg').onload = centre;
+}
+const closeViewer = () => $('viewer').classList.add('hidden');
+$('vClose').onclick = closeViewer;
+$('viewer').addEventListener('click', (ev) => { if (ev.target.id === 'viewer' || ev.target.id === 'vScroll') closeViewer(); });
+
+/* ---------- keys ---------- */
+document.addEventListener('keydown', (ev) => {
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return;
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName);
+  if (!$('viewer').classList.contains('hidden')) { if (ev.key === 'Escape' || ev.key.toLowerCase() === 'v') { ev.preventDefault(); closeViewer(); } return; }
+  if (typing) return;
+  const it = SEQ[S.pos];
+  const k = ev.key.length === 1 ? ev.key.toLowerCase() : ev.key;
+  if (S.pos < 0 && k === 'Enter') { ev.preventDefault(); go(firstOpen()); return; }
+  if (k === 'ArrowLeft' || k === 'Backspace') { ev.preventDefault(); if (S.pos >= 0) back(); return; }
+  if (k === 'ArrowRight') { ev.preventDefault(); if (it) next(); return; }
+  if (!it) return;
+  if (it.kind === 'page') {
+    if (k === 'Enter' && ev.target.tagName !== 'BUTTON') { ev.preventDefault(); next(); }
+    return;
+  }
+  if (k === 'y' || k === 'n' || k === 'c') { ev.preventDefault(); answer(it.i, activeQ, k); }
+  else if (k === 's') { ev.preventDefault(); next(); }
+  else if (k === 'v') { ev.preventDefault(); const r = ROWS[it.i]; openViewer(r[0], shotOf(r[0])?.els?.[r[2]]?.pageRect); }
+  else if (k === 'ArrowUp') { ev.preventDefault(); activeQ = Math.max(0, activeQ - 1); render(); }
+  else if (k === 'ArrowDown') { ev.preventDefault(); activeQ = Math.min(2, activeQ + 1); render(); }
+  else if (k === 'Enter') { ev.preventDefault(); if (complete(it.i)) next(); else { activeQ = answersOf(it.i).findIndex((x) => !x); render(); } }
+});
+$('hBack').onclick = back;
+$('hSkip').onclick = next;
+$('hFinish').onclick = () => go(SEQ.length);
+window.addEventListener('beforeunload', save);
+
+go(S.pos);
+</script>
+</body>
+</html>

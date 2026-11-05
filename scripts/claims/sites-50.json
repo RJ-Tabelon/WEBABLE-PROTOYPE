@@ -1,0 +1,327 @@
+{
+  "demo": [
+    {
+      "name": "alderra-refill",
+      "url": "http://127.0.0.1:41741/demo/alderra/refill.html?reset=1",
+      "note": "Main demo: tiny grey Confirm refill below the fold, carousel, upsells, cookie banner, chat at 4 s.",
+      "settleMs": 5500
+    },
+    {
+      "name": "benefits-apply",
+      "url": "http://127.0.0.1:41741/demo/benefits/apply.html",
+      "note": "Session-timeout warning (keep_popup) and a survey popup (fold).",
+      "settleMs": 2500
+    }
+  ],
+  "real": [
+    {
+      "name": "cnn-home",
+      "url": "https://www.cnn.com/",
+      "note": "Wide news home page: at high zoom it fills the screen edge to edge (Caden's 3.webp). Survey and ad chips at the bottom right. A fresh profile gets a Legal Terms gate: the harness hides it for the shots (never clicks Agree).",
+      "settleMs": 7000,
+      "evalHide": [
+        "Legal Terms and Privacy"
+      ],
+      "evalHideBlocks": [
+        [
+          "DRM System Not Supported",
+          "Help Center"
+        ]
+      ]
+    },
+    {
+      "name": "apnews-home",
+      "url": "https://apnews.com/",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "npr-home",
+      "url": "https://www.npr.org/",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "usatoday-home",
+      "url": "https://www.usatoday.com/",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "foxnews-home",
+      "url": "https://www.foxnews.com/",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "nbcnews-home",
+      "url": "https://www.nbcnews.com/",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "wcjb",
+      "url": "https://www.wcjb.com/",
+      "note": "Local news: 262 controls, 24 ad slots, sticky ads.",
+      "settleMs": 6000
+    },
+    {
+      "name": "gainesville-sun",
+      "url": "https://www.gainesville.com/",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "weather-gov-gnv",
+      "url": "https://forecast.weather.gov/MapClick.php?lat=29.65&lon=-82.32",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "bbc-news",
+      "url": "https://www.bbc.com/news",
+      "note": "category: news. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "drugs-metformin",
+      "url": "https://www.drugs.com/metformin.html",
+      "note": "186 controls, 74% under 24 px; 403 to the HeadlessChrome user agent.",
+      "settleMs": 6000
+    },
+    {
+      "name": "mayo-hypertension",
+      "url": "https://www.mayoclinic.org/diseases-conditions/high-blood-pressure/symptoms-causes/syc-20373410",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "webmd-home",
+      "url": "https://www.webmd.com/",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "medlineplus-metformin",
+      "url": "https://medlineplus.gov/druginfo/meds/a696005.html",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "cdc-flu",
+      "url": "https://www.cdc.gov/flu/index.html",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "cvs-pharmacy",
+      "url": "https://www.cvs.com/pharmacy",
+      "note": "Cookie banner 17%, three refill links. Bot protection can challenge automated loads.",
+      "settleMs": 6000
+    },
+    {
+      "name": "walgreens-refill",
+      "url": "https://www.walgreens.com/rx-checkout/guest-express-refill",
+      "note": "Continue button below the fold, chat widget. Never submit the form.",
+      "settleMs": 6000
+    },
+    {
+      "name": "healthline-home",
+      "url": "https://www.healthline.com/",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "uf-health",
+      "url": "https://ufhealth.org/",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "medicare-home",
+      "url": "https://www.medicare.gov/",
+      "note": "category: health. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "ssa-home",
+      "url": "https://www.ssa.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "irs-home",
+      "url": "https://www.irs.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "usa-gov",
+      "url": "https://www.usa.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "va-home",
+      "url": "https://www.va.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "healthcare-gov",
+      "url": "https://www.healthcare.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "disasterassistance",
+      "url": "https://www.disasterassistance.gov/",
+      "note": "Alert slide-in, chat bubble, stacked sticky bars. Help and chat must stay.",
+      "settleMs": 6000
+    },
+    {
+      "name": "fl-dcf-snap",
+      "url": "https://www.myflfamilies.com/services/public-assistance/supplemental-nutrition-assistance-program-snap",
+      "note": "Banner and hero fill the first screen.",
+      "settleMs": 6000
+    },
+    {
+      "name": "flhsmv-home",
+      "url": "https://www.flhsmv.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "usps-tracking",
+      "url": "https://tools.usps.com/go/TrackConfirmAction_input",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "studentaid-home",
+      "url": "https://studentaid.gov/",
+      "note": "category: gov. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "fpl",
+      "url": "https://www.fpl.com/",
+      "note": "Storm banner, region-picker modal, cookie notice. Never dismiss the modal automatically.",
+      "settleMs": 6000
+    },
+    {
+      "name": "gru",
+      "url": "https://www.gru.com/",
+      "note": "category: utility. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "att-home",
+      "url": "https://www.att.com/",
+      "note": "category: utility. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "target-home",
+      "url": "https://www.target.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "bestbuy-home",
+      "url": "https://www.bestbuy.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "homedepot-home",
+      "url": "https://www.homedepot.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "ebay-home",
+      "url": "https://www.ebay.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "etsy-home",
+      "url": "https://www.etsy.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "costco-home",
+      "url": "https://www.costco.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "publix-home",
+      "url": "https://www.publix.com/",
+      "note": "category: shop. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "wikipedia-article",
+      "url": "https://en.wikipedia.org/wiki/Gainesville,_Florida",
+      "note": "category: ref. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "allrecipes-recipe",
+      "url": "https://www.allrecipes.com/recipe/10813/best-chocolate-chip-cookies/",
+      "note": "category: ref. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "imdb-home",
+      "url": "https://www.imdb.com/",
+      "note": "category: ref. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "craigslist-gnv",
+      "url": "https://gainesville.craigslist.org/",
+      "note": "category: ref. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "amtrak-home",
+      "url": "https://www.amtrak.com/",
+      "note": "category: travel. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "delta-home",
+      "url": "https://www.delta.com/",
+      "note": "category: travel. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "chase-home",
+      "url": "https://www.chase.com/",
+      "note": "category: bank. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "bankofamerica-home",
+      "url": "https://www.bankofamerica.com/",
+      "note": "category: bank. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "ufl-home",
+      "url": "https://www.ufl.edu/",
+      "note": "category: edu. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    },
+    {
+      "name": "khanacademy-home",
+      "url": "https://www.khanacademy.org/",
+      "note": "category: edu. Never sign in, accept, submit or dismiss anything.",
+      "settleMs": 6000
+    }
+  ]
+}
