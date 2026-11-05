@@ -1,0 +1,1098 @@
+/* The onboarding flow (docs/design/ONBOARDING.md, round 8c wins). Shared tokens live in ui/tokens.css; this file is
+   layout only. One thing at a time, huge quiet type, 64 px controls, all on white. Chrome moves at --t-ui; stimuli
+   never animate. */
+
+body {
+  min-height: 100vh;
+}
+
+[tabindex='-1']:focus,
+[tabindex='-1']:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.fl-app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ================================================================== */
+/* Top bar                                                             */
+/* ================================================================== */
+
+.fl-top {
+  height: 72px;
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
+  padding: 0 32px;
+}
+
+.fl-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 19px/1 var(--font);
+  letter-spacing: -0.01em;
+  color: var(--c-ink);
+}
+.fl-wordmark .wa-logo { display: block; flex: none; }
+
+.fl-ruler ol {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.fl-seg {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 15px/1 var(--font);
+  color: var(--c-ink-3);
+  transition: color var(--t-ui) var(--ease);
+}
+.fl-seg.is-current {
+  color: var(--c-ink);
+}
+.fl-seg.is-done {
+  color: var(--c-ink-2);
+}
+.fl-seg-mark {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.fl-seg-dot {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1.5px solid var(--c-line-strong);
+  transition: opacity var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+.fl-seg.is-current .fl-seg-dot {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+}
+.fl-seg-mark .fl-check {
+  position: absolute;
+  inset: 0;
+  color: var(--c-accent);
+  opacity: 0;
+  transition: opacity var(--t-ui) var(--ease);
+}
+.fl-seg.is-done .fl-seg-dot,
+.fl-seg-mark.is-ticking .fl-seg-dot {
+  opacity: 0;
+}
+.fl-seg.is-done .fl-check,
+.fl-seg-mark.is-ticking .fl-check {
+  opacity: 1;
+}
+.fl-rule {
+  width: 40px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--c-line-strong);
+}
+.fl-rule.is-past {
+  background: var(--c-ink-3);
+}
+
+.fl-top-end {
+  justify-self: end;
+}
+.fl-skip {
+  min-height: 48px;
+  padding: 0 4px;
+}
+.fl-skip:hover,
+.btn-text:hover {
+  color: var(--c-ink);
+}
+
+/* ================================================================== */
+/* Main column                                                         */
+/* ================================================================== */
+
+.fl-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 760px);
+  justify-content: center;
+  align-items: start;
+  column-gap: 40px;
+  padding: 16px 24px 64px;
+}
+.fl-col {
+  min-width: 0;
+}
+
+/* On white, every card has a hairline as well as the soft shadow (round 8c). */
+.fl-app .card,
+.fl-modal {
+  border: 1px solid var(--c-line);
+}
+/* Hover tints: the canvas is white now, so tints use the second canvas. */
+.fl-app .answer:hover {
+  background: var(--c-canvas-2);
+}
+
+/* ================================================================== */
+/* Welcome                                                             */
+/* ================================================================== */
+
+.fl-welcome {
+  margin-top: clamp(0px, 5vh, 56px);
+  padding: 64px 56px 48px;
+  text-align: center;
+}
+.fl-welcome-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--c-line-strong);
+  display: grid;
+  place-items: center;
+}
+.fl-welcome-mark span {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--c-accent);
+}
+.fl-welcome-title {
+  margin: 28px 0 0;
+  font: var(--f-h1);
+  letter-spacing: var(--track-h1);
+}
+.fl-welcome-deck {
+  max-width: 540px;
+  margin: 16px auto 0;
+  font: var(--f-deck);
+  color: var(--c-ink-2);
+}
+.fl-welcome-parts {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  margin: 40px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fl-welcome-parts li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font: 600 15px/1 var(--font);
+  color: var(--c-ink-2);
+}
+.fl-welcome-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: var(--c-canvas-2);
+  color: var(--c-ink);
+  display: grid;
+  place-items: center;
+}
+.fl-welcome-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 44px;
+}
+.fl-welcome-actions .btn-text {
+  min-height: 48px;
+}
+.fl-welcome-note {
+  margin: 28px 0 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--c-line);
+  font: var(--f-small);
+  color: var(--c-ink-2);
+}
+
+.fl-btn-wide {
+  min-width: 200px;
+}
+
+/* ================================================================== */
+/* A step: the question, the white stage, the answers                  */
+/* ================================================================== */
+
+.fl-task {
+  display: flex;
+  flex-direction: column;
+}
+.fl-task-title {
+  min-height: 56px;
+  margin: 4px 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font: var(--f-h2);
+  letter-spacing: -0.01em;
+}
+.fl-task-sub {
+  min-height: 24px;
+  margin: -12px 0 12px;
+  text-align: center;
+  font: 400 17px/24px var(--font);
+  color: var(--c-ink-2);
+}
+
+.fl-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  overflow: hidden;
+}
+.fl-stage.is-size {
+  height: 400px;
+  justify-content: flex-start;
+}
+.fl-stage.is-read {
+  height: 320px;
+}
+.fl-stage.is-faint {
+  height: 240px;
+}
+.fl-stage.is-ld-ask {
+  height: 280px;
+}
+.fl-stage.is-dots {
+  height: 460px;
+  padding: 0;
+}
+.fl-stage.is-sites {
+  height: 360px;
+}
+/* Round 10: "Your context" holds the ask-and-paste form, so it grows with it. */
+.fl-stage.is-context {
+  height: auto;
+  min-height: 360px;
+  padding: 36px 40px 40px;
+}
+.fl-stage.is-which {
+  padding: 48px 40px;
+}
+.fl-stage.is-inway {
+  padding: 48px 40px;
+}
+/* The dark stage for light-or-dark: same contrast as the light one, flipped. No transition: stimuli appear at once. */
+.fl-stage.is-dark {
+  background: #16150f;
+  color: #ffffff;
+}
+
+.fl-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 32px;
+}
+.fl-actions-ghost {
+  display: block;
+  height: 72px;
+}
+.fl-pair {
+  display: flex;
+  gap: 16px;
+}
+.fl-words {
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.answer {
+  min-width: 176px;
+  transition: background 120ms var(--ease), transform 120ms var(--ease), border-color 120ms var(--ease);
+}
+.answer.is-down {
+  transform: scale(0.97);
+  background: var(--c-canvas-2);
+}
+.fl-answer-quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--c-ink-2);
+}
+.fl-answer-quiet:hover {
+  background: var(--c-canvas-2);
+  color: var(--c-ink);
+}
+.btn-secondary:hover:not(:disabled) {
+  background: var(--c-canvas-2);
+}
+.btn-primary:hover {
+  background: #2a2920;
+}
+
+/* ---------------- stimuli ---------------- */
+
+.fl-para {
+  margin: 0;
+  line-height: 1.45;
+  color: var(--c-ink);
+  max-width: 100%;
+}
+.fl-sentence {
+  margin: 0;
+  line-height: 1.25;
+  color: var(--c-ink);
+  text-align: left;
+}
+.fl-stage.is-dark .fl-sentence {
+  color: #ffffff;
+}
+.fl-word {
+  margin: 0;
+  line-height: 1;
+  font-weight: 400;
+}
+
+/* ---------------- light or dark: the question ---------------- */
+
+.fl-ld-pair {
+  display: flex;
+  gap: 24px;
+}
+.fl-ld-swatch {
+  width: 200px;
+  height: 148px;
+  border-radius: 20px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fl-ld-swatch.is-light {
+  background: #ffffff;
+  color: #16150f;
+  border: 1.5px solid var(--c-line-strong);
+}
+.fl-ld-swatch.is-dark {
+  background: #16150f;
+  color: #ffffff;
+}
+.fl-ld-swatch span {
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 600;
+}
+.fl-ld-swatch i {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: currentColor;
+  opacity: 0.28;
+}
+.fl-ld-swatch i:last-child {
+  width: 64%;
+}
+
+/* ---------------- dots ---------------- */
+
+.fl-ring {
+  position: absolute;
+  inset: 0;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.fl-dot {
+  position: absolute;
+  border-radius: 50%;
+  border: 2px solid var(--c-line-strong);
+  background: #ffffff;
+}
+.fl-dot.is-lit {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+}
+
+/* ---------------- finding on real websites ---------------- */
+
+/* The calm waiting card while the sites are open in another tab. */
+.fl-sites {
+  margin-top: 84px;
+  padding: 56px 48px 40px;
+  text-align: center;
+}
+.fl-sites-count {
+  margin: 0 0 12px;
+  font: 600 15px/22px var(--font);
+  color: var(--c-ink-2);
+}
+.fl-sites-title {
+  margin: 0;
+  font: var(--f-h2);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.fl-sites-deck {
+  margin: 12px 0 0;
+  font: var(--f-deck);
+  color: var(--c-ink-2);
+}
+.fl-sites-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 28px;
+  margin: 36px 0 0;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--c-line);
+  list-style: none;
+}
+.fl-sites-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font: 600 17px/24px var(--font);
+  color: var(--c-ink-3);
+}
+.fl-sites-item.is-current {
+  color: var(--c-ink);
+}
+.fl-sites-item.is-done {
+  color: var(--c-ink-2);
+}
+.fl-sites-mark {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+}
+.fl-sites-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--c-line-strong);
+}
+.fl-sites-item.is-current .fl-sites-dot {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+}
+.fl-sites-item.is-done .fl-check {
+  color: var(--c-accent);
+}
+.fl-sites-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+.fl-sites-actions .btn-text {
+  min-height: 48px;
+}
+
+/* "Which site was easier to find things on?" */
+.fl-which {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+
+.fl-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+}
+.fl-toggle {
+  height: 64px;
+  padding: 0 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--c-line-strong);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: 500 20px/1 var(--font);
+  cursor: pointer;
+  transition: background var(--t-ui) var(--ease), color var(--t-ui) var(--ease), border-color var(--t-ui) var(--ease);
+}
+.fl-toggle:hover {
+  background: var(--c-canvas-2);
+}
+.fl-toggle.is-on {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+  color: #ffffff;
+}
+
+/* ---------------- closing ---------------- */
+
+.fl-closing {
+  margin-top: 84px;
+  padding: 64px 48px;
+  text-align: center;
+}
+.fl-closing-mark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  background: var(--c-accent-tint);
+  color: var(--c-accent);
+  display: grid;
+  place-items: center;
+}
+.fl-closing-mark .fl-check {
+  color: var(--c-accent);
+}
+.fl-closing-title {
+  margin: 0;
+  font: var(--f-h1);
+  letter-spacing: var(--track-h1);
+}
+.fl-closing-deck {
+  margin: 12px 0 0;
+  font: var(--f-deck);
+  color: var(--c-ink-2);
+}
+
+.fl-results {
+  animation: fl-fade 400ms var(--ease) both;
+}
+@keyframes fl-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ================================================================== */
+/* Instruction card                                                    */
+/* ================================================================== */
+
+.fl-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 560px);
+  justify-content: center;
+  align-items: center;
+  padding: 24px;
+  overflow-y: auto;
+  background: var(--c-dim);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: fl-fade var(--t-ui) var(--ease) both;
+}
+.fl-modal-wrap {
+  grid-column: 1;
+}
+.fl-modal {
+  background: var(--c-card);
+  border-radius: var(--r-modal);
+  padding: 48px;
+  box-shadow: var(--shadow-modal);
+  animation: fl-modal-in var(--t-ui) var(--ease) both;
+}
+@keyframes fl-modal-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.fl-modal-reward {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.fl-modal-set {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font: 600 17px/24px var(--font);
+  color: var(--c-ink);
+}
+.fl-modal-set .fl-check {
+  color: var(--c-accent);
+}
+.fl-eyebrow {
+  margin: 0 0 8px;
+  font: 600 15px/22px var(--font);
+  color: var(--c-ink-2);
+}
+.fl-modal-title {
+  margin: 0;
+  font: var(--f-h2);
+  letter-spacing: -0.01em;
+}
+.fl-modal-text {
+  margin: 12px 0 28px;
+  text-wrap: pretty;
+}
+.fl-modal-todo {
+  margin: 0;
+  font: var(--f-body);
+  color: var(--c-ink);
+}
+.fl-modal-success {
+  margin: 4px 0 0;
+  font: var(--f-body);
+  color: var(--c-ink-2);
+}
+.fl-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 32px;
+}
+.fl-modal-actions .btn-text {
+  min-height: 48px;
+  padding: 0 4px;
+}
+
+/* ================================================================== */
+/* Demos: tiny looping pictures of each step                           */
+/* ================================================================== */
+
+.dm {
+  height: 200px;
+  border-radius: 20px;
+  background: var(--c-canvas-2);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+.dm-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.dm-row {
+  display: flex;
+  gap: 10px;
+}
+.dm-card {
+  background: #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(22, 21, 15, 0.06), 0 6px 18px rgba(22, 21, 15, 0.06);
+}
+.dm-line {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--c-ink-3);
+  opacity: 0.55;
+}
+.dm-line + .dm-line {
+  margin-top: 8px;
+}
+.dm-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--r-pill);
+  background: #ffffff;
+  border: 1.5px solid var(--c-line-strong);
+  font: 600 15px/1 var(--font);
+  color: var(--c-ink-2);
+}
+.dm-press-a {
+  animation: dm-press-a 4s var(--ease) infinite;
+}
+.dm-press-b {
+  animation: dm-press-b 4s var(--ease) infinite;
+}
+@keyframes dm-press-a {
+  0%,
+  14%,
+  26%,
+  100% {
+    background: #ffffff;
+    color: var(--c-ink-2);
+    border-color: var(--c-line-strong);
+  }
+  17%,
+  23% {
+    background: var(--c-ink);
+    color: #ffffff;
+    border-color: var(--c-ink);
+  }
+}
+@keyframes dm-press-b {
+  0%,
+  39%,
+  51%,
+  100% {
+    background: #ffffff;
+    color: var(--c-ink-2);
+    border-color: var(--c-line-strong);
+  }
+  42%,
+  48% {
+    background: var(--c-ink);
+    color: #ffffff;
+    border-color: var(--c-ink);
+  }
+}
+
+/* size */
+.dm-size {
+  width: 220px;
+  height: 92px;
+  padding: 18px 20px;
+  overflow: hidden;
+}
+.dm-size-text {
+  width: 150px;
+  transform-origin: left top;
+  animation: dm-grow 4s var(--ease) infinite;
+}
+@keyframes dm-grow {
+  0%,
+  30% {
+    transform: scale(0.8);
+  }
+  50%,
+  85% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(0.8);
+  }
+}
+
+/* true or false */
+.dm-tf {
+  width: 220px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+}
+.dm-tf-text {
+  width: 160px;
+  animation: dm-shrink 4s steps(1, end) infinite;
+}
+@keyframes dm-shrink {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(0.84);
+  }
+  50% {
+    transform: scale(0.7);
+  }
+  75% {
+    transform: scale(0.58);
+  }
+}
+
+/* faint word */
+.dm-faint {
+  width: 220px;
+  height: 84px;
+  display: grid;
+  place-items: center;
+}
+.dm-faint-word {
+  font: 600 30px/1 var(--font);
+  color: var(--c-ink);
+  animation: dm-lighter 4s steps(1, end) infinite;
+}
+@keyframes dm-lighter {
+  0% {
+    color: #16150f;
+  }
+  25% {
+    color: #8b8880;
+  }
+  50% {
+    color: #bdb9b0;
+  }
+  75% {
+    color: #dcd9d1;
+  }
+}
+.dm-faint + .dm-row .dm-pill {
+  padding: 0 10px;
+}
+
+/* light or dark */
+.dm-ld {
+  gap: 16px;
+}
+.dm-ld .dm-card {
+  width: 128px;
+  height: 96px;
+  padding: 22px 18px;
+  animation: dm-pick-a 4s var(--ease) infinite;
+}
+.dm-ld .dm-ld-dark {
+  background: #16150f;
+  animation-name: dm-pick-b;
+}
+.dm-ld-dark .dm-line {
+  background: #ffffff;
+}
+@keyframes dm-pick-a {
+  0%,
+  45%,
+  100% {
+    box-shadow: 0 0 0 0 transparent, 0 6px 18px rgba(22, 21, 15, 0.06);
+  }
+  10%,
+  40% {
+    box-shadow: 0 0 0 3px var(--c-ink-2), 0 6px 18px rgba(22, 21, 15, 0.06);
+  }
+}
+@keyframes dm-pick-b {
+  0%,
+  55%,
+  95%,
+  100% {
+    box-shadow: 0 0 0 0 transparent, 0 6px 18px rgba(22, 21, 15, 0.06);
+  }
+  60%,
+  90% {
+    box-shadow: 0 0 0 3px var(--c-ink-2), 0 6px 18px rgba(22, 21, 15, 0.06);
+  }
+}
+
+/* dots */
+.dm-ring {
+  position: relative;
+  width: 140px;
+  height: 140px;
+}
+.dm-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--c-line-strong);
+  background: #ffffff;
+  animation: dm-dot 5.4s steps(1, end) infinite;
+}
+.dm-dot.is-still {
+  background: var(--c-ink);
+  border-color: var(--c-ink);
+}
+@keyframes dm-dot {
+  0% {
+    background: var(--c-ink);
+    border-color: var(--c-ink);
+  }
+  11.11%,
+  100% {
+    background: #ffffff;
+    border-color: var(--c-line-strong);
+  }
+}
+
+/* finding on real websites: a browser window with WebAble's card at the bottom */
+.dm-browser {
+  position: relative;
+  width: 300px;
+  height: 168px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid var(--c-line);
+  box-shadow: 0 1px 2px rgba(22, 21, 15, 0.05), 0 8px 24px rgba(22, 21, 15, 0.06);
+  overflow: hidden;
+}
+.dm-browser-bar {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--c-line);
+}
+.dm-browser-bar i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-line-strong);
+}
+.dm-browser-url {
+  width: 110px;
+  height: 12px;
+  margin-left: 14px;
+  border-radius: 6px;
+  background: var(--c-canvas-2);
+}
+.dm-browser-page {
+  padding: 12px 14px;
+}
+.dm-browser-nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dm-link {
+  width: 36px;
+  height: 9px;
+  border-radius: 5px;
+  background: var(--c-ink-3);
+  opacity: 0.55;
+}
+.dm-link.is-target {
+  /* The still frame (reduced motion) shows it found. */
+  opacity: 1;
+  background: var(--c-ink);
+  box-shadow: 0 0 0 3px var(--c-accent);
+  animation: dm-found 4s var(--ease) infinite;
+}
+@keyframes dm-found {
+  0%,
+  55% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 0 transparent;
+  }
+  62%,
+  100% {
+    opacity: 1;
+    background: var(--c-ink);
+    box-shadow: 0 0 0 3px var(--c-accent);
+  }
+}
+.dm-taskcard {
+  position: absolute;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: #ffffff;
+  border: 1px solid var(--c-line);
+  box-shadow: 0 6px 18px rgba(22, 21, 15, 0.12);
+  font: 400 15px/1 var(--font);
+  color: var(--c-ink-2);
+}
+.dm-taskcard b {
+  font-weight: 600;
+  color: var(--c-ink);
+}
+/* Round 10: the chat in "Your context": the question on the right, the AI's answer on the left. */
+.dm-chat-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dm-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 14px;
+}
+.dm-bubble-me {
+  align-self: flex-end;
+  width: 46%;
+  background: #f4f2ee;
+}
+.dm-bubble-ai {
+  align-self: flex-start;
+  width: 78%;
+}
+
+/* ================================================================== */
+/* Narrow windows                                                      */
+/* ================================================================== */
+
+@media (max-width: 760px) {
+  .fl-top {
+    padding: 0 16px;
+    grid-template-columns: auto 1fr auto;
+  }
+  .fl-ruler ol {
+    justify-content: center;
+    gap: 10px;
+  }
+  .fl-rule {
+    width: 16px;
+  }
+  .fl-main {
+    padding: 8px 16px 48px;
+  }
+  .fl-welcome {
+    padding: 48px 24px 32px;
+  }
+  .fl-stage {
+    padding: 32px 24px;
+  }
+  .fl-modal {
+    padding: 32px 24px;
+  }
+  .fl-welcome-parts {
+    gap: 24px;
+  }
+  .fl-sites {
+    margin-top: 32px;
+    padding: 40px 24px 28px;
+  }
+}
+@media (max-width: 600px) {
+  .fl-seg-label {
+    display: none;
+  }
+  .fl-seg.is-current .fl-seg-label {
+    display: inline;
+  }
+}
+
+/* ================================================================== */
+/* Reduce motion: the chrome holds still and every demo shows one frame */
+/* ================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .fl-scrim,
+  .fl-modal,
+  .fl-results,
+  .dm * {
+    animation: none !important;
+  }
+  .answer,
+  .fl-toggle,
+  .fl-seg,
+  .fl-seg-dot,
+  .fl-seg-mark .fl-check {
+    transition: none !important;
+  }
+}

@@ -1,72 +1,27 @@
-export * from './versions';
-
-export * from './profile/schema';
-export * from './profile/defaults';
-export * from './profile/needs';
-export * from './profile/describe';
-
-export * from './calibration/schema';
-export * from './calibration/trials';
-export * from './calibration/pointing';
-export * from './calibration/reading';
-export * from './calibration/focus';
-export * from './calibration/fit';
-export * from './calibration/stimuli';
-
-export * from './ops/catalog';
-
-export * from './page/types';
-export * from './page/vocab';
-export * from './page/vocab-check';
-export * from './page/excluded';
-
-export * from './policy/types';
-export * from './policy/decide';
-
-export * from './learning/types';
-export * from './learning/params';
-export * from './learning/learners';
-
-export * from './decide/wire';
-export * from './decide/verdict';
-export * from './decide/catalog';
-
+// Re-exports. Do not reorder; append only.
+export * from './types';
+export * from './redact';
 export * from './jev/api';
-export * from './jev/client';
-
-export * from './explain/glossary';
-export * from './explain/templates';
-
-export * from './bridge/protocol';
-
-export * from './skeleton/constants';
-export * from './skeleton/types';
-export * from './skeleton/wire';
-export * from './skeleton/to-wire';
-export * from './skeleton/outline';
-export * from './skeleton/locate';
-export * from './skeleton/template';
-
-export * from './compose/constants';
-export * from './compose/spec';
-export * from './compose/wire';
-export * from './compose/validate';
-export * from './compose/heuristic';
-export * from './compose/prompt';
-
-export * from './fit/types';
-export * from './fit/typeramp';
-export * from './fit/solver';
-export * from './fit/structure';
-
-export * from './triage/types';
-export * from './triage/triage';
-
-export type {
-  Database,
-  Json,
-  Tables,
-  TablesInsert,
-  TablesUpdate,
-  Enums,
-} from './db/types';
+export * from './jev/page';
+export * from './jev/judge';
+export * from './jev/explain-check';
+export * from './jev/visual';
+export * from './policy';
+export * from './signals';
+export * from './fit/derive';
+export * from './text/scale';
+export * from './color/contrast';
+export * from './layout/spec';
+export * from './layout/heuristic';
+export * from './verify/checks';
+export * from './jev/overlay';
+export * from './layout/variants';
+export * from './fit/passive';
+export * from './jev/attribution';
+export * from './reword/prompt';
+export * from './reword/brief';
+export * from './reword/check';
+export * from './reword/jev';
+export * from './compose/blocks';
+export * from './compose/check';
+export * from './compose/jev';

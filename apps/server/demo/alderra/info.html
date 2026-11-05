@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alderra Pharmacy</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'%3E%3Cpath d='M14 25c-1-6 1-13 10-19-1 9-5 16-10 19z' fill='%230E7C86'/%3E%3Cpath d='M14 25C8 22 4 16 5 8c6 3 9 9 9 17z' fill='%23F26B1D'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="alderra.css">
+</head>
+<body>
+<div class="promo" role="region" aria-label="Current offers">
+  <a href="info.html?p=savings">25% off $40+ with code FALL25</a>
+  <span class="sep" aria-hidden="true">·</span>
+  <a href="info.html?p=flu-shots">Flu shots: walk in today</a>
+  <span class="sep" aria-hidden="true">·</span>
+  <a href="info.html?p=delivery">Free delivery over $35</a>
+</div>
+<header class="site-header">
+  <div class="wrap header-row">
+    <a class="brand" href="refill.html">
+      <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><path d="M14 25c-1-6 1-13 10-19-1 9-5 16-10 19z" fill="#0E7C86"/><path d="M14 25C8 22 4 16 5 8c6 3 9 9 9 17z" fill="#F26B1D" opacity=".92"/><path d="M14 25c0-5 2-10 7-15" stroke="#fff" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>
+      <span>Alderra Pharmacy</span>
+    </a>
+    <div class="store">
+      <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="10" r="2.5" fill="currentColor"/></svg>
+      <div><span class="store-line">Store #4127 · Open until 9 PM</span></div>
+    </div>
+  </div>
+</header>
+<div class="wrap">
+  <main class="info-main" id="main">
+    <p class="kicker">Demo site</p>
+    <h1 data-info-title>This page isn't part of the demo</h1>
+    <p>Alderra Pharmacy is a fictional site built to show how WebAble fits a busy page to one person. Only the refill page works.</p>
+    <a class="btn-teal" href="refill.html">← Back to refill</a>
+  </main>
+</div>
+<footer class="site-footer">
+  <div class="wrap footer-legal">
+    <p class="footer-disclaimer">Alderra Pharmacy is a fictional demo site built for Gator Hack V. No real orders.</p>
+    <p class="footer-small">© 2026 Alderra Pharmacy (fictional)</p>
+  </div>
+</footer>
+<script>
+  (function () {
+    var p = new URLSearchParams(location.search).get('p') || '';
+    var words = p.replace(/[^a-z0-9-]/gi, '').split('-').filter(Boolean);
+    if (!words.length) return;
+    var name = words.join(' ');
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+    var h = document.querySelector('[data-info-title]');
+    if (h) h.textContent = name + " isn't part of the demo";
+    document.title = name + ' | Alderra Pharmacy';
+  })();
+</script>
+</body>
+</html>

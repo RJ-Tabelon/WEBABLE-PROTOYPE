@@ -1,3 +1,0 @@
-# Signed-in browser state written by auth.setup.ts, and the local test user.
-.auth/
-.env.*

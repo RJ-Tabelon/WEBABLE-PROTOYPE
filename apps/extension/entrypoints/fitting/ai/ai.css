@@ -1,0 +1,334 @@
+/* Round 9, fitting.html#ai: bring in how the person likes things explained. Shared tokens live in ui/tokens.css and
+   the frame in flow.css; this file is the four steps only. One card at a time on white, h1 44/50, deck 20/30, body
+   18/28, nothing under 15, 64 px pills, ink primary buttons, the accent only for what WebAble changes. */
+
+.ai-card {
+  margin-top: clamp(0px, 4vh, 48px);
+  padding: 56px 56px 48px;
+}
+
+.ai-eyebrow {
+  margin: 0 0 12px;
+  font: 600 15px/22px var(--font);
+  color: var(--c-ink-2);
+}
+.ai-h1 {
+  margin: 0;
+  font: var(--f-h1);
+  letter-spacing: var(--track-h1);
+  text-wrap: balance;
+}
+.ai-deck {
+  margin: 16px 0 0;
+  font: var(--f-deck);
+  color: var(--c-ink-2);
+  text-wrap: pretty;
+}
+
+.ai-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 160px;
+  text-decoration: none;
+}
+.ai .btn-primary:hover {
+  background: #2c2b23;
+}
+.ai .btn-secondary:hover {
+  background: var(--c-canvas-2);
+}
+.ai .btn-primary:disabled:hover {
+  background: var(--c-ink);
+}
+.ai-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+  margin-top: 36px;
+}
+.ai-quiet {
+  min-height: 48px;
+}
+
+/* ---------------- 1. Ask ---------------- */
+
+.ai-steps {
+  margin: 44px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.ai-step + .ai-step {
+  margin-top: 44px;
+  padding-top: 40px;
+  border-top: 1px solid var(--c-line);
+}
+.ai-step-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 20px;
+  font: 600 24px/32px var(--font);
+  letter-spacing: -0.01em;
+}
+.ai-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--c-canvas-2);
+  font: 600 17px/1 var(--font);
+  color: var(--c-ink);
+}
+.ai-ask {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.ai-ask .fl-check {
+  color: var(--c-accent);
+}
+.ai-hint {
+  margin: 16px 0 0;
+  font: var(--f-small);
+  color: var(--c-ink-2);
+}
+.ai-question {
+  margin-top: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 18px 20px;
+  border-radius: 16px;
+  background: var(--c-canvas-2);
+  font: 400 16px/25px var(--font);
+  color: var(--c-ink-2);
+  white-space: pre-wrap;
+}
+.ai-answer {
+  display: block;
+  width: 100%;
+  min-height: 240px;
+  padding: 18px 20px;
+  border: 1.5px solid var(--c-line-strong);
+  border-radius: 20px;
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: var(--f-body);
+  resize: vertical;
+  transition: border-color var(--t-ui) var(--ease);
+}
+.ai-answer:hover {
+  border-color: var(--c-ink-3);
+}
+.ai-answer:focus-visible {
+  border-color: var(--c-ink);
+}
+.ai-answer[aria-invalid='true'] {
+  border-color: var(--c-ink);
+}
+.ai-problem {
+  margin: 14px 0 0;
+  font: 600 18px/26px var(--font);
+  color: var(--c-ink);
+}
+
+/* ---------------- 2. Reading ---------------- */
+
+.ai-reading {
+  margin-top: 84px;
+  padding: 72px 56px 64px;
+  text-align: center;
+}
+/* Three dots that brighten in turn; still under reduced motion. Nothing here counts or pretends to know how far along. */
+.ai-wait {
+  display: inline-flex;
+  gap: 10px;
+  margin-bottom: 32px;
+}
+.ai-wait span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--c-ink-3);
+  opacity: 0.35;
+  animation: ai-breathe 1.6s var(--ease) infinite;
+}
+.ai-wait span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.ai-wait span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+@keyframes ai-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* ---------------- 3. What WebAble took from it ---------------- */
+
+.ai-points {
+  margin: 36px 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--c-line);
+}
+.ai-point {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 24px;
+  min-height: 64px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--c-line);
+}
+.ai-says {
+  margin: 0;
+  font: var(--f-deck);
+  color: var(--c-ink);
+  text-wrap: pretty;
+}
+.ai-quote {
+  margin: 6px 0 0;
+  font: 400 16px/24px var(--font);
+  color: var(--c-ink-2);
+  text-wrap: pretty;
+}
+.ai-point-text {
+  min-width: 0;
+  transition: opacity var(--t-ui) var(--ease);
+}
+.ai-point.is-off .ai-point-text {
+  opacity: 0.45;
+}
+.ai-remove {
+  margin-top: 20px;
+}
+.ai-remove > .btn-text {
+  min-height: 48px;
+}
+.ai-confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 0;
+  font: var(--f-body);
+  color: var(--c-ink);
+}
+.ai-confirm .btn-text {
+  min-height: 48px;
+}
+.ai-confirm-yes {
+  color: var(--c-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ---------------- 4. Done ---------------- */
+
+.ai-done {
+  text-align: center;
+}
+.ai-done-mark {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 24px;
+  border-radius: 50%;
+  background: var(--c-accent-tint);
+  color: var(--c-accent);
+  display: grid;
+  place-items: center;
+}
+.ai-done-mark .fl-check {
+  color: var(--c-accent);
+}
+.ai-sub {
+  margin: 44px 0 16px;
+  font: 600 20px/28px var(--font);
+}
+.ai-pages {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  text-align: left;
+}
+.ai-page {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 88px;
+  padding: 18px 20px 18px 24px;
+  border: 1px solid var(--c-line);
+  border-radius: 20px;
+  background: var(--c-card);
+  color: var(--c-ink);
+  text-decoration: none;
+  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+}
+.ai-page:hover {
+  border-color: var(--c-line-strong);
+  box-shadow: var(--shadow-card);
+}
+.ai-page-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.ai-page-label {
+  font: 600 20px/28px var(--font);
+}
+.ai-page-host {
+  font: var(--f-small);
+  color: var(--c-ink-3);
+}
+.ai-page-out {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--c-accent-tint);
+  color: var(--c-accent);
+}
+.ai-done .ai-actions {
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .ai-card {
+    padding: 40px 24px 32px;
+  }
+  .ai-reading {
+    margin-top: 32px;
+    padding: 48px 24px;
+  }
+  .ai-btn {
+    flex: 1 1 100%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-wait span {
+    animation: none;
+    opacity: 0.6;
+  }
+  .ai-point-text,
+  .ai-answer,
+  .ai-page {
+    transition: none;
+  }
+}

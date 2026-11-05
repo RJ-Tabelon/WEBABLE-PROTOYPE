@@ -1,9 +1,0 @@
-/* WebAble pre-paint stylesheet (focus-outline.css). Generated from lib/engine/ops/css.ts;
-   a unit test keeps it identical. Registered by the service worker at document_start;
-   the engine stands it down with <html data-wa-off="..."> when undone or paused. */
-:where(html:not([data-wa-off~='focus_outline']):not([data-wa-off~='all']))
-  :focus-visible:not(#_wa_#_wa_#_wa_) {
-  outline: 3px solid #1a1a17 !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 7px #ffffff !important;
-}

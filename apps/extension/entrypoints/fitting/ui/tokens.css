@@ -1,0 +1,125 @@
+/* Shared design tokens for the onboarding and results (docs/design/ONBOARDING.md). */
+:root {
+  --c-canvas: #ffffff;
+  --c-canvas-2: #f6f5f2;
+  --c-card: #ffffff;
+  --c-ink: #16150f;
+  --c-ink-2: #5e5c55;
+  --c-ink-3: #8b8880;
+  --c-line: #e6e3dc;
+  --c-line-strong: #d4d0c6;
+  --c-accent: #17694a;
+  --c-accent-tint: #e6f1eb;
+  --c-accent-fill: rgba(23, 105, 74, 0.14);
+  --c-dim: rgba(255, 255, 255, 0.82);
+
+  --font: system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --f-h1: 600 44px/50px var(--font);
+  --f-h2: 600 30px/36px var(--font);
+  --f-deck: 400 20px/30px var(--font);
+  --f-body: 400 18px/28px var(--font);
+  --f-small: 400 15px/22px var(--font);
+  --f-btn: 600 18px/1 var(--font);
+  --track-h1: -0.02em;
+
+  --r-card: 28px;
+  --r-modal: 32px;
+  --r-answer: 20px;
+  --r-pill: 999px;
+  --h-btn: 64px;
+  --h-answer: 72px;
+  --gap: 16px;
+  --gap-l: 32px;
+  --shadow-card: 0 1px 2px rgba(22, 21, 15, 0.04), 0 12px 40px rgba(22, 21, 15, 0.06);
+  --shadow-modal: 0 2px 6px rgba(22, 21, 15, 0.06), 0 30px 80px rgba(22, 21, 15, 0.14);
+  --focus: 0 0 0 3px var(--c-card), 0 0 0 6px var(--c-accent);
+
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --t-ui: 200ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-ui: 0ms;
+  }
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--c-canvas);
+  color: var(--c-ink);
+  font: var(--f-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.btn {
+  height: var(--h-btn);
+  padding: 0 32px;
+  border-radius: var(--r-pill);
+  font: var(--f-btn);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+}
+.btn:active {
+  transform: scale(0.98);
+}
+.btn-primary {
+  background: var(--c-ink);
+  color: #fff;
+}
+.btn-secondary {
+  background: var(--c-card);
+  color: var(--c-ink);
+  border-color: var(--c-line-strong);
+}
+.btn-text {
+  background: none;
+  border: 0;
+  color: var(--c-ink-2);
+  font: 600 17px/1 var(--font);
+  padding: 12px 8px;
+  cursor: pointer;
+}
+.answer {
+  min-height: var(--h-answer);
+  padding: 0 28px;
+  border-radius: var(--r-answer);
+  border: 1.5px solid var(--c-line-strong);
+  background: var(--c-card);
+  color: var(--c-ink);
+  font: 500 20px/1.2 var(--font);
+  cursor: pointer;
+  transition: background var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+}
+.answer:hover {
+  background: var(--c-canvas);
+}
+.answer:active {
+  transform: scale(0.98);
+}
+.card {
+  background: var(--c-card);
+  border-radius: var(--r-card);
+  box-shadow: var(--shadow-card);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
