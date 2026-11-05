@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WebAble demo pages</title>
+<link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
+<link rel="apple-touch-icon" href="brand/apple-touch-icon.png">
+<style>
+  :root { --bg: #F5F5F7; --card: #fff; --ink: #1D1D1F; --muted: #6E6E73; --line: #E3E3E8; --blue: #0071E3; --fern: #3A7D44; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 64px 24px 80px; }
+  h1 img { vertical-align: middle; margin-right: 8px; }
+  h1 { font-size: 44px; line-height: 1.1; font-weight: 600; letter-spacing: -.6px; margin: 0 0 12px; }
+  .lede { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 0 40px; }
+  h2 { font-size: 24px; font-weight: 600; letter-spacing: -.2px; margin: 48px 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 2px rgba(0,0,0,.04); }
+  .tag { align-self: flex-start; font-size: 12px; font-weight: 600; color: var(--fern); background: #E8F3EA; padding: 3px 10px; border-radius: 999px; }
+  .card h3 { font-size: 21px; font-weight: 600; margin: 0; }
+  .card p { margin: 0; color: var(--muted); font-size: 15px; }
+  .card ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+  .open { margin-top: 6px; align-self: flex-start; display: inline-flex; align-items: center; height: 40px; padding: 0 20px; border-radius: 999px; background: var(--blue); color: #fff; text-decoration: none; font-weight: 600; font-size: 15px; }
+  .open:hover { background: #0062C4; }
+  .flags { display: flex; flex-wrap: wrap; gap: 8px; }
+  .flags a { font-size: 13px; color: var(--blue); text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; background: #fff; }
+  .flags a:hover { border-color: var(--blue); }
+  code { font: 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; background: #EDEDF0; padding: 1px 6px; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border-radius: 18px; overflow: hidden; font-size: 14px; }
+  th, td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; }
+  tr:last-child td { border-bottom: 0; }
+  td a { color: var(--blue); }
+  .note { margin-top: 40px; font-size: 13px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <h1><img src="brand/logo.svg" width="56" height="40" alt=""> WebAble demo pages</h1>
+  <p class="lede">Two fictional sites for showing WebAble at Gator Hack V. They are plain HTML, CSS and JavaScript, work offline, and contain nothing written for WebAble.</p>
+
+  <h2>Local pages</h2>
+  <div class="grid">
+    <section class="card">
+      <span class="tag">Main demo</span>
+      <h3>Alderra Pharmacy: refill</h3>
+      <p>A busy refill page. The real action, "Confirm refill", is a 104 × 28 px grey button below the fold, after a loud "Continue shopping".</p>
+      <ul>
+        <li>Self-rotating promo carousel, no pause</li>
+        <li>Flu-shot and membership upsells inside the form</li>
+        <li>11 px grey fine print, cookie banner, chat that opens at 4 s</li>
+      </ul>
+      <a class="open" href="alderra/refill.html">Open the refill page</a>
+      <div class="flags">
+        <a href="alderra/refill.html?reset=1">?reset=1 · fresh visit</a>
+        <a href="alderra/refill.html?reset=1&amp;modal=1">?modal=1 · text signup</a>
+      </div>
+    </section>
+    <section class="card">
+      <span class="tag">Popups</span>
+      <h3>Lakeshore County: benefits application</h3>
+      <p>A long form with a session-timeout warning that has to stay and a survey popup that can be put away.</p>
+      <ul>
+        <li>Session warning with a live countdown</li>
+        <li>Survey invitation in the corner</li>
+        <li>Required fields, filled fields and a help line</li>
+      </ul>
+      <a class="open" href="benefits/apply.html">Open the application</a>
+      <div class="flags">
+        <a href="benefits/apply.html?timeout=0">?timeout=0 · no warning</a>
+        <a href="benefits/apply.html?survey=0">?survey=0 · no survey</a>
+        <a href="benefits/apply.html?minutes=1">?minutes=1 · short countdown</a>
+      </div>
+    </section>
+  </div>
+
+  <h2>Real sites in the eval</h2>
+  <table>
+    <thead><tr><th>Site</th><th>What makes it hard</th></tr></thead>
+    <tbody>
+      <tr><td><a href="https://www.drugs.com/metformin.html" rel="noopener">Drugs.com: metformin</a></td><td>74% of controls under 24 px, an ad above the heading, 16 screens of text</td></tr>
+      <tr><td><a href="https://www.wcjb.com/" rel="noopener">WCJB TV20</a></td><td>262 controls, 24 ad slots, sticky top and bottom ads</td></tr>
+      <tr><td><a href="https://www.fpl.com/" rel="noopener">FPL</a></td><td>Storm banner, region picker covering the page, cookie notice</td></tr>
+      <tr><td><a href="https://www.cvs.com/pharmacy" rel="noopener">CVS Pharmacy</a></td><td>Cookie banner covering 17%, three different refill links</td></tr>
+      <tr><td><a href="https://www.walgreens.com/rx-checkout/guest-express-refill" rel="noopener">Walgreens express refill</a></td><td>Continue button below the fold, chat widget, promos in the top bar</td></tr>
+      <tr><td><a href="https://www.disasterassistance.gov/" rel="noopener">DisasterAssistance.gov</a></td><td>Alert slide-in, chat bubble, three stacked sticky bars</td></tr>
+      <tr><td><a href="https://www.myflfamilies.com/services/public-assistance/supplemental-nutrition-assistance-program-snap" rel="noopener">Florida DCF SNAP</a></td><td>Banner and hero fill the first screen; content starts below the fold</td></tr>
+    </tbody>
+  </table>
+
+  <p class="note">Run the eval harness with <code>pnpm eval</code> (demo pages), <code>pnpm eval --sites all</code>, or <code>pnpm eval --check</code> for the page checks without the extension. Shift+R resets the Alderra page.</p>
+</main>
+</body>
+</html>
