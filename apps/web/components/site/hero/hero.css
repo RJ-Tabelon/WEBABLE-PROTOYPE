@@ -1,0 +1,260 @@
+/*
+ * The home hero: the moving letters behind the promise (GlyphField) and the
+ * product picture under it (HeroShowcase: real screenshots of sites in Chrome,
+ * as each site made it and fitted by WebAble).
+ */
+
+/* =========================================================================
+   The letters behind the hero's words
+   ========================================================================= */
+
+.wm-hero__top {
+  position: relative;
+  isolation: isolate;
+  padding-block-start: var(--space-16);
+}
+
+@container ws (min-width: 64em) {
+  .wm-hero__top {
+    padding-block-start: var(--space-24, 6rem);
+  }
+}
+
+/* The field runs from the top of the hero to behind the top of the picture,
+   where it fades out. */
+.wm-glyphs {
+  position: absolute;
+  z-index: -1;
+  inset: 0 0 -14rem;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--ink);
+  font-family: var(--font-mono);
+}
+
+.wm-glyphs__canvas {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+/* Pause sits at the end of the hero's last line, out of the words' way. */
+.wm-glyphs__bar {
+  position: absolute;
+  inset-inline: 0;
+  inset-block-end: calc(-1 * var(--space-2));
+  display: flex;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+/* On a phone the last lines fill the width, so Pause goes to the top corner,
+   above the announcement. */
+@container ws (max-width: 29.99em) {
+  .wm-glyphs__bar {
+    inset-block: var(--space-2) auto;
+  }
+}
+
+.wm-glyphs__toggle.wa-icon-btn {
+  pointer-events: auto;
+  color: var(--ink-3);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .wm-glyphs__toggle.wa-icon-btn:hover {
+    color: var(--ink);
+  }
+}
+
+/* Still letters need no Pause. */
+@media (prefers-reduced-motion: reduce) {
+  .wm-glyphs__bar {
+    display: none;
+  }
+}
+:root[data-wa-motion='reduce'] .wm-glyphs__bar {
+  display: none;
+}
+
+/* The picture sits above the letters' fade. */
+.wm-hero .wm-hero__stage {
+  z-index: 1;
+}
+
+/* =========================================================================
+   The hero picture: real screenshots in a browser window
+   ========================================================================= */
+
+.wm-show {
+  display: grid;
+  gap: var(--space-5);
+  min-inline-size: 0;
+  margin: 0;
+}
+
+.wm-show__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--ink);
+  font-size: var(--text-meta);
+  font-weight: var(--weight-medium);
+  line-height: var(--leading-label);
+  white-space: nowrap;
+}
+
+.wm-show__glyph.wa-status-glyph--adapted {
+  color: var(--accent);
+}
+
+.wm-show__badge-more {
+  display: none;
+}
+
+@container wm-window (min-width: 44em) {
+  .wm-show__badge-more {
+    display: inline;
+  }
+}
+
+/* A narrow window: the switch takes the bar's whole end. */
+@container wm-window (max-width: 33.99em) {
+  .wm-show .wm-window__end {
+    flex: 1 1 100%;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  .wm-show[data-view='original'] .wm-show__badge {
+    display: none;
+  }
+  .wm-show[data-view='original'] .wm-window__end {
+    justify-content: flex-end;
+  }
+}
+
+@container wm-window (max-width: 20.99em) {
+  .wm-show .wm-show__badge {
+    display: none;
+  }
+  .wm-show .wm-window__end {
+    justify-content: flex-end;
+  }
+}
+
+/* The screenshots, stacked; the one on show fades in over the other. */
+.wm-show__view {
+  position: relative;
+  display: grid;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.wm-show__shot {
+  grid-area: 1 / 1;
+  inline-size: 100%;
+  block-size: 100%;
+  object-fit: cover;
+  object-position: top left;
+  opacity: 0;
+  transition: opacity 700ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+.wm-show__shot[data-on] {
+  opacity: 1;
+}
+
+/* A jump (reduced motion, a later visit, a site switch) moves nothing,
+   the switches included. */
+.wm-show[data-instant]
+  :is(.wm-show__shot, .wa-segmented__item, .wa-segmented__indicator) {
+  transition: none;
+}
+
+/* Under the window: the site switch, then what changed. */
+.wm-show__below {
+  display: grid;
+  gap: var(--space-5) var(--space-10);
+}
+
+@container ws (min-width: 56em) {
+  .wm-show__below {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.wm-show__label {
+  margin: 0 0 var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+.wm-show__sites .wa-segmented {
+  max-inline-size: 100%;
+}
+
+/* On a phone the three site names fill the row, with tighter padding so
+   they fit at 320 px without the text getting smaller. */
+@container ws (max-width: 29.99em) {
+  .wm-show__sites .wa-segmented {
+    display: flex;
+    inline-size: 100%;
+  }
+  .wm-show__sites .wa-segmented__item {
+    flex: 1 1 auto;
+    min-inline-size: var(--target-min);
+    padding-inline: var(--space-2);
+  }
+}
+
+.wm-show__list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: var(--space-1) var(--space-8);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wm-show__list > li {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--target-min);
+}
+
+/* A change in WebAble's own sentence, with a tick in the fit colour, centred
+   on the sentence's first line. */
+.wm-show__list > li.wm-show__did {
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-block: var(--space-2);
+  color: var(--ink);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+}
+
+.wm-show__did .wa-icon {
+  flex: none;
+  margin-block-start: calc((1lh - 1rem) / 2);
+  color: var(--accent);
+}
+
+.wm-show__caption {
+  color: var(--ink-3);
+  font-size: var(--text-meta);
+  line-height: var(--leading-meta);
+  letter-spacing: var(--track-meta);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wm-show__shot {
+    transition: none;
+  }
+}
+:root[data-wa-motion='reduce'] .wm-show__shot {
+  transition: none;
+}
