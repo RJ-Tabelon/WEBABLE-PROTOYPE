@@ -23,9 +23,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm env:sync
         env:
-          SUPABASE_URL: https://example.supabase.co
-          SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
-          CONTACT_EMAIL: ci@example.com
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
       - run: pnpm check
       - run: pnpm --filter @webable/web build
 
