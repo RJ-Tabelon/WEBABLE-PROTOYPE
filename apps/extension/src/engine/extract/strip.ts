@@ -4,11 +4,15 @@
 const NODE_ID = /^n\d{1,5}$/;
 
 function looksLikeOutlineNode(o: Record<string, unknown>): boolean {
-  return typeof o.id === 'string' && NODE_ID.test(o.id) && typeof o.kind === 'string';
+  return (
+    typeof o.id === 'string' && NODE_ID.test(o.id) && typeof o.kind === 'string'
+  );
 }
 
 /** A copy of an outline without any node's `data` (ExtractedData). */
-export function stripOutlineData<T extends { nodes: ReadonlyArray<object> }>(outline: T): T {
+export function stripOutlineData<T extends { nodes: ReadonlyArray<object> }>(
+  outline: T,
+): T {
   return {
     ...outline,
     nodes: outline.nodes.map((n) => {

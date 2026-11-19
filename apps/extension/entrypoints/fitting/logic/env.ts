@@ -2,7 +2,7 @@
 // page: Chrome's font settings, default and per-site zoom, the OS preferences as media queries, and languages.
 // Nothing here is a question, and nothing leaves the laptop.
 
-import type { BrowserSettings } from '@webable/core';
+import type { BrowserSettings } from '@webable/engine';
 
 export const STIMULUS_FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
@@ -135,8 +135,10 @@ export async function readBrowserSettings(): Promise<BrowserSettings> {
 
   try {
     const fs = c?.fontSettings;
-    if (fs?.getDefaultFontSize) defaultFontPx = (await fs.getDefaultFontSize({})).pixelSize ?? null;
-    if (fs?.getMinimumFontSize) minFontPx = (await fs.getMinimumFontSize({})).pixelSize ?? null;
+    if (fs?.getDefaultFontSize)
+      defaultFontPx = (await fs.getDefaultFontSize({})).pixelSize ?? null;
+    if (fs?.getMinimumFontSize)
+      minFontPx = (await fs.getMinimumFontSize({})).pixelSize ?? null;
   } catch {
     /* no permission yet: probe below */
   }
@@ -149,8 +151,12 @@ export async function readBrowserSettings(): Promise<BrowserSettings> {
   try {
     if (c?.tabs?.getZoomSettings) {
       const id = await currentTabId(c);
-      const zs = id != null ? await c.tabs.getZoomSettings(id) : await c.tabs.getZoomSettings();
-      if (zs?.defaultZoomFactor && Number.isFinite(zs.defaultZoomFactor)) defaultZoom = zs.defaultZoomFactor;
+      const zs =
+        id != null
+          ? await c.tabs.getZoomSettings(id)
+          : await c.tabs.getZoomSettings();
+      if (zs?.defaultZoomFactor && Number.isFinite(zs.defaultZoomFactor))
+        defaultZoom = zs.defaultZoomFactor;
     }
   } catch {
     /* unknown */
@@ -166,14 +172,19 @@ export async function readBrowserSettings(): Promise<BrowserSettings> {
         if (!site || seen.has(site) || t.id == null) continue;
         seen.add(site);
         const z = await c.tabs.getZoom(t.id).catch(() => null);
-        if (z != null && Math.abs(z - (defaultZoom ?? 1)) >= 0.05) siteZooms.push({ site, zoom: Math.round(z * 100) / 100 });
+        if (z != null && Math.abs(z - (defaultZoom ?? 1)) >= 0.05)
+          siteZooms.push({ site, zoom: Math.round(z * 100) / 100 });
       }
     }
   } catch {
     /* fine without */
   }
 
-  const pointer: BrowserSettings['pointer'] = mq('(pointer: coarse)') ? 'coarse' : mq('(pointer: fine)') ? 'fine' : 'none';
+  const pointer: BrowserSettings['pointer'] = mq('(pointer: coarse)')
+    ? 'coarse'
+    : mq('(pointer: fine)')
+      ? 'fine'
+      : 'none';
   return {
     defaultFontPx,
     minFontPx,
@@ -184,7 +195,9 @@ export async function readBrowserSettings(): Promise<BrowserSettings> {
     forcedColors: mq('(forced-colors: active)'),
     colorScheme: mq('(prefers-color-scheme: dark)') ? 'dark' : 'light',
     reducedTransparency: mq('(prefers-reduced-transparency: reduce)'),
-    languages: [...(navigator.languages ?? [navigator.language])].filter(Boolean).slice(0, 6),
+    languages: [...(navigator.languages ?? [navigator.language])]
+      .filter(Boolean)
+      .slice(0, 6),
     pointer,
     anyHover: mq('(any-hover: hover)'),
   };
@@ -193,10 +206,16 @@ export async function readBrowserSettings(): Promise<BrowserSettings> {
 /** Plain words for the settings that shaped the warm-up, kept with the fit. */
 export function settingsUsed(s: BrowserSettings): string[] {
   const out: string[] = [];
-  if (s.defaultFontPx != null && Math.abs(s.defaultFontPx - 16) >= 0.5) out.push(`Default font ${Math.round(s.defaultFontPx)} px`);
-  if (s.defaultZoom != null && Math.abs(s.defaultZoom - 1) >= 0.01) out.push(`Page zoom ${Math.round(s.defaultZoom * 100)}%`);
-  if (s.minFontPx != null && s.minFontPx > 0) out.push(`Minimum font ${Math.round(s.minFontPx)} px`);
-  if (s.siteZooms.length) out.push(`Zoomed in on ${s.siteZooms.length} open site${s.siteZooms.length === 1 ? '' : 's'}`);
+  if (s.defaultFontPx != null && Math.abs(s.defaultFontPx - 16) >= 0.5)
+    out.push(`Default font ${Math.round(s.defaultFontPx)} px`);
+  if (s.defaultZoom != null && Math.abs(s.defaultZoom - 1) >= 0.01)
+    out.push(`Page zoom ${Math.round(s.defaultZoom * 100)}%`);
+  if (s.minFontPx != null && s.minFontPx > 0)
+    out.push(`Minimum font ${Math.round(s.minFontPx)} px`);
+  if (s.siteZooms.length)
+    out.push(
+      `Zoomed in on ${s.siteZooms.length} open site${s.siteZooms.length === 1 ? '' : 's'}`,
+    );
   if (s.reducedMotion) out.push('Reduce motion');
   if (s.contrastMore) out.push('More contrast');
   if (s.forcedColors) out.push('System colours');

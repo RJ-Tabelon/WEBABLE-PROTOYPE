@@ -9,10 +9,25 @@
 // URLs or coordinates leave this file: Jev only ever sees window aggregates built by core `toSignals`.
 
 import {
-  decideOffers, gate, initialCusum, initialOfferMemory, resetCusum, snoozeOffer, toSignals, turnOffOffer,
-  type BgRequest, type CusumState, type FitProfile, type Offer, type OfferKind, type OfferMemory,
-  type StruggleCounts, type StruggleJudgment, type StruggleKind, type StruggleSignals,
-} from '@webable/core';
+  decideOffers,
+  gate,
+  initialCusum,
+  initialOfferMemory,
+  resetCusum,
+  snoozeOffer,
+  toSignals,
+  turnOffOffer,
+  type BgRequest,
+  type CusumState,
+  type FitProfile,
+  type Offer,
+  type OfferKind,
+  type OfferMemory,
+  type StruggleCounts,
+  type StruggleJudgment,
+  type StruggleKind,
+  type StruggleSignals,
+} from '@webable/engine';
 import { askExt, type ZoomInfo } from './bus';
 import { onMovingPart, type PointerOutcome } from './passive';
 
@@ -20,7 +35,11 @@ export interface SignalsHost {
   elementFor(id: string): Element | null;
   fit(): FitProfile | null;
   pageKind(): string;
-  onJudgment(j: StruggleJudgment, waiting: StruggleKind[], offers: Offer[]): void;
+  onJudgment(
+    j: StruggleJudgment,
+    waiting: StruggleKind[],
+    offers: Offer[],
+  ): void;
   ask<T>(req: BgRequest): Promise<T>;
   isOurUi(target: EventTarget | null): boolean;
   /**
@@ -66,11 +85,11 @@ export const SIG = {
   DEAD_MS: 1000,
   DEAD_PAUSE_MS: 10_000,
   // R1 browser zoom, R2 pinch, P9 pinch-to-tap
-  ZOOM_IN_RATIO: 1.10,
+  ZOOM_IN_RATIO: 1.1,
   ZOOM_HOLD_MS: 5000,
   ZOOM_HINT_MS: 2500,
   PINCH_SCALE: 1.25,
-  PINCH_REARM_SCALE: 1.10,
+  PINCH_REARM_SCALE: 1.1,
   PINCH_HOLD_MS: 2000,
   PINCH_TAP_MS: 3000,
   // R3 full re-read (backtrack)
@@ -123,21 +142,43 @@ export const SIG = {
 
 /** Interactive selector from research-struggle.md §2. */
 export const INTERACTIVE = [
-  'a[href]', 'button', 'input:not([type=hidden])', 'select', 'textarea', 'summary', 'label[for]',
-  '[role=button]', '[role=link]', '[role=checkbox]', '[role=radio]', '[role=switch]', '[role=tab]',
-  '[role=menuitem]', '[role=option]', '[contenteditable=""]', '[contenteditable=true]', '[tabindex]:not([tabindex^="-"])',
+  'a[href]',
+  'button',
+  'input:not([type=hidden])',
+  'select',
+  'textarea',
+  'summary',
+  'label[for]',
+  '[role=button]',
+  '[role=link]',
+  '[role=checkbox]',
+  '[role=radio]',
+  '[role=switch]',
+  '[role=tab]',
+  '[role=menuitem]',
+  '[role=option]',
+  '[contenteditable=""]',
+  '[contenteditable=true]',
+  '[tabindex]:not([tabindex^="-"])',
 ].join(',');
 /** Drag-capable exclusions from research-struggle.md §2. */
-export const DRAG_OK = 'input[type=range],[draggable=true],canvas,svg,video,[role=slider],[role=scrollbar]';
-const MEDIA = 'img,picture,canvas,svg,video,iframe,[role=img],[role=application]';
+export const DRAG_OK =
+  'input[type=range],[draggable=true],canvas,svg,video,[role=slider],[role=scrollbar]';
+const MEDIA =
+  'img,picture,canvas,svg,video,iframe,[role=img],[role=application]';
 const FIELD = [
   'input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=reset]):not([type=image])' +
     ':not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file])',
-  'select', 'textarea', '[contenteditable=""]', '[contenteditable=true]',
+  'select',
+  'textarea',
+  '[contenteditable=""]',
+  '[contenteditable=true]',
 ].join(',');
 const DIALOG = 'dialog,[role=dialog],[role=alertdialog],[aria-modal=true]';
-const NOT_OVERLAY = 'header,nav,[role=navigation],[role=banner],[role=menu],[role=menubar],[role=listbox],[role=toolbar]';
-const CAROUSEL = '[aria-roledescription*="carousel"],[class*="carousel"],[class*="slider"],[class*="swiper"],[class*="slick"],[role=tablist],[role=listbox]';
+const NOT_OVERLAY =
+  'header,nav,[role=navigation],[role=banner],[role=menu],[role=menubar],[role=listbox],[role=toolbar]';
+const CAROUSEL =
+  '[aria-roledescription*="carousel"],[class*="carousel"],[class*="slider"],[class*="swiper"],[class*="slick"],[role=tablist],[role=listbox]';
 /** X2: canvas, game and map pages disable the pointing gates. */
 const POINTING_OFF_KINDS = /canvas|game|map|draw|paint|whiteboard|design tool/i;
 
@@ -145,7 +186,12 @@ const POINTING_OFF_KINDS = /canvas|game|map|draw|paint|whiteboard|design tool/i;
 /* Pure helpers (exported for tests; no DOM access)                    */
 /* ------------------------------------------------------------------ */
 
-export interface RectLike { left: number; top: number; right: number; bottom: number }
+export interface RectLike {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
 
 /** Distance from a point to a rectangle (0 inside or on the edge). */
 export function rectDistance(x: number, y: number, r: RectLike): number {
@@ -155,7 +201,10 @@ export function rectDistance(x: number, y: number, r: RectLike): number {
 }
 
 /** Overlap of two [low, high] ranges, relative to the shorter one. */
-export function overlapRatio(a: readonly [number, number], b: readonly [number, number]): number {
+export function overlapRatio(
+  a: readonly [number, number],
+  b: readonly [number, number],
+): number {
   const inter = Math.max(0, Math.min(a[1], b[1]) - Math.max(a[0], b[0]));
   return inter / Math.max(1, Math.min(a[1] - a[0], b[1] - b[0]));
 }
@@ -177,18 +226,36 @@ export interface PressFacts {
 
 /** P2: the press began on control A and was released off A, 3-40 px away, within 800 ms. */
 export function isLostClick(p: PressFacts): boolean {
-  return p.pointerType !== 'touch' && !p.releasedInside && !p.selecting && !p.dragCapable &&
-    p.distPx >= SIG.SLIP_MIN_PX && p.distPx <= SIG.SLIP_MAX_PX && p.durMs <= SIG.LOST_MAX_MS;
+  return (
+    p.pointerType !== 'touch' &&
+    !p.releasedInside &&
+    !p.selecting &&
+    !p.dragCapable &&
+    p.distPx >= SIG.SLIP_MIN_PX &&
+    p.distPx <= SIG.SLIP_MAX_PX &&
+    p.durMs <= SIG.LOST_MAX_MS
+  );
 }
 
 /** How long a still viewport of `words` short text must last to count as a long pause (pace <= 0.5x usual). */
-export function longPauseThresholdMs(words: number, wpm: number = SIG.USUAL_WPM): number {
+export function longPauseThresholdMs(
+  words: number,
+  wpm: number = SIG.USUAL_WPM,
+): number {
   const expected = (Math.max(0, words) / Math.max(60, wpm)) * 60_000;
   return Math.max(SIG.LONG_PAUSE_MIN_MS, 2 * expected);
 }
 
-export function progressBand(progressEvents: number, msSinceProgress: number, windowMs: number): StruggleCounts['progress'] {
-  if (msSinceProgress >= SIG.HUNT_NO_ACTION_MS && windowMs >= SIG.HUNT_NO_ACTION_MS) return 'none';
+export function progressBand(
+  progressEvents: number,
+  msSinceProgress: number,
+  windowMs: number,
+): StruggleCounts['progress'] {
+  if (
+    msSinceProgress >= SIG.HUNT_NO_ACTION_MS &&
+    windowMs >= SIG.HUNT_NO_ACTION_MS
+  )
+    return 'none';
   if (progressEvents >= 3 && msSinceProgress < 10_000) return 'steady';
   return 'some';
 }
@@ -214,7 +281,10 @@ export class PointerTrail {
     else this.head = (this.head + 1) % this.cap;
   }
   /** The current movement segment: samples since `sinceT` (the last click) and since the last pause of >= 1 s. */
-  segment(sinceT: number, nowT: number): Array<{ x: number; y: number; t: number }> {
+  segment(
+    sinceT: number,
+    nowT: number,
+  ): Array<{ x: number; y: number; t: number }> {
     const out: Array<{ x: number; y: number; t: number }> = [];
     let later: number | null = null;
     for (let k = this.size - 1; k >= 0; k--) {
@@ -241,7 +311,11 @@ export class PointerTrail {
 }
 
 export type ToggleOutcome = 'double' | 'undone' | null;
-export interface ToggleClick { t: number; pre: string; post: string | null }
+export interface ToggleClick {
+  t: number;
+  pre: string;
+  post: string | null;
+}
 
 /**
  * P4 for one toggle. `pre` is the state just before each click; `settle` gives the state after it.
@@ -262,12 +336,25 @@ export class ToggleHistory {
     if (k < 0) return null;
     const b = this.e[k - 1];
     const a = this.e[k - 2];
-    if (a && b && b.t - a.t <= SIG.DOUBLE_MS && c.t - b.t <= SIG.UNDO_MS &&
-        a.pre !== b.pre && c.pre === a.pre && post === b.pre) {
+    if (
+      a &&
+      b &&
+      b.t - a.t <= SIG.DOUBLE_MS &&
+      c.t - b.t <= SIG.UNDO_MS &&
+      a.pre !== b.pre &&
+      c.pre === a.pre &&
+      post === b.pre
+    ) {
       this.e = [];
       return 'double';
     }
-    if (b && c.t - b.t > SIG.DOUBLE_MS && c.t - b.t <= SIG.UNDO_MS && b.pre !== c.pre && post === b.pre) {
+    if (
+      b &&
+      c.t - b.t > SIG.DOUBLE_MS &&
+      c.t - b.t <= SIG.UNDO_MS &&
+      b.pre !== c.pre &&
+      post === b.pre
+    ) {
       this.e = [];
       return 'undone';
     }
@@ -277,7 +364,13 @@ export class ToggleHistory {
 
 /** R2 + P9: a pinch to >= 125% held 2 s and not followed by a tap within 3 s is a reading zoom; with a tap it is pointing. */
 export class PinchWatch {
-  private start: { t: number; belowAt: number | null; max: number; media: boolean; tapped: boolean } | null = null;
+  private start: {
+    t: number;
+    belowAt: number | null;
+    max: number;
+    media: boolean;
+    tapped: boolean;
+  } | null = null;
   private armed = true;
   scale(s: number, t: number, onMedia: () => boolean): void {
     const st = this.start;
@@ -285,7 +378,13 @@ export class PinchWatch {
       if (s < SIG.PINCH_SCALE && st.belowAt === null) st.belowAt = t;
       st.max = Math.max(st.max, s);
     } else if (this.armed && s >= SIG.PINCH_SCALE) {
-      this.start = { t, belowAt: null, max: s, media: onMedia(), tapped: false };
+      this.start = {
+        t,
+        belowAt: null,
+        max: s,
+        media: onMedia(),
+        tapped: false,
+      };
       this.armed = false;
     }
     if (!this.start && s < SIG.PINCH_REARM_SCALE) this.armed = true;
@@ -324,15 +423,21 @@ export class ZoomWatch {
     this.ref = initial;
     this.current = initial;
   }
-  get pending(): boolean { return this.cand !== null; }
-  hint(t: number): void { this.hintAt = t; }
+  get pending(): boolean {
+    return this.cand !== null;
+  }
+  hint(t: number): void {
+    this.hintAt = t;
+  }
   observe(f: number, t: number, byPerson: boolean | null = null): void {
     if (!(f > 0)) return;
     this.current = f;
-    if (this.cand && f < this.cand.from * SIG.ZOOM_IN_RATIO - 1e-6) this.cand = null;
+    if (this.cand && f < this.cand.from * SIG.ZOOM_IN_RATIO - 1e-6)
+      this.cand = null;
     const isIn = f >= this.ref * SIG.ZOOM_IN_RATIO - 1e-6;
     if (isIn && !this.cand) {
-      if (byPerson === true || t - this.hintAt <= SIG.ZOOM_HINT_MS) this.cand = { from: this.ref, t };
+      if (byPerson === true || t - this.hintAt <= SIG.ZOOM_HINT_MS)
+        this.cand = { from: this.ref, t };
       else this.ref = f;
     }
     if (!this.cand && f < this.ref) this.ref = f;
@@ -357,12 +462,18 @@ export class ZoomWatch {
  */
 export class Backtracker {
   private lastY: number | null = null;
-  private bt: { start: number; end: number; at: number; void: boolean } | null = null;
-  private pending: { range: [number, number]; start: number; at: number } | null = null;
+  private bt: { start: number; end: number; at: number; void: boolean } | null =
+    null;
+  private pending: {
+    range: [number, number];
+    start: number;
+    at: number;
+  } | null = null;
   private guardAt = Number.NEGATIVE_INFINITY;
   guard(at: number): void {
     this.guardAt = at;
-    if (this.bt && Math.abs(this.bt.at - at) <= SIG.BACKTRACK_GUARD_MS) this.bt.void = true;
+    if (this.bt && Math.abs(this.bt.at - at) <= SIG.BACKTRACK_GUARD_MS)
+      this.bt.void = true;
   }
   feed(y: number, at: number): void {
     if (this.lastY === null) {
@@ -373,15 +484,32 @@ export class Backtracker {
     this.lastY = y;
     if (Math.abs(d) < 2) return;
     if (d < 0) {
-      if (this.pending && y < this.pending.start - SIG.BACKTRACK_RETURN_SLACK_PX) this.pending = null;
+      if (
+        this.pending &&
+        y < this.pending.start - SIG.BACKTRACK_RETURN_SLACK_PX
+      )
+        this.pending = null;
       if (!this.bt || at - this.bt.at > SIG.BACKTRACK_EXPIRE_MS) {
-        this.bt = { start: y - d, end: y, at, void: Math.abs(at - this.guardAt) <= SIG.BACKTRACK_GUARD_MS };
+        this.bt = {
+          start: y - d,
+          end: y,
+          at,
+          void: Math.abs(at - this.guardAt) <= SIG.BACKTRACK_GUARD_MS,
+        };
       } else {
         this.bt.end = Math.min(this.bt.end, y);
       }
-    } else if (this.bt && this.bt.start - this.bt.end >= SIG.BACKTRACK_MIN_PX &&
-               y >= this.bt.start - SIG.BACKTRACK_RETURN_SLACK_PX) {
-      if (!this.bt.void) this.pending = { range: [this.bt.end, this.bt.start], start: this.bt.start, at };
+    } else if (
+      this.bt &&
+      this.bt.start - this.bt.end >= SIG.BACKTRACK_MIN_PX &&
+      y >= this.bt.start - SIG.BACKTRACK_RETURN_SLACK_PX
+    ) {
+      if (!this.bt.void)
+        this.pending = {
+          range: [this.bt.end, this.bt.start],
+          start: this.bt.start,
+          at,
+        };
       this.bt = null;
     }
   }
@@ -407,12 +535,21 @@ export class ActiveClock {
       this.since = null;
     }
   }
-  at(nowW: number): number { return this.acc + (this.since === null ? 0 : nowW - this.since); }
+  at(nowW: number): number {
+    return this.acc + (this.since === null ? 0 : nowW - this.since);
+  }
 }
 
 /** One local observation. `at` is active time, `t` is performance.now(). Never leaves the device. */
 export type SigEvent =
-  | { k: 'act'; at: number; t: number; hit: 'near' | 'lost' | 'pinch' | null; reentries: number; sizePx: number }
+  | {
+      k: 'act';
+      at: number;
+      t: number;
+      hit: 'near' | 'lost' | 'pinch' | null;
+      reentries: number;
+      sizePx: number;
+    }
   | { k: 'lost'; at: number; t: number }
   | { k: 'double'; at: number; t: number }
   | { k: 'undone'; at: number; t: number }
@@ -463,18 +600,39 @@ export interface LiveFacts {
  * - progress: activations, typing and new scroll depth; 'none' after >= 20 s without any.
  * Canvas, game and map pages (and a page view where Jev found the activity deliberate) zero the pointing counts.
  */
-export function summarize(log: readonly SigEvent[], fromAt: number, toAt: number, live: LiveFacts): StruggleCounts {
+export function summarize(
+  log: readonly SigEvent[],
+  fromAt: number,
+  toAt: number,
+  live: LiveFacts,
+): StruggleCounts {
   const deadTs: number[] = [];
   const rereads: Array<Extract<SigEvent, { k: 'reread' }>> = [];
   for (const e of log) {
     if (e.k === 'dead') deadTs.push(e.t);
     else if (e.k === 'reread') rereads.push(e);
   }
-  const paused = (t: number): boolean => deadTs.some((d) => t >= d && t - d <= SIG.DEAD_PAUSE_MS);
+  const paused = (t: number): boolean =>
+    deadTs.some((d) => t >= d && t - d <= SIG.DEAD_PAUSE_MS);
   const inWin = (e: SigEvent): boolean => e.at > fromAt && e.at <= toAt;
 
-  let clicks = 0, near = 0, lost = 0, repeat = 0, dead = 0, undone = 0, wobbly = 0, zoom = 0, sideways = 0;
-  let pauses = 0, selections = 0, popups = 0, hunts = 0, stuck = 0, corrections = 0, progress = 0, scrollBacks = 0;
+  let clicks = 0,
+    near = 0,
+    lost = 0,
+    repeat = 0,
+    dead = 0,
+    undone = 0,
+    wobbly = 0,
+    zoom = 0,
+    sideways = 0;
+  let pauses = 0,
+    selections = 0,
+    popups = 0,
+    hunts = 0,
+    stuck = 0,
+    corrections = 0,
+    progress = 0,
+    scrollBacks = 0;
 
   for (const e of log) {
     if (!inWin(e)) continue;
@@ -486,29 +644,65 @@ export function summarize(log: readonly SigEvent[], fromAt: number, toAt: number
         if (e.hit === 'near' || e.hit === 'pinch') near++;
         if (e.reentries >= 2) wobbly++;
         break;
-      case 'lost': if (!paused(e.t)) lost++; break;
-      case 'double': repeat++; break;
-      case 'undone': undone++; break;
-      case 'dead': dead++; break;
-      case 'zoom': zoom++; break;
+      case 'lost':
+        if (!paused(e.t)) lost++;
+        break;
+      case 'double':
+        repeat++;
+        break;
+      case 'undone':
+        undone++;
+        break;
+      case 'dead':
+        dead++;
+        break;
+      case 'zoom':
+        zoom++;
+        break;
       case 'reread': {
-        const group = 1 + rereads.filter((o) => o !== e && Math.abs(o.at - e.at) <= SIG.SAME_PASSAGE_WINDOW_MS &&
-          overlapRatio(o.range, e.range) >= SIG.SAME_PASSAGE_OVERLAP).length;
+        const group =
+          1 +
+          rereads.filter(
+            (o) =>
+              o !== e &&
+              Math.abs(o.at - e.at) <= SIG.SAME_PASSAGE_WINDOW_MS &&
+              overlapRatio(o.range, e.range) >= SIG.SAME_PASSAGE_OVERLAP,
+          ).length;
         if (group >= 2) scrollBacks = Math.max(scrollBacks, group);
         break;
       }
-      case 'sideways': sideways++; break;
-      case 'pause': pauses++; break;
-      case 'select': selections++; break;
-      case 'popup': popups++; break;
-      case 'hunt': hunts++; break;
-      case 'stuck': stuck++; break;
-      case 'correction': corrections++; break;
-      case 'progress': progress++; break;
+      case 'sideways':
+        sideways++;
+        break;
+      case 'pause':
+        pauses++;
+        break;
+      case 'select':
+        selections++;
+        break;
+      case 'popup':
+        popups++;
+        break;
+      case 'hunt':
+        hunts++;
+        break;
+      case 'stuck':
+        stuck++;
+        break;
+      case 'correction':
+        corrections++;
+        break;
+      case 'progress':
+        progress++;
+        break;
     }
   }
   if (live.pointingOff) {
-    near = 0; lost = 0; repeat = 0; undone = 0; wobbly = 0;
+    near = 0;
+    lost = 0;
+    repeat = 0;
+    undone = 0;
+    wobbly = 0;
   }
   return {
     windowMs: Math.max(0, Math.round(live.windowMs)),
@@ -540,11 +734,25 @@ export function summarize(log: readonly SigEvent[], fromAt: number, toAt: number
  * timeOnPageSec). Core scales the CUSUM update by the share of the window that is new; with this span that share is
  * exactly 1, so every trial enters the statistic once ("never on fewer than 3 retries", research-struggle §0.4).
  */
-export function gateCounts(log: readonly SigEvent[], lastGateAt: number, toAt: number, live: LiveFacts): StruggleCounts {
+export function gateCounts(
+  log: readonly SigEvent[],
+  lastGateAt: number,
+  toAt: number,
+  live: LiveFacts,
+): StruggleCounts {
   const win = summarize(log, toAt - SIG.WINDOW_MS, toAt, live);
   const fresh = summarize(log, lastGateAt, toAt, live);
-  const spanSec = Math.max(1, Math.round(toAt / 1000) - Math.round(lastGateAt / 1000));
-  return { ...win, windowMs: spanSec * 1000, clicks: fresh.clicks, nearMissClicks: fresh.nearMissClicks, lostClicks: fresh.lostClicks };
+  const spanSec = Math.max(
+    1,
+    Math.round(toAt / 1000) - Math.round(lastGateAt / 1000),
+  );
+  return {
+    ...win,
+    windowMs: spanSec * 1000,
+    clicks: fresh.clicks,
+    nearMissClicks: fresh.nearMissClicks,
+    lostClicks: fresh.lostClicks,
+  };
 }
 
 /** Parse the background's zoom answer (a number, or an object carrying one). */
@@ -554,13 +762,20 @@ export function parseZoom(raw: unknown): number | null {
     const o = raw as Record<string, unknown>;
     f = o.factor ?? o.zoom ?? o.zoomFactor ?? o.value;
   }
-  return typeof f === 'number' && Number.isFinite(f) && f >= 0.25 && f <= 5 ? f : null;
+  return typeof f === 'number' && Number.isFinite(f) && f >= 0.25 && f <= 5
+    ? f
+    : null;
 }
 
 export function isJudgment(x: unknown): x is StruggleJudgment {
   if (!x || typeof x !== 'object') return false;
   const j = x as Partial<StruggleJudgment>;
-  return typeof j.level === 'number' && !!j.kinds && typeof j.kinds === 'object' && !!j.metrics;
+  return (
+    typeof j.level === 'number' &&
+    !!j.kinds &&
+    typeof j.kinds === 'object' &&
+    !!j.metrics
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -620,11 +835,17 @@ function containsComposed(outer: Element, inner: Element): boolean {
   return false;
 }
 
-function hasModifier(e: MouseEvent): boolean { return e.ctrlKey || e.metaKey || e.shiftKey || e.altKey; }
+function hasModifier(e: MouseEvent): boolean {
+  return e.ctrlKey || e.metaKey || e.shiftKey || e.altKey;
+}
 
 function isPrivateField(el: Element): boolean {
   const ac = (el.getAttribute('autocomplete') ?? '').toLowerCase();
-  return (el instanceof HTMLInputElement && el.type === 'password') || /(^|\s)cc-/.test(ac) || ac.includes('one-time-code');
+  return (
+    (el instanceof HTMLInputElement && el.type === 'password') ||
+    /(^|\s)cc-/.test(ac) ||
+    ac.includes('one-time-code')
+  );
 }
 
 function fieldOf(el: Element | null): Element | null {
@@ -634,14 +855,20 @@ function fieldOf(el: Element | null): Element | null {
 
 function deepActiveElement(): Element | null {
   let a = document.activeElement;
-  for (let i = 0; a?.shadowRoot?.activeElement && i < 8; i++) a = a.shadowRoot.activeElement;
+  for (let i = 0; a?.shadowRoot?.activeElement && i < 8; i++)
+    a = a.shadowRoot.activeElement;
   return a;
 }
 
 /** The state of a toggle, or null if `el` is not one (P4: checkbox, aria-pressed, aria-checked, aria-expanded, details). */
 function toggleState(el: Element): string | null {
-  if (el instanceof HTMLInputElement && el.type === 'checkbox') return el.checked ? 'on' : 'off';
-  if (el.localName === 'summary' && el.parentElement instanceof HTMLDetailsElement) return el.parentElement.open ? 'open' : 'shut';
+  if (el instanceof HTMLInputElement && el.type === 'checkbox')
+    return el.checked ? 'on' : 'off';
+  if (
+    el.localName === 'summary' &&
+    el.parentElement instanceof HTMLDetailsElement
+  )
+    return el.parentElement.open ? 'open' : 'shut';
   for (const a of ['aria-pressed', 'aria-checked', 'aria-expanded']) {
     const v = el.getAttribute(a);
     if (v !== null) return `${a}=${v}`;
@@ -656,7 +883,11 @@ function flipped(state: string): string {
 /** The dialog or fixed overlay a click inside might close. */
 function overlayContainer(start: Element): Element | null {
   let el: Element | null = start;
-  for (let depth = 0; el && el !== document.body && el !== document.documentElement && depth < 25; depth++) {
+  for (
+    let depth = 0;
+    el && el !== document.body && el !== document.documentElement && depth < 25;
+    depth++
+  ) {
     if (el.matches(DIALOG)) return el;
     if (el.matches(NOT_OVERLAY)) return null;
     const pos = getComputedStyle(el).position;
@@ -673,7 +904,12 @@ function overlayGone(box: Element, area0: number): boolean {
   if (!box.isConnected) return true;
   if (box instanceof HTMLDialogElement && !box.open) return true;
   const cs = getComputedStyle(box);
-  if (cs.display === 'none' || cs.visibility === 'hidden' || Number(cs.opacity) < 0.05) return true;
+  if (
+    cs.display === 'none' ||
+    cs.visibility === 'hidden' ||
+    Number(cs.opacity) < 0.05
+  )
+    return true;
   const r = box.getBoundingClientRect();
   return r.width * r.height < 0.25 * area0;
 }
@@ -696,7 +932,10 @@ function mediaAtViewportCenter(): boolean {
 }
 
 type CaretDoc = Document & {
-  caretPositionFromPoint?: (x: number, y: number) => { offsetNode: Node } | null;
+  caretPositionFromPoint?: (
+    x: number,
+    y: number,
+  ) => { offsetNode: Node } | null;
   caretRangeFromPoint?: (x: number, y: number) => Range | null;
 };
 
@@ -704,8 +943,10 @@ type CaretDoc = Document & {
 function visibleWords(isOurs: (t: EventTarget | null) => boolean): number {
   const d = document as CaretDoc;
   const caret = (x: number, y: number): Node | null => {
-    if (typeof d.caretPositionFromPoint === 'function') return d.caretPositionFromPoint(x, y)?.offsetNode ?? null;
-    if (typeof d.caretRangeFromPoint === 'function') return d.caretRangeFromPoint(x, y)?.startContainer ?? null;
+    if (typeof d.caretPositionFromPoint === 'function')
+      return d.caretPositionFromPoint(x, y)?.offsetNode ?? null;
+    if (typeof d.caretRangeFromPoint === 'function')
+      return d.caretRangeFromPoint(x, y)?.startContainer ?? null;
     return null;
   };
   const seen = new Set<Element>();
@@ -716,8 +957,11 @@ function visibleWords(isOurs: (t: EventTarget | null) => boolean): number {
       if (!n || n.nodeType !== Node.TEXT_NODE) continue;
       const parent = n.parentElement;
       if (!parent || isOurs(parent) || parent.closest(FIELD)) continue;
-      const block = parent.closest('p,li,dd,dt,td,th,blockquote,figcaption,h1,h2,h3,h4,h5,h6,label,legend,pre');
-      const box = block && (block.textContent ?? '').length <= 4000 ? block : parent;
+      const block = parent.closest(
+        'p,li,dd,dt,td,th,blockquote,figcaption,h1,h2,h3,h4,h5,h6,label,legend,pre',
+      );
+      const box =
+        block && (block.textContent ?? '').length <= 4000 ? block : parent;
       if (seen.has(box)) continue;
       seen.add(box);
       words += wordCount((box.textContent ?? '').slice(0, 4000));
@@ -727,10 +971,14 @@ function visibleWords(isOurs: (t: EventTarget | null) => boolean): number {
   return words;
 }
 
-type StorageArea = { get(key: string): Promise<Record<string, unknown>>; set(items: Record<string, unknown>): Promise<void> };
+type StorageArea = {
+  get(key: string): Promise<Record<string, unknown>>;
+  set(items: Record<string, unknown>): Promise<void>;
+};
 function chromeStorage(): StorageArea | null {
   try {
-    const c = (globalThis as { chrome?: { storage?: { local?: StorageArea } } }).chrome;
+    const c = (globalThis as { chrome?: { storage?: { local?: StorageArea } } })
+      .chrome;
     return c?.storage?.local ?? null;
   } catch {
     return null;
@@ -750,7 +998,8 @@ interface StoredMem {
   off: string[];
   sites: Record<string, { snoozedUntil: Record<string, number> }>;
 }
-const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === 'object' && !Array.isArray(x);
+const isObj = (x: unknown): x is Record<string, unknown> =>
+  !!x && typeof x === 'object' && !Array.isArray(x);
 
 /* ------------------------------------------------------------------ */
 /* Public API                                                          */
@@ -839,12 +1088,27 @@ class SignalEngine {
   /** §5.2 rule 4: a hold re-asks once (CUSUM >= 4.5 or 60 s later); a second hold drops the episode. */
   private reaskAt: number | null = null;
   private reasked = false;
-  private deferred: { memBefore: OfferMemory; counts: StruggleCounts; until: number } | null = null;
-  private afterCheck: { kind: OfferKind; at: number; acts: number; acceptedAt: number } | null = null;
+  private deferred: {
+    memBefore: OfferMemory;
+    counts: StruggleCounts;
+    until: number;
+  } | null = null;
+  private afterCheck: {
+    kind: OfferKind;
+    at: number;
+    acts: number;
+    acceptedAt: number;
+  } | null = null;
   private actCount = 0;
 
   // pointer
-  private down: { x: number; y: number; t: number; el: Element; id: number } | null = null;
+  private down: {
+    x: number;
+    y: number;
+    t: number;
+    el: Element;
+    id: number;
+  } | null = null;
   private buttonDown = false;
   private pendingNear: Array<{ el: Element; t: number }> = [];
   private lostAt = Number.NEGATIVE_INFINITY;
@@ -873,10 +1137,19 @@ class SignalEngine {
   private zoomConfirmScheduled = false;
   private zoomInfoWorks = true;
   private readonly scrollers = new Map<object, ScrollState>();
-  private still: { since: number; words: number | null } = { since: 0, words: null };
+  private still: { since: number; words: number | null } = {
+    since: 0,
+    words: null,
+  };
   private lastSelectionKey = '';
   // forms
-  private field: { el: Element; focusAt: number; typed: boolean; inserted: boolean; stuck: boolean } | null = null;
+  private field: {
+    el: Element;
+    focusAt: number;
+    typed: boolean;
+    inserted: boolean;
+    stuck: boolean;
+  } | null = null;
   private readonly touched = new WeakSet<Element>();
   private readonly returns = new WeakMap<Element, number>();
   private readonly errors = new WeakMap<Element, number>();
@@ -888,15 +1161,46 @@ class SignalEngine {
 
   start(): void {
     this.running = true;
-    try { this.cusum = initialCusum(); } catch { this.cusum = null; }
-    try { this.mem = initialOfferMemory(); } catch { this.mem = null; }
+    try {
+      this.cusum = initialCusum();
+    } catch {
+      this.cusum = null;
+    }
+    try {
+      this.mem = initialOfferMemory();
+    } catch {
+      this.mem = null;
+    }
     this.lastDpr = devicePixelRatio;
     this.syncClock();
     const opt = { capture: true, passive: true } as const;
-    this.on(window, 'pointermove', (e) => this.onPointerMove(e as PointerEvent), opt);
-    this.on(window, 'pointerdown', (e) => this.onPointerDown(e as PointerEvent), opt);
-    this.on(window, 'pointerup', (e) => this.onPointerUp(e as PointerEvent), opt);
-    this.on(window, 'pointercancel', () => { this.down = null; this.buttonDown = false; }, opt);
+    this.on(
+      window,
+      'pointermove',
+      (e) => this.onPointerMove(e as PointerEvent),
+      opt,
+    );
+    this.on(
+      window,
+      'pointerdown',
+      (e) => this.onPointerDown(e as PointerEvent),
+      opt,
+    );
+    this.on(
+      window,
+      'pointerup',
+      (e) => this.onPointerUp(e as PointerEvent),
+      opt,
+    );
+    this.on(
+      window,
+      'pointercancel',
+      () => {
+        this.down = null;
+        this.buttonDown = false;
+      },
+      opt,
+    );
     this.on(window, 'click', (e) => this.onClick(e as MouseEvent), opt);
     this.on(window, 'keydown', (e) => this.onKeyDown(e as KeyboardEvent), opt);
     this.on(window, 'wheel', (e) => this.onWheel(e as WheelEvent), opt);
@@ -904,19 +1208,88 @@ class SignalEngine {
     this.on(window, 'focusin', (e) => this.onFocusIn(e), opt);
     this.on(window, 'focusout', (e) => this.onFocusOut(e), opt);
     this.on(window, 'input', (e) => this.onInput(e), opt);
-    this.on(window, 'mouseup', () => this.later(0, () => this.checkSelection()), opt);
-    this.on(window, 'keyup', () => this.later(0, () => this.checkSelection()), opt);
-    for (const type of ['change', 'toggle', 'play', 'pause', 'submit', 'reset']) {
-      this.on(window, type, (e) => { if (!this.ours(e.target)) this.lastResponseW = performance.now(); }, opt);
+    this.on(
+      window,
+      'mouseup',
+      () => this.later(0, () => this.checkSelection()),
+      opt,
+    );
+    this.on(
+      window,
+      'keyup',
+      () => this.later(0, () => this.checkSelection()),
+      opt,
+    );
+    for (const type of [
+      'change',
+      'toggle',
+      'play',
+      'pause',
+      'submit',
+      'reset',
+    ]) {
+      this.on(
+        window,
+        type,
+        (e) => {
+          if (!this.ours(e.target)) this.lastResponseW = performance.now();
+        },
+        opt,
+      );
     }
-    this.on(document, 'selectionchange', () => { this.lastResponseW = performance.now(); }, opt);
-    this.on(window, 'hashchange', () => { this.lastResponseW = performance.now(); this.guardBacktracks(); }, opt);
-    this.on(window, 'popstate', () => { this.lastResponseW = performance.now(); this.checkQuickBack(); }, opt);
-    this.on(window, 'pageshow', (e) => {
-      if ((e as PageTransitionEvent).persisted) { this.leaving = false; this.checkQuickBack(); }
-    }, opt);
-    this.on(window, 'pagehide', () => { this.leaving = true; }, opt);
-    this.on(window, 'beforeunload', () => { this.leaving = true; }, opt);
+    this.on(
+      document,
+      'selectionchange',
+      () => {
+        this.lastResponseW = performance.now();
+      },
+      opt,
+    );
+    this.on(
+      window,
+      'hashchange',
+      () => {
+        this.lastResponseW = performance.now();
+        this.guardBacktracks();
+      },
+      opt,
+    );
+    this.on(
+      window,
+      'popstate',
+      () => {
+        this.lastResponseW = performance.now();
+        this.checkQuickBack();
+      },
+      opt,
+    );
+    this.on(
+      window,
+      'pageshow',
+      (e) => {
+        if ((e as PageTransitionEvent).persisted) {
+          this.leaving = false;
+          this.checkQuickBack();
+        }
+      },
+      opt,
+    );
+    this.on(
+      window,
+      'pagehide',
+      () => {
+        this.leaving = true;
+      },
+      opt,
+    );
+    this.on(
+      window,
+      'beforeunload',
+      () => {
+        this.leaving = true;
+      },
+      opt,
+    );
     this.on(window, 'resize', () => this.onResize(), opt);
     this.on(document, 'visibilitychange', () => this.syncClock(), opt);
     this.on(window, 'focus', () => this.syncClock(), opt);
@@ -924,11 +1297,22 @@ class SignalEngine {
     const vv = window.visualViewport;
     if (vv) this.on(vv, 'resize', () => this.onVisualViewport(), opt);
     const nav = (window as { navigation?: EventTarget }).navigation;
-    if (nav) this.on(nav, 'navigate', () => { this.lastResponseW = performance.now(); }, opt);
+    if (nav)
+      this.on(
+        nav,
+        'navigate',
+        () => {
+          this.lastResponseW = performance.now();
+        },
+        opt,
+      );
     try {
       this.perfObs = new PerformanceObserver((list) => {
         for (const e of list.getEntries()) {
-          if (!(e as PerformanceEntry & { hadRecentInput?: boolean }).hadRecentInput) {
+          if (
+            !(e as PerformanceEntry & { hadRecentInput?: boolean })
+              .hadRecentInput
+          ) {
             this.lastLayoutShiftW = e.startTime;
             this.guardBacktracks();
           }
@@ -940,7 +1324,11 @@ class SignalEngine {
     }
     this.interval = setInterval(() => {
       if (!this.running) return;
-      try { this.tick(); } catch { /* never break the page */ }
+      try {
+        this.tick();
+      } catch {
+        /* never break the page */
+      }
     }, 1000);
     void this.loadMem();
     void this.readZoom(true);
@@ -960,10 +1348,19 @@ class SignalEngine {
     this.mo = null;
   }
 
-  private on(target: EventTarget, type: string, fn: (e: Event) => void, opt: AddEventListenerOptions): void {
+  private on(
+    target: EventTarget,
+    type: string,
+    fn: (e: Event) => void,
+    opt: AddEventListenerOptions,
+  ): void {
     const wrapped = (e: Event): void => {
       if (!this.running) return;
-      try { fn(e); } catch { /* never break the page */ }
+      try {
+        fn(e);
+      } catch {
+        /* never break the page */
+      }
     };
     target.addEventListener(type, wrapped, opt);
     this.offs.push(() => target.removeEventListener(type, wrapped, opt));
@@ -973,27 +1370,46 @@ class SignalEngine {
     const id = setTimeout(() => {
       this.timers.delete(id);
       if (!this.running) return;
-      try { fn(); } catch { /* ignore */ }
+      try {
+        fn();
+      } catch {
+        /* ignore */
+      }
     }, ms);
     this.timers.add(id);
   }
 
-  private isActive(): boolean { return !document.hidden && document.hasFocus(); }
-  private syncClock(): void { this.clock.set(this.isActive(), performance.now()); }
-  private nowAt(nowW = performance.now()): number { return this.clock.at(nowW); }
+  private isActive(): boolean {
+    return !document.hidden && document.hasFocus();
+  }
+  private syncClock(): void {
+    this.clock.set(this.isActive(), performance.now());
+  }
+  private nowAt(nowW = performance.now()): number {
+    return this.clock.at(nowW);
+  }
 
   private push(e: SigEvent): void {
     this.log.push(e);
-    if (this.log.length > SIG.LOG_CAP) this.log.splice(0, this.log.length - SIG.LOG_CAP);
+    if (this.log.length > SIG.LOG_CAP)
+      this.log.splice(0, this.log.length - SIG.LOG_CAP);
   }
 
   private ours(t: EventTarget | null): boolean {
-    try { return this.host.isOurUi(t); } catch { return false; }
+    try {
+      return this.host.isOurUi(t);
+    } catch {
+      return false;
+    }
   }
 
   private pointingOff(): boolean {
     let kind = '';
-    try { kind = this.host.pageKind(); } catch { /* unknown */ }
+    try {
+      kind = this.host.pageKind();
+    } catch {
+      /* unknown */
+    }
     return this.pointingSuppressed || POINTING_OFF_KINDS.test(kind);
   }
 
@@ -1016,12 +1432,17 @@ class SignalEngine {
 
   private onPointerMove(e: PointerEvent): void {
     if (!e.isTrusted) return;
-    const evs = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
-    if (evs.length) for (const c of evs) this.trail.push(c.clientX, c.clientY, c.timeStamp);
+    const evs =
+      typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : [];
+    if (evs.length)
+      for (const c of evs) this.trail.push(c.clientX, c.clientY, c.timeStamp);
     else this.trail.push(e.clientX, e.clientY, e.timeStamp);
     if (e.pointerType === 'touch' || e.target === this.lastMoveTarget) return;
     this.lastMoveTarget = e.target;
-    const el = e.target instanceof Element && !this.ours(e.target) ? interactiveOf(e.target) : null;
+    const el =
+      e.target instanceof Element && !this.ours(e.target)
+        ? interactiveOf(e.target)
+        : null;
     if (el !== this.hoverEl) {
       const nowW = performance.now();
       this.endHover(nowW);
@@ -1055,17 +1476,28 @@ class SignalEngine {
       return;
     }
     // P1: a press with no interactive ancestor, near a control. Confirmed only by a corrective click.
-    if (hasModifier(e) || closestComposed(target, DRAG_OK) || this.pointingOff()) return;
+    if (
+      hasModifier(e) ||
+      closestComposed(target, DRAG_OK) ||
+      this.pointingOff()
+    )
+      return;
     if (nowW - this.lastLayoutShiftW <= SIG.LAYOUT_SHIFT_GUARD_MS) return;
     const near = this.nearestInteractive(e.clientX, e.clientY, e.pointerType);
     if (near) {
-      this.pendingNear = this.pendingNear.filter((p) => nowW - p.t <= SIG.CORRECT_MS);
+      this.pendingNear = this.pendingNear.filter(
+        (p) => nowW - p.t <= SIG.CORRECT_MS,
+      );
       this.pendingNear.push({ el: near, t: nowW });
     }
   }
 
   /** Nearest interactive element 0 < d <= 24 px away: probes on rings of 8/16/24 px (touch: up to max(24, size/2)). */
-  private nearestInteractive(x: number, y: number, pointerType: string): Element | null {
+  private nearestInteractive(
+    x: number,
+    y: number,
+    pointerType: string,
+  ): Element | null {
     const touch = pointerType === 'touch';
     const rings = touch ? SIG.TOUCH_RINGS : SIG.NEAR_MISS_RINGS;
     let best: { el: Element; d: number } | null = null;
@@ -1083,7 +1515,9 @@ class SignalEngine {
         tried.add(el);
         const rect = el.getBoundingClientRect();
         const d = rectDistance(x, y, rect);
-        const maxD = touch ? Math.max(SIG.NEAR_MISS_PX, 0.5 * Math.min(rect.width, rect.height)) : SIG.NEAR_MISS_PX;
+        const maxD = touch
+          ? Math.max(SIG.NEAR_MISS_PX, 0.5 * Math.min(rect.width, rect.height))
+          : SIG.NEAR_MISS_PX;
         if (d > 0 && d <= maxD && (!best || d < best.d)) best = { el, d };
       }
     }
@@ -1144,28 +1578,47 @@ class SignalEngine {
     if (!pointer || this.pointingOff()) return;
     const at = this.nowAt(nowW);
     const r = el.getBoundingClientRect();
-    const nm = this.pendingNear.findIndex((p) => nowW - p.t <= SIG.CORRECT_MS &&
-      (p.el === el || p.el.contains(el) || el.contains(p.el) || (control !== null && p.el === control)));
+    const nm = this.pendingNear.findIndex(
+      (p) =>
+        nowW - p.t <= SIG.CORRECT_MS &&
+        (p.el === el ||
+          p.el.contains(el) ||
+          el.contains(p.el) ||
+          (control !== null && p.el === control)),
+    );
     const pinchTap = this.pinch.tap(nowW);
     let hit: 'near' | 'lost' | 'pinch' | null = null;
     if (nm >= 0) hit = 'near';
     else if (pinchTap) hit = 'pinch';
     else if (nowW - this.lostAt <= SIG.LOST_LOOKBACK_MS) hit = 'lost';
-    this.pendingNear = this.pendingNear.filter((p, i) => i !== nm && nowW - p.t <= SIG.CORRECT_MS);
+    this.pendingNear = this.pendingNear.filter(
+      (p, i) => i !== nm && nowW - p.t <= SIG.CORRECT_MS,
+    );
     if (hit === 'near' || hit === 'pinch') {
       this.retriesSinceGate++;
       this.trigger = true;
     }
     const reentries = this.trail.reentries(r, this.lastClickT, nowW);
     this.lastClickT = nowW;
-    this.push({ k: 'act', at, t: nowW, hit, reentries, sizePx: Math.round(Math.min(r.width, r.height)) });
+    this.push({
+      k: 'act',
+      at,
+      t: nowW,
+      hit,
+      reentries,
+      sizePx: Math.round(Math.min(r.width, r.height)),
+    });
     // A retry right after a slip was counted as the slip; a pinch-then-tap is a touch gesture, not an aim.
     if (hit === 'near') this.outcome('near', el, nowW);
     else if (hit === null) this.outcome('clean', el, nowW);
   }
 
   /** Round 4: one click's outcome for the passive fit (the control's size, whether the page had just shifted). */
-  private outcome(kind: PointerOutcome['kind'], el: Element, nowW: number): void {
+  private outcome(
+    kind: PointerOutcome['kind'],
+    el: Element,
+    nowW: number,
+  ): void {
     const fn = this.host.onPointerOutcome;
     if (!fn) return;
     let sizePx = 0;
@@ -1175,7 +1628,9 @@ class SignalEngine {
     } catch {
       sizePx = 0;
     }
-    const shift = Number.isFinite(this.lastLayoutShiftW) ? Math.max(0, Math.round(nowW - this.lastLayoutShiftW)) : null;
+    const shift = Number.isFinite(this.lastLayoutShiftW)
+      ? Math.max(0, Math.round(nowW - this.lastLayoutShiftW))
+      : null;
     try {
       fn({ kind, sizePx, shiftMs: shift, moving: onMovingPart(el) });
     } catch {
@@ -1203,12 +1658,18 @@ class SignalEngine {
       const out = hist.settle(entry, post);
       const t = performance.now();
       if (out === 'double') this.push({ k: 'double', at: this.nowAt(t), t });
-      else if (out === 'undone') this.push({ k: 'undone', at: this.nowAt(t), t });
+      else if (out === 'undone')
+        this.push({ k: 'undone', at: this.nowAt(t), t });
     });
   }
 
   private noteLink(el: Element): void {
-    if (!(el instanceof HTMLAnchorElement) || !el.href || (el.target && el.target !== '_self')) return;
+    if (
+      !(el instanceof HTMLAnchorElement) ||
+      !el.href ||
+      (el.target && el.target !== '_self')
+    )
+      return;
     try {
       const u = new URL(el.href, location.href);
       const here = new URL(location.href);
@@ -1237,9 +1698,11 @@ class SignalEngine {
   /* ---------------- S1 dead clicks ---------------- */
 
   private watchDead(el: Element, t0: number): void {
-    if (el.matches(FIELD) || el.matches('input[type=file],input[type=color]')) return;
+    if (el.matches(FIELD) || el.matches('input[type=file],input[type=color]'))
+      return;
     if (el instanceof HTMLAnchorElement) {
-      if ((el.target && el.target !== '_self') || el.hasAttribute('download')) return;
+      if ((el.target && el.target !== '_self') || el.hasAttribute('download'))
+        return;
       const href = el.getAttribute('href') ?? '';
       if (/^\s*(mailto|tel|sms|facetime|callto):/i.test(href)) return;
     }
@@ -1253,7 +1716,12 @@ class SignalEngine {
           }
         }
       });
-      this.mo.observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+      this.mo.observe(document, {
+        subtree: true,
+        childList: true,
+        attributes: true,
+        characterData: true,
+      });
     }
     this.later(SIG.DEAD_MS, () => {
       if (performance.now() >= this.watchUntilW - 60) {
@@ -1288,7 +1756,14 @@ class SignalEngine {
     const nowW = performance.now();
     this.lastKeyW = nowW;
     const k = e.key;
-    if (k === 'Shift' || k === 'Control' || k === 'Meta' || k === 'Alt' || k === 'CapsLock') return;
+    if (
+      k === 'Shift' ||
+      k === 'Control' ||
+      k === 'Meta' ||
+      k === 'Alt' ||
+      k === 'CapsLock'
+    )
+      return;
     if ((e.ctrlKey || e.metaKey) && !e.altKey) {
       if (k === 'f' || k === 'F') {
         this.guardBacktracks();
@@ -1334,16 +1809,21 @@ class SignalEngine {
   }
 
   /** Read the tab's zoom. Prefers `zoomInfo` (it says whether the person changed it), falls back to `getZoom`. */
-  private async fetchZoom(): Promise<{ factor: number; byPerson: boolean | null } | null> {
+  private async fetchZoom(): Promise<{
+    factor: number;
+    byPerson: boolean | null;
+  } | null> {
     if (this.zoomInfoWorks) {
       try {
         const info = await askExt<ZoomInfo>({ type: 'zoomInfo' });
         const f = parseZoom(info);
         if (f !== null) {
           const ours = info && typeof info.ours === 'number' ? info.ours : null;
-          const byPerson = info && typeof info.personChanged === 'boolean'
-            ? info.personChanged && (ours === null || Math.abs(ours - f) > 1e-3)
-            : null;
+          const byPerson =
+            info && typeof info.personChanged === 'boolean'
+              ? info.personChanged &&
+                (ours === null || Math.abs(ours - f) > 1e-3)
+              : null;
           return { factor: f, byPerson };
         }
         this.zoomInfoWorks = false;
@@ -1375,7 +1855,13 @@ class SignalEngine {
       const ev = this.zoom.tick(nowW);
       if (ev && !mediaAtViewportCenter()) {
         // zooming to look at an image, chart or map is not a reading signal
-        this.push({ k: 'zoom', at: this.nowAt(nowW), t: nowW, from: ev.from, to: ev.to });
+        this.push({
+          k: 'zoom',
+          at: this.nowAt(nowW),
+          t: nowW,
+          from: ev.from,
+          to: ev.to,
+        });
         this.trigger = true;
       }
       if (this.zoom.pending && !this.zoomConfirmScheduled) {
@@ -1392,7 +1878,8 @@ class SignalEngine {
 
   private onVisualViewport(): void {
     const vv = window.visualViewport;
-    if (vv) this.pinch.scale(vv.scale, performance.now(), mediaAtViewportCenter);
+    if (vv)
+      this.pinch.scale(vv.scale, performance.now(), mediaAtViewportCenter);
   }
 
   /* ---------------- scrolling ---------------- */
@@ -1410,10 +1897,22 @@ class SignalEngine {
     const tgt = e.target;
     if (this.ours(tgt)) return;
     let y: number, x: number, vh: number, key: object, main: boolean;
-    if (tgt === document || tgt === document.documentElement || tgt === document.body) {
-      y = window.scrollY; x = window.scrollX; vh = innerHeight; key = document; main = true;
+    if (
+      tgt === document ||
+      tgt === document.documentElement ||
+      tgt === document.body
+    ) {
+      y = window.scrollY;
+      x = window.scrollX;
+      vh = innerHeight;
+      key = document;
+      main = true;
     } else if (tgt instanceof Element) {
-      y = tgt.scrollTop; x = tgt.scrollLeft; vh = tgt.clientHeight; key = tgt; main = vh >= 0.5 * innerHeight;
+      y = tgt.scrollTop;
+      x = tgt.scrollLeft;
+      vh = tgt.clientHeight;
+      key = tgt;
+      main = vh >= 0.5 * innerHeight;
     } else {
       return;
     }
@@ -1424,7 +1923,13 @@ class SignalEngine {
         const first = this.scrollers.keys().next().value;
         if (first) this.scrollers.delete(first);
       }
-      st = { bt: main ? new Backtracker() : null, lastX: x, maxY: y, h: null, textual: null };
+      st = {
+        bt: main ? new Backtracker() : null,
+        lastX: x,
+        maxY: y,
+        h: null,
+        textual: null,
+      };
       st.bt?.feed(y, at);
       this.scrollers.set(key, st);
     }
@@ -1438,7 +1943,8 @@ class SignalEngine {
     const dx = x - st.lastX;
     st.lastX = x;
     if (Math.abs(dx) >= 1 && this.sidewaysEligible(key, st)) {
-      if (!st.h || nowW - st.h.t > SIG.SIDEWAYS_GAP_MS) st.h = { sum: 0, t: nowW, counted: false };
+      if (!st.h || nowW - st.h.t > SIG.SIDEWAYS_GAP_MS)
+        st.h = { sum: 0, t: nowW, counted: false };
       st.h.sum += Math.abs(dx);
       st.h.t = nowW;
       if (!st.h.counted && st.h.sum >= SIG.SIDEWAYS_MIN_PX) {
@@ -1453,7 +1959,8 @@ class SignalEngine {
     if (key === document) return true;
     if (st.textual === null) {
       const el = key as Element;
-      st.textual = !el.closest(CAROUSEL) && (el.textContent ?? '').trim().length >= 200;
+      st.textual =
+        !el.closest(CAROUSEL) && (el.textContent ?? '').trim().length >= 200;
     }
     return st.textual;
   }
@@ -1464,10 +1971,24 @@ class SignalEngine {
     const words = this.still.words;
     // The pointer inspecting several controls meanwhile is hunting (F1), not a pause over the text.
     let inspected = 0;
-    for (const t of this.hoverItems.values()) if (t >= this.still.since) inspected++;
-    if (words !== null && words >= SIG.SHORT_TEXT_MIN_WORDS && words <= SIG.SHORT_TEXT_MAX_WORDS &&
-        dur >= longPauseThresholdMs(words) && dur <= SIG.LONG_PAUSE_MAX_MS && !this.field && inspected < 3) {
-      this.push({ k: 'pause', at, t: performance.now(), words, ms: Math.round(dur) });
+    for (const t of this.hoverItems.values())
+      if (t >= this.still.since) inspected++;
+    if (
+      words !== null &&
+      words >= SIG.SHORT_TEXT_MIN_WORDS &&
+      words <= SIG.SHORT_TEXT_MAX_WORDS &&
+      dur >= longPauseThresholdMs(words) &&
+      dur <= SIG.LONG_PAUSE_MAX_MS &&
+      !this.field &&
+      inspected < 3
+    ) {
+      this.push({
+        k: 'pause',
+        at,
+        t: performance.now(),
+        words,
+        ms: Math.round(dur),
+      });
     }
     this.still = { since: at, words: null };
   }
@@ -1507,7 +2028,13 @@ class SignalEngine {
       if (n === SIG.FIELD_RETURNS) this.stuck('returns');
     }
     this.touched.add(f);
-    this.field = { el: f, focusAt: this.nowAt(), typed: false, inserted: false, stuck: false };
+    this.field = {
+      el: f,
+      focusAt: this.nowAt(),
+      typed: false,
+      inserted: false,
+      stuck: false,
+    };
   }
 
   private onFocusOut(e: Event): void {
@@ -1519,7 +2046,9 @@ class SignalEngine {
     const typed = cur.typed;
     // M3: errors counted on blur only (never on every keystroke); :invalid only after the person typed.
     this.later(300, () => {
-      const invalid = (typed && f.matches(':invalid')) || f.getAttribute('aria-invalid') === 'true';
+      const invalid =
+        (typed && f.matches(':invalid')) ||
+        f.getAttribute('aria-invalid') === 'true';
       if (!invalid) return;
       const n = (this.errors.get(f) ?? 0) + 1;
       this.errors.set(f, n);
@@ -1565,13 +2094,18 @@ class SignalEngine {
     const at = this.nowAt(nowW);
 
     // F1: dwell on the element under a resting pointer
-    if (this.hoverEl && nowW - this.hoverSinceW >= SIG.HOVER_ITEM_MS && !this.hoverItems.has(this.hoverEl)) {
+    if (
+      this.hoverEl &&
+      nowW - this.hoverSinceW >= SIG.HOVER_ITEM_MS &&
+      !this.hoverItems.has(this.hoverEl)
+    ) {
       this.hoverItems.set(this.hoverEl, at);
     }
     // F1: >= 20 s without an action and >= 6 items inspected without choosing any: one hunting episode
     if (!this.huntOpen && at - this.lastActionAt >= SIG.HUNT_NO_ACTION_MS) {
       let items = 0;
-      for (const t of this.hoverItems.values()) if (t > at - SIG.WINDOW_MS) items++;
+      for (const t of this.hoverItems.values())
+        if (t > at - SIG.WINDOW_MS) items++;
       if (items >= SIG.HUNT_MIN_ITEMS) {
         this.huntOpen = true;
         this.push({ k: 'hunt', at, t: nowW });
@@ -1599,7 +2133,11 @@ class SignalEngine {
       this.trigger = true;
     }
     // R4: measure the words of a still viewport once, shortly before the shortest long-pause threshold
-    if (this.still.words === null && at - this.still.since >= SIG.LONG_PAUSE_MIN_MS - 2000 && nowW - this.lastScrollW > 1000) {
+    if (
+      this.still.words === null &&
+      at - this.still.since >= SIG.LONG_PAUSE_MIN_MS - 2000 &&
+      nowW - this.lastScrollW > 1000
+    ) {
       this.still.words = visibleWords((t) => this.ours(t));
     }
     this.prune(at, nowW);
@@ -1609,12 +2147,23 @@ class SignalEngine {
     if (this.inflight) return;
     const slot = this.jevSlotFree(nowW);
     const ac = this.afterCheck;
-    if (ac && slot && idle.strict && (this.actCount - ac.acts >= SIG.AFTER_CHECK_ACTIVATIONS || at - ac.at >= SIG.AFTER_CHECK_MS)) {
+    if (
+      ac &&
+      slot &&
+      idle.strict &&
+      (this.actCount - ac.acts >= SIG.AFTER_CHECK_ACTIVATIONS ||
+        at - ac.at >= SIG.AFTER_CHECK_MS)
+    ) {
       this.afterCheck = null;
       void this.evaluate('after_check');
       return;
     }
-    if (this.reaskAt !== null && slot && idle.strict && (at >= this.reaskAt || (this.cusum?.s ?? 0) >= SIG.REASK_CUSUM)) {
+    if (
+      this.reaskAt !== null &&
+      slot &&
+      idle.strict &&
+      (at >= this.reaskAt || (this.cusum?.s ?? 0) >= SIG.REASK_CUSUM)
+    ) {
       this.reaskAt = null;
       this.reasked = true;
       void this.evaluate('reask');
@@ -1625,20 +2174,30 @@ class SignalEngine {
       return;
     }
     if (at - this.lastEvalAt >= SIG.EVAL_EVERY_MS) void this.evaluate('timer');
-    else if ((this.retriesSinceGate >= SIG.RETRIES_FOR_EARLY_GATE || this.trigger) && idle.strict) void this.evaluate('early');
+    else if (
+      (this.retriesSinceGate >= SIG.RETRIES_FOR_EARLY_GATE || this.trigger) &&
+      idle.strict
+    )
+      void this.evaluate('early');
   }
 
   private prune(at: number, nowW: number): void {
     const cut = at - SIG.LOG_KEEP_MS;
-    if (this.log.length && (this.log[0]?.at ?? at) < cut) this.log = this.log.filter((e) => e.at >= cut);
-    for (const [el, t] of this.hoverItems) if (t < at - SIG.WINDOW_MS) this.hoverItems.delete(el);
+    if (this.log.length && (this.log[0]?.at ?? at) < cut)
+      this.log = this.log.filter((e) => e.at >= cut);
+    for (const [el, t] of this.hoverItems)
+      if (t < at - SIG.WINDOW_MS) this.hoverItems.delete(el);
     const hourAgo = nowW - 3_600_000;
-    if (this.calls.length && (this.calls[0] ?? nowW) < hourAgo) this.calls = this.calls.filter((c) => c >= hourAgo);
+    if (this.calls.length && (this.calls[0] ?? nowW) < hourAgo)
+      this.calls = this.calls.filter((c) => c >= hourAgo);
   }
 
   /** §5.3: no key in 2 s, no button held, no scroll in 1 s, no text field focused (the form offer may show beside a field). */
   private idle(nowW: number): { strict: boolean; form: boolean } {
-    const base = this.isActive() && nowW - this.lastKeyW >= SIG.IDLE_KEY_MS && !this.buttonDown &&
+    const base =
+      this.isActive() &&
+      nowW - this.lastKeyW >= SIG.IDLE_KEY_MS &&
+      !this.buttonDown &&
       nowW - this.lastScrollW >= SIG.IDLE_SCROLL_MS;
     const a = deepActiveElement();
     const fieldFocused = !!this.field || (!!a && a.matches(FIELD));
@@ -1649,7 +2208,10 @@ class SignalEngine {
   private jevSlotFree(nowW: number): boolean {
     const last = this.calls[this.calls.length - 1];
     if (last !== undefined && nowW - last < SIG.JEV_MIN_GAP_MS) return false;
-    return this.calls.filter((c) => nowW - c < 3_600_000).length < SIG.JEV_MAX_PER_HOUR;
+    return (
+      this.calls.filter((c) => nowW - c < 3_600_000).length <
+      SIG.JEV_MAX_PER_HOUR
+    );
   }
 
   /* ---------------- counts, gate, Jev, offers ---------------- */
@@ -1683,13 +2245,18 @@ class SignalEngine {
     // Jev budget is spent, so the statistic stays current (the hold band re-asks at CUSUM >= 4.5).
     const live = this.live(at);
     const counts = summarize(this.log, at - SIG.WINDOW_MS, at, live);
-    let check = reason === 'reask' || reason === 'after_check' || this.pendingCheck;
+    let check =
+      reason === 'reask' || reason === 'after_check' || this.pendingCheck;
     if ((reason === 'timer' || reason === 'early') && this.cusum) {
       if (Math.round(at / 1000) === Math.round(this.lastGateAt / 1000)) {
         this.trigger = true; // same second as the previous gate run: try again on the next tick
       } else {
         try {
-          const g = gate(this.cusum, gateCounts(this.log, this.lastGateAt, at, live), fit);
+          const g = gate(
+            this.cusum,
+            gateCounts(this.log, this.lastGateAt, at, live),
+            fit,
+          );
           this.cusum = g.state;
           check = check || g.check;
         } catch {
@@ -1731,7 +2298,10 @@ class SignalEngine {
     this.history.push(j);
     if (this.history.length > 12) this.history.shift();
     // §5.2 rule 2: deliberate activity explains the pointer pattern; suppress pointing gates for this page view.
-    if ((j.kinds.deliberate ?? 0) >= 0.40 && counts.nearMissClicks + counts.lostClicks + counts.repeatClicks > 0) {
+    if (
+      (j.kinds.deliberate ?? 0) >= 0.4 &&
+      counts.nearMissClicks + counts.lostClicks + counts.repeatClicks > 0
+    ) {
       this.pointingSuppressed = true;
     }
     this.deferred = null;
@@ -1743,7 +2313,14 @@ class SignalEngine {
     const idle = this.idle(nowW);
     let r: { offers: Offer[]; waiting: StruggleKind[]; mem: OfferMemory };
     try {
-      r = decideOffers(this.history, counts, memBefore, Date.now(), nowW - this.startedW, idle.strict || idle.form);
+      r = decideOffers(
+        this.history,
+        counts,
+        memBefore,
+        Date.now(),
+        nowW - this.startedW,
+        idle.strict || idle.form,
+      );
     } catch {
       this.host.onJudgment(j, [], []);
       return;
@@ -1756,10 +2333,12 @@ class SignalEngine {
     } else {
       this.mem = r.mem;
       if (offers.length) void this.saveMem();
-      else if (!idle.strict) this.deferred = { memBefore, counts, until: nowW + 30_000 };
+      else if (!idle.strict)
+        this.deferred = { memBefore, counts, until: nowW + 30_000 };
     }
     if (r.waiting.length) {
-      if (!this.reasked && this.reaskAt === null) this.reaskAt = this.nowAt(nowW) + SIG.REASK_MS;
+      if (!this.reasked && this.reaskAt === null)
+        this.reaskAt = this.nowAt(nowW) + SIG.REASK_MS;
     } else {
       this.reaskAt = null;
       this.reasked = false;
@@ -1780,7 +2359,14 @@ class SignalEngine {
     const latest = this.history[this.history.length - 1];
     if (!latest) return;
     try {
-      const r = decideOffers(this.history, d.counts, d.memBefore, Date.now(), nowW - this.startedW, true);
+      const r = decideOffers(
+        this.history,
+        d.counts,
+        d.memBefore,
+        Date.now(),
+        nowW - this.startedW,
+        true,
+      );
       if (!r.offers.length) return;
       this.mem = r.mem;
       void this.saveMem();
@@ -1801,18 +2387,37 @@ class SignalEngine {
       } catch {
         next = m;
       }
-      if (outcome === 'undone' && this.afterCheck?.kind === kind && now - this.afterCheck.acceptedAt <= SIG.FAST_UNDO_MS) {
-        next = { ...next, snoozedUntil: { ...next.snoozedUntil, [kind]: now + SIG.FAST_UNDO_OFF_MS } };
+      if (
+        outcome === 'undone' &&
+        this.afterCheck?.kind === kind &&
+        now - this.afterCheck.acceptedAt <= SIG.FAST_UNDO_MS
+      ) {
+        next = {
+          ...next,
+          snoozedUntil: {
+            ...next.snoozedUntil,
+            [kind]: now + SIG.FAST_UNDO_OFF_MS,
+          },
+        };
       }
       this.mem = next;
       void this.saveMem();
     }
     if (outcome === 'accepted') {
-      this.afterCheck = { kind, at: this.nowAt(), acts: this.actCount, acceptedAt: now };
+      this.afterCheck = {
+        kind,
+        at: this.nowAt(),
+        acts: this.actCount,
+        acceptedAt: now,
+      };
     } else if (outcome === 'undone' || outcome === 'never') {
       this.afterCheck = null;
     }
-    try { this.cusum = this.cusum ? resetCusum(this.cusum) : initialCusum(); } catch { /* keep the old state */ }
+    try {
+      this.cusum = this.cusum ? resetCusum(this.cusum) : initialCusum();
+    } catch {
+      /* keep the old state */
+    }
     this.reaskAt = null;
     this.reasked = false;
     this.pendingCheck = false;
@@ -1832,13 +2437,18 @@ class SignalEngine {
       if (!isObj(v) || !base || !this.running) return;
       const sites = isObj(v.sites) ? v.sites : {};
       const site = sites[location.origin];
-      const snoozed = isObj(site) && isObj(site.snoozedUntil) ? site.snoozedUntil : {};
+      const snoozed =
+        isObj(site) && isObj(site.snoozedUntil) ? site.snoozedUntil : {};
       const snoozedUntil: Record<string, number> = { ...base.snoozedUntil };
-      for (const [k, t] of Object.entries(snoozed)) if (typeof t === 'number' && t > Date.now()) snoozedUntil[k] = t;
-      const off = Array.isArray(v.off) ? v.off.filter((x): x is string => typeof x === 'string') : [];
+      for (const [k, t] of Object.entries(snoozed))
+        if (typeof t === 'number' && t > Date.now()) snoozedUntil[k] = t;
+      const off = Array.isArray(v.off)
+        ? v.off.filter((x): x is string => typeof x === 'string')
+        : [];
       this.mem = {
         ...base,
-        lastOfferAt: typeof v.lastOfferAt === 'number' ? v.lastOfferAt : base.lastOfferAt,
+        lastOfferAt:
+          typeof v.lastOfferAt === 'number' ? v.lastOfferAt : base.lastOfferAt,
         // core resets `today` itself when `day` is not today's date
         day: typeof v.day === 'string' ? v.day : base.day,
         today: typeof v.today === 'number' ? v.today : base.today,
@@ -1863,14 +2473,23 @@ class SignalEngine {
       for (const [origin, s] of Object.entries(prevSites)) {
         const su = isObj(s) && isObj(s.snoozedUntil) ? s.snoozedUntil : {};
         const kept: Record<string, number> = {};
-        for (const [k, t] of Object.entries(su)) if (typeof t === 'number' && t > now) kept[k] = t;
+        for (const [k, t] of Object.entries(su))
+          if (typeof t === 'number' && t > now) kept[k] = t;
         if (Object.keys(kept).length) sites[origin] = { snoozedUntil: kept };
       }
       const mine: Record<string, number> = {};
-      for (const [k, t] of Object.entries(m.snoozedUntil)) if (t > now) mine[k] = t;
-      if (Object.keys(mine).length) sites[location.origin] = { snoozedUntil: mine };
+      for (const [k, t] of Object.entries(m.snoozedUntil))
+        if (t > now) mine[k] = t;
+      if (Object.keys(mine).length)
+        sites[location.origin] = { snoozedUntil: mine };
       else delete sites[location.origin];
-      const stored: StoredMem = { day: m.day ?? '', lastOfferAt: m.lastOfferAt, today: m.today, off: [...m.off], sites };
+      const stored: StoredMem = {
+        day: m.day ?? '',
+        lastOfferAt: m.lastOfferAt,
+        today: m.today,
+        off: [...m.off],
+        sites,
+      };
       await st.set({ [MEM_KEY]: stored });
     } catch {
       /* storage unavailable */

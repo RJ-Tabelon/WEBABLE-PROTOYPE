@@ -9,18 +9,45 @@
 //   kept     everything else                               none (hairline, no chip)
 //
 // Pure: no DOM. The thresholds come from core's POLICY, so the Lens never restates them by hand.
-import { POLICY } from '@webable/core';
-import type { ElementDecision, ElementEvidence, ElementJudgment, FineRole, PageDigest, PageUnderstanding, Role } from '@webable/core';
+import { POLICY } from '@webable/engine';
+import type {
+  ElementDecision,
+  ElementEvidence,
+  ElementJudgment,
+  FineRole,
+  PageDigest,
+  PageUnderstanding,
+  Role,
+} from '@webable/engine';
 import { settledFine, type FineFamily, type OutlineWeight } from './words';
 
-export type LensClass = 'main' | 'popup' | 'folded' | 'guarded' | 'unsure' | 'kept' | 'pending';
+export type LensClass =
+  'main' | 'popup' | 'folded' | 'guarded' | 'unsure' | 'kept' | 'pending';
 
 /** Chip priority weight per class (priority = weight × 10 + p). */
-export const CLASS_WEIGHT: Record<LensClass, number> = { main: 6, popup: 5, folded: 4, guarded: 3, unsure: 2, kept: 0, pending: 0 };
+export const CLASS_WEIGHT: Record<LensClass, number> = {
+  main: 6,
+  popup: 5,
+  folded: 4,
+  guarded: 3,
+  unsure: 2,
+  kept: 0,
+  pending: 0,
+};
 
-export const FOLD_ROLES: readonly Role[] = ['advertising', 'recommendations', 'popup_overlay'];
+export const FOLD_ROLES: readonly Role[] = [
+  'advertising',
+  'recommendations',
+  'popup_overlay',
+];
 export const PROTECT_ROLES: readonly Role[] = [
-  'main_content', 'form_field', 'action_button', 'navigation', 'help_contact', 'consent_notice', 'account_utility',
+  'main_content',
+  'form_field',
+  'action_button',
+  'navigation',
+  'help_contact',
+  'consent_notice',
+  'account_utility',
 ];
 
 export const ROLE_NAME: Record<Role, string> = {
@@ -100,19 +127,30 @@ export interface LensItem {
   weight: OutlineWeight | null;
 }
 
-const f2 = (p: number): string => (Number.isFinite(p) ? Math.min(1, Math.max(0, p)).toFixed(2) : '0.00');
-const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+const f2 = (p: number): string =>
+  Number.isFinite(p) ? Math.min(1, Math.max(0, p)).toFixed(2) : '0.00';
+const n = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : 0;
 // Probabilities are quantised to 0.01; round sums so 0.02 + 0.03 compares as exactly 0.05 (as the policy does).
 const sumOf = (j: ElementJudgment, roles: readonly Role[]): number =>
   Math.round(roles.reduce((t, r) => t + n(j.roleProbs[r]), 0) * 1e6) / 1e6;
 
 function normLabel(s: string): string {
-  return s.toLowerCase().replace(/[^\p{L}\p{N}\[\] ]+/gu, ' ').replace(/\s+/g, ' ').trim();
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\[\] ]+/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
-const pickKey = (e: ElementEvidence): string => `${normLabel(e.label)}|${e.link_target ?? ''}|${e.tag === 'a' ? 'a' : 'control'}`;
+const pickKey = (e: ElementEvidence): string =>
+  `${normLabel(e.label)}|${e.link_target ?? ''}|${e.tag === 'a' ? 'a' : 'control'}`;
 
 /** The main pick's probability summed over controls with the same label and target (the policy's own rule). */
-export function summedMainP(id: string, digest: PageDigest, u: PageUnderstanding | null): { p: number; members: number } {
+export function summedMainP(
+  id: string,
+  digest: PageDigest,
+  u: PageUnderstanding | null,
+): { p: number; members: number } {
   const probs = u?.mainPick?.probs ?? {};
   const self = digest.elements.find((e) => e.id === id);
   if (!self) return { p: n(probs[id]), members: 1 };
@@ -148,14 +186,34 @@ function foldKind(j: ElementJudgment): { one: string; many: string } {
 }
 
 const RULE_TEXT: Array<{ test: RegExp; title: string; sentence: string }> = [
-  { test: /consent notice \(rule\)/, title: 'Consent notice', sentence: 'Consent notices are never folded, and WebAble never answers them.' },
-  { test: /required field \(rule\)/, title: 'Required field', sentence: 'A page rule keeps required fields in view, whatever Jev says.' },
-  { test: /typed value \(rule\)/, title: 'Has a typed value', sentence: 'A page rule keeps fields that already hold a value in view.' },
-  { test: /focus is inside \(rule\)/, title: 'Focus is here', sentence: 'A page rule keeps the part of the page with keyboard focus in view.' },
+  {
+    test: /consent notice \(rule\)/,
+    title: 'Consent notice',
+    sentence:
+      'Consent notices are never folded, and WebAble never answers them.',
+  },
+  {
+    test: /required field \(rule\)/,
+    title: 'Required field',
+    sentence: 'A page rule keeps required fields in view, whatever Jev says.',
+  },
+  {
+    test: /typed value \(rule\)/,
+    title: 'Has a typed value',
+    sentence: 'A page rule keeps fields that already hold a value in view.',
+  },
+  {
+    test: /focus is inside \(rule\)/,
+    title: 'Focus is here',
+    sentence:
+      'A page rule keeps the part of the page with keyboard focus in view.',
+  },
 ];
 
 function whereText(ev: ElementEvidence): string {
-  const what = (ev.role_hint || ev.tag || 'element').replace(/\s*\((required|disabled)\)/g, '').trim();
+  const what = (ev.role_hint || ev.tag || 'element')
+    .replace(/\s*\((required|disabled)\)/g, '')
+    .trim();
   const lm = ev.landmark && ev.landmark !== 'none' ? ev.landmark : '';
   const pos = ev.position || '';
   const place = [lm, pos].filter(Boolean).join(', ');
@@ -164,35 +222,74 @@ function whereText(ev: ElementEvidence): string {
 
 function displayLabel(ev: ElementEvidence): string {
   const raw = (ev.label || '').trim();
-  const hint = (ev.role_hint || ev.tag || 'element').replace(/\s*\((required|disabled)\)/g, '').trim();
-  if (raw && raw !== '·' && raw.toLowerCase() !== hint.toLowerCase()) return raw;
+  const hint = (ev.role_hint || ev.tag || 'element')
+    .replace(/\s*\((required|disabled)\)/g, '')
+    .trim();
+  if (raw && raw !== '·' && raw.toLowerCase() !== hint.toLowerCase())
+    return raw;
   // No label of its own: say what it is and what its class words or position say ("Region: ad slot").
   const Hint = hint.charAt(0).toUpperCase() + hint.slice(1);
-  const words = (ev.class_words ?? []).filter((w) => w && w.length > 1).slice(0, 3);
+  const words = (ev.class_words ?? [])
+    .filter((w) => w && w.length > 1)
+    .slice(0, 3);
   if (words.length) return `${Hint}: ${words.join(' ')}`;
   return ev.position ? `${Hint} · ${ev.position}` : Hint;
 }
 
 /** Classify one digest element for the Lens. */
-export function lensItem(ev: ElementEvidence, index: number, d: ElementDecision | undefined, digest: PageDigest, u: PageUnderstanding | null): LensItem {
-  const base = { id: ev.id, ev, index, label: displayLabel(ev), where: whereText(ev) };
+export function lensItem(
+  ev: ElementEvidence,
+  index: number,
+  d: ElementDecision | undefined,
+  digest: PageDigest,
+  u: PageUnderstanding | null,
+): LensItem {
+  const base = {
+    id: ev.id,
+    ev,
+    index,
+    label: displayLabel(ev),
+    where: whereText(ev),
+  };
   if (!d) {
     return {
-      ...base, decision: null, j: null, cls: 'pending', p: null, byRule: false, chip: 'Reading', num: '', kind: ev.role_hint || ev.tag,
-      foldSum: 0, protectSum: 0, sentence: "Waiting for Jev's answer.", because: [], track: null, priority: 0,
+      ...base,
+      decision: null,
+      j: null,
+      cls: 'pending',
+      p: null,
+      byRule: false,
+      chip: 'Reading',
+      num: '',
+      kind: ev.role_hint || ev.tag,
+      foldSum: 0,
+      protectSum: 0,
+      sentence: "Waiting for Jev's answer.",
+      because: [],
+      track: null,
+      priority: 0,
       ...settledFine(null),
     };
   }
   const j = d.judgment;
   const reasons = Array.isArray(d.reasons) ? d.reasons : [];
-  const answered = Boolean(j && (j.roleP > 0 || Object.keys(j.roleProbs ?? {}).length > 0));
+  const answered = Boolean(
+    j && (j.roleP > 0 || Object.keys(j.roleProbs ?? {}).length > 0),
+  );
   const foldSum = j ? sumOf(j, FOLD_ROLES) : 0;
   const protectSum = j ? sumOf(j, PROTECT_ROLES) : 0;
   const task = n(j?.task);
   const help = n(j?.help);
   const main = n(j?.main);
   const fk = j ? foldKind(j) : { one: 'ad', many: 'ads' };
-  const common = { ...base, decision: d, j, foldSum, protectSum, ...settledFine(j) };
+  const common = {
+    ...base,
+    decision: d,
+    j,
+    foldSum,
+    protectSum,
+    ...settledFine(j),
+  };
 
   if (d.verdict === 'promote') {
     const sm = summedMainP(ev.id, digest, u);
@@ -201,18 +298,36 @@ export function lensItem(ev: ElementEvidence, index: number, d: ElementDecision 
       `main ${f2(main)} ≥ ${f2(POLICY.promoteMainNoul)}`,
     ];
     return {
-      ...common, cls: 'main', p: sm.p, byRule: false, chip: 'Main action', num: f2(sm.p), kind: 'main action',
-      sentence: "Jev picked this as the page's main action. WebAble outlines it and widens its click area; it stays where the site put it.",
-      because, track: { p: sm.p, at: POLICY.promotePick, dir: 'ge', label: 'main pick' },
+      ...common,
+      cls: 'main',
+      p: sm.p,
+      byRule: false,
+      chip: 'Main action',
+      num: f2(sm.p),
+      kind: 'main action',
+      sentence:
+        "Jev picked this as the page's main action. WebAble outlines it and widens its click area; it stays where the site put it.",
+      because,
+      track: { p: sm.p, at: POLICY.promotePick, dir: 'ge', label: 'main pick' },
       priority: CLASS_WEIGHT.main * 10 + sm.p,
     };
   }
 
   if (d.verdict === 'keep_popup') {
     return {
-      ...common, cls: 'popup', p: task, byRule: false, chip: 'Kept in view · task', num: f2(task), kind: 'popup',
-      sentence: 'This popup matters to the task on this page (a time-out warning, for example), so it stays in view.',
-      because: [`popup ${f2(n(j?.roleProbs.popup_overlay) || n(j?.roleP))}`, `task ${f2(task)} ≥ ${f2(POLICY.keepPopupTask)}`],
+      ...common,
+      cls: 'popup',
+      p: task,
+      byRule: false,
+      chip: 'Kept in view · task',
+      num: f2(task),
+      kind: 'popup',
+      sentence:
+        'This popup matters to the task on this page (a time-out warning, for example), so it stays in view.',
+      because: [
+        `popup ${f2(n(j?.roleProbs.popup_overlay) || n(j?.roleP))}`,
+        `task ${f2(task)} ≥ ${f2(POLICY.keepPopupTask)}`,
+      ],
       track: { p: task, at: POLICY.keepPopupTask, dir: 'ge', label: 'task' },
       priority: CLASS_WEIGHT.popup * 10 + task,
     };
@@ -220,14 +335,26 @@ export function lensItem(ev: ElementEvidence, index: number, d: ElementDecision 
 
   if (d.verdict === 'fold') {
     return {
-      ...common, cls: 'folded', p: foldSum, byRule: false, chip: `Folded · ${fk.one}`, num: f2(foldSum), kind: fk.one,
-      sentence: 'Jev is sure this is not part of the task, so it is dimmed. It is still there and still works.',
+      ...common,
+      cls: 'folded',
+      p: foldSum,
+      byRule: false,
+      chip: `Folded · ${fk.one}`,
+      num: f2(foldSum),
+      kind: fk.one,
+      sentence:
+        'Jev is sure this is not part of the task, so it is dimmed. It is still there and still works.',
       because: [
         `${fk.many} ${f2(foldSum)} ≥ ${f2(POLICY.foldRoleSum)}`,
         `task ${f2(task)} ≤ ${f2(POLICY.foldTaskMax)}`,
         `help ${f2(help)} ≤ ${f2(POLICY.foldHelpMax)}`,
       ],
-      track: { p: foldSum, at: POLICY.foldRoleSum, dir: 'ge', label: 'ads, teasers, popups' },
+      track: {
+        p: foldSum,
+        at: POLICY.foldRoleSum,
+        dir: 'ge',
+        label: 'ads, teasers, popups',
+      },
       priority: CLASS_WEIGHT.folded * 10 + foldSum,
     };
   }
@@ -238,9 +365,18 @@ export function lensItem(ev: ElementEvidence, index: number, d: ElementDecision 
     const consentRole = j?.role === 'consent_notice';
     if (rule) {
       return {
-        ...common, cls: 'guarded', p: null, byRule: true, chip: `${rule.title} ·`, num: 'rule', kind: rule.title.toLowerCase(),
+        ...common,
+        cls: 'guarded',
+        p: null,
+        byRule: true,
+        chip: `${rule.title} ·`,
+        num: 'rule',
+        kind: rule.title.toLowerCase(),
         sentence: rule.sentence,
-        because: [reasons.find((x) => rule.test.test(x)) ?? 'page rule', ...(answered ? [`help ${f2(help)}`, `task ${f2(task)}`] : [])],
+        because: [
+          reasons.find((x) => rule.test.test(x)) ?? 'page rule',
+          ...(answered ? [`help ${f2(help)}`, `task ${f2(task)}`] : []),
+        ],
         track: null,
         priority: CLASS_WEIGHT.guarded * 10 + 1,
       };
@@ -248,48 +384,110 @@ export function lensItem(ev: ElementEvidence, index: number, d: ElementDecision 
     if (help >= POLICY.protectHelp || helpRole) {
       const p = Math.max(help, helpRole ? n(j?.roleP) : 0);
       return {
-        ...common, cls: 'guarded', p, byRule: false, chip: 'Help', num: f2(p), kind: 'help',
+        ...common,
+        cls: 'guarded',
+        p,
+        byRule: false,
+        chip: 'Help',
+        num: f2(p),
+        kind: 'help',
         sentence: 'Help and contact links are never hidden or dimmed.',
-        because: help >= POLICY.protectHelp
-          ? [`help ${f2(help)} ≥ ${f2(POLICY.protectHelp)}`]
-          : [`help role ${f2(n(j?.roleP))}`, `content, controls, help ${f2(protectSum)} ≥ ${f2(POLICY.protectRoleSum)}`],
-        track: { p: help >= POLICY.protectHelp ? help : protectSum, at: help >= POLICY.protectHelp ? POLICY.protectHelp : POLICY.protectRoleSum, dir: 'ge', label: help >= POLICY.protectHelp ? 'help' : 'content, controls, help' },
+        because:
+          help >= POLICY.protectHelp
+            ? [`help ${f2(help)} ≥ ${f2(POLICY.protectHelp)}`]
+            : [
+                `help role ${f2(n(j?.roleP))}`,
+                `content, controls, help ${f2(protectSum)} ≥ ${f2(POLICY.protectRoleSum)}`,
+              ],
+        track: {
+          p: help >= POLICY.protectHelp ? help : protectSum,
+          at:
+            help >= POLICY.protectHelp
+              ? POLICY.protectHelp
+              : POLICY.protectRoleSum,
+          dir: 'ge',
+          label:
+            help >= POLICY.protectHelp ? 'help' : 'content, controls, help',
+        },
         priority: CLASS_WEIGHT.guarded * 10 + p,
       };
     }
     if (consentRole) {
       const p = n(j?.roleProbs.consent_notice) || n(j?.roleP);
       return {
-        ...common, cls: 'guarded', p, byRule: false, chip: 'Consent notice', num: f2(p), kind: 'consent notice',
-        sentence: 'Consent notices are never folded, and WebAble never answers them.',
-        because: [`consent notice ${f2(p)}`, `content, controls, help ${f2(protectSum)} ≥ ${f2(POLICY.protectRoleSum)}`],
-        track: { p: protectSum, at: POLICY.protectRoleSum, dir: 'ge', label: 'content, controls, help' },
+        ...common,
+        cls: 'guarded',
+        p,
+        byRule: false,
+        chip: 'Consent notice',
+        num: f2(p),
+        kind: 'consent notice',
+        sentence:
+          'Consent notices are never folded, and WebAble never answers them.',
+        because: [
+          `consent notice ${f2(p)}`,
+          `content, controls, help ${f2(protectSum)} ≥ ${f2(POLICY.protectRoleSum)}`,
+        ],
+        track: {
+          p: protectSum,
+          at: POLICY.protectRoleSum,
+          dir: 'ge',
+          label: 'content, controls, help',
+        },
         priority: CLASS_WEIGHT.guarded * 10 + p,
       };
     }
     // Protected because it is part of the task: a hairline, no chip.
     const why: string[] = [];
-    if (task >= POLICY.protectTask) why.push(`task ${f2(task)} ≥ ${f2(POLICY.protectTask)}`);
-    if (protectSum >= POLICY.protectRoleSum) why.push(`content, controls, help ${f2(protectSum)} ≥ ${f2(POLICY.protectRoleSum)}`);
+    if (task >= POLICY.protectTask)
+      why.push(`task ${f2(task)} ≥ ${f2(POLICY.protectTask)}`);
+    if (protectSum >= POLICY.protectRoleSum)
+      why.push(
+        `content, controls, help ${f2(protectSum)} ≥ ${f2(POLICY.protectRoleSum)}`,
+      );
     // It looked like an ad, but Jev kept some probability that it is content or a control: not sure, left alone.
     if (answered && foldSum >= 0.5 && task < POLICY.protectTask) {
       return {
-        ...common, cls: 'unsure', p: foldSum, byRule: false, chip: `Left alone · ${fk.one}`, num: f2(foldSum), kind: fk.one,
+        ...common,
+        cls: 'unsure',
+        p: foldSum,
+        byRule: false,
+        chip: `Left alone · ${fk.one}`,
+        num: f2(foldSum),
+        kind: fk.one,
         sentence: `It looks like ${fk.one === 'ad' ? 'an ad' : `a ${fk.one}`}, but Jev's probability that it is content or a control is ${f2(protectSum)}, so the policy protects it and WebAble leaves it as the site made it.`,
         because: [`${fk.many} ${f2(foldSum)}`, ...why, 'not sure: left alone'],
-        track: { p: foldSum, at: POLICY.foldRoleSum, dir: 'ge', label: 'ads, teasers, popups' },
+        track: {
+          p: foldSum,
+          at: POLICY.foldRoleSum,
+          dir: 'ge',
+          label: 'ads, teasers, popups',
+        },
         priority: CLASS_WEIGHT.unsure * 10 + foldSum,
       };
     }
     return {
-      ...common, cls: 'kept', p: null, byRule: false, chip: 'Part of the task', num: '', kind: j ? ROLE_NAME[j.role] : 'element',
-      sentence: task >= POLICY.protectTask
-        ? 'Part of the task on this page, so it is kept as the site made it and never folded.'
-        : 'Content or a control on this page, so it is kept as the site made it and never folded.',
+      ...common,
+      cls: 'kept',
+      p: null,
+      byRule: false,
+      chip: 'Part of the task',
+      num: '',
+      kind: j ? ROLE_NAME[j.role] : 'element',
+      sentence:
+        task >= POLICY.protectTask
+          ? 'Part of the task on this page, so it is kept as the site made it and never folded.'
+          : 'Content or a control on this page, so it is kept as the site made it and never folded.',
       because: why.length ? why : reasons.slice(0, 2),
-      track: task >= POLICY.protectTask
-        ? { p: task, at: POLICY.protectTask, dir: 'ge', label: 'task' }
-        : { p: protectSum, at: POLICY.protectRoleSum, dir: 'ge', label: 'content, controls, help' },
+      track:
+        task >= POLICY.protectTask
+          ? { p: task, at: POLICY.protectTask, dir: 'ge', label: 'task' }
+          : {
+              p: protectSum,
+              at: POLICY.protectRoleSum,
+              dir: 'ge',
+              label: 'content, controls, help',
+            },
       priority: 0,
     };
   }
@@ -297,44 +495,94 @@ export function lensItem(ev: ElementEvidence, index: number, d: ElementDecision 
   // keep
   if (answered && foldSum >= 0.5) {
     const because: string[] = [];
-    if (foldSum < POLICY.foldRoleSum) because.push(`${fk.many} ${f2(foldSum)} < ${f2(POLICY.foldRoleSum)}`);
+    if (foldSum < POLICY.foldRoleSum)
+      because.push(`${fk.many} ${f2(foldSum)} < ${f2(POLICY.foldRoleSum)}`);
     else because.push(`${fk.many} ${f2(foldSum)} ≥ ${f2(POLICY.foldRoleSum)}`);
-    if (task > POLICY.foldTaskMax) because.push(`task ${f2(task)} > ${f2(POLICY.foldTaskMax)}`);
-    if (help > POLICY.foldHelpMax) because.push(`help ${f2(help)} > ${f2(POLICY.foldHelpMax)}`);
+    if (task > POLICY.foldTaskMax)
+      because.push(`task ${f2(task)} > ${f2(POLICY.foldTaskMax)}`);
+    if (help > POLICY.foldHelpMax)
+      because.push(`help ${f2(help)} > ${f2(POLICY.foldHelpMax)}`);
     because.push('not sure: left alone');
     return {
-      ...common, cls: 'unsure', p: foldSum, byRule: false, chip: `Left alone · ${fk.one}`, num: f2(foldSum), kind: fk.one,
-      sentence: 'Jev was not sure enough to act, so WebAble left it as the site made it.',
+      ...common,
+      cls: 'unsure',
+      p: foldSum,
+      byRule: false,
+      chip: `Left alone · ${fk.one}`,
+      num: f2(foldSum),
+      kind: fk.one,
+      sentence:
+        'Jev was not sure enough to act, so WebAble left it as the site made it.',
       because,
-      track: { p: foldSum, at: POLICY.foldRoleSum, dir: 'ge', label: 'ads, teasers, popups' },
+      track: {
+        p: foldSum,
+        at: POLICY.foldRoleSum,
+        dir: 'ge',
+        label: 'ads, teasers, popups',
+      },
       priority: CLASS_WEIGHT.unsure * 10 + foldSum,
     };
   }
   return {
-    ...common, cls: 'kept', p: null, byRule: false, chip: 'Kept', num: '', kind: j && answered ? ROLE_NAME[j.role] : 'element',
+    ...common,
+    cls: 'kept',
+    p: null,
+    byRule: false,
+    chip: 'Kept',
+    num: '',
+    kind: j && answered ? ROLE_NAME[j.role] : 'element',
     sentence: answered
       ? 'Nothing here crossed a threshold, so it is kept as the site made it.'
       : 'Jev did not answer for this one, so it is kept as the site made it (WebAble fails closed).',
     because: answered
       ? [`ads, teasers, popups ${f2(foldSum)} < 0.50`, `task ${f2(task)}`]
       : ['no answer from Jev: left as is'],
-    track: answered ? { p: foldSum, at: POLICY.foldRoleSum, dir: 'ge', label: 'ads, teasers, popups' } : null,
+    track: answered
+      ? {
+          p: foldSum,
+          at: POLICY.foldRoleSum,
+          dir: 'ge',
+          label: 'ads, teasers, popups',
+        }
+      : null,
     priority: 0,
   };
 }
 
 /** Every digest element as a Lens item, in digest order. */
-export function lensItems(digest: PageDigest | null, decisions: ElementDecision[], u: PageUnderstanding | null): LensItem[] {
+export function lensItems(
+  digest: PageDigest | null,
+  decisions: ElementDecision[],
+  u: PageUnderstanding | null,
+): LensItem[] {
   if (!digest) return [];
   const byId = new Map<string, ElementDecision>();
   for (const d of decisions) byId.set(d.id, d);
-  return digest.elements.map((ev, i) => lensItem(ev, i, byId.get(ev.id), digest, u));
+  return digest.elements.map((ev, i) =>
+    lensItem(ev, i, byId.get(ev.id), digest, u),
+  );
 }
 
-export interface ClassCounts { main: number; popup: number; folded: number; guarded: number; unsure: number; kept: number; pending: number }
+export interface ClassCounts {
+  main: number;
+  popup: number;
+  folded: number;
+  guarded: number;
+  unsure: number;
+  kept: number;
+  pending: number;
+}
 
 export function classCounts(items: LensItem[]): ClassCounts {
-  const c: ClassCounts = { main: 0, popup: 0, folded: 0, guarded: 0, unsure: 0, kept: 0, pending: 0 };
+  const c: ClassCounts = {
+    main: 0,
+    popup: 0,
+    folded: 0,
+    guarded: 0,
+    unsure: 0,
+    kept: 0,
+    pending: 0,
+  };
   for (const it of items) c[it.cls]++;
   return c;
 }
@@ -343,12 +591,19 @@ export function classCounts(items: LensItem[]): ClassCounts {
  * Chip face for elements that share one fine role: "Scoreboard" / "Team logo ×2".
  * Null when any member has no fine role, so the caller keeps the policy chip.
  */
-export function fineChipFace(items: LensItem[]): { words: string; num: string } | null {
+export function fineChipFace(
+  items: LensItem[],
+): { words: string; num: string } | null {
   const first = items[0];
   if (!first?.fine || !first.fineName) return null;
   if (!items.every((i) => i.fine === first.fine && i.fineName)) return null;
   const ps = items.map((i) => i.fineP).filter((p): p is number => p != null);
-  const range = ps.length === 0 ? '' : f2(Math.min(...ps)) === f2(Math.max(...ps)) ? f2(ps[0]!) : `${f2(Math.min(...ps))}–${f2(Math.max(...ps))}`;
+  const range =
+    ps.length === 0
+      ? ''
+      : f2(Math.min(...ps)) === f2(Math.max(...ps))
+        ? f2(ps[0]!)
+        : `${f2(Math.min(...ps))}–${f2(Math.max(...ps))}`;
   if (items.length === 1) return { words: first.fineName, num: range };
   return { words: `${first.fineName} ×${items.length}`, num: range };
 }
@@ -366,7 +621,12 @@ export function mergedChip(items: LensItem[]): { words: string; num: string } {
   const ps = items.map((i) => i.p).filter((p): p is number => p != null);
   const lo = ps.length ? Math.min(...ps) : null;
   const hi = ps.length ? Math.max(...ps) : null;
-  const range = lo == null || hi == null ? 'rule' : f2(lo) === f2(hi) ? f2(lo) : `${f2(lo)}–${f2(hi)}`;
+  const range =
+    lo == null || hi == null
+      ? 'rule'
+      : f2(lo) === f2(hi)
+        ? f2(lo)
+        : `${f2(lo)}–${f2(hi)}`;
   const allRule = items.every((i) => i.byRule);
   switch (first.cls) {
     case 'folded':
@@ -374,7 +634,10 @@ export function mergedChip(items: LensItem[]): { words: string; num: string } {
     case 'guarded': {
       const kinds = new Set(items.map((i) => i.chip));
       const title = first.chip.replace(/ ·$/, '');
-      return { words: kinds.size === 1 ? `${title} ×${k} ·` : `${k} protected ·`, num: allRule ? 'rule' : range };
+      return {
+        words: kinds.size === 1 ? `${title} ×${k} ·` : `${k} protected ·`,
+        num: allRule ? 'rule' : range,
+      };
     }
     case 'unsure':
       return { words: `${k} left alone ·`, num: range };
@@ -386,12 +649,52 @@ export function mergedChip(items: LensItem[]): { words: string; num: string } {
 }
 
 /** Sheet groups, in order, with the rule each one follows. */
-export const GROUPS: Array<{ key: string; title: string; rule: string; classes: LensClass[] }> = [
-  { key: 'main', title: 'Main action', rule: `main pick ≥ ${f2(POLICY.promotePick)} and main ≥ ${f2(POLICY.promoteMainNoul)}, never off-site`, classes: ['main'] },
-  { key: 'popup', title: 'Kept in view', rule: `a popup with task ≥ ${f2(POLICY.keepPopupTask)}`, classes: ['popup'] },
-  { key: 'guarded', title: 'Protected: help and notices', rule: `help ≥ ${f2(POLICY.protectHelp)}, a help or consent role, or a page rule`, classes: ['guarded'] },
-  { key: 'folded', title: 'Folded', rule: `ads, teasers, popups ≥ ${f2(POLICY.foldRoleSum)}, task ≤ ${f2(POLICY.foldTaskMax)}, help ≤ ${f2(POLICY.foldHelpMax)}`, classes: ['folded'] },
-  { key: 'unsure', title: 'Left alone: not sure', rule: 'looked like an ad or popup, but not surely enough to act', classes: ['unsure'] },
-  { key: 'kept', title: 'Part of the task', rule: 'everything else stays as the site made it', classes: ['kept'] },
-  { key: 'pending', title: 'Waiting for Jev', rule: 'asked, not answered yet', classes: ['pending'] },
+export const GROUPS: Array<{
+  key: string;
+  title: string;
+  rule: string;
+  classes: LensClass[];
+}> = [
+  {
+    key: 'main',
+    title: 'Main action',
+    rule: `main pick ≥ ${f2(POLICY.promotePick)} and main ≥ ${f2(POLICY.promoteMainNoul)}, never off-site`,
+    classes: ['main'],
+  },
+  {
+    key: 'popup',
+    title: 'Kept in view',
+    rule: `a popup with task ≥ ${f2(POLICY.keepPopupTask)}`,
+    classes: ['popup'],
+  },
+  {
+    key: 'guarded',
+    title: 'Protected: help and notices',
+    rule: `help ≥ ${f2(POLICY.protectHelp)}, a help or consent role, or a page rule`,
+    classes: ['guarded'],
+  },
+  {
+    key: 'folded',
+    title: 'Folded',
+    rule: `ads, teasers, popups ≥ ${f2(POLICY.foldRoleSum)}, task ≤ ${f2(POLICY.foldTaskMax)}, help ≤ ${f2(POLICY.foldHelpMax)}`,
+    classes: ['folded'],
+  },
+  {
+    key: 'unsure',
+    title: 'Left alone: not sure',
+    rule: 'looked like an ad or popup, but not surely enough to act',
+    classes: ['unsure'],
+  },
+  {
+    key: 'kept',
+    title: 'Part of the task',
+    rule: 'everything else stays as the site made it',
+    classes: ['kept'],
+  },
+  {
+    key: 'pending',
+    title: 'Waiting for Jev',
+    rule: 'asked, not answered yet',
+    classes: ['pending'],
+  },
 ];

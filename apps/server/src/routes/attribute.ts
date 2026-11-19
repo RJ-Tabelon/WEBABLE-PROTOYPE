@@ -6,8 +6,12 @@
 // 5xx and the extension then uses the code-only weight.
 import type { Hono } from 'hono';
 import { z } from 'zod';
-import { ATTRIBUTION_KEYS, buildAttributionCall, parseAttribution } from '@webable/core';
-import type { AttributionAnswer, AttributionQuestion } from '@webable/core';
+import {
+  ATTRIBUTION_KEYS,
+  buildAttributionCall,
+  parseAttribution,
+} from '@webable/engine';
+import type { AttributionAnswer, AttributionQuestion } from '@webable/engine';
 import { askJev, jevMetrics } from '../jev';
 import { cleanLabel } from '../sanitize';
 import { HttpError, errorMessage, log, round } from '../util';
@@ -15,19 +19,31 @@ import { readBody, wantsFresh } from './common';
 
 const KINDS = ['zoom_reason', 'pause_reason', 'miss_reason'] as const;
 
-const EvidenceValue = z.union([z.string().max(120), z.number().finite().min(-1_000_000).max(1_000_000), z.boolean()]);
+const EvidenceValue = z.union([
+  z.string().max(120),
+  z.number().finite().min(-1_000_000).max(1_000_000),
+  z.boolean(),
+]);
 
 export const AttributeBody = z.object({
   question: z.object({
     kind: z.enum(KINDS),
     evidence: z
-      .record(z.string().regex(/^[a-z_]{1,40}$/, 'evidence keys are snake_case words'), EvidenceValue)
+      .record(
+        z
+          .string()
+          .regex(/^[a-z_]{1,40}$/, 'evidence keys are snake_case words'),
+        EvidenceValue,
+      )
       .refine((o) => Object.keys(o).length <= 24, 'at most 24 evidence values'),
   }),
 });
 
 /** Known keys only; strings re-redacted (they are code-written kinds like "paragraph text", never page text). */
-export function sanitizeAttribution(q: AttributionQuestion): { question: AttributionQuestion; dropped: number } {
+export function sanitizeAttribution(q: AttributionQuestion): {
+  question: AttributionQuestion;
+  dropped: number;
+} {
   const keys = new Set(ATTRIBUTION_KEYS[q.kind] ?? []);
   const evidence: Record<string, string | number | boolean> = {};
   let dropped = 0;
@@ -41,26 +57,55 @@ export function sanitizeAttribution(q: AttributionQuestion): { question: Attribu
   return { question: { kind: q.kind, evidence }, dropped };
 }
 
-export async function attribute(input: AttributionQuestion, opts: { fresh?: boolean } = {}): Promise<AttributionAnswer> {
+export async function attribute(
+  input: AttributionQuestion,
+  opts: { fresh?: boolean } = {},
+): Promise<AttributionAnswer> {
   const { question, dropped } = sanitizeAttribution(input);
-  if (dropped) log('attribute: dropped unknown evidence keys', { kind: question.kind, count: dropped });
+  if (dropped)
+    log('attribute: dropped unknown evidence keys', {
+      kind: question.kind,
+      count: dropped,
+    });
   let call: ReturnType<typeof buildAttributionCall>;
   try {
     call = buildAttributionCall(question);
   } catch (e) {
-    throw new HttpError(422, 'no_evidence', `Nothing to ask: ${errorMessage(e).slice(0, 80)}`);
+    throw new HttpError(
+      422,
+      'no_evidence',
+      `Nothing to ask: ${errorMessage(e).slice(0, 80)}`,
+    );
   }
-  const r = await askJev({ state: call.state, questions: call.questions }, { tag: `attribute/${question.kind}`, fresh: opts.fresh });
+  const r = await askJev(
+    { state: call.state, questions: call.questions },
+    { tag: `attribute/${question.kind}`, fresh: opts.fresh },
+  );
   let answer: AttributionAnswer & { agree?: boolean };
   try {
     answer = parseAttribution(r.body, question.kind, jevMetrics([r]));
   } catch (e) {
-    log('attribute: answer parser failed', { error: errorMessage(e).slice(0, 120) });
-    throw new HttpError(502, 'attribute_unavailable', 'Jev did not answer the attribution question.');
+    log('attribute: answer parser failed', {
+      error: errorMessage(e).slice(0, 120),
+    });
+    throw new HttpError(
+      502,
+      'attribute_unavailable',
+      'Jev did not answer the attribution question.',
+    );
   }
-  log('attribute', { kind: question.kind, top: answer.top, p: round(answer.probs[answer.top] ?? 0, 2), agree: answer.agree, cached: r.cached || undefined });
+  log('attribute', {
+    kind: question.kind,
+    top: answer.top,
+    p: round(answer.probs[answer.top] ?? 0, 2),
+    agree: answer.agree,
+    cached: r.cached || undefined,
+  });
   // Structure-only evidence (code-written kinds and numbers, never page text), for tuning: WEBABLE_LOG_ATTRIBUTION=1.
-  if (process.env.WEBABLE_LOG_ATTRIBUTION === '1') log('attribute evidence', { ev: JSON.stringify(question.evidence).slice(0, 600) });
+  if (process.env.WEBABLE_LOG_ATTRIBUTION === '1')
+    log('attribute evidence', {
+      ev: JSON.stringify(question.evidence).slice(0, 600),
+    });
   return answer;
 }
 

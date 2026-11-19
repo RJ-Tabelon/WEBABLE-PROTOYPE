@@ -14,13 +14,29 @@ function Parts({ parts }: { parts: Inline[] }): JSX.Element {
   return <>{renderParts(parts)}</>;
 }
 
-export function LeadBand({ lead, small = false }: { lead: Lead; small?: boolean }): JSX.Element {
+export function LeadBand({
+  lead,
+  small = false,
+}: {
+  lead: Lead;
+  small?: boolean;
+}): JSX.Element {
   const Title = lead.titleSize === 'page' ? 'h1' : 'h2';
   const hasLine = !!(lead.orient || lead.pinned);
   return (
     <header class="wa-lead">
-      {lead.eyebrow && <p class="wa-eyebrow wa-lead__eyebrow">{lead.eyebrow}</p>}
-      {lead.title && <Title class={lead.titleSize === 'page' && !small ? 'wa-h-page' : 'wa-h-section'}>{lead.title}</Title>}
+      {lead.eyebrow && (
+        <p class="wa-eyebrow wa-lead__eyebrow">{lead.eyebrow}</p>
+      )}
+      {lead.title && (
+        <Title
+          class={
+            lead.titleSize === 'page' && !small ? 'wa-h-page' : 'wa-h-section'
+          }
+        >
+          {lead.title}
+        </Title>
+      )}
       {(hasLine || lead.about.length > 0) && (
         <div class="wa-orient">
           {lead.orient && (
@@ -48,8 +64,15 @@ export function LeadBand({ lead, small = false }: { lead: Lead; small?: boolean 
  * An article's header (design.md §2): kicker · date, then the title (left-aligned), the dek, the byline with each name
  * once (the page's own links), and the lead picture in the picture column with its caption and credit.
  */
-export function ArticleHeader({ lead, art, readLine = null, listen = null }: {
-  lead: Lead | null; art: ArticleHead; readLine?: string | null;
+export function ArticleHeader({
+  lead,
+  art,
+  readLine = null,
+  listen = null,
+}: {
+  lead: Lead | null;
+  art: ArticleHead;
+  readLine?: string | null;
   /** Round 8b: the article's own Listen control; one quiet button under the byline presses it. */
   listen?: Element | null;
 }): JSX.Element {
@@ -104,7 +127,11 @@ export function ArticleHeader({ lead, art, readLine = null, listen = null }: {
       )}
       {readLine && !by && <p class="wa-meta wa-readtime">{readLine}</p>}
       {listen && (
-        <button type="button" class="wa-btn wa-listen" onClick={() => ctx.click(listen)}>
+        <button
+          type="button"
+          class="wa-btn wa-listen"
+          onClick={() => ctx.click(listen)}
+        >
           <Speaker />
           <span>Listen to this article</span>
         </button>

@@ -10,12 +10,23 @@
 import { createPortal } from 'preact/compat';
 import { Logo } from './Logo';
 import type { ComponentChildren } from 'preact';
-import { useEffect, useErrorBoundary, useLayoutEffect, useRef, useState } from 'preact/hooks';
+import {
+  useEffect,
+  useErrorBoundary,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import type { EngineApi, EngineState } from '../contracts';
 import { CalmView } from './calm/CalmView';
 import { Lens } from './lens/Lens';
 import { Note, useNote } from './offers/Note';
-import { ConsentBar, OverlayOffer, overlayView, type OverlayView } from './offers/Overlays';
+import {
+  ConsentBar,
+  OverlayOffer,
+  overlayView,
+  type OverlayView,
+} from './offers/Overlays';
 import { WaButton } from './panel/Button';
 import { pageOrigin } from './panel/format';
 import { inEditable, shortcutFor } from './panel/keys';
@@ -38,8 +49,20 @@ export interface AppProps {
  * Keeps one part's failure from taking the rest of the chrome with it: if the simplified page or the Jev view throws
  * while rendering, the button and the sheet stay. `resetKey` tries again when the part's input changes.
  */
-function Guard({ name, resetKey, fallback, children }: { name: string; resetKey: string; fallback: ComponentChildren; children: ComponentChildren }) {
-  const [error, reset] = useErrorBoundary((e: unknown) => console.warn(`[WebAble] ${name} could not be drawn`, e));
+function Guard({
+  name,
+  resetKey,
+  fallback,
+  children,
+}: {
+  name: string;
+  resetKey: string;
+  fallback: ComponentChildren;
+  children: ComponentChildren;
+}) {
+  const [error, reset] = useErrorBoundary((e: unknown) =>
+    console.warn(`[WebAble] ${name} could not be drawn`, e),
+  );
   const key = useRef(resetKey);
   useEffect(() => {
     if (key.current !== resetKey) {
@@ -50,13 +73,30 @@ function Guard({ name, resetKey, fallback, children }: { name: string; resetKey:
   return <>{error ? fallback : children}</>;
 }
 
-function CalmFallback({ api, s, broken = false }: { api: EngineApi; s: EngineState; broken?: boolean }) {
+function CalmFallback({
+  api,
+  s,
+  broken = false,
+}: {
+  api: EngineApi;
+  s: EngineState;
+  broken?: boolean;
+}) {
   const failed = broken || (!s.calm.loading && !s.calm.spec);
   return (
-    <div class="wa-calm-loading" role="dialog" aria-modal="true" aria-label="Simplified page">
+    <div
+      class="wa-calm-loading"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Simplified page"
+    >
       <div class="wa-calm-loading-card">
         {!failed && <Logo size={48} active />}
-        <h2>{failed ? 'This page could not be simplified' : 'Simplifying this page'}</h2>
+        <h2>
+          {failed
+            ? 'This page could not be simplified'
+            : 'Simplifying this page'}
+        </h2>
         <p>
           {failed
             ? 'The page stays as it is. Your other changes are still on.'
@@ -88,7 +128,9 @@ export function App({ api, calmHost, calmMount }: AppProps) {
   const [announce, setAnnounce] = useState('');
   const [gone, setGone] = useState<ReadonlySet<string>>(new Set());
   const [barH, setBarH] = useState(0);
-  const [dockBox, setDockBox] = useState<{ top: number; w: number } | null>(null);
+  const [dockBox, setDockBox] = useState<{ top: number; w: number } | null>(
+    null,
+  );
   const announced = useRef(new Set<string>());
 
   const calmOpen = s.calm.open;
@@ -103,10 +145,16 @@ export function App({ api, calmHost, calmMount }: AppProps) {
 
   // Overlays the engine moved out of the way: a docked cookie notice becomes a bar; tucked ones are listed in the
   // sheet ("Moved a survey out of the way" · Show it); a pop-up WebAble may close is asked about once, in one card.
-  const views: OverlayView[] = (s.overlays ?? []).map(overlayView).filter((v) => !gone.has(v.id) && !v.revealed);
+  const views: OverlayView[] = (s.overlays ?? [])
+    .map(overlayView)
+    .filter((v) => !gone.has(v.id) && !v.revealed);
   const onPage = !calmOpen && !s.showingOriginal;
-  const docked = onPage ? (views.find((v) => v.kind === 'consent' && v.action === 'docked') ?? null) : null;
-  const overlayOffer = onPage ? (views.find((v) => v.action === 'offered') ?? null) : null;
+  const docked = onPage
+    ? (views.find((v) => v.kind === 'consent' && v.action === 'docked') ?? null)
+    : null;
+  const overlayOffer = onPage
+    ? (views.find((v) => v.action === 'offered') ?? null)
+    : null;
   // With the sheet open, the note shows inside it instead.
   const noteText = note?.text ?? null;
   const hasItems = Boolean(overlayOffer || (noteText && !panelOpen));
@@ -131,8 +179,13 @@ export function App({ api, calmHost, calmMount }: AppProps) {
 
   // One predictable home at every zoom and viewport size, even when site controls occupy this corner.
   const side = 'right';
-  const bottom = clampBottom(vh, M, M, fab);
-  const contentLift = Math.max(0, plan.minBottom - bottom, calmOpen && calmDockH > 0 ? calmDockH / Z + GAP - bottom : 0);
+  const bottom = clampBottom(
+    vh,
+    Math.max(M, calmOpen && calmDockH > 0 ? calmDockH / Z + GAP : M),
+    M,
+    fab,
+  );
+  const contentLift = Math.max(0, plan.minBottom - bottom);
   const heights = dockHeights(vh, bottom + contentLift, M, fab, GAP, panelOpen);
   const showPill = heights.pillWithPanel;
   // One thing at a time: with the sheet open, the pop-up card waits.
@@ -160,7 +213,9 @@ export function App({ api, calmHost, calmMount }: AppProps) {
             requestAnimationFrame(() => {
               const root = rootRef.current?.getRootNode();
               if (root instanceof ShadowRoot && root.activeElement) {
-                rootRef.current?.querySelector<HTMLButtonElement>('.wa-fab')?.focus({ preventScroll: true });
+                rootRef.current
+                  ?.querySelector<HTMLButtonElement>('.wa-fab')
+                  ?.focus({ preventScroll: true });
               }
             });
           }
@@ -184,13 +239,17 @@ export function App({ api, calmHost, calmMount }: AppProps) {
     const has = calmReady && calmMount.childElementCount > 0;
     calmHost.classList.toggle('has-content', has);
     const cz = String(Math.round((1 / pageZoom) * 10000) / 10000);
-    if (calmHost.style.getPropertyValue('zoom') !== cz) calmHost.style.setProperty('zoom', cz);
+    if (calmHost.style.getPropertyValue('zoom') !== cz)
+      calmHost.style.setProperty('zoom', cz);
     calmHost.style.setProperty('--wa-vw', `${Math.round(vp.w * pageZoom)}px`);
     calmHost.style.setProperty('--wa-vh', `${Math.round(vp.h * pageZoom)}px`);
     // The simplified page's own action bar (its height from the bottom of the screen, in the page's CSS px).
-    const calmDock = calmReady ? calmMount.querySelector<HTMLElement>('.wa-dock') : null;
+    const calmDock = calmReady
+      ? calmMount.querySelector<HTMLElement>('.wa-dock')
+      : null;
     const dr = calmDock?.getBoundingClientRect();
-    const dockH = dr && dr.height > 0 ? Math.max(0, Math.round(vp.h - dr.top)) : 0;
+    // Height stays reliable during the dock's slide-in animation; its top does not.
+    const dockH = dr && dr.height > 0 ? Math.round(dr.height) : 0;
     if (Math.abs(dockH - calmDockH) > 1) setCalmDockH(dockH);
     // With the sheet open (Simplified pressed there), focus stays in the sheet.
     if (calmReady && !wasCalm.current && !panelOpen) {
@@ -220,8 +279,16 @@ export function App({ api, calmHost, calmMount }: AppProps) {
   // Overlays brought back stay hidden here until the engine forgets them.
   useEffect(() => {
     if (gone.size === 0) return;
-    const kept = new Set(['docked', 'tucked', 'offered', 'minimised', 'unpinned']);
-    const ids = new Set((s.overlays ?? []).filter((o) => kept.has(o.action)).map((o) => o.id));
+    const kept = new Set([
+      'docked',
+      'tucked',
+      'offered',
+      'minimised',
+      'unpinned',
+    ]);
+    const ids = new Set(
+      (s.overlays ?? []).filter((o) => kept.has(o.action)).map((o) => o.id),
+    );
     const keep = [...gone].filter((id) => ids.has(id));
     if (keep.length !== gone.size) setGone(new Set(keep));
   }, [s.overlays, gone]);
@@ -235,7 +302,9 @@ export function App({ api, calmHost, calmMount }: AppProps) {
       const k = `p:${offerId}`;
       if (!announced.current.has(k)) {
         announced.current.add(k);
-        setAnnounce('A pop-up is covering this page. WebAble can close it, next to the WebAble button.');
+        setAnnounce(
+          'A pop-up is covering this page. WebAble can close it, next to the WebAble button.',
+        );
         return;
       }
     }
@@ -243,7 +312,9 @@ export function App({ api, calmHost, calmMount }: AppProps) {
       const k = `c:${dockedId}`;
       if (!announced.current.has(k)) {
         announced.current.add(k);
-        setAnnounce("This site asks about cookies. Its choices are in a bar at the bottom of the screen.");
+        setAnnounce(
+          'This site asks about cookies. Its choices are in a bar at the bottom of the screen.',
+        );
         return;
       }
     }
@@ -260,13 +331,22 @@ export function App({ api, calmHost, calmMount }: AppProps) {
   // column scrolls only when it truly does not fit (a scroller would clip the cards' shadows).
   useLayoutEffect(() => {
     const d = dockRef.current?.getBoundingClientRect();
-    const next = d && d.width > 0 ? { top: Math.round(d.top), w: Math.round(d.width) } : null;
-    if ((next?.top ?? -1) !== (dockBox?.top ?? -1) || (next?.w ?? -1) !== (dockBox?.w ?? -1)) setDockBox(next);
+    const next =
+      d && d.width > 0
+        ? { top: Math.round(d.top), w: Math.round(d.width) }
+        : null;
+    if (
+      (next?.top ?? -1) !== (dockBox?.top ?? -1) ||
+      (next?.w ?? -1) !== (dockBox?.w ?? -1)
+    )
+      setDockBox(next);
     // Natural heights (offsetHeight ignores the entry animation's transform, which scrollHeight would count).
     const el = itemsRef.current;
     if (el) {
       const kids = Array.from(el.children) as HTMLElement[];
-      const need = kids.reduce((a, c) => a + c.offsetHeight, 0) + GAP * Math.max(0, kids.length - 1);
+      const need =
+        kids.reduce((a, c) => a + c.offsetHeight, 0) +
+        GAP * Math.max(0, kids.length - 1);
       const scroll = need > itemsMax + 1;
       if (scroll !== el.hasAttribute('data-scroll')) {
         if (scroll) {
@@ -280,11 +360,17 @@ export function App({ api, calmHost, calmMount }: AppProps) {
 
   const closePanel = () => {
     setPanelOpen(false);
-    requestAnimationFrame(() => rootRef.current?.querySelector<HTMLButtonElement>('.wa-fab')?.focus({ preventScroll: true }));
+    requestAnimationFrame(() =>
+      rootRef.current
+        ?.querySelector<HTMLButtonElement>('.wa-fab')
+        ?.focus({ preventScroll: true }),
+    );
   };
 
   // The page layer (the Lens) keeps clear of the dock, in the page's CSS px.
-  const dockReserve = dockBox ? Math.max(0, Math.round(vp.h - dockBox.top)) : Math.round((bottom + fab) * Z);
+  const dockReserve = dockBox
+    ? Math.max(0, Math.round(vp.h - dockBox.top))
+    : Math.round((bottom + fab) * Z);
 
   const r2 = (n: number) => `${Math.round(n * 100) / 100}px`;
   const uiVars = {
@@ -294,12 +380,22 @@ export function App({ api, calmHost, calmMount }: AppProps) {
     '--wa-vw': r2(vw),
     '--wa-vh': r2(vh),
   };
-  const pageVars = { '--u': `${sz.u}px`, '--wa-target': `${Math.round(sz.targetPx)}px` };
+  const pageVars = {
+    '--u': `${sz.u}px`,
+    '--wa-target': `${Math.round(sz.targetPx)}px`,
+  };
   const edge = `${M}px`;
   const items = showItems ? (
-    <div class="wa-dock-items" ref={itemsRef} data-wa-chrome="" style={{ maxHeight: r2(Math.max(0, itemsMax)) }}>
+    <div
+      class="wa-dock-items"
+      ref={itemsRef}
+      data-wa-chrome=""
+      style={{ maxHeight: r2(Math.max(0, itemsMax)) }}
+    >
       {noteText && !panelOpen && <Note text={noteText} />}
-      {overlayOffer && <OverlayOffer api={api} view={overlayOffer} onGone={markGone} />}
+      {overlayOffer && (
+        <OverlayOffer api={api} view={overlayOffer} onGone={markGone} />
+      )}
     </div>
   ) : null;
 
@@ -315,14 +411,30 @@ export function App({ api, calmHost, calmMount }: AppProps) {
         style={pageVars}
       >
         {s.lens.on && !calmOpen && (
-          <Guard name="Jev view" resetKey={`${s.lens.on}|${s.understanding ? 1 : 0}`} fallback={null}>
+          <Guard
+            name="Jev view"
+            resetKey={`${s.lens.on}|${s.understanding ? 1 : 0}`}
+            fallback={null}
+          >
             <Lens api={api} s={s} reduce={reduce} bottomReserve={dockReserve} />
           </Guard>
         )}
 
         {calmReady && s.calm.spec && s.outline && s.fit && (
-          <Guard name="Simplified page" resetKey={`${s.calm.source}|${s.calm.spec ? 1 : 0}|${s.calm.open}`} fallback={<CalmFallback api={api} s={s} broken />}>
-            {createPortal(<CalmView api={api} spec={s.calm.spec} outline={s.outline} fit={s.fit} />, calmMount)}
+          <Guard
+            name="Simplified page"
+            resetKey={`${s.calm.source}|${s.calm.spec ? 1 : 0}|${s.calm.open}`}
+            fallback={<CalmFallback api={api} s={s} broken />}
+          >
+            {createPortal(
+              <CalmView
+                api={api}
+                spec={s.calm.spec}
+                outline={s.outline}
+                fit={s.fit}
+              />,
+              calmMount,
+            )}
           </Guard>
         )}
       </div>
@@ -357,11 +469,26 @@ export function App({ api, calmHost, calmMount }: AppProps) {
             class="wa-dock"
             ref={dockRef}
             data-side={side}
-            style={{ bottom: r2(bottom), right: edge, left: 'auto', maxHeight: r2(Math.max(0, vh - bottom - M)) }}
+            style={{
+              bottom: r2(bottom),
+              right: edge,
+              left: 'auto',
+              maxHeight: r2(Math.max(0, vh - bottom - M)),
+            }}
           >
-            <div class="wa-dock-col" ref={mainColRef} style={{ maxHeight: r2(Math.max(0, vh - bottom - M)) }}>
+            <div
+              class="wa-dock-col"
+              ref={mainColRef}
+              style={{ maxHeight: r2(Math.max(0, vh - bottom - M)) }}
+            >
               {(panelOpen || items) && (
-                <div class="wa-dock-content" style={{ maxHeight: r2(heights.aboveMax), marginBottom: r2(contentLift) }}>
+                <div
+                  class="wa-dock-content"
+                  style={{
+                    maxHeight: r2(heights.aboveMax),
+                    marginBottom: r2(contentLift),
+                  }}
+                >
                   {!panelOpen && items}
                   {panelOpen && (
                     <Sheet
@@ -379,7 +506,16 @@ export function App({ api, calmHost, calmMount }: AppProps) {
                   )}
                 </div>
               )}
-              {showPill && <WaButton s={s} origin={origin} open={panelOpen} onToggle={() => (panelOpen ? closePanel() : setPanelOpen(true))} />}
+              {showPill && (
+                <WaButton
+                  s={s}
+                  origin={origin}
+                  open={panelOpen}
+                  onToggle={() =>
+                    panelOpen ? closePanel() : setPanelOpen(true)
+                  }
+                />
+              )}
             </div>
           </div>
         )}

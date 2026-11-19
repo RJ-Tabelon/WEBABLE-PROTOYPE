@@ -43,7 +43,10 @@
   font: 600 20px/1 var(--font);
   letter-spacing: -0.01em;
 }
-.rs-mark .wa-logo { display: block; flex: none; }
+.rs-mark .wa-logo {
+  display: block;
+  flex: none;
+}
 
 /* Hero: the heading, the struggle cards and the chart */
 .rs-hero {
@@ -285,11 +288,16 @@
   box-shadow: var(--shadow-card);
   color: var(--c-ink);
   text-decoration: none;
-  transition: transform var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease), border-color var(--t-ui) var(--ease);
+  transition:
+    transform var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease),
+    border-color var(--t-ui) var(--ease);
 }
 .rs-site:hover {
   border-color: var(--c-line-strong);
-  box-shadow: 0 2px 4px rgba(22, 21, 15, 0.05), 0 18px 48px rgba(22, 21, 15, 0.09);
+  box-shadow:
+    0 2px 4px rgba(22, 21, 15, 0.05),
+    0 18px 48px rgba(22, 21, 15, 0.09);
   transform: translateY(-2px);
 }
 .rs-site:active {
@@ -558,7 +566,9 @@
   transform: translateX(calc(var(--i) * 100%));
   border-radius: 12px;
   background: var(--c-card);
-  box-shadow: 0 1px 2px rgba(22, 21, 15, 0.08), 0 3px 10px rgba(22, 21, 15, 0.07);
+  box-shadow:
+    0 1px 2px rgba(22, 21, 15, 0.08),
+    0 3px 10px rgba(22, 21, 15, 0.07);
   transition: transform var(--t-ui) var(--ease);
 }
 .seg-opt {
@@ -633,7 +643,9 @@
   background: var(--c-card);
   color: var(--c-ink);
   cursor: pointer;
-  transition: background var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+  transition:
+    background var(--t-ui) var(--ease),
+    transform var(--t-ui) var(--ease);
 }
 .step-btn:hover:not(:disabled) {
   background: var(--c-canvas-2);

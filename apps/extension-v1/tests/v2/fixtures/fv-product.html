@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Trail Shoe</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Ridgeline Trail Shoe",
+        "offers": { "@type": "Offer", "price": "89.99", "priceCurrency": "USD" }
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font:
+          13px/1.4 Arial,
+          sans-serif;
+        color: #111;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        padding: 8px 16px;
+        background: #131921;
+      }
+      header a {
+        color: #fff;
+        font-size: 12px;
+      }
+      .page {
+        display: grid;
+        grid-template-columns: 420px minmax(0, 1fr);
+        gap: 24px;
+        padding: 16px;
+      }
+      .gallery img {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .buy {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0;
+      }
+      .list-price {
+        color: #565959;
+        font-size: 12px;
+        text-decoration: line-through;
+      }
+      .deal {
+        color: #b12704;
+        font-size: 18px;
+      }
+      .stars {
+        font-size: 12px;
+        color: #007185;
+      }
+      .swatches {
+        display: flex;
+        gap: 6px;
+      }
+      .swatches button {
+        width: 28px;
+        height: 28px;
+        font-size: 0;
+        border: 1px solid #888;
+        border-radius: 50%;
+      }
+      .swatches button[aria-checked='true'] {
+        outline: 2px solid #e77600;
+      }
+      .cta {
+        display: flex;
+        gap: 8px;
+      }
+      .cta button {
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 16px;
+        border: 0;
+      }
+      .add {
+        background: #ffd814;
+      }
+      .now {
+        background: #ffa41c;
+      }
+      .meta {
+        font-size: 12px;
+        color: #565959;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/v2/fv-product.html">Shopfront</a>
+      <a href="/v2/fv-product.html#cart">Cart</a>
+    </header>
+    <div class="page">
+      <div class="gallery">
+        <img
+          src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='300'%3E%3Crect width='400' height='300' fill='%23987'/%3E%3C/svg%3E"
+          width="400"
+          height="300"
+          alt="Ridgeline Trail Shoe, side view"
+        />
+      </div>
+      <div class="buy" id="buybox">
+        <h1>Ridgeline Trail Shoe</h1>
+        <div class="stars">
+          <a
+            href="/v2/fv-product.html#reviews"
+            aria-label="4.4 out of 5 stars, 1,203 ratings"
+            >★★★★☆ 1,203 ratings</a
+          >
+        </div>
+        <div class="prices">
+          <span class="list-price">List: $119.00</span>
+          <span class="deal">$89.99</span>
+        </div>
+        <label for="size">Size</label>
+        <select id="size">
+          <option>Select</option>
+          <option>7</option>
+          <option>8</option>
+          <option>9</option>
+          <option selected>10</option>
+          <option>11</option>
+          <option>12</option>
+        </select>
+        <div class="swatches" role="radiogroup" aria-label="Colour">
+          <button
+            type="button"
+            role="radio"
+            aria-checked="true"
+            aria-label="Moss"
+          >
+            Moss
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked="false"
+            aria-label="Slate"
+          >
+            Slate
+          </button>
+          <button
+            type="button"
+            role="radio"
+            aria-checked="false"
+            aria-label="Rust"
+          >
+            Rust
+          </button>
+        </div>
+        <div class="cta">
+          <button type="button" class="add">Add to Cart</button>
+          <button type="button" class="now">Buy Now</button>
+        </div>
+        <p class="meta">
+          FREE delivery Tuesday, October 20. Ships from and sold by Shopfront.
+        </p>
+        <p class="meta">
+          Returnable until January 31 in the original packaging.
+        </p>
+        <p>
+          A light trail shoe with a grippy outsole and a breathable upper, made
+          for long days on rocky paths.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

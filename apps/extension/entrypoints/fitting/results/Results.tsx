@@ -3,7 +3,7 @@
 // way, real websites to try it on, every setting in plain word levels, and a footer. Every change saves at once
 // through onChange. Nothing a person sees here is a pixel value or a technical word. Round 9: after the struggle
 // cards, one card to bring in how the person likes things explained, from their AI assistant (fitting.html#ai).
-import type { FitProfile, Polarity, ReaderProfile } from '@webable/core';
+import type { FitProfile, Polarity, ReaderProfile } from '@webable/engine';
 import type { JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { Logo } from '../../../src/ui/Logo';
@@ -31,7 +31,15 @@ import {
 } from './adjust';
 import { Segmented, Stepper, Switch } from './controls';
 import { CheckIcon, OutIcon, StruggleIcon } from './icons';
-import { FIX_OFF_LINE, STRUGGLE_LABELS, amountWords, anyStrong, fixOn, struggleCards, struggleValues } from './needs';
+import {
+  FIX_OFF_LINE,
+  STRUGGLE_LABELS,
+  amountWords,
+  anyStrong,
+  fixOn,
+  struggleCards,
+  struggleValues,
+} from './needs';
 import { Radar } from './Radar';
 import './results.css';
 
@@ -48,14 +56,28 @@ export interface ResultsProps {
   /** Round 9: opens fitting.html#ai. Without it the card is not shown. */
   onReader?(): void;
   /** Round 10: the onboarding's last step is still reading the AI answer, or could not. */
-  readerJob?: { status: 'reading' | 'failed'; source: string | null; problem?: ImportProblem } | null;
+  readerJob?: {
+    status: 'reading' | 'failed';
+    source: string | null;
+    problem?: ImportProblem;
+  } | null;
   /** Round 10: a point switched on or off on Results (App saves it). */
   onReaderPoints?(next: ReaderProfile): void;
 }
 
 /** "See it on real websites": real pages WebAble changes by itself (round 8c point 5). */
-const REAL_SITES: ReadonlyArray<{ name: string; host: string; url: string; caption: string }> = [
-  { name: 'CNN', host: 'cnn.com', url: 'https://www.cnn.com', caption: 'News, as a clean page with the story first' },
+const REAL_SITES: ReadonlyArray<{
+  name: string;
+  host: string;
+  url: string;
+  caption: string;
+}> = [
+  {
+    name: 'CNN',
+    host: 'cnn.com',
+    url: 'https://www.cnn.com',
+    caption: 'News, as a clean page with the story first',
+  },
   {
     name: 'Allrecipes',
     host: 'allrecipes.com',
@@ -68,11 +90,19 @@ const REAL_SITES: ReadonlyArray<{ name: string; host: string; url: string; capti
     url: 'https://floridagators.com/sports/football/opponent-history/university-of-kentucky/32',
     caption: 'The score and the record, up front',
   },
-  { name: 'IRS', host: 'irs.gov', url: 'https://www.irs.gov/refunds', caption: 'The same page, easier to read' },
+  {
+    name: 'IRS',
+    host: 'irs.gov',
+    url: 'https://www.irs.gov/refunds',
+    caption: 'The same page, easier to read',
+  },
 ];
 
 function useReducedMotion(): boolean {
-  const query = typeof matchMedia === 'function' ? matchMedia('(prefers-reduced-motion: reduce)') : null;
+  const query =
+    typeof matchMedia === 'function'
+      ? matchMedia('(prefers-reduced-motion: reduce)')
+      : null;
   const [reduced, setReduced] = useState(query?.matches ?? false);
   useEffect(() => {
     if (!query) return;
@@ -84,7 +114,9 @@ function useReducedMotion(): boolean {
 }
 
 const listJoin = (xs: string[]): string =>
-  xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+  xs.length <= 1
+    ? xs.join('')
+    : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
 
 export function Results(props: ResultsProps): JSX.Element {
   const { measured, onRetake, onDone } = props;
@@ -108,8 +140,14 @@ export function Results(props: ResultsProps): JSX.Element {
     props.onChange(next);
   };
 
-  const values = useMemo(() => struggleValues(opened, evidence), [opened, evidence]);
-  const cards = useMemo(() => struggleCards(opened, evidence, values), [opened, evidence, values]);
+  const values = useMemo(
+    () => struggleValues(opened, evidence),
+    [opened, evidence],
+  );
+  const cards = useMemo(
+    () => struggleCards(opened, evidence, values),
+    [opened, evidence, values],
+  );
   const strong = anyStrong(values);
   const cardIds = new Set(cards.map((c) => c.id));
   const summary = cards.length
@@ -117,7 +155,9 @@ export function Results(props: ResultsProps): JSX.Element {
     : 'What gets in your way: hardly anything.';
 
   const onReal = !evidence || evidence.sites.length > 0;
-  const h1 = strong ? 'Here’s what makes the web harder for you.' : 'The web mostly works for you.';
+  const h1 = strong
+    ? 'Here’s what makes the web harder for you.'
+    : 'The web mostly works for you.';
   const deck = !strong
     ? 'A few things still get in the way. WebAble takes care of them.'
     : !measured
@@ -127,14 +167,20 @@ export function Results(props: ResultsProps): JSX.Element {
         : 'From what you just did.';
 
   const toSites = (): void => {
-    sitesRef.current?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+    sitesRef.current?.scrollIntoView({
+      behavior: reduced ? 'auto' : 'smooth',
+      block: 'start',
+    });
   };
 
   return (
     <div class="rs">
       <header class="rs-top">
         <div class="rs-wrap">
-          <span class="rs-mark"><Logo />WebAble</span>
+          <span class="rs-mark">
+            <Logo />
+            WebAble
+          </span>
         </div>
       </header>
 
@@ -189,17 +235,27 @@ export function Results(props: ResultsProps): JSX.Element {
             ) : null}
 
             <div class="rs-actions">
-              <button type="button" class="btn btn-primary rs-btn" onClick={toSites}>
+              <button
+                type="button"
+                class="btn btn-primary rs-btn"
+                onClick={toSites}
+              >
                 See it on real websites
               </button>
-              <button type="button" class="btn btn-secondary rs-btn" onClick={onDone}>
+              <button
+                type="button"
+                class="btn btn-secondary rs-btn"
+                onClick={onDone}
+              >
                 Done
               </button>
             </div>
           </div>
 
           <figure class="rs-chart card">
-            <figcaption class="rs-chart-title">What gets in your way</figcaption>
+            <figcaption class="rs-chart-title">
+              What gets in your way
+            </figcaption>
             <Radar
               values={values.map((s) => s.value)}
               labels={values.map((s) => s.label)}
@@ -208,7 +264,9 @@ export function Results(props: ResultsProps): JSX.Element {
               summary={summary}
               reduced={reduced}
             />
-            <p class="rs-chart-note">The further out, the more it gets in your way.</p>
+            <p class="rs-chart-note">
+              The further out, the more it gets in your way.
+            </p>
           </figure>
         </section>
 
@@ -218,13 +276,20 @@ export function Results(props: ResultsProps): JSX.Element {
               <h2 class="rs-h2" id="rs-sites">
                 See it on real websites
               </h2>
-              <p class="rs-sub">WebAble is on. Open any of these and it works by itself.</p>
+              <p class="rs-sub">
+                WebAble is on. Open any of these and it works by itself.
+              </p>
             </div>
           </div>
           <ul class="rs-sites">
             {REAL_SITES.map((s) => (
               <li key={s.url}>
-                <a class="rs-site" href={s.url} target="_blank" rel="noopener noreferrer">
+                <a
+                  class="rs-site"
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   <span class="rs-site-top">
                     <span class="rs-site-name">{s.name}</span>
                     <span class="rs-site-out">
@@ -245,7 +310,10 @@ export function Results(props: ResultsProps): JSX.Element {
         <Adjust fit={fit} onChange={change} />
 
         <footer class="rs-foot">
-          <p>WebAble keeps learning as you browse. Change anything here, any time, from the WebAble button on any page.</p>
+          <p>
+            WebAble keeps learning as you browse. Change anything here, any
+            time, from the WebAble button on any page.
+          </p>
           <button type="button" class="btn-text rs-restart" onClick={onRetake}>
             Start over
           </button>
@@ -287,12 +355,17 @@ function ReaderCard(props: {
     action = 'Change';
   } else {
     title = 'Pages can explain things the way you like';
-    line = 'Bring what your AI assistant already knows about how you like things explained.';
+    line =
+      'Bring what your AI assistant already knows about how you like things explained.';
     action = 'Bring it in';
   }
   const showPoints = !!reader && job?.status !== 'reading' && !!onPoints;
   return (
-    <section class="rs-ai" aria-label="How you like things explained" aria-busy={job?.status === 'reading' ? true : undefined}>
+    <section
+      class="rs-ai"
+      aria-label="How you like things explained"
+      aria-busy={job?.status === 'reading' ? true : undefined}
+    >
       <span class="rs-card-icon">
         <ExplainIcon />
       </span>
@@ -300,19 +373,34 @@ function ReaderCard(props: {
         <p class="rs-problem">{title}</p>
         <p class="rs-evidence">{line}</p>
         {showPoints ? (
-          <ul class="ai-points rs-ai-points" aria-label="What WebAble took from your AI">
+          <ul
+            class="ai-points rs-ai-points"
+            aria-label="What WebAble took from your AI"
+          >
             {reader.points.map((p) => (
               <PointRow
                 key={p.id}
                 point={p}
                 source={reader.source}
-                onToggle={(id, on) => onPoints({ ...reader, points: reader.points.map((x) => (x.id === id ? { ...x, on } : x)) })}
+                onToggle={(id, on) =>
+                  onPoints({
+                    ...reader,
+                    points: reader.points.map((x) =>
+                      x.id === id ? { ...x, on } : x,
+                    ),
+                  })
+                }
               />
             ))}
           </ul>
         ) : null}
         {action ? (
-          <button type="button" class="btn btn-secondary rs-btn rs-ai-btn" onClick={onOpen} data-answer="reader">
+          <button
+            type="button"
+            class="btn btn-secondary rs-btn rs-ai-btn"
+            onClick={onOpen}
+            data-answer="reader"
+          >
             {action}
           </button>
         ) : null}
@@ -354,10 +442,24 @@ function wordChange(from: string, to: string | null): JSX.Element | string {
   );
 }
 
-const FAINT_WORDS: Record<FaintLevel, string | null> = { off: null, darker: 'Darker', darkest: 'Darkest' };
-const POLARITY_WORDS: Record<Polarity, string | null> = { none: null, light: 'Light', dark: 'Dark' };
+const FAINT_WORDS: Record<FaintLevel, string | null> = {
+  off: null,
+  darker: 'Darker',
+  darkest: 'Darkest',
+};
+const POLARITY_WORDS: Record<Polarity, string | null> = {
+  none: null,
+  light: 'Light',
+  dark: 'Dark',
+};
 
-function Adjust({ fit, onChange }: { fit: FitProfile; onChange(next: FitProfile): void }): JSX.Element {
+function Adjust({
+  fit,
+  onChange,
+}: {
+  fit: FitProfile;
+  onChange(next: FitProfile): void;
+}): JSX.Element {
   const level = textLevel(fit);
   const buttons = buttonLevel(fit);
   const polarity: Polarity = fit.polarity?.value ?? 'none';
@@ -394,18 +496,29 @@ function Adjust({ fit, onChange }: { fit: FitProfile; onChange(next: FitProfile)
         <Row
           label="Button size"
           hint="How big buttons and links are to click."
-          change={wordChange('Standard', buttons === 'standard' ? null : buttonLabel(fit))}
+          change={wordChange(
+            'Standard',
+            buttons === 'standard' ? null : buttonLabel(fit),
+          )}
           wide
         >
           <Segmented<ButtonLevel>
             label="Button size"
             wide
-            options={BUTTON_LEVELS.map((l) => ({ value: l.value, label: l.label }))}
+            options={BUTTON_LEVELS.map((l) => ({
+              value: l.value,
+              label: l.label,
+            }))}
             value={buttons}
             onChange={(v) => onChange(withButtonLevel(fit, v))}
           />
         </Row>
-        <Row label="Faint text" hint="Light grey words, made darker." change={wordChange('Grey', FAINT_WORDS[faintLevel(fit)])} wide>
+        <Row
+          label="Faint text"
+          hint="Light grey words, made darker."
+          change={wordChange('Grey', FAINT_WORDS[faintLevel(fit)])}
+          wide
+        >
           <Segmented<FaintLevel>
             label="Faint text"
             wide
@@ -441,14 +554,22 @@ function Adjust({ fit, onChange }: { fit: FitProfile; onChange(next: FitProfile)
           hint="Your click stays on what you meant, even if your hand moves."
           change={fit.clicks.steady.on ? <strong>On</strong> : 'Off'}
         >
-          <Switch label="Keep my clicks steady" checked={fit.clicks.steady.on} onChange={(on) => onChange(withSteady(fit, on))} />
+          <Switch
+            label="Keep my clicks steady"
+            checked={fit.clicks.steady.on}
+            onChange={(on) => onChange(withSteady(fit, on))}
+          />
         </Row>
         <Row
           label="Pause moving things"
           hint="Slideshows and moving ads stand still."
           change={fit.attention.motion.on ? <strong>On</strong> : 'Off'}
         >
-          <Switch label="Pause moving things" checked={fit.attention.motion.on} onChange={(on) => onChange(withMotion(fit, on))} />
+          <Switch
+            label="Pause moving things"
+            checked={fit.attention.motion.on}
+            onChange={(on) => onChange(withMotion(fit, on))}
+          />
         </Row>
       </div>
     </section>

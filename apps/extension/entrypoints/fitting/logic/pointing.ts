@@ -7,7 +7,10 @@ export const MOUSE_LADDER = [24, 32, 44, 56, 72, 96] as const;
 export const TOUCH_LADDER = [44, 56, 72, 96] as const;
 export const RING_COUNT = 9;
 /** Visiting order across the ring (ISO 9241-9 style): each step jumps to the far side. */
-export const RING_ORDER: number[] = Array.from({ length: RING_COUNT }, (_, k) => (k * 5) % RING_COUNT);
+export const RING_ORDER: number[] = Array.from(
+  { length: RING_COUNT },
+  (_, k) => (k * 5) % RING_COUNT,
+);
 
 export interface RingPress {
   dx: number;
@@ -33,10 +36,15 @@ export function pMissCircle(L: number, sigma: number): number {
 export function blockStats(sizePx: number, presses: RingPress[]): BlockStats {
   const W = sizePx;
   const misses = presses.filter((p) => !p.hit).length;
-  const r = presses.map((p) => Math.hypot(p.dx, p.dy)).filter((d) => d <= 2 * W);
+  const r = presses
+    .map((p) => Math.hypot(p.dx, p.dy))
+    .filter((d) => d <= 2 * W);
   const sigma = r.length ? median(r) / 1.1774 : W;
   const sigmaAbs = Math.sqrt(Math.max(0, sigma * sigma - (0.16 * W) ** 2));
-  const pMiss = pMissCircle(W, Math.sqrt((1.15 * sigmaAbs) ** 2 + (0.16 * W) ** 2));
+  const pMiss = pMissCircle(
+    W,
+    Math.sqrt((1.15 * sigmaAbs) ** 2 + (0.16 * W) ** 2),
+  );
   return { misses, sigma, sigmaAbs, pMiss, pass: misses <= 1 && pMiss <= 0.08 };
 }
 
@@ -80,7 +88,10 @@ export class BlockWalk {
   }
 
   get scoredCount(): number {
-    return this.blocks.reduce((a, b) => a + b.presses.length, 0) + this.presses.length;
+    return (
+      this.blocks.reduce((a, b) => a + b.presses.length, 0) +
+      this.presses.length
+    );
   }
 
   /** Record one press at the current size. */
@@ -97,11 +108,14 @@ export class BlockWalk {
     this.blocks.push({ sizePx: size, presses: this.presses, pass });
     this.presses = [];
     const dir: -1 | 1 = pass ? -1 : 1;
-    if (this.direction !== null && dir !== this.direction) return this.finish('reversal');
+    if (this.direction !== null && dir !== this.direction)
+      return this.finish('reversal');
     this.direction = dir;
-    if (this.blocks.length >= BlockWalk.MAX_BLOCKS) return this.finish('max_trials');
+    if (this.blocks.length >= BlockWalk.MAX_BLOCKS)
+      return this.finish('max_trials');
     const next = this.idx + dir;
-    if (next < 0 || next >= this.ladder.length) return this.finish('ladder_end');
+    if (next < 0 || next >= this.ladder.length)
+      return this.finish('ladder_end');
     this.idx = next;
   }
 
@@ -112,7 +126,12 @@ export class BlockWalk {
 }
 
 /** Ring geometry for a stage of the given size; grows so large dots never touch their neighbours. */
-export function ringDiameter(stageW: number, stageH: number, touch: boolean, dotPx: number): number {
+export function ringDiameter(
+  stageW: number,
+  stageH: number,
+  touch: boolean,
+  dotPx: number,
+): number {
   const m = Math.min(stageW, stageH);
   const base = touch
     ? Math.min(260, Math.max(120, Math.round(0.3 * m)))

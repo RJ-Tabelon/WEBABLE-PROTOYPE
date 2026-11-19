@@ -9,7 +9,11 @@ import {
   type FinishedRecord,
   type RunState,
 } from '../../../src/sitetask/shared';
-import type { SiteTaskMessage, SiteTaskResult, SiteTaskSpec } from '../../../src/sitetask/types';
+import type {
+  SiteTaskMessage,
+  SiteTaskResult,
+  SiteTaskSpec,
+} from '../../../src/sitetask/types';
 
 /**
  * Checked against the live pages at 1440×900 on 2026-10-25. CNN's "Sports" now sits behind the "More" menu at that
@@ -21,7 +25,10 @@ export const SITE_TASKS: SiteTaskSpec[] = [
     name: 'Wikipedia',
     url: 'https://en.wikipedia.org/wiki/Gainesville,_Florida',
     prompt: 'the link to the University of Florida',
-    target: { hrefIncludes: ['/wiki/University_of_Florida'], text: ['University of Florida'] },
+    target: {
+      hrefIncludes: ['/wiki/University_of_Florida'],
+      text: ['University of Florida'],
+    },
     busy: false,
   },
   {
@@ -49,11 +56,20 @@ type ChromeLike = typeof chrome;
 
 function chromeApi(): ChromeLike | null {
   const c = (globalThis as { chrome?: ChromeLike }).chrome;
-  return c && c.runtime && typeof c.runtime.sendMessage === 'function' ? c : null;
+  return c && c.runtime && typeof c.runtime.sendMessage === 'function'
+    ? c
+    : null;
 }
 
-function isFinishedMessage(msg: unknown): msg is Extract<SiteTaskMessage, { siteTask: 'finished' }> {
-  return !!msg && typeof msg === 'object' && (msg as { siteTask?: unknown }).siteTask === 'finished' && Array.isArray((msg as { results?: unknown }).results);
+function isFinishedMessage(
+  msg: unknown,
+): msg is Extract<SiteTaskMessage, { siteTask: 'finished' }> {
+  return (
+    !!msg &&
+    typeof msg === 'object' &&
+    (msg as { siteTask?: unknown }).siteTask === 'finished' &&
+    Array.isArray((msg as { results?: unknown }).results)
+  );
 }
 
 function finishedResults(v: unknown): SiteTaskResult[] | null {
@@ -142,7 +158,10 @@ export function runSiteTasks(
       return false;
     };
 
-    const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+    const onChanged = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
       if (area !== 'session') return;
       const fin = finishedResults(changes[FINISHED_KEY]?.newValue);
       if (fin) {
@@ -198,7 +217,11 @@ export function runSiteTasks(
         reply = null;
       }
       if (settled) return;
-      if (!reply || typeof reply !== 'object' || (reply as { ok?: unknown }).ok !== true) {
+      if (
+        !reply ||
+        typeof reply !== 'object' ||
+        (reply as { ok?: unknown }).ok !== true
+      ) {
         finish(null);
         return;
       }

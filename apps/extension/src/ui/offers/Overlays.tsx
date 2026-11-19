@@ -7,7 +7,7 @@
 // Commands go through api.restoreOverlay: `id` (Show it), `${id}#read` (back for this page view only),
 // `${id}#close` (accept the offered close).
 import { useLayoutEffect, useRef, useState } from 'preact/hooks';
-import type { OverlayAction, OverlayKind } from '@webable/core';
+import type { OverlayAction, OverlayKind } from '@webable/engine';
 import type { EngineApi } from '../../contracts';
 import { IconChevron, IconShield } from '../panel/icons';
 import { popupNoun } from '../panel/model';
@@ -44,7 +44,9 @@ const KIND_NAME: Record<OverlayKind, string> = {
 };
 
 function str(v: unknown): string | null {
-  return typeof v === 'string' && v.trim() ? v.replace(/\s+/g, ' ').trim() : null;
+  return typeof v === 'string' && v.trim()
+    ? v.replace(/\s+/g, ' ').trim()
+    : null;
 }
 
 function choicesFrom(v: unknown): OverlayChoice[] {
@@ -69,12 +71,15 @@ const EDGES = new Set(['top', 'bottom', 'left', 'right']);
 export function overlayView(o: OverlayAction): OverlayView {
   const x = o as OverlayAction & Record<string, unknown>;
   const name = str(x.name);
-  const edge = typeof x.edge === 'string' && EDGES.has(x.edge) ? (x.edge as OverlayView['edge']) : null;
+  const edge =
+    typeof x.edge === 'string' && EDGES.has(x.edge)
+      ? (x.edge as OverlayView['edge'])
+      : null;
   return {
     id: o.id,
     kind: o.kind,
     action: o.action,
-    name: name && name.length <= 28 ? name : KIND_NAME[o.kind] ?? 'Popup',
+    name: name && name.length <= 28 ? name : (KIND_NAME[o.kind] ?? 'Popup'),
     choices: choicesFrom(x.choices),
     revealed: x.revealed === true,
     edge,
@@ -82,15 +87,25 @@ export function overlayView(o: OverlayAction): OverlayView {
   };
 }
 
-const CONTROL = 'button, a[href], [role="button"], input[type="button"], input[type="submit"]';
+const CONTROL =
+  'button, a[href], [role="button"], input[type="button"], input[type="submit"]';
 
 function textOf(el: Element): string {
-  const t = (el as HTMLElement).innerText || el.textContent || el.getAttribute('aria-label') || (el as HTMLInputElement).value || '';
+  const t =
+    (el as HTMLElement).innerText ||
+    el.textContent ||
+    el.getAttribute('aria-label') ||
+    (el as HTMLInputElement).value ||
+    '';
   return t.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
 /** The site's own control for a choice: by the engine's id, else by its label inside the notice. */
-function findControl(api: EngineApi, overlayId: string, c: OverlayChoice): HTMLElement | null {
+function findControl(
+  api: EngineApi,
+  overlayId: string,
+  c: OverlayChoice,
+): HTMLElement | null {
   if (c.id) {
     const el = api.elementFor(c.id);
     if (el instanceof HTMLElement && el.isConnected) return el;
@@ -103,7 +118,8 @@ function findControl(api: EngineApi, overlayId: string, c: OverlayChoice): HTMLE
     const t = textOf(el);
     if (!t) continue;
     if (t === want) return el as HTMLElement;
-    if (!partial && (t.startsWith(want) || want.startsWith(t))) partial = el as HTMLElement;
+    if (!partial && (t.startsWith(want) || want.startsWith(t)))
+      partial = el as HTMLElement;
   }
   return partial;
 }
@@ -127,7 +143,16 @@ interface BarProps {
 }
 
 /** The short bar a docked cookie notice becomes. It never answers for the person. */
-export function ConsentBar({ api, view, left, right, bottom, onGone, layoutKey = '', onHeight }: BarProps) {
+export function ConsentBar({
+  api,
+  view,
+  left,
+  right,
+  bottom,
+  onGone,
+  layoutKey = '',
+  onHeight,
+}: BarProps) {
   const barRef = useRef<HTMLDivElement>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
@@ -141,7 +166,8 @@ export function ConsentBar({ api, view, left, right, bottom, onGone, layoutKey =
   }, [key]);
   useLayoutEffect(() => {
     const row = rowRef.current;
-    if (row && !compact && row.scrollWidth > row.clientWidth + 1) setCompact(true);
+    if (row && !compact && row.scrollWidth > row.clientWidth + 1)
+      setCompact(true);
     const h = barRef.current?.offsetHeight ?? 0;
     if (h > 0 && Math.abs(h - lastH.current) > 0.5) {
       lastH.current = h;
@@ -169,7 +195,11 @@ export function ConsentBar({ api, view, left, right, bottom, onGone, layoutKey =
       aria-label="Cookie notice from this site"
       data-compact={showChoices ? '' : undefined}
       data-wa-chrome=""
-      style={{ left: `${Math.round(left)}px`, right: `${Math.round(right)}px`, bottom: `${Math.round(bottom)}px` }}
+      style={{
+        left: `${Math.round(left)}px`,
+        right: `${Math.round(right)}px`,
+        bottom: `${Math.round(bottom)}px`,
+      }}
     >
       <div class="wa-cbar-row" ref={rowRef}>
         <span class="wa-cbar-icon" aria-hidden="true">
@@ -183,9 +213,17 @@ export function ConsentBar({ api, view, left, right, bottom, onGone, layoutKey =
           </button>
         ) : (
           <>
-            <div class="wa-cbar-choices" role="group" aria-label="The site's own choices">
+            <div
+              class="wa-cbar-choices"
+              role="group"
+              aria-label="The site's own choices"
+            >
               {view.choices.map((c, i) => (
-                <button key={`${i}-${c.label}`} class="wa-kbtn wa-cbar-btn" onClick={() => press(c)}>
+                <button
+                  key={`${i}-${c.label}`}
+                  class="wa-kbtn wa-cbar-btn"
+                  onClick={() => press(c)}
+                >
                   {c.label}
                 </button>
               ))}
@@ -202,13 +240,23 @@ export function ConsentBar({ api, view, left, right, bottom, onGone, layoutKey =
 }
 
 /** A modal the engine found a safe close button for: offered, never pressed without the person. */
-export function OverlayOffer({ api, view, onGone }: { api: EngineApi; view: OverlayView; onGone: (id: string) => void }) {
+export function OverlayOffer({
+  api,
+  view,
+  onGone,
+}: {
+  api: EngineApi;
+  view: OverlayView;
+  onGone: (id: string) => void;
+}) {
   const noun = popupNoun(view.kind);
   const what = noun.charAt(0).toUpperCase() + noun.slice(1);
   return (
     <div class="wa-offer" role="region" aria-label="WebAble" data-wa-chrome="">
       <p class="wa-offer-q">{what} is covering this page.</p>
-      <p class="wa-offer-fact">WebAble can close it with the site's own close button.</p>
+      <p class="wa-offer-fact">
+        WebAble can close it with the site's own close button.
+      </p>
       <div class="wa-offer-btns">
         <button
           class="wa-kbtn"

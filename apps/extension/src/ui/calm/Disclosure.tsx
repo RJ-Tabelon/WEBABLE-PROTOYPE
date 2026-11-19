@@ -19,20 +19,35 @@ export function Disclosure(props: {
   const root = useRef<HTMLDivElement>(null);
   const first = useRef(props.openCall);
   useEffect(() => {
-    if (props.openCall === undefined || props.openCall === first.current) return;
+    if (props.openCall === undefined || props.openCall === first.current)
+      return;
     setOpen(true);
-    requestAnimationFrame(() => root.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+    requestAnimationFrame(() =>
+      root.current?.scrollIntoView({ block: 'start', behavior: 'smooth' }),
+    );
   }, [props.openCall]);
   const H = props.headingLevel === 3 ? 'h3' : 'h2';
   return (
-    <div class={`wa-disc${props.quiet ? ' wa-disc--quiet' : ''}`} data-open={open || undefined} ref={root}>
+    <div
+      class={`wa-disc${props.quiet ? ' wa-disc--quiet' : ''}`}
+      data-open={open || undefined}
+      ref={root}
+    >
       <H>
-        <button type="button" class="wa-disc__sum" aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
+        <button
+          type="button"
+          class="wa-disc__sum"
+          aria-expanded={open}
+          aria-controls={body}
+          onClick={() => setOpen(!open)}
+        >
           <span class="wa-disc__text">
             <span class="wa-disc__title">{props.title}</span>
             {props.sub && <span class="wa-disc__sub">{props.sub}</span>}
           </span>
-          {props.count != null && props.count > 0 && <span class="wa-chipcount">{props.count}</span>}
+          {props.count != null && props.count > 0 && (
+            <span class="wa-chipcount">{props.count}</span>
+          )}
           <span class="wa-chev" aria-hidden="true">
             <ChevronDown />
           </span>
@@ -48,12 +63,21 @@ export function Disclosure(props: {
 }
 
 /** A disclosure that sits in running text ("About this page"): a quiet toggle, then a well card under the line. */
-export function InlineDisclosure(props: { label: string; children: ComponentChildren }): JSX.Element {
+export function InlineDisclosure(props: {
+  label: string;
+  children: ComponentChildren;
+}): JSX.Element {
   const [open, setOpen] = useState(false);
   const body = useId();
   return (
     <>
-      <button type="button" class="wa-about" aria-expanded={open} aria-controls={body} onClick={() => setOpen(!open)}>
+      <button
+        type="button"
+        class="wa-about"
+        aria-expanded={open}
+        aria-controls={body}
+        onClick={() => setOpen(!open)}
+      >
         <span>{props.label}</span>
         <ChevronDown class="wa-about__chev" />
       </button>

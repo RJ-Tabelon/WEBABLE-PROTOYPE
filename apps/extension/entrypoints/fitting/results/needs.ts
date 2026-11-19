@@ -3,13 +3,21 @@
 // onboarding (RunEvidence). The results page leads with the strongest as cards: the problem, their evidence in plain
 // spoken numbers, then what WebAble does about it. Pure and deterministic: the chart, the cards and the tests read the
 // same numbers. Nothing here ever puts a pixel value or a technical word in front of a person.
-import type { FitProfile } from '@webable/core';
+import type { FitProfile } from '@webable/engine';
 import type { RunEvidence } from '../logic/evidence';
 
-export type StruggleId = 'text' | 'faint' | 'buttons' | 'slips' | 'busy' | 'motion';
+export type StruggleId =
+  'text' | 'faint' | 'buttons' | 'slips' | 'busy' | 'motion';
 
 /** Chart order, clockwise from the top. */
-export const STRUGGLE_ORDER: readonly StruggleId[] = ['text', 'faint', 'buttons', 'slips', 'busy', 'motion'];
+export const STRUGGLE_ORDER: readonly StruggleId[] = [
+  'text',
+  'faint',
+  'buttons',
+  'slips',
+  'busy',
+  'motion',
+];
 
 export const STRUGGLE_LABELS: Record<StruggleId, string> = {
   text: 'Small text',
@@ -43,14 +51,16 @@ export const FIX_LINES: Record<StruggleId, string> = {
 export const FIT_LINES: Record<StruggleId, string> = {
   text: 'You read best when text is larger than most websites make it.',
   faint: 'You read best when words are darker than many websites make them.',
-  buttons: 'You hit things best when they are bigger than most websites make them.',
+  buttons:
+    'You hit things best when they are bigger than most websites make them.',
   slips: 'Sometimes a press slides off what you meant before you let go.',
   busy: 'Ads, pop-ups and crowded pages make things harder to find.',
   motion: 'Slideshows and moving ads make it hard to keep your place.',
 };
 
 /** Shown in place of the fix line when the person has turned that fix off below. */
-export const FIX_OFF_LINE = 'Turned off for now. You can turn it back on below.';
+export const FIX_OFF_LINE =
+  'Turned off for now. You can turn it back on below.';
 
 /** Simplified busy pages are on for everyone, and busy pages slow everyone a little, so this never drops below this. */
 export const BUSY_FLOOR = 35;
@@ -77,9 +87,12 @@ export interface StruggleCard {
   fix: string;
 }
 
-const clamp = (v: number, lo: number, hi: number): number => (v < lo ? lo : v > hi ? hi : v);
-const finite = (v: unknown, fallback: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
-const count = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v) : 0);
+const clamp = (v: number, lo: number, hi: number): number =>
+  v < lo ? lo : v > hi ? hi : v;
+const finite = (v: unknown, fallback: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : fallback;
+const count = (v: unknown): number =>
+  typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.round(v) : 0;
 
 /* ---------------- From the fit ---------------- */
 
@@ -144,7 +157,15 @@ function fitStrength(id: StruggleId, fit: FitProfile): number {
     case 'busy': {
       const level = fit.attention?.structureLevel ?? 0;
       const clutterP = clamp(finite(fit.attention?.clutter?.p, 0.25), 0, 1);
-      return clamp(Math.max(BUSY_FLOOR, level === 2 ? 80 : level === 1 ? 58 : 0, clutterP * 100), BUSY_FLOOR, 100);
+      return clamp(
+        Math.max(
+          BUSY_FLOOR,
+          level === 2 ? 80 : level === 1 ? 58 : 0,
+          clutterP * 100,
+        ),
+        BUSY_FLOOR,
+        100,
+      );
     }
     case 'motion': {
       const p = clamp(finite(fit.attention?.motion?.p, 0.3), 0, 1);
@@ -156,17 +177,28 @@ function fitStrength(id: StruggleId, fit: FitProfile): number {
 /* ---------------- From their own numbers ---------------- */
 
 /** The same words core reads from the "Did anything get in your way?" chips. */
-const saidMoving = (ev: RunEvidence): boolean => (ev.gotInWay ?? []).some((c) => /mov|motion|animat/i.test(c));
-const saidBusy = (ev: RunEvidence): boolean => (ev.gotInWay ?? []).some((c) => /too much|busy|clutter|crowd/i.test(c));
+const saidMoving = (ev: RunEvidence): boolean =>
+  (ev.gotInWay ?? []).some((c) => /mov|motion|animat/i.test(c));
+const saidBusy = (ev: RunEvidence): boolean =>
+  (ev.gotInWay ?? []).some((c) => /too much|busy|clutter|crowd/i.test(c));
 
-const sites = (ev: RunEvidence): RunEvidence['sites'] => (Array.isArray(ev.sites) ? ev.sites : []);
-const siteNearMisses = (ev: RunEvidence): number => sites(ev).reduce((n, s) => n + count(s.nearMisses), 0);
+const sites = (ev: RunEvidence): RunEvidence['sites'] =>
+  Array.isArray(ev.sites) ? ev.sites : [];
+const siteNearMisses = (ev: RunEvidence): number =>
+  sites(ev).reduce((n, s) => n + count(s.nearMisses), 0);
 
 /** Slipped presses and all presses: the whole flow when we have it, else just the real sites. */
 function slipCounts(ev: RunEvidence): { slips: number; presses: number } {
-  if (ev.pointing) return { slips: count(ev.pointing.slips), presses: count(ev.pointing.presses) };
+  if (ev.pointing)
+    return {
+      slips: count(ev.pointing.slips),
+      presses: count(ev.pointing.presses),
+    };
   return sites(ev).reduce(
-    (a, s) => ({ slips: a.slips + count(s.slips), presses: a.presses + count(s.presses) }),
+    (a, s) => ({
+      slips: a.slips + count(s.slips),
+      presses: a.presses + count(s.presses),
+    }),
     { slips: 0, presses: 0 },
   );
 }
@@ -178,7 +210,13 @@ const readingSlowdown = (ev: RunEvidence): number | null => {
 
 const busyRatio = (ev: RunEvidence): RunEvidence['busySlowdown'] => {
   const b = ev.busySlowdown;
-  return b && Number.isFinite(b.ratio) && b.ratio >= 1.15 && b.busyName && b.quietName ? b : null;
+  return b &&
+    Number.isFinite(b.ratio) &&
+    b.ratio >= 1.15 &&
+    b.busyName &&
+    b.quietName
+    ? b
+    : null;
 };
 
 function evidenceStrength(id: StruggleId, ev: RunEvidence): number {
@@ -186,15 +224,24 @@ function evidenceStrength(id: StruggleId, ev: RunEvidence): number {
     case 'text': {
       const s = readingSlowdown(ev);
       const tooSmall = count(ev.reading?.tooSmallCount);
-      return Math.max(s ? clamp((s - 1) * 200, 0, 100) : 0, tooSmall ? 30 + 10 * Math.min(tooSmall, 3) : 0);
+      return Math.max(
+        s ? clamp((s - 1) * 200, 0, 100) : 0,
+        tooSmall ? 30 + 10 * Math.min(tooSmall, 3) : 0,
+      );
     }
     case 'faint':
       return ev.faint?.missedCommonGrey ? 65 : 0;
     case 'buttons': {
       const p = ev.pointing;
-      const missed = p && count(p.smallTotal) > 0 ? count(p.smallMisses) / count(p.smallTotal) : 0;
+      const missed =
+        p && count(p.smallTotal) > 0
+          ? count(p.smallMisses) / count(p.smallTotal)
+          : 0;
       const near = siteNearMisses(ev);
-      return Math.max(missed > 0 ? clamp(25 + 150 * missed, 0, 100) : 0, near ? Math.min(55, 25 + 10 * near) : 0);
+      return Math.max(
+        missed > 0 ? clamp(25 + 150 * missed, 0, 100) : 0,
+        near ? Math.min(55, 25 + 10 * near) : 0,
+      );
     }
     case 'slips': {
       const { slips, presses } = slipCounts(ev);
@@ -204,7 +251,10 @@ function evidenceStrength(id: StruggleId, ev: RunEvidence): number {
     }
     case 'busy': {
       const b = busyRatio(ev);
-      return Math.max(b ? clamp((b.ratio - 1) * 100, 0, 100) : 0, saidBusy(ev) ? 60 : 0);
+      return Math.max(
+        b ? clamp((b.ratio - 1) * 100, 0, 100) : 0,
+        saidBusy(ev) ? 60 : 0,
+      );
     }
     case 'motion':
       return saidMoving(ev) ? 70 : sites(ev).some((s) => s.motionSeen) ? 20 : 0;
@@ -215,17 +265,38 @@ function evidenceStrength(id: StruggleId, ev: RunEvidence): number {
  * How strongly each struggle gets in their way, in chart order. The fit decides whether it is a real need (so every
  * card's fix is true); their own numbers can make it stronger. A struggle whose fix is off stays below a card.
  */
-export function struggleValues(fit: FitProfile, evidence: RunEvidence | null = null): Struggle[] {
+export function struggleValues(
+  fit: FitProfile,
+  evidence: RunEvidence | null = null,
+): Struggle[] {
   return STRUGGLE_ORDER.map((id) => {
     const ev = evidence ? evidenceStrength(id, evidence) : 0;
-    const value = fixOn(id, fit) ? Math.max(fitStrength(id, fit), ev) : Math.min(ev * 0.5, CARD_MIN - 1);
-    return { id, label: STRUGGLE_LABELS[id], value: Math.round(clamp(value, 0, 100)) };
+    const value = fixOn(id, fit)
+      ? Math.max(fitStrength(id, fit), ev)
+      : Math.min(ev * 0.5, CARD_MIN - 1);
+    return {
+      id,
+      label: STRUGGLE_LABELS[id],
+      value: Math.round(clamp(value, 0, 100)),
+    };
   });
 }
 
 /* ---------------- Speech ---------------- */
 
-const NUMBER_WORDS = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const NUMBER_WORDS = [
+  'zero',
+  'one',
+  'two',
+  'three',
+  'four',
+  'five',
+  'six',
+  'seven',
+  'eight',
+  'nine',
+  'ten',
+];
 
 /** A slowdown as a spoken percentage: 1.42 → 40 ("about 40%"). Nearest 5 below 25%, nearest 10 above. */
 export function aboutPercent(slowdown: number): number {
@@ -240,51 +311,66 @@ export function timesWords(ratio: number): string {
     const n = Math.round(ratio);
     return `${NUMBER_WORDS[n] ?? String(n)} times`;
   }
-  const r = ratio >= 1.25 ? Math.round(ratio * 2) / 2 : Math.round(ratio * 10) / 10;
+  const r =
+    ratio >= 1.25 ? Math.round(ratio * 2) / 2 : Math.round(ratio * 10) / 10;
   if (r === 2) return 'twice';
   return `${r} times`;
 }
 
 /** Their own numbers for this struggle, as one line: the first template that has data, or null. */
-export function evidenceLine(id: StruggleId, ev: RunEvidence | null): string | null {
+export function evidenceLine(
+  id: StruggleId,
+  ev: RunEvidence | null,
+): string | null {
   if (!ev) return null;
   switch (id) {
     case 'text': {
       const s = readingSlowdown(ev);
-      if (s) return `As the text got smaller, your reading slowed by about ${aboutPercent(s)}%.`;
-      if (count(ev.reading?.tooSmallCount)) return 'Some sentences were too small to read.';
+      if (s)
+        return `As the text got smaller, your reading slowed by about ${aboutPercent(s)}%.`;
+      if (count(ev.reading?.tooSmallCount))
+        return 'Some sentences were too small to read.';
       return null;
     }
     case 'faint':
-      return ev.faint?.missedCommonGrey ? 'You couldn’t make out words in the light grey many websites use.' : null;
+      return ev.faint?.missedCommonGrey
+        ? 'You couldn’t make out words in the light grey many websites use.'
+        : null;
     case 'buttons': {
       const p = ev.pointing;
       if (p && count(p.smallMisses) > 0 && count(p.smallTotal) > 0) {
         return `You missed ${count(p.smallMisses)} of the ${count(p.smallTotal)} smaller dots.`;
       }
-      if (siteNearMisses(ev)) return 'Some of your clicks on real sites landed just beside what you aimed for.';
+      if (siteNearMisses(ev))
+        return 'Some of your clicks on real sites landed just beside what you aimed for.';
       return null;
     }
     case 'slips': {
       const { slips } = slipCounts(ev);
-      return slips ? `${slips} of your presses slipped off what you were pressing.` : null;
+      return slips
+        ? `${slips} of your presses slipped off what you were pressing.`
+        : null;
     }
     case 'busy': {
       const b = busyRatio(ev);
-      if (b) return `Finding something on ${b.busyName} took you ${timesWords(b.ratio)} as long as on ${b.quietName}.`;
+      if (b)
+        return `Finding something on ${b.busyName} took you ${timesWords(b.ratio)} as long as on ${b.quietName}.`;
       if (saidBusy(ev)) return 'You said there was too much on the page.';
       return null;
     }
     case 'motion': {
       if (saidMoving(ev)) return 'You said moving things got in your way.';
       const site = sites(ev).find((s) => s.motionSeen);
-      return site ? `Something was moving on ${site.name} while you searched.` : null;
+      return site
+        ? `Something was moving on ${site.name} while you searched.`
+        : null;
     }
   }
 }
 
 const byValue = (a: Struggle, b: Struggle): number =>
-  b.value - a.value || STRUGGLE_ORDER.indexOf(a.id) - STRUGGLE_ORDER.indexOf(b.id);
+  b.value - a.value ||
+  STRUGGLE_ORDER.indexOf(a.id) - STRUGGLE_ORDER.indexOf(b.id);
 
 /** The struggle cards, strongest first, at most four, each with its problem, their evidence and the fix. */
 export function struggleCards(

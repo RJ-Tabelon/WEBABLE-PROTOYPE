@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Quillon Vesperine store checkout private</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "Quillon lamp"
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        font-family: Helvetica, Arial, sans-serif;
+        color: #222;
+        background: #fff;
+      }
+      header.top {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        height: 72px;
+        background: #111;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 0 24px;
+      }
+      header.top a {
+        color: #fff;
+        font-size: 14px;
+      }
+      .menu {
+        list-style: none;
+        display: flex;
+        gap: 16px;
+        margin: 0;
+        padding: 0;
+      }
+      .menu > li {
+        position: relative;
+      }
+      .menu .sub {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background: #222;
+        padding: 8px;
+        margin: 0;
+        list-style: none;
+        min-width: 160px;
+      }
+      .menu li:hover > .sub {
+        display: block;
+      }
+      .toolbar {
+        display: flex;
+        gap: 2px;
+        padding: 12px 24px;
+      }
+      .toolbar button {
+        width: 18px;
+        height: 18px;
+        padding: 0;
+        font-size: 10px;
+        line-height: 1;
+      }
+      .tags {
+        padding: 0 24px;
+        font-size: 12px;
+      }
+      .tags a {
+        font-size: 11px;
+        margin-right: 1px;
+      }
+      main {
+        padding: 24px;
+      }
+      .carousel {
+        position: relative;
+        width: 600px;
+        height: 200px;
+        overflow: hidden;
+        background: #eee;
+      }
+      .slides {
+        display: flex;
+        width: 1800px;
+        animation: slide 6s linear infinite;
+      }
+      .slides.is-paused {
+        animation-play-state: paused;
+      }
+      .slide {
+        width: 600px;
+        height: 200px;
+        display: grid;
+        place-items: center;
+        font-size: 24px;
+      }
+      @keyframes slide {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-1200px);
+        }
+      }
+      .spinner {
+        width: 24px;
+        height: 24px;
+        border: 3px solid #ccc;
+        border-top-color: #333;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      video {
+        width: 320px;
+        height: 180px;
+        background: #000;
+        display: block;
+        margin: 16px 0;
+      }
+      .product {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .price {
+        font-size: 13px;
+        color: #777;
+      }
+      #onetrust-banner-sdk {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: #fff;
+        border-top: 2px solid #333;
+        padding: 16px 24px;
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        z-index: 50;
+      }
+      .intercom-lightweight-app {
+        position: fixed;
+        right: 20px;
+        bottom: 120px;
+        width: 60px;
+        height: 60px;
+        z-index: 60;
+      }
+      .intercom-lightweight-app button {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+      }
+      .promo-rail {
+        width: 300px;
+        height: 600px;
+        background: #fdf3e7;
+        position: absolute;
+        right: 24px;
+        top: 160px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="top">
+      <a href="/">Shop</a>
+      <nav aria-label="Main">
+        <ul class="menu">
+          <li>
+            <a href="/lamps" aria-haspopup="true">Lamps</a>
+            <ul class="sub">
+              <li><a href="/lamps/desk">Desk lamps</a></li>
+              <li><a href="/lamps/floor">Floor lamps</a></li>
+            </ul>
+          </li>
+          <li><a href="/chairs">Chairs</a></li>
+        </ul>
+      </nav>
+      <input type="search" name="q" aria-label="Search the shop" />
+    </header>
+    <div class="toolbar" role="toolbar" aria-label="View">
+      <button type="button" aria-label="Grid">G</button>
+      <button type="button" aria-label="List">L</button>
+      <button type="button" aria-label="Sort">S</button>
+      <button type="button" aria-label="Filter">F</button>
+      <button type="button" aria-label="Share">H</button>
+    </div>
+    <p class="tags">
+      <a href="/t/1">new</a><a href="/t/2">sale</a><a href="/t/3">oak</a
+      ><a href="/t/4">brass</a>
+    </p>
+    <main>
+      <div class="product">
+        <div>
+          <h1>Quillon lamp</h1>
+          <p class="price">Price 48151623 private</p>
+          <button type="button" id="buy">Add to cart</button>
+          <div class="spinner" aria-hidden="true"></div>
+        </div>
+      </div>
+      <div class="carousel" aria-roledescription="carousel" aria-label="Photos">
+        <button
+          type="button"
+          class="pause"
+          aria-label="Pause slideshow"
+          id="carousel-pause"
+        >
+          Pause
+        </button>
+        <div class="slides">
+          <div class="slide">One</div>
+          <div class="slide">Two</div>
+          <div class="slide">Three</div>
+        </div>
+      </div>
+      <video id="promo-video" muted autoplay loop playsinline></video>
+      <img
+        id="gif"
+        src="/engine/assets/anim.gif"
+        alt="Animated lamp"
+        width="48"
+        height="48"
+      />
+    </main>
+    <div class="promo-rail" id="sponsored-rail"><span>Sponsored</span></div>
+    <div id="onetrust-banner-sdk" role="region" aria-label="Cookie notice">
+      <p>We use cookies to improve your visit.</p>
+      <button type="button">Accept all</button>
+      <button type="button">Reject all</button>
+    </div>
+    <div class="intercom-lightweight-app">
+      <button type="button" aria-label="Open chat">Chat</button>
+    </div>
+    <script>
+      // A playing, muted, autoplay video without a media file: a canvas stream.
+      const canvas = document.createElement('canvas');
+      canvas.width = 64;
+      canvas.height = 36;
+      const ctx = canvas.getContext('2d');
+      let frame = 0;
+      setInterval(() => {
+        ctx.fillStyle = frame++ % 2 ? '#2d6a3e' : '#1a1a17';
+        ctx.fillRect(0, 0, 64, 36);
+      }, 100);
+      const video = document.getElementById('promo-video');
+      video.srcObject = canvas.captureStream(10);
+      video.play().catch(() => {});
+      // Carousel pause control toggles the CSS animation and its own label.
+      const pause = document.getElementById('carousel-pause');
+      pause.addEventListener('click', () => {
+        const slides = document.querySelector('.slides');
+        const paused = slides.classList.contains('is-paused');
+        slides.classList.toggle('is-paused', !paused);
+        pause.setAttribute(
+          'aria-label',
+          paused ? 'Pause slideshow' : 'Play slideshow',
+        );
+        pause.textContent = paused ? 'Pause' : 'Play';
+      });
+      // A WAAPI loop the CSS reset cannot reach.
+      document
+        .querySelector('.spinner')
+        .animate([{ opacity: 1 }, { opacity: 0.4 }], {
+          duration: 800,
+          iterations: Infinity,
+        });
+    </script>
+  </body>
+</html>

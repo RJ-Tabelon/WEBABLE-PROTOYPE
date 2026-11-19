@@ -1,7 +1,7 @@
 // R4, "Light or dark?": two true/false sentences on a light stage and two on a dark one, near the person's size, then
 // "Which felt easier to read?". Fills reading.polarity (times and the stated choice).
 
-import type { Polarity } from '@webable/core';
+import type { Polarity } from '@webable/engine';
 import type { JSX } from 'preact';
 import { useContext, useMemo, useRef, useState } from 'preact/hooks';
 import { StepLabelsContext } from '../ui/words';
@@ -16,7 +16,10 @@ import { Answer, TaskLayout, type TaskProps } from './Task';
 const SIDES: Array<'light' | 'dark'> = ['light', 'dark', 'dark', 'light'];
 
 /** Near their size: one step above the smallest sentence they read correctly, else the comfortable size. */
-function nearPx(ladder: ReadonlyArray<{ px: number; correct: boolean; cant?: boolean }>, seed: number | null): number {
+function nearPx(
+  ladder: ReadonlyArray<{ px: number; correct: boolean; cant?: boolean }>,
+  seed: number | null,
+): number {
   const read = ladder.filter((t) => t.correct && !t.cant).map((t) => t.px);
   const base = read.length ? Math.min(...read) * 10 ** 0.1 : (seed ?? 18);
   return Math.round(Math.max(12, Math.min(40, base)) * 10) / 10;
@@ -25,7 +28,10 @@ function nearPx(ladder: ReadonlyArray<{ px: number; correct: boolean; cant?: boo
 export function LightDarkTask(props: TaskProps): JSX.Element {
   const L = useContext(StepLabelsContext);
   const { raw } = props;
-  const pool = useMemo(() => shuffle(SENTENCES, props.rng).slice(0, SIDES.length), []);
+  const pool = useMemo(
+    () => shuffle(SENTENCES, props.rng).slice(0, SIDES.length),
+    [],
+  );
   const eff = useMemo(() => nearPx(raw.ladder, raw.seedPx), []);
   const [n, setN] = useState(0);
   const asking = n >= SIDES.length;
@@ -74,13 +80,29 @@ export function LightDarkTask(props: TaskProps): JSX.Element {
         focusTitle
         actions={
           <>
-            <Answer id="light" pressed={pressed} onClick={() => choose('light', 'light')} keys="L">
+            <Answer
+              id="light"
+              pressed={pressed}
+              onClick={() => choose('light', 'light')}
+              keys="L"
+            >
               {L.light}
             </Answer>
-            <Answer id="dark" pressed={pressed} onClick={() => choose('dark', 'dark')} keys="D">
+            <Answer
+              id="dark"
+              pressed={pressed}
+              onClick={() => choose('dark', 'dark')}
+              keys="D"
+            >
               {L.dark}
             </Answer>
-            <Answer id="same" kind="quiet" pressed={pressed} onClick={() => choose('none', 'same')} keys="S">
+            <Answer
+              id="same"
+              kind="quiet"
+              pressed={pressed}
+              onClick={() => choose('none', 'same')}
+              keys="S"
+            >
               {L.same}
             </Answer>
           </>
@@ -110,17 +132,36 @@ export function LightDarkTask(props: TaskProps): JSX.Element {
       focusTitle={n === 0}
       actions={
         <>
-          <Answer id="true" pressed={pressed} onClick={() => reply('true')} keys="T">
+          <Answer
+            id="true"
+            pressed={pressed}
+            onClick={() => reply('true')}
+            keys="T"
+          >
             {L.yes}
           </Answer>
-          <Answer id="false" pressed={pressed} onClick={() => reply('false')} keys="F">
+          <Answer
+            id="false"
+            pressed={pressed}
+            onClick={() => reply('false')}
+            keys="F"
+          >
             {L.no}
           </Answer>
         </>
       }
     >
       {sentence ? (
-        <p class="fl-sentence" key={n} style={{ fontSize: `${css}px`, fontFamily: STIMULUS_FONT, maxWidth: '22ch' }} data-truth={sentence.truth ? 'true' : 'false'}>
+        <p
+          class="fl-sentence"
+          key={n}
+          style={{
+            fontSize: `${css}px`,
+            fontFamily: STIMULUS_FONT,
+            maxWidth: '22ch',
+          }}
+          data-truth={sentence.truth ? 'true' : 'false'}
+        >
           {sentence.text}
         </p>
       ) : null}

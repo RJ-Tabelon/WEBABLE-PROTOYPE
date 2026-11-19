@@ -56,7 +56,12 @@ export function Instruction(props: {
           </div>
         ) : null}
         <p class="fl-eyebrow">{props.eyebrow}</p>
-        <h2 id="fl-modal-title" class="fl-modal-title" ref={title} tabIndex={-1}>
+        <h2
+          id="fl-modal-title"
+          class="fl-modal-title"
+          ref={title}
+          tabIndex={-1}
+        >
           {props.words.title}
         </h2>
         <div id="fl-modal-desc" class="fl-modal-text">
@@ -65,10 +70,20 @@ export function Instruction(props: {
         </div>
         <Demo step={props.step} />
         <div class="fl-modal-actions">
-          <button type="button" class="btn-text" onClick={props.onSkip} data-answer="skip-step">
+          <button
+            type="button"
+            class="btn-text"
+            onClick={props.onSkip}
+            data-answer="skip-step"
+          >
             {L.skipStep}
           </button>
-          <button type="button" class="btn btn-primary fl-btn-wide" onClick={props.onStart} data-answer="start-step">
+          <button
+            type="button"
+            class="btn btn-primary fl-btn-wide"
+            onClick={props.onStart}
+            data-answer="start-step"
+          >
             {L.startStep}
           </button>
         </div>

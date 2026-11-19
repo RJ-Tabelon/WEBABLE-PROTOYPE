@@ -5,7 +5,11 @@
 import { render } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ComposeGroupState, EngineApi, EngineState } from '../../contracts';
+import type {
+  ComposeGroupState,
+  EngineApi,
+  EngineState,
+} from '../../contracts';
 import { type GroupSeg, segmentBlocks } from './compose/composeGroups';
 import { Calm, type CalmCtx } from './context';
 import { Blocks } from './Blocks';
@@ -25,10 +29,25 @@ let onScreen = true;
 beforeEach(() => {
   onScreen = true;
   seen.length = 0;
-  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-    const r = this.classList.contains('wa-cg') ? (onScreen ? { top: 100, bottom: 500 } : { top: 1200, bottom: 1600 }) : { top: 0, bottom: 800 };
-    return { ...r, left: 0, right: 600, width: 600, height: r.bottom - r.top, x: 0, y: r.top, toJSON: () => r } as DOMRect;
-  });
+  vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(
+    function (this: Element) {
+      const r = this.classList.contains('wa-cg')
+        ? onScreen
+          ? { top: 100, bottom: 500 }
+          : { top: 1200, bottom: 1600 }
+        : { top: 0, bottom: 800 };
+      return {
+        ...r,
+        left: 0,
+        right: 600,
+        width: 600,
+        height: r.bottom - r.top,
+        x: 0,
+        y: r.top,
+        toJSON: () => r,
+      } as DOMRect;
+    },
+  );
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -46,19 +65,40 @@ function page(): { segs: ReturnType<typeof segmentBlocks>; seg: GroupSeg } {
   return { segs, seg: segs.find((s): s is GroupSeg => s.k === 'group')! };
 }
 
-function compose(id: string, state: ComposeGroupState['state'], version = 1): NonNullable<EngineState['compose']> {
+function compose(
+  id: string,
+  state: ComposeGroupState['state'],
+  version = 1,
+): NonNullable<EngineState['compose']> {
   const g: ComposeGroupState = {
-    id, state, better: state === 'ready' ? 0.9 : null, readyAt: state === 'ready' ? performance.now() - 5000 : undefined,
-    blocks: state === 'ready' ? [{ k: 'prose', src: ['u1'], text: 'Plainer words with ⟦1⟧.' }] : null,
+    id,
+    state,
+    better: state === 'ready' ? 0.9 : null,
+    readyAt: state === 'ready' ? performance.now() - 5000 : undefined,
+    blocks:
+      state === 'ready'
+        ? [{ k: 'prose', src: ['u1'], text: 'Plainer words with ⟦1⟧.' }]
+        : null,
   };
   return { status: 'working', groups: { [id]: g }, version };
 }
 
-function mount(segs: ReturnType<typeof segmentBlocks>, c: EngineState['compose'], settle: SettleCtl, host?: HTMLElement): HTMLElement {
+function mount(
+  segs: ReturnType<typeof segmentBlocks>,
+  c: EngineState['compose'],
+  settle: SettleCtl,
+  host?: HTMLElement,
+): HTMLElement {
   const el = host ?? document.body.appendChild(document.createElement('div'));
   const ctx = {
-    api: { rewordFor: () => null } as unknown as EngineApi, splitN: Infinity, groupSize: 8, reduceMotion: false,
-    click: vi.fn(), compose: c, groupOrder: [], settle,
+    api: { rewordFor: () => null } as unknown as EngineApi,
+    splitN: Infinity,
+    groupSize: 8,
+    reduceMotion: false,
+    click: vi.fn(),
+    compose: c,
+    groupOrder: [],
+    settle,
   } as unknown as CalmCtx;
   act(() => {
     render(
@@ -74,28 +114,42 @@ function mount(segs: ReturnType<typeof segmentBlocks>, c: EngineState['compose']
 describe('a group on the WebAble page', () => {
   it("shows the page's own words, with no mark, while its layout is being made", () => {
     const { segs, seg } = page();
-    const host = mount(segs, compose(seg.group.id, 'waiting'), createSettle(() => null));
+    const host = mount(
+      segs,
+      compose(seg.group.id, 'waiting'),
+      createSettle(() => null),
+    );
     expect(host.querySelector('[data-wa-compose]')).toBeNull();
     expect(host.querySelector('.wa-rw-mark')).toBeNull();
     expect(host.textContent).toContain('word39 and the page link.');
-    expect(host.querySelector('.wa-cg')?.getAttribute('data-showing')).toBe('waiting');
+    expect(host.querySelector('.wa-cg')?.getAttribute('data-showing')).toBe(
+      'waiting',
+    );
   });
 
   it('settles in once ready in the first moments, with one soft motion and a green mark that switches it', () => {
     const { segs, seg } = page();
     const settle = createSettle(() => null);
     const host = mount(segs, compose(seg.group.id, 'ready'), settle);
-    expect(host.querySelector(`[data-wa-compose="${seg.group.id}"]`)).not.toBeNull();
+    expect(
+      host.querySelector(`[data-wa-compose="${seg.group.id}"]`),
+    ).not.toBeNull();
     expect(host.textContent).not.toContain('word39');
     expect(seen.at(-1)).toEqual({ id: seg.group.id, settle: true, links: 1 });
     const mark = host.querySelector<HTMLButtonElement>('button.wa-rw-mark')!;
     expect(mark.getAttribute('data-showing')).toBe('new');
-    expect(mark.title).toBe('Laid out for you by WebAble. Click to see the page’s own words.');
+    expect(mark.title).toBe(
+      'Laid out for you by WebAble. Click to see the page’s own words.',
+    );
     act(() => mark.click());
     expect(host.querySelector('[data-wa-compose]')).toBeNull();
     expect(host.textContent).toContain('word39');
-    expect(host.querySelector('button.wa-rw-mark')!.getAttribute('data-showing')).toBe('original');
-    act(() => host.querySelector<HTMLButtonElement>('button.wa-rw-mark')!.click());
+    expect(
+      host.querySelector('button.wa-rw-mark')!.getAttribute('data-showing'),
+    ).toBe('original');
+    act(() =>
+      host.querySelector<HTMLButtonElement>('button.wa-rw-mark')!.click(),
+    );
     expect(host.querySelector('[data-wa-compose]')).not.toBeNull();
     // Back again by the person's own press: no second motion.
     expect(seen.at(-1)!.settle).toBe(false);
@@ -128,7 +182,11 @@ describe('a group on the WebAble page', () => {
   it("keeps the page's own words when the layout was not used", () => {
     const { segs, seg } = page();
     for (const st of ['kept', 'failed'] as const) {
-      const host = mount(segs, compose(seg.group.id, st), createSettle(() => null));
+      const host = mount(
+        segs,
+        compose(seg.group.id, st),
+        createSettle(() => null),
+      );
       expect(host.querySelector('[data-wa-compose]')).toBeNull();
       expect(host.querySelector('.wa-rw-mark')).toBeNull();
       expect(host.textContent).toContain('word39');

@@ -17,7 +17,10 @@ function isOurs(node: Node): boolean {
 }
 
 /** Resolve once no childList mutations (outside our own UI) happened for `quietMs`, or after `capMs`. */
-export function waitForQuiet(quietMs = 400, capMs = 2000): Promise<{ waitedMs: number; capped: boolean }> {
+export function waitForQuiet(
+  quietMs = 400,
+  capMs = 2000,
+): Promise<{ waitedMs: number; capped: boolean }> {
   const t0 = performance.now();
   return new Promise((resolve) => {
     const root = document.documentElement;
@@ -96,7 +99,10 @@ interface NavigationLike extends EventTarget {
  * Watch for same-document navigations. `onNavigate` runs after the new route has rendered
  * (DOM quiet 400 ms, 2 s cap). Returns a stop function.
  */
-export function watchNavigation(onNavigate: (url: string) => void, opts: { quietMs?: number; capMs?: number } = {}): () => void {
+export function watchNavigation(
+  onNavigate: (url: string) => void,
+  opts: { quietMs?: number; capMs?: number } = {},
+): () => void {
   const quietMs = opts.quietMs ?? 400;
   const capMs = opts.capMs ?? 2000;
   let lastKey = routeKey(location.href);
@@ -171,7 +177,10 @@ export function twoFrames(): Promise<void> {
 /** Settle after a write phase: two frames plus `document.fonts.ready` (capped). */
 export async function settle(fontCapMs = 400): Promise<void> {
   await twoFrames();
-  await Promise.race([document.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, fontCapMs))]);
+  await Promise.race([
+    document.fonts?.ready ?? Promise.resolve(),
+    new Promise((r) => setTimeout(r, fontCapMs)),
+  ]);
 }
 
 export function sleep(ms: number): Promise<void> {

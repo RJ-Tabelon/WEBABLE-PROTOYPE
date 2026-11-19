@@ -4,7 +4,8 @@ import { render } from 'preact';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AdTag, Kicker, readTimeLine } from './markers';
 
-const words = (n: number): string => Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
+const words = (n: number): string =>
+  Array.from({ length: n }, (_, i) => `word${i}`).join(' ');
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -28,8 +29,18 @@ describe('reading time line', () => {
 
   it('uses the main region Jev is sure of', () => {
     document.body.innerHTML = `<div id="m"><h1>Title</h1><p>${words(460)}</p></div><article><p>${words(5000)}</p></article>`;
-    const u = { elements: [], mainPick: { id: 'none', p: 0, probs: {} }, metrics: {} as never, cached: false, mainRegion: { id: 'n1', p: 0.9, probs: {} } };
-    expect(readTimeLine(document, u, (id) => (id === 'n1' ? document.getElementById('m') : null))).toBe('2 min read');
+    const u = {
+      elements: [],
+      mainPick: { id: 'none', p: 0, probs: {} },
+      metrics: {} as never,
+      cached: false,
+      mainRegion: { id: 'n1', p: 0.9, probs: {} },
+    };
+    expect(
+      readTimeLine(document, u, (id) =>
+        id === 'n1' ? document.getElementById('m') : null,
+      ),
+    ).toBe('2 min read');
   });
 });
 
@@ -38,9 +49,13 @@ describe('live dot and ad tag', () => {
     const host = document.createElement('div');
     document.body.append(host);
     render(<Kicker text="Live" live="Live" pulse />, host);
-    expect(host.querySelector('.wa-live__dot')?.hasAttribute('data-pulse')).toBe(true);
+    expect(
+      host.querySelector('.wa-live__dot')?.hasAttribute('data-pulse'),
+    ).toBe(true);
     render(<Kicker text="Live" live="Live" pulse={false} />, host);
-    expect(host.querySelector('.wa-live__dot')?.hasAttribute('data-pulse')).toBe(false);
+    expect(
+      host.querySelector('.wa-live__dot')?.hasAttribute('data-pulse'),
+    ).toBe(false);
     expect(host.textContent).toBe('Live');
   });
 

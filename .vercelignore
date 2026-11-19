@@ -1,0 +1,25 @@
+# Deployment source only. Never upload local credentials, research data, or builds.
+.git
+.vercel
+**/node_modules
+**/.next*
+**/.output
+**/.wxt
+**/.env
+**/.env.*
+**/*.tsbuildinfo
+**/coverage
+**/test-results
+**/playwright-report
+eval-output
+docx-qa.*
+Context.rtf
+*.pdf
+*.docx
+*.pptx
+supabase/.temp
+supabase/.branches
+supabase/tests/.env*
+**/.auth
+**/.DS_Store
+apps/extension-v1/tests

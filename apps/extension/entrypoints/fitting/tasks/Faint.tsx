@@ -15,7 +15,10 @@ export function FaintTask(props: TaskProps): JSX.Element {
   const L = useContext(StepLabelsContext);
   const { raw } = props;
   const body = props.draft.text.override ?? props.draft.text.bodyPx;
-  const quest = useMemo(() => new FaintQuest(body >= 32, props.settings?.contrastMore ? 3 : 6), []);
+  const quest = useMemo(
+    () => new FaintQuest(body >= 32, props.settings?.contrastMore ? 3 : 6),
+    [],
+  );
   const order = useMemo(() => shuffle(FAINT_WORDS, props.rng), []);
   const [trial, setTrial] = useState(0);
   const [stim, setStim] = useState<GrayStimulus | null>(() => quest.next());
@@ -40,8 +43,13 @@ export function FaintTask(props: TaskProps): JSX.Element {
     raw.faint.push({ contrast: Math.round(stim.ratio * 1000) / 1000, correct });
     props.onAnswer();
     if (quest.done) {
-      const ceiling = quest.trials.filter((t) => t.correct && t.stim.weber <= 0.02).length >= 3;
-      props.onDone({ trials: quest.trials.length, stop: ceiling ? 'ceiling' : 'max_trials' });
+      const ceiling =
+        quest.trials.filter((t) => t.correct && t.stim.weber <= 0.02).length >=
+        3;
+      props.onDone({
+        trials: quest.trials.length,
+        stop: ceiling ? 'ceiling' : 'max_trials',
+      });
       return;
     }
     setStim(quest.next());
@@ -65,12 +73,23 @@ export function FaintTask(props: TaskProps): JSX.Element {
         <>
           <div class="fl-words">
             {options.map((w, i) => (
-              <Answer id={`w${i + 1}`} pressed={pressed} onClick={() => answer(w, `w${i + 1}`)} keys={String(i + 1)}>
+              <Answer
+                id={`w${i + 1}`}
+                pressed={pressed}
+                onClick={() => answer(w, `w${i + 1}`)}
+                keys={String(i + 1)}
+              >
                 <span data-word={w}>{w}</span>
               </Answer>
             ))}
           </div>
-          <Answer id="none" kind="quiet" pressed={pressed} onClick={() => answer(null, 'none')} keys="0">
+          <Answer
+            id="none"
+            kind="quiet"
+            pressed={pressed}
+            onClick={() => answer(null, 'none')}
+            keys="0"
+          >
             {L.cantSee}
           </Answer>
         </>
@@ -81,7 +100,11 @@ export function FaintTask(props: TaskProps): JSX.Element {
         key={trial}
         aria-hidden="true"
         data-word={target}
-        style={{ fontSize: `${css}px`, fontFamily: STIMULUS_FONT, color: `rgb(${g}, ${g}, ${g})` }}
+        style={{
+          fontSize: `${css}px`,
+          fontFamily: STIMULUS_FONT,
+          color: `rgb(${g}, ${g}, ${g})`,
+        }}
       >
         {target}
       </p>

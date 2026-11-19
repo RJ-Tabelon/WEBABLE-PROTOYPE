@@ -18,7 +18,11 @@ interface Props {
   onTags: (rects: Rect[]) => void;
 }
 
-interface Drawn { id: string; box: Rect; tag: Rect | null }
+interface Drawn {
+  id: string;
+  box: Rect;
+  tag: Rect | null;
+}
 
 const TAG_W = 272;
 const TAG_H = 42;
@@ -26,7 +30,7 @@ const OUTSET = 3;
 
 export function Paras({ api, reword, scale, avoid, onTags }: Props) {
   const [drawn, setDrawn] = useState<Drawn[]>([]);
-  const items = reword && reword.status !== 'off' ? reword.items ?? [] : [];
+  const items = reword && reword.status !== 'off' ? (reword.items ?? []) : [];
   const live = useRef({ items, scale, avoid, onTags });
   live.current = { items, scale, avoid, onTags };
   const sig = useRef('');
@@ -40,8 +44,19 @@ export function Paras({ api, reword, scale, avoid, onTags }: Props) {
       const el = api.elementFor(it.id);
       if (!el || !el.isConnected) continue;
       const b = el.getBoundingClientRect();
-      if (b.width < 1 || b.height < 1 || b.bottom <= 0 || b.top >= vh || b.right <= 0 || b.left >= vw) continue;
-      boxes.push({ id: it.id, r: { x: b.left, y: b.top, w: b.width, h: b.height } });
+      if (
+        b.width < 1 ||
+        b.height < 1 ||
+        b.bottom <= 0 ||
+        b.top >= vh ||
+        b.right <= 0 ||
+        b.left >= vw
+      )
+        continue;
+      boxes.push({
+        id: it.id,
+        r: { x: b.left, y: b.top, w: b.width, h: b.height },
+      });
     }
     const keep: Rect[] = [];
     let top = 8;
@@ -53,9 +68,23 @@ export function Paras({ api, reword, scale, avoid, onTags }: Props) {
       if (b.top <= 8 && b.width >= vw * 0.5) top = Math.max(top, b.bottom + 8);
       else keep.push({ x: b.left, y: b.top, w: b.width, h: b.height });
     }
-    const tags = placeParaTags(boxes, { w: TAG_W * L.scale, h: TAG_H * L.scale }, { vw, vh, top }, keep);
-    const next: Drawn[] = boxes.map((b) => ({ id: b.id, box: b.r, tag: tags.get(b.id) ?? null }));
-    const s = next.map((d) => `${d.id}:${Math.round(d.box.x)},${Math.round(d.box.y)},${Math.round(d.box.w)},${Math.round(d.box.h)}:${d.tag ? `${Math.round(d.tag.x)},${Math.round(d.tag.y)}` : '-'}`).join('|');
+    const tags = placeParaTags(
+      boxes,
+      { w: TAG_W * L.scale, h: TAG_H * L.scale },
+      { vw, vh, top },
+      keep,
+    );
+    const next: Drawn[] = boxes.map((b) => ({
+      id: b.id,
+      box: b.r,
+      tag: tags.get(b.id) ?? null,
+    }));
+    const s = next
+      .map(
+        (d) =>
+          `${d.id}:${Math.round(d.box.x)},${Math.round(d.box.y)},${Math.round(d.box.w)},${Math.round(d.box.h)}:${d.tag ? `${Math.round(d.tag.x)},${Math.round(d.tag.y)}` : '-'}`,
+      )
+      .join('|');
     if (s === sig.current) return;
     sig.current = s;
     L.onTags([...tags.values()]);
@@ -79,7 +108,8 @@ export function Paras({ api, reword, scale, avoid, onTags }: Props) {
       raf = 0;
       if (!alive) return;
       run();
-      if (performance.now() - lastMove < 150) raf = requestAnimationFrame(frame);
+      if (performance.now() - lastMove < 150)
+        raf = requestAnimationFrame(frame);
     };
     const onMove = (): void => {
       lastMove = performance.now();
@@ -135,7 +165,9 @@ export function Paras({ api, reword, scale, avoid, onTags }: Props) {
                 class="wa-lptag"
                 data-tone={face.tone}
                 title={face.say}
-                style={{ transform: `translate3d(${Math.round(d.tag.x)}px,${Math.round(d.tag.y)}px,0)` }}
+                style={{
+                  transform: `translate3d(${Math.round(d.tag.x)}px,${Math.round(d.tag.y)}px,0)`,
+                }}
               >
                 <span class="wa-lptag-top">
                   <span class="wa-lptag-t">{face.top}</span>

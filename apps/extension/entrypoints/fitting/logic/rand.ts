@@ -32,7 +32,9 @@ export function median(xs: readonly number[]): number {
   if (xs.length === 0) return NaN;
   const s = xs.slice().sort((a, b) => a - b);
   const m = s.length >> 1;
-  return s.length % 2 ? (s[m] as number) : ((s[m - 1] as number) + (s[m] as number)) / 2;
+  return s.length % 2
+    ? (s[m] as number)
+    : ((s[m - 1] as number) + (s[m] as number)) / 2;
 }
 
 export function clamp(x: number, lo: number, hi: number): number {

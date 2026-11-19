@@ -2,9 +2,10 @@
 // person a result: what we learned is shown once, at the end. Pure data and functions, so the words can be checked
 // without a browser.
 
-import type { BrowserSettings, InputClass } from '@webable/core';
+import type { BrowserSettings, InputClass } from '@webable/engine';
 
-export type StepId = 'size' | 'truefalse' | 'faint' | 'lightdark' | 'dots' | 'find' | 'context';
+export type StepId =
+  'size' | 'truefalse' | 'faint' | 'lightdark' | 'dots' | 'find' | 'context';
 export type PartId = 'reading' | 'pointing' | 'finding' | 'context';
 
 export const PARTS: Array<{ id: PartId; label: string }> = [
@@ -25,14 +26,25 @@ export const PART_OF: Record<StepId, PartId> = {
   context: 'context',
 };
 
-const ORDER: StepId[] = ['size', 'truefalse', 'faint', 'lightdark', 'dots', 'find', 'context'];
+const ORDER: StepId[] = [
+  'size',
+  'truefalse',
+  'faint',
+  'lightdark',
+  'dots',
+  'find',
+  'context',
+];
 
 /**
  * The steps this person does. Keyboard users skip the dots (WebAble never changes keyboard use). With the system's own
  * colours on, the faint word and light-or-dark steps are left out: the system's colours win, and grey text cannot be
  * shown faithfully anyway.
  */
-export function planSteps(input: InputClass, settings: BrowserSettings | null): StepId[] {
+export function planSteps(
+  input: InputClass,
+  settings: BrowserSettings | null,
+): StepId[] {
   return ORDER.filter((s) => {
     if (s === 'dots') return input !== 'keyboard';
     if (s === 'faint' || s === 'lightdark') return !settings?.forcedColors;
@@ -40,7 +52,9 @@ export function planSteps(input: InputClass, settings: BrowserSettings | null): 
   });
 }
 
-export function partsFor(steps: StepId[]): Array<{ id: PartId; label: string }> {
+export function partsFor(
+  steps: StepId[],
+): Array<{ id: PartId; label: string }> {
   const used = new Set(steps.map((s) => PART_OF[s]));
   return PARTS.filter((p) => used.has(p.id));
 }
@@ -66,19 +80,22 @@ export function wordsFor(step: StepId, input: InputClass): StepWords {
       return {
         title: 'True or false?',
         todo: 'Read each short sentence and say whether it is true or false.',
-        success: 'The words get smaller as you go. When you can’t read one, just say so.',
+        success:
+          'The words get smaller as you go. When you can’t read one, just say so.',
       };
     case 'faint':
       return {
         title: 'Which word is it?',
         todo: 'A word appears, a little lighter each time. Pick it from the four below it.',
-        success: 'When you can’t see a word, say so. That helps as much as an answer.',
+        success:
+          'When you can’t see a word, say so. That helps as much as an answer.',
       };
     case 'lightdark':
       return {
         title: 'Light or dark?',
         todo: 'Read two sentences on a light page and two on a dark one, then pick the easier one.',
-        success: 'There is no better choice, only the one that suits your eyes.',
+        success:
+          'There is no better choice, only the one that suits your eyes.',
       };
     case 'dots':
       return {
@@ -91,14 +108,16 @@ export function wordsFor(step: StepId, input: InputClass): StepWords {
       return {
         title: 'Now, some real websites',
         todo: 'We’ll open three websites, one at a time. On each one, find what we ask for and click it.',
-        success: 'WebAble stays off while you do this, so we see the web as it really is.',
+        success:
+          'WebAble stays off while you do this, so we see the web as it really is.',
       };
     case 'context':
       // Round 10: the person's AI answer, read while "You're all set" shows; what WebAble took from it is on Results.
       return {
         title: 'Bring your context',
         todo: 'Ask the AI you use most one question, then paste its answer here.',
-        success: 'Its answer tells WebAble how you like things explained. No AI? Skip this one.',
+        success:
+          'Its answer tells WebAble how you like things explained. No AI? Skip this one.',
       };
   }
 }

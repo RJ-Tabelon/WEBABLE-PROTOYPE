@@ -52,7 +52,10 @@ export function createStore<T extends object>(initial: T): Store<T> {
 }
 
 /** Throttle a function to at most one call per `ms`, always running the trailing call. */
-export function throttle(fn: () => void, ms: number): { (): void; cancel(): void; flush(): void } {
+export function throttle(
+  fn: () => void,
+  ms: number,
+): { (): void; cancel(): void; flush(): void } {
   let last = 0;
   let timer: ReturnType<typeof setTimeout> | null = null;
   const run = () => {

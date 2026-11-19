@@ -3,9 +3,24 @@
 import { render, type JSX } from 'preact';
 import { act } from 'preact/test-utils';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { componentsCss, DataTable, LogoMark, Recipe, ScheduleList, Scoreboard, StatGrid } from './index';
 import {
-  gatorsColumns, gatorsNumericCols, gatorsRows, gatorsSchedule, gatorsScore, gatorsShowFirst, gatorsStats, sampleRecipe,
+  componentsCss,
+  DataTable,
+  LogoMark,
+  Recipe,
+  ScheduleList,
+  Scoreboard,
+  StatGrid,
+} from './index';
+import {
+  gatorsColumns,
+  gatorsNumericCols,
+  gatorsRows,
+  gatorsSchedule,
+  gatorsScore,
+  gatorsShowFirst,
+  gatorsStats,
+  sampleRecipe,
 } from './preview';
 
 function mount(node: JSX.Element): HTMLDivElement {
@@ -44,9 +59,15 @@ describe('Calm meaning components', () => {
     expect(text).toContain('22-13');
     expect(text).toContain('Away record');
     expect(text).toContain('since 1917');
-    const leads = [...el.querySelectorAll('[data-emphasis="lead"]')].map((n) => n.textContent ?? '');
-    expect(leads.some((t) => t.includes('54') && t.includes('Wins'))).toBe(true);
-    expect(leads.some((t) => t.includes('22') && t.includes('Losses'))).toBe(true);
+    const leads = [...el.querySelectorAll('[data-emphasis="lead"]')].map(
+      (n) => n.textContent ?? '',
+    );
+    expect(leads.some((t) => t.includes('54') && t.includes('Wins'))).toBe(
+      true,
+    );
+    expect(leads.some((t) => t.includes('22') && t.includes('Losses'))).toBe(
+      true,
+    );
     expect(el.querySelector('h2')?.textContent).toBe('Series record');
   });
 
@@ -55,7 +76,9 @@ describe('Calm meaning components', () => {
     const text = el.textContent ?? '';
     expect(text).toContain('Last matchup');
     expect(text).toContain('11/8/2025');
-    expect(el.querySelector('time')?.getAttribute('datetime')).toBe('2025-11-08');
+    expect(el.querySelector('time')?.getAttribute('datetime')).toBe(
+      '2025-11-08',
+    );
     expect(text).toContain('at');
     const sides = [...el.querySelectorAll('.wa-scoreboard__side')];
     const florida = sides.find((n) => n.textContent?.includes('Florida'));
@@ -68,11 +91,15 @@ describe('Calm meaning components', () => {
     expect(kentucky?.textContent).toContain('Home');
     expect(kentucky?.textContent).toContain('Won');
     expect(kentucky?.hasAttribute('data-winner')).toBe(true);
-    const alts = [...el.querySelectorAll('img')].map((img) => img.getAttribute('alt'));
+    const alts = [...el.querySelectorAll('img')].map((img) =>
+      img.getAttribute('alt'),
+    );
     expect(alts).toEqual(['Florida', 'Kentucky']);
     const line = el.querySelector('.wa-scoreboard__lines');
     expect(line?.querySelector('caption')?.textContent).toBe('Line score');
-    const rows = [...(line?.querySelectorAll('tbody tr') ?? [])].map((row) => row.textContent ?? '');
+    const rows = [...(line?.querySelectorAll('tbody tr') ?? [])].map(
+      (row) => row.textContent ?? '',
+    );
     expect(rows[0]).toContain('Florida');
     expect(rows[0]).toContain('7');
     expect(rows[0]).toContain('0');
@@ -94,8 +121,12 @@ describe('Calm meaning components', () => {
       />,
     );
     const table = el.querySelector('table');
-    expect(table?.querySelector('caption')?.textContent).toBe('Florida vs Kentucky');
-    expect(table?.querySelectorAll('thead th').length).toBe(gatorsColumns.length);
+    expect(table?.querySelector('caption')?.textContent).toBe(
+      'Florida vs Kentucky',
+    );
+    expect(table?.querySelectorAll('thead th').length).toBe(
+      gatorsColumns.length,
+    );
     expect(table?.querySelectorAll('tbody tr').length).toBe(gatorsShowFirst);
     const first = table?.querySelector('tbody tr')?.textContent ?? '';
     expect(first).toContain('November 8');
@@ -120,8 +151,14 @@ describe('Calm meaning components', () => {
 
   it('marks the current game and uses buttons only when a row can activate', () => {
     const activate = vi.fn();
-    const items = gatorsSchedule.map((item, i) => (i === 0 ? { ...item, onActivate: activate } : { ...item, onActivate: undefined }));
-    const el = mount(<ScheduleList title="Recent games" items={items} currentIndex={0} />);
+    const items = gatorsSchedule.map((item, i) =>
+      i === 0
+        ? { ...item, onActivate: activate }
+        : { ...item, onActivate: undefined },
+    );
+    const el = mount(
+      <ScheduleList title="Recent games" items={items} currentIndex={0} />,
+    );
     expect(el.querySelectorAll('button.wa-schedule__row').length).toBe(1);
     expect(el.querySelectorAll('div.wa-schedule__row').length).toBe(3);
     expect(el.querySelector('a')).toBeNull();
@@ -142,7 +179,9 @@ describe('Calm meaning components', () => {
     localStorage.setItem('wa-recipe', 'leave-this');
     const el = mount(<Recipe {...sampleRecipe} />);
     expect(el.querySelector('h2')?.textContent).toBe('Chocolate chip cookies');
-    expect(el.querySelector('img')?.getAttribute('alt')).toBe('A chocolate chip cookie');
+    expect(el.querySelector('img')?.getAttribute('alt')).toBe(
+      'A chocolate chip cookie',
+    );
     expect(el.textContent).toContain('15 min');
     expect(el.textContent).toContain('Prep');
     expect(el.textContent).toContain('Ingredients');
@@ -150,19 +189,27 @@ describe('Calm meaning components', () => {
     expect(el.textContent).toContain('Notes');
     const boxes = [...el.querySelectorAll('input[type="checkbox"]')];
     expect(boxes.length).toBe(sampleRecipe.ingredients.length);
-    expect(el.querySelectorAll('ol.wa-recipe__steps li').length).toBe(sampleRecipe.steps.length);
+    expect(el.querySelectorAll('ol.wa-recipe__steps li').length).toBe(
+      sampleRecipe.steps.length,
+    );
     const first = boxes[0] as HTMLInputElement;
     act(() => {
       first.click();
     });
     expect(first.checked).toBe(true);
-    expect(el.querySelector('[data-done]')?.textContent ?? '').toContain('butter');
+    expect(el.querySelector('[data-done]')?.textContent ?? '').toContain(
+      'butter',
+    );
     expect(localStorage.getItem('wa-recipe')).toBe('leave-this');
     expect(localStorage.length).toBe(1);
   });
 
   it('renders a logo with its name at each size', () => {
-    const picture = { src: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E', alt: 'Florida', ratio: 1 };
+    const picture = {
+      src: 'data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E',
+      alt: 'Florida',
+      ratio: 1,
+    };
     const el = mount(
       <div>
         <LogoMark picture={picture} label="Florida" size="small" />
@@ -171,8 +218,14 @@ describe('Calm meaning components', () => {
       </div>,
     );
     const marks = [...el.querySelectorAll('.wa-logomark')];
-    expect(marks.map((n) => n.getAttribute('data-size'))).toEqual(['small', 'medium', 'large']);
-    expect(marks.map((n) => n.querySelector('img')?.getAttribute('alt'))).toEqual(['Florida', 'Florida', 'Florida']);
+    expect(marks.map((n) => n.getAttribute('data-size'))).toEqual([
+      'small',
+      'medium',
+      'large',
+    ]);
+    expect(
+      marks.map((n) => n.querySelector('img')?.getAttribute('alt')),
+    ).toEqual(['Florida', 'Florida', 'Florida']);
     expect(marks[2]?.textContent).toContain('Florida Gators');
   });
 });

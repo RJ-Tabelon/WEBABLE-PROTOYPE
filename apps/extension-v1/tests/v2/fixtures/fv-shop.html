@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ridgeline Readers</title>
+    <!--
+      A product page modelled on a large store's (docs/11 §4 polish): image
+      thumbnails and swatches drawn as submit inputs with role="radio" at
+      opacity 0.01 over their pictures, a price drawn in pieces beside an
+      offscreen copy, option groups of 4 and 16, a native select behind a
+      drawn dropdown, an expanded price panel, and an expander whose name is
+      a paragraph.
+    -->
+    <style>
+      body {
+        margin: 0;
+        font:
+          13px/1.4 Arial,
+          sans-serif;
+        color: #111;
+      }
+      header {
+        display: flex;
+        gap: 12px;
+        padding: 8px 16px;
+        background: #131921;
+      }
+      header a {
+        color: #fff;
+        font-size: 12px;
+      }
+      .dp {
+        display: grid;
+        grid-template-columns: 420px minmax(0, 1fr) 240px;
+        gap: 24px;
+        padding: 16px;
+      }
+      .left {
+        display: flex;
+        gap: 8px;
+        align-items: flex-start;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .thumbs {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .a-button {
+        position: relative;
+        display: inline-block;
+        border: 1px solid #888;
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      .a-button-input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0.01;
+        cursor: pointer;
+        z-index: 2;
+      }
+      .a-button-text {
+        display: block;
+        padding: 4px 8px;
+        cursor: pointer;
+      }
+      .is-on {
+        outline: 2px solid #e77600;
+      }
+      .main-img {
+        cursor: zoom-in;
+      }
+      .main-img img {
+        display: block;
+      }
+      h1 {
+        font-size: 22px;
+        margin: 4px 0;
+      }
+      .stars i {
+        display: inline-block;
+        width: 76px;
+        height: 16px;
+        background: #f90;
+      }
+      .a-offscreen {
+        position: absolute;
+        left: -10000px;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+      }
+      .a-price {
+        position: relative;
+        font-size: 28px;
+      }
+      .a-price-symbol,
+      .a-price-fraction {
+        font-size: 13px;
+        position: relative;
+        top: -0.75em;
+      }
+      .a-price-decimal {
+        position: absolute;
+        opacity: 0;
+      }
+      .list s {
+        color: #565959;
+      }
+      .swatches,
+      .sizes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .swatches img {
+        display: block;
+        width: 64px;
+        height: 64px;
+      }
+      .buybox {
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .acc {
+        cursor: pointer;
+        font-weight: 700;
+      }
+      .dd {
+        position: relative;
+        display: inline-block;
+      }
+      .dd select {
+        position: absolute;
+        inset: 0;
+      }
+      .dd .a-button-dropdown {
+        position: relative;
+        z-index: 1;
+        background: #f0f2f2;
+      }
+      .dd .a-button-dropdown {
+        display: inline-block;
+        padding: 4px 8px;
+        border: 1px solid #888;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .buybox input[type='submit'] {
+        padding: 6px 12px;
+        border-radius: 16px;
+        border: 0;
+        background: #ffd814;
+      }
+      .details {
+        grid-column: 2 / 4;
+      }
+      .expander {
+        display: block;
+        cursor: pointer;
+        color: #007185;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/v2/fv-shop.html">Shopfront</a>
+      <a href="/v2/fv-shop.html#cart">Cart</a>
+    </header>
+    <div class="dp">
+      <div class="left">
+        <ul
+          class="thumbs"
+          role="radiogroup"
+          aria-label="Image thumbnails"
+          data-qa="thumbs"
+        ></ul>
+        <div
+          class="main-img"
+          role="button"
+          tabindex="0"
+          aria-haspopup="dialog"
+          aria-label="Ridgeline Readers, front view"
+        >
+          <img
+            alt="Ridgeline Readers, front view"
+            width="340"
+            height="340"
+            src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='340' height='340'%3E%3Crect width='340' height='340' fill='%23987'/%3E%3C/svg%3E"
+          />
+        </div>
+      </div>
+      <div class="center" id="center">
+        <a href="/v2/fv-shop.html#store">Visit the Ridgeline Store</a>
+        <h1>Ridgeline Readers, Blue Light Blocking, Square Frames</h1>
+        <div class="rating">
+          <a
+            class="stars"
+            role="button"
+            href="javascript:void(0)"
+            aria-label="4.4 out of 5 stars"
+            ><i></i
+          ></a>
+          <a href="/v2/fv-shop.html#reviews">2,466 ratings</a>
+        </div>
+        <div class="price">
+          <span class="pct">-17%</span>
+          <span class="a-price"
+            ><span class="a-offscreen">CAD 14.16</span
+            ><span aria-hidden="true"
+              ><span class="a-price-symbol">CAD</span
+              ><span class="a-price-whole"
+                >14<span class="a-price-decimal">.</span></span
+              ><span class="a-price-fraction">16</span></span
+            ></span
+          >
+          <span class="unit">(CAD4.72 / count)</span>
+        </div>
+        <div class="list">List Price: <s>CAD16.99</s></div>
+        <div class="twister">
+          <div class="dim-head" id="color-head">Color: <b>Multi-01</b></div>
+          <ul
+            class="swatches"
+            role="radiogroup"
+            data-dim="color"
+            data-qa="colours"
+          ></ul>
+          <div class="dim-head" id="strength-head">Strength: <b>1.5 X</b></div>
+          <ul
+            class="sizes"
+            role="radiogroup"
+            data-dim="strength"
+            data-qa="strengths"
+          ></ul>
+        </div>
+      </div>
+      <div class="buybox">
+        <div
+          class="acc"
+          role="button"
+          tabindex="0"
+          aria-expanded="true"
+          aria-label="Prime Member Price CAD14.16 CAD&amp;nbsp;4.72 per count"
+        >
+          Prime Member Price CAD14.16
+        </div>
+        <label for="qty">Quantity:</label>
+        <span class="dd"
+          ><select id="qty" aria-label="Quantity:">
+            <option selected>1</option>
+            <option>2</option>
+            <option>3</option></select
+          ><span class="a-button-dropdown" aria-hidden="true" tabindex="-1"
+            ><span class="a-button-text">Quantity: 1</span></span
+          ></span
+        >
+        <input type="submit" value="Add to cart" id="add" />
+        <input type="submit" value="Buy Now" id="buy" />
+        <a href="/v2/fv-shop.html#list">Add to List</a>
+      </div>
+      <div class="details">
+        <h2>Product details</h2>
+        <a
+          class="expander"
+          role="button"
+          href="javascript:void(0)"
+          aria-expanded="false"
+          aria-label="Top highlights Care instructions Handle with care, clean gently with a soft cloth, store in a safe place when not in use. Origin Imported"
+          >Top highlights</a
+        >
+        <p>
+          Light square readers with spring hinges and lenses that cut the glare
+          of a screen, for reading, computer work and other close-up tasks.
+        </p>
+      </div>
+    </div>
+    <script>
+      var pixel = function (fill, w, h) {
+        return (
+          "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='" +
+          w +
+          "' height='" +
+          h +
+          "'%3E%3Crect width='" +
+          w +
+          "' height='" +
+          h +
+          "' fill='%23" +
+          fill +
+          "'/%3E%3C/svg%3E"
+        );
+      };
+      var thumbs = document.querySelector('.thumbs');
+      for (var i = 0; i < 6; i++) {
+        var li = document.createElement('li');
+        li.innerHTML =
+          '<span class="a-button' +
+          (i === 0 ? ' is-on' : '') +
+          '"><input role="radio" aria-checked="' +
+          (i === 0) +
+          '" class="a-button-input" type="submit" aria-labelledby="t' +
+          i +
+          '"><span id="t' +
+          i +
+          '" class="a-button-text" aria-hidden="true"><img alt="" width="38" height="50" src="' +
+          pixel('98' + i + '7', 38, 50) +
+          '"></span></span>';
+        thumbs.appendChild(li);
+      }
+      var colours = [
+        ['Multi-01', 'CAD14.16'],
+        ['Multi-02', 'CAD18.41'],
+        ['Multi-03', 'CAD18.41'],
+        ['Multi-04', 'CAD19.83'],
+      ];
+      var sw = document.querySelector('.swatches');
+      colours.forEach(function (c, i) {
+        var li = document.createElement('li');
+        li.innerHTML =
+          '<span class="a-button' +
+          (i === 0 ? ' is-on' : '') +
+          '"><input name="' +
+          i +
+          '" role="radio" aria-checked="' +
+          (i === 0) +
+          '" class="a-button-input" type="submit" aria-labelledby="c' +
+          i +
+          '"><span id="c' +
+          i +
+          '" class="a-button-text" aria-hidden="true"><img alt="' +
+          c[0] +
+          '" src="' +
+          pixel('7' + i + '9', 64, 64) +
+          '"><span class="a-offscreen">' +
+          c[1].replace('CAD', 'CAD ') +
+          '</span><span class="sw-price" aria-hidden="true">' +
+          c[1] +
+          '</span></span></span>';
+        sw.appendChild(li);
+      });
+      var sizes = document.querySelector('.sizes');
+      for (var s = 0; s < 16; s++) {
+        var x = s * 0.25;
+        var v = Number.isInteger(x) ? x.toFixed(1) : String(x);
+        var li2 = document.createElement('li');
+        var on = v === '1.5';
+        li2.innerHTML =
+          '<span class="a-button' +
+          (on ? ' is-on' : '') +
+          '"><input name="' +
+          s +
+          '" role="radio" aria-checked="' +
+          on +
+          '" class="a-button-input" type="submit" aria-labelledby="s' +
+          s +
+          '"><span id="s' +
+          s +
+          '" class="a-button-text" aria-hidden="true"><span class="swatch-title">' +
+          v +
+          ' X</span></span></span>';
+        sizes.appendChild(li2);
+      }
+      // The store's own delegated handler: a press on a swatch's input
+      // selects it and updates the group's heading.
+      document
+        .querySelector('.twister')
+        .addEventListener('click', function (e) {
+          var input = e.target.closest('input.a-button-input');
+          if (!input) return;
+          e.preventDefault();
+          var ul = input.closest('ul');
+          ul.querySelectorAll('input').forEach(function (x) {
+            x.setAttribute('aria-checked', String(x === input));
+            x.parentElement.classList.toggle('is-on', x === input);
+          });
+          var name = document.getElementById(
+            input.getAttribute('aria-labelledby'),
+          ).textContent;
+          var head = ul.previousElementSibling;
+          head.querySelector('b').textContent =
+            ul.dataset.dim === 'color'
+              ? name.replace(/CAD.*/, '').trim()
+              : name.trim();
+        });
+      document.querySelector('.buybox').addEventListener('click', function (e) {
+        if (e.target.matches('input[type="submit"]')) e.preventDefault();
+      });
+    </script>
+  </body>
+</html>

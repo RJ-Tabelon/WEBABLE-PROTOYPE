@@ -4,7 +4,7 @@
 //   { ok: true, data } | { ok: false, code, error }
 // so the caller can tell a server failure from a timeout from a reloaded extension.
 
-import type { BgRequest, FitProfile, Settings } from '@webable/core';
+import type { BgRequest, FitProfile, Settings } from '@webable/engine';
 
 /** Extra requests the background answers beyond the shared BgRequest union (popup and engine helpers). */
 export type ExtRequest =
@@ -50,7 +50,11 @@ export type BusErrorCode =
 export class BusError extends Error {
   readonly code: BusErrorCode;
   readonly status: number | null;
-  constructor(code: BusErrorCode, message: string, status: number | null = null) {
+  constructor(
+    code: BusErrorCode,
+    message: string,
+    status: number | null = null,
+  ) {
     super(message);
     this.name = 'BusError';
     this.code = code;
@@ -85,12 +89,19 @@ const DEFAULT_TIMEOUTS: Partial<Record<ExtRequest['type'], number>> = {
 };
 
 function isReply(v: unknown): v is BusReply {
-  return typeof v === 'object' && v !== null && 'ok' in v && typeof (v as { ok: unknown }).ok === 'boolean';
+  return (
+    typeof v === 'object' &&
+    v !== null &&
+    'ok' in v &&
+    typeof (v as { ok: unknown }).ok === 'boolean'
+  );
 }
 
 function runtimeAvailable(): boolean {
   try {
-    return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
+    return (
+      typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id
+    );
   } catch {
     return false;
   }
@@ -100,14 +111,24 @@ function runtimeAvailable(): boolean {
 export function askExt<T>(req: ExtRequest, timeoutMs?: number): Promise<T> {
   const limit = timeoutMs ?? DEFAULT_TIMEOUTS[req.type] ?? 15000;
   if (!runtimeAvailable()) {
-    return Promise.reject(new BusError('context', 'WebAble was updated or reloaded. Reload the page to use it again.'));
+    return Promise.reject(
+      new BusError(
+        'context',
+        'WebAble was updated or reloaded. Reload the page to use it again.',
+      ),
+    );
   }
   return new Promise<T>((resolve, reject) => {
     let settled = false;
     const timer = setTimeout(() => {
       if (settled) return;
       settled = true;
-      reject(new BusError('timeout', `No answer for "${req.type}" within ${Math.round(limit / 100) / 10} s`));
+      reject(
+        new BusError(
+          'timeout',
+          `No answer for "${req.type}" within ${Math.round(limit / 100) / 10} s`,
+        ),
+      );
     }, limit);
     const done = (fn: () => void) => {
       if (settled) return;
@@ -127,19 +148,28 @@ export function askExt<T>(req: ExtRequest, timeoutMs?: number): Promise<T> {
       (reply) => {
         done(() => {
           if (!isReply(reply)) {
-            reject(new BusError('bad_response', `Unexpected answer for "${req.type}"`));
+            reject(
+              new BusError(
+                'bad_response',
+                `Unexpected answer for "${req.type}"`,
+              ),
+            );
             return;
           }
           if (reply.ok) resolve(reply.data as T);
-          else reject(new BusError(reply.code, reply.error, reply.status ?? null));
+          else
+            reject(new BusError(reply.code, reply.error, reply.status ?? null));
         });
       },
       (err: unknown) => {
         done(() => {
           const msg = errText(err);
-          const code: BusErrorCode = /context invalidated|receiving end does not exist|message port closed/i.test(msg)
-            ? 'context'
-            : 'network';
+          const code: BusErrorCode =
+            /context invalidated|receiving end does not exist|message port closed/i.test(
+              msg,
+            )
+              ? 'context'
+              : 'network';
           reject(new BusError(code, msg));
         });
       },

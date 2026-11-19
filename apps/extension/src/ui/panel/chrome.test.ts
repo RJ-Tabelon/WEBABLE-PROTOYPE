@@ -1,14 +1,17 @@
 // Owner: P, U. Pure parts of the in-page chrome: shortcuts, overlay views, steady sizing at any page
 // zoom and the corner dock.
 import { describe, expect, it } from 'vitest';
-import { DEMO_FITS, type OverlayAction } from '@webable/core';
+import { DEMO_FITS, type OverlayAction } from '@webable/engine';
 import { overlayView } from '../offers/Overlays';
 import { parseZoom } from '../zoom';
 import { clampBottom, dockHeights, planDock, type DockInput } from './dock';
 import { chromeSizing } from './hooks';
 import { shortcutFor } from './keys';
 
-const key = (code: string, mods: { alt?: boolean; shift?: boolean; ctrl?: boolean; meta?: boolean } = {}) => ({
+const key = (
+  code: string,
+  mods: { alt?: boolean; shift?: boolean; ctrl?: boolean; meta?: boolean } = {},
+) => ({
   code,
   altKey: mods.alt ?? true,
   shiftKey: mods.shift ?? true,
@@ -45,16 +48,42 @@ describe('shortcuts', () => {
 });
 
 describe('overlay views', () => {
-  const base: OverlayAction = { id: 'n7', kind: 'consent', action: 'docked', coverageBefore: 0.31, coverageAfter: 0.05, detail: 'x' };
+  const base: OverlayAction = {
+    id: 'n7',
+    kind: 'consent',
+    action: 'docked',
+    coverageBefore: 0.31,
+    coverageAfter: 0.05,
+    detail: 'x',
+  };
   it('reads the engine fields defensively', () => {
-    const v = overlayView({ ...base, choices: [{ id: 'n8', label: 'Accept all' }, { id: 'n9', label: ' Reject  non-essential ' }], revealed: false, edge: 'bottom' } as OverlayAction);
+    const v = overlayView({
+      ...base,
+      choices: [
+        { id: 'n8', label: 'Accept all' },
+        { id: 'n9', label: ' Reject  non-essential ' },
+      ],
+      revealed: false,
+      edge: 'bottom',
+    } as OverlayAction);
     expect(v.name).toBe('Cookie notice');
-    expect(v.choices).toEqual([{ id: 'n8', label: 'Accept all' }, { id: 'n9', label: 'Reject non-essential' }]);
+    expect(v.choices).toEqual([
+      { id: 'n8', label: 'Accept all' },
+      { id: 'n9', label: 'Reject non-essential' },
+    ]);
     expect(v.edge).toBe('bottom');
     expect(v.revealed).toBe(false);
   });
   it('falls back to a kind name and ignores junk', () => {
-    const v = overlayView({ ...base, kind: 'survey', action: 'tucked', name: 42, choices: 'no', edge: 'middle', revealed: 'yes' } as unknown as OverlayAction);
+    const v = overlayView({
+      ...base,
+      kind: 'survey',
+      action: 'tucked',
+      name: 42,
+      choices: 'no',
+      edge: 'middle',
+      revealed: 'yes',
+    } as unknown as OverlayAction);
     expect(v.name).toBe('Survey');
     expect(v.choices).toEqual([]);
     expect(v.edge).toBeNull();
@@ -80,12 +109,16 @@ describe('steady size at any page zoom', () => {
   it("keeps the person's minimum target on screen", () => {
     const s = chromeSizing(rosa, 2);
     expect(s.target * s.scale).toBeCloseTo(56, 6); // rosa: 56 px click areas
-    expect(chromeSizing(null, 1.5).target * chromeSizing(null, 1.5).scale).toBeCloseTo(44, 6);
+    expect(
+      chromeSizing(null, 1.5).target * chromeSizing(null, 1.5).scale,
+    ).toBeCloseTo(44, 6);
   });
   it('grows a little for large text, within bounds', () => {
     expect(chromeSizing(null, 1).scale).toBe(1);
     expect(chromeSizing(rosa, 1).scale).toBeGreaterThan(1);
-    expect(chromeSizing({ ...rosa, text: { ...rosa.text, bodyPx: 64 } }, 1).scale).toBeLessThanOrEqual(20 / 15);
+    expect(
+      chromeSizing({ ...rosa, text: { ...rosa.text, bodyPx: 64 } }, 1).scale,
+    ).toBeLessThanOrEqual(20 / 15);
   });
   it('reads the zoom answer in its usual shapes and rejects junk', () => {
     expect(parseZoom(1.5)).toBe(1.5);
@@ -100,8 +133,18 @@ describe('steady size at any page zoom', () => {
 
 describe('corner dock', () => {
   const base: DockInput = {
-    vw: 1271, vh: 794, margin: 16, gap: 10, pillW: 150, pillH: 49, hasItems: false, itemsW: 360,
-    panelOpen: false, panelW: 392, barH: null, barMaxW: 1080,
+    vw: 1271,
+    vh: 794,
+    margin: 16,
+    gap: 10,
+    pillW: 150,
+    pillH: 49,
+    hasItems: false,
+    itemsW: 360,
+    panelOpen: false,
+    panelW: 392,
+    barH: null,
+    barMaxW: 1080,
   };
   it('sits at the bottom margin with no cookie bar', () => {
     expect(planDock(base).minBottom).toBe(16);
@@ -114,13 +157,24 @@ describe('corner dock', () => {
   it('stays at the bottom beside the bar on a wide screen', () => {
     expect(planDock({ ...base, vw: 1800, barH: 82 }).minBottom).toBe(16);
     // An offer makes the dock wider: it needs more room beside the bar before it may stay at the bottom.
-    expect(planDock({ ...base, vw: 1900, barH: 82, hasItems: true }).minBottom).toBe(16);
-    expect(planDock({ ...base, vw: 1800, barH: 82, hasItems: true }).minBottom).toBe(108);
+    expect(
+      planDock({ ...base, vw: 1900, barH: 82, hasItems: true }).minBottom,
+    ).toBe(16);
+    expect(
+      planDock({ ...base, vw: 1800, barH: 82, hasItems: true }).minBottom,
+    ).toBe(108);
   });
   it('puts offers beside the open panel only when both fit', () => {
-    expect(planDock({ ...base, hasItems: true, panelOpen: true }).itemsBeside).toBe(true);
-    expect(planDock({ ...base, vw: 700, hasItems: true, panelOpen: true }).itemsBeside).toBe(false);
-    expect(planDock({ ...base, hasItems: false, panelOpen: true }).itemsBeside).toBe(false);
+    expect(
+      planDock({ ...base, hasItems: true, panelOpen: true }).itemsBeside,
+    ).toBe(true);
+    expect(
+      planDock({ ...base, vw: 700, hasItems: true, panelOpen: true })
+        .itemsBeside,
+    ).toBe(false);
+    expect(
+      planDock({ ...base, hasItems: false, panelOpen: true }).itemsBeside,
+    ).toBe(false);
   });
   it('gives the panel the remaining height and keeps the launcher visible on short screens', () => {
     const h = dockHeights(794, 16, 16, 49, 8, false);

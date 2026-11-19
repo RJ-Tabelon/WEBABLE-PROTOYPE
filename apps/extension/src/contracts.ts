@@ -2,13 +2,35 @@
 // The engine owns all state; the UI subscribes and calls the actions below.
 
 import type {
-  CheckResult, ElementDecision, FitProfile, FitSpec, HealthStatus, LedgerEntry, Offer, OfferKind,
-  OpRecord, OverlayAction, PageDigest, PageOutline, PageUnderstanding, PassiveFitState, FitDimension, RedesignResult, Settings, StruggleJudgment,
-  StruggleKind, VisualVerdict, RewordKind, ComposeBlock, ComposeGroupIn,
-} from '@webable/core';
+  CheckResult,
+  ElementDecision,
+  FitProfile,
+  FitSpec,
+  HealthStatus,
+  LedgerEntry,
+  Offer,
+  OfferKind,
+  OpRecord,
+  OverlayAction,
+  PageDigest,
+  PageOutline,
+  PageUnderstanding,
+  PassiveFitState,
+  FitDimension,
+  RedesignResult,
+  Settings,
+  StruggleJudgment,
+  StruggleKind,
+  VisualVerdict,
+  RewordKind,
+  ComposeBlock,
+  ComposeGroupIn,
+} from '@webable/engine';
 
 /** Round 9: one piece of a rewritten paragraph. Links are the page's own anchors, live in the page. */
-export type RewordInline = { t: 'text'; text: string } | { t: 'link'; el: Element; text: string; href: string | null };
+export type RewordInline =
+  | { t: 'text'; text: string }
+  | { t: 'link'; el: Element; text: string; href: string | null };
 
 /** Round 9: a rewritten paragraph as the simplified page renders it (the same words the original page shows). */
 export interface RewordView {
@@ -93,14 +115,11 @@ export interface EngineState {
   pageZoom: number;
   /** Round 4: what WebAble has learned about the person's needs (null until loaded). */
   passive: PassiveFitState | null;
-  /**
-   * The zoom text is shown at. Equal to pageZoom, except with the page column on: the column is a narrower virtual
-   * window, the tab's zoom is raised by screen ÷ column and the body is drawn back down by the same factor.
-   */
+  /** Native zoom used for text measurements. CSS columns preserve pageZoom. */
   textZoom?: number;
   /**
-   * Round 11: on a narrow screen where the page's width capped the zoom, every text size on the page is also this
-   * many times the site's own (the text map); body text is shown at textZoom x textScale. 1 or absent: zoom alone.
+   * CSS text-map factor; body text is shown at textZoom × textScale. Hierarchy
+   * and constrained controls receive their own mapped factors. 1 or absent: no map.
    */
   textScale?: number;
   /**
@@ -163,7 +182,10 @@ export interface EngineApi {
   /** Text size: one zoom preset smaller or larger than the fit, remembered per site. */
   adjustText(step: -1 | 1): void;
   /** Round 4: the person corrects a learned need ('not_right' lowers it, 'forget' clears it, 'confirm' locks it). */
-  passiveFeedback(dim: FitDimension, action: 'not_right' | 'forget' | 'confirm'): void;
+  passiveFeedback(
+    dim: FitDimension,
+    action: 'not_right' | 'forget' | 'confirm',
+  ): void;
   /** Round 9: every rewritten paragraph shows the page's own words (true) or the rewritten ones again (false). */
   showOriginalWords(on: boolean): void;
   /** Round 9: one paragraph back to the page's own words, or forward to the rewrite again. */

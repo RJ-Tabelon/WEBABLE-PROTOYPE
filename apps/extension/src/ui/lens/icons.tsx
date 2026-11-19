@@ -5,7 +5,13 @@ import type { FineFamily } from './words';
 
 type P = { size?: number };
 
-function Svg(props: P & { children: JSX.Element | JSX.Element[]; fill?: boolean; sw?: number }) {
+function Svg(
+  props: P & {
+    children: JSX.Element | JSX.Element[];
+    fill?: boolean;
+    sw?: number;
+  },
+) {
   const s = props.size ?? 12;
   return (
     <svg
@@ -64,7 +70,14 @@ export const IDot = (p: P) => (
 );
 export const IRule = (p: P) => (
   <Svg {...p} sw={2}>
-    <rect x="3.5" y="3.5" width="17" height="17" rx="3" stroke-dasharray="3 3" />
+    <rect
+      x="3.5"
+      y="3.5"
+      width="17"
+      height="17"
+      rx="3"
+      stroke-dasharray="3 3"
+    />
   </Svg>
 );
 export const IClose = (p: P) => (
@@ -110,7 +123,13 @@ export const IRegion = (p: P) => (
   </Svg>
 );
 
-export function ClassIcon({ cls, size }: { cls: LensClass | 'rule' | 'page' | FineFamily; size?: number }) {
+export function ClassIcon({
+  cls,
+  size,
+}: {
+  cls: LensClass | 'rule' | 'page' | FineFamily;
+  size?: number;
+}) {
   switch (cls) {
     case 'main':
       return <IStar size={size} />;

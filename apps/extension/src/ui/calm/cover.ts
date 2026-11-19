@@ -18,7 +18,26 @@ export interface CoverTree<T> {
 }
 
 /** Glue words content strings often leave out. */
-const STOP = new Set(['the', 'of', 'a', 'an', 'and', 'to', 'for', 'in', 'on', 'at', 'vs', 'by', 'with', 'or', 'from', 'is', 'as', 'v']);
+const STOP = new Set([
+  'the',
+  'of',
+  'a',
+  'an',
+  'and',
+  'to',
+  'for',
+  'in',
+  'on',
+  'at',
+  'vs',
+  'by',
+  'with',
+  'or',
+  'from',
+  'is',
+  'as',
+  'v',
+]);
 
 /** Words of a text: lower case, accents off, numbers kept whole ("30-6", "11/8/2025", "7:30", "2.5"). */
 export function tokens(s: string): string[] {
@@ -32,7 +51,11 @@ export function tokens(s: string): string[] {
 }
 
 /** True when the words are (almost) all content words: misses allowed are `slack` of the words, rounded down. */
-export function wordsCovered(words: string[], set: ReadonlySet<string>, slack = 0.1): boolean {
+export function wordsCovered(
+  words: string[],
+  set: ReadonlySet<string>,
+  slack = 0.1,
+): boolean {
   const ws = words.filter((w) => !STOP.has(w));
   if (!ws.length) return true;
   let miss = 0;
@@ -41,7 +64,10 @@ export function wordsCovered(words: string[], set: ReadonlySet<string>, slack = 
 }
 
 /** Share of the content's distinct words (three letters or more) that an element's words hold. */
-export function contentShare(words: string[], content: ReadonlySet<string>): number {
+export function contentShare(
+  words: string[],
+  content: ReadonlySet<string>,
+): number {
   const own = new Set(words);
   let n = 0;
   let hit = 0;
@@ -65,7 +91,12 @@ export interface CoverResult<T> {
  * opened up and its children checked; an element with no words (a logo picture, a divider) is covered when its parent's
  * words are mostly content and it holds no control. Depth is capped.
  */
-export function coverTree<T>(root: T, tree: CoverTree<T>, set: ReadonlySet<string>, maxDepth = 12): CoverResult<T> {
+export function coverTree<T>(
+  root: T,
+  tree: CoverTree<T>,
+  set: ReadonlySet<string>,
+  maxDepth = 12,
+): CoverResult<T> {
   const covered: T[] = [];
   const orphans: T[] = [];
   const controlsIn = (n: T, out: T[]): void => {
@@ -79,7 +110,8 @@ export function coverTree<T>(root: T, tree: CoverTree<T>, set: ReadonlySet<strin
     const cs: T[] = [];
     if (tree.isControl(n)) return;
     controlsIn(n, cs);
-    for (const c of cs) if (!wordsCovered(tokens(tree.text(c)), set, 0)) orphans.push(c);
+    for (const c of cs)
+      if (!wordsCovered(tokens(tree.text(c)), set, 0)) orphans.push(c);
   };
   /** Share of an element's own words that are content words (decides whether a word-less child is part of it). */
   const richness = (words: string[]): number => {
@@ -95,7 +127,8 @@ export function coverTree<T>(root: T, tree: CoverTree<T>, set: ReadonlySet<strin
     if (!cs.length) return words;
     const left = new Map<string, number>();
     for (const w of words) left.set(w, (left.get(w) ?? 0) + 1);
-    for (const c of cs) for (const w of tokens(tree.text(c))) left.set(w, (left.get(w) ?? 0) - 1);
+    for (const c of cs)
+      for (const w of tokens(tree.text(c))) left.set(w, (left.get(w) ?? 0) - 1);
     return words.filter((w) => {
       const k = left.get(w) ?? 0;
       if (k <= 0) return false;

@@ -10,7 +10,13 @@ const MAX_OBJECTS = 200;
 export function parseLd(texts: string[]): Ld[] {
   const out: Ld[] = [];
   const add = (x: unknown, depth: number) => {
-    if (out.length >= MAX_OBJECTS || depth > 4 || x === null || typeof x !== 'object') return;
+    if (
+      out.length >= MAX_OBJECTS ||
+      depth > 4 ||
+      x === null ||
+      typeof x !== 'object'
+    )
+      return;
     if (Array.isArray(x)) {
       for (const y of x) add(y, depth + 1);
       return;
@@ -18,7 +24,8 @@ export function parseLd(texts: string[]): Ld[] {
     const o = x as Ld;
     if (o['@type'] !== undefined) out.push(o);
     if (o['@graph'] !== undefined) add(o['@graph'], depth + 1);
-    if (o.mainEntity !== undefined && typeof o.mainEntity === 'object') add(o.mainEntity, depth + 1);
+    if (o.mainEntity !== undefined && typeof o.mainEntity === 'object')
+      add(o.mainEntity, depth + 1);
   };
   for (const t of texts) {
     if (!t || t.length > 2_000_000) continue;
@@ -34,7 +41,9 @@ export function parseLd(texts: string[]): Ld[] {
 export function typesOf(o: Ld): string[] {
   const t = o['@type'];
   const list = Array.isArray(t) ? t : [t];
-  return list.filter((x): x is string => typeof x === 'string').map((x) => x.replace(/^.*[/#]/, '').toLowerCase());
+  return list
+    .filter((x): x is string => typeof x === 'string')
+    .map((x) => x.replace(/^.*[/#]/, '').toLowerCase());
 }
 
 export function findLd(objs: Ld[], types: string[]): Ld | null {
@@ -51,7 +60,8 @@ function str(x: unknown): string {
 /** An image's URL from a string, an ImageObject, or a list of either. */
 export function imageUrl(x: unknown): string | undefined {
   if (!x) return undefined;
-  if (typeof x === 'string') return /^(https?:)?\/\//i.test(x) || x.startsWith('/') ? x : undefined;
+  if (typeof x === 'string')
+    return /^(https?:)?\/\//i.test(x) || x.startsWith('/') ? x : undefined;
   if (Array.isArray(x)) {
     for (const y of x) {
       const u = imageUrl(y);
@@ -70,7 +80,8 @@ export function imageUrl(x: unknown): string | undefined {
 export function namesOf(x: unknown): string[] {
   if (!x) return [];
   if (typeof x === 'string') return x.trim() ? [plain(x)] : [];
-  if (Array.isArray(x)) return x.flatMap(namesOf).filter((n, i, a) => n && a.indexOf(n) === i);
+  if (Array.isArray(x))
+    return x.flatMap(namesOf).filter((n, i, a) => n && a.indexOf(n) === i);
   if (typeof x === 'object') {
     const n = str((x as Ld).name);
     return n ? [n] : [];
@@ -89,7 +100,13 @@ export interface LdRecipe {
 /** A Recipe object in plain strings. */
 export function recipeFromLd(o: Ld): LdRecipe | null {
   const title = str(o.name) || str(o.headline);
-  const ingredients = (Array.isArray(o.recipeIngredient) ? o.recipeIngredient : Array.isArray(o.ingredients) ? o.ingredients : [])
+  const ingredients = (
+    Array.isArray(o.recipeIngredient)
+      ? o.recipeIngredient
+      : Array.isArray(o.ingredients)
+        ? o.ingredients
+        : []
+  )
     .map(str)
     .filter(Boolean)
     .slice(0, 80);
@@ -103,12 +120,20 @@ export function recipeFromLd(o: Ld): LdRecipe | null {
   time('Prep', o.prepTime);
   time('Cook', o.cookTime);
   time('Total', o.totalTime);
-  const yields = (Array.isArray(o.recipeYield) ? o.recipeYield : [o.recipeYield]).map(str).filter(Boolean);
+  const yields = (
+    Array.isArray(o.recipeYield) ? o.recipeYield : [o.recipeYield]
+  )
+    .map(str)
+    .filter(Boolean);
   const servings = yields.find((y) => /^\d+$/.test(y));
   const yieldText = yields.find((y) => !/^\d+$/.test(y));
   if (servings) meta.push({ label: 'Servings', value: servings });
-  if (yieldText && yieldText !== servings) meta.push({ label: 'Yield', value: yieldText });
-  const rating = o.aggregateRating && typeof o.aggregateRating === 'object' ? (o.aggregateRating as Ld) : null;
+  if (yieldText && yieldText !== servings)
+    meta.push({ label: 'Yield', value: yieldText });
+  const rating =
+    o.aggregateRating && typeof o.aggregateRating === 'object'
+      ? (o.aggregateRating as Ld)
+      : null;
   if (rating) {
     const v = Number(str(rating.ratingValue));
     const n = Number(str(rating.ratingCount) || str(rating.reviewCount));
@@ -128,13 +153,16 @@ export function stepsOf(x: unknown, depth = 0): string[] {
   if (!x || depth > 4) return [];
   if (typeof x === 'string') {
     const t = String(x);
-    const parts = /<li[\s>]/i.test(t) ? t.split(/<li[^>]*>/i) : t.split(/\n+|\r+/);
+    const parts = /<li[\s>]/i.test(t)
+      ? t.split(/<li[^>]*>/i)
+      : t.split(/\n+|\r+/);
     return parts.map(plain).filter((s) => s.length > 1);
   }
   if (Array.isArray(x)) return x.flatMap((y) => stepsOf(y, depth + 1));
   if (typeof x === 'object') {
     const o = x as Ld;
-    if (o.itemListElement !== undefined) return stepsOf(o.itemListElement, depth + 1);
+    if (o.itemListElement !== undefined)
+      return stepsOf(o.itemListElement, depth + 1);
     const t = str(o.text) || str(o.name) || str(o.description);
     return t ? [t] : [];
   }
@@ -142,8 +170,18 @@ export function stepsOf(x: unknown, depth = 0): string[] {
 }
 
 export const ARTICLE_TYPES = [
-  'NewsArticle', 'Article', 'BlogPosting', 'ReportageNewsArticle', 'AnalysisNewsArticle', 'OpinionNewsArticle',
-  'BackgroundNewsArticle', 'ReviewNewsArticle', 'LiveBlogPosting', 'TechArticle', 'ScholarlyArticle', 'Report',
+  'NewsArticle',
+  'Article',
+  'BlogPosting',
+  'ReportageNewsArticle',
+  'AnalysisNewsArticle',
+  'OpinionNewsArticle',
+  'BackgroundNewsArticle',
+  'ReviewNewsArticle',
+  'LiveBlogPosting',
+  'TechArticle',
+  'ScholarlyArticle',
+  'Report',
 ];
 
 export interface LdArticle {
@@ -168,7 +206,9 @@ export function articleFromLd(o: Ld): LdArticle | null {
   if (pub) out.published = pub;
   const mod = str(o.dateModified);
   if (mod) out.modified = mod;
-  const sec = Array.isArray(o.articleSection) ? str(o.articleSection[0]) : str(o.articleSection);
+  const sec = Array.isArray(o.articleSection)
+    ? str(o.articleSection[0])
+    : str(o.articleSection);
   if (sec) out.section = collapse(sec);
   return out;
 }

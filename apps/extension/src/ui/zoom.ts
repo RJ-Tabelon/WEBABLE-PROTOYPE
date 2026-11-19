@@ -33,7 +33,9 @@ export function parseZoom(r: unknown): number | null {
     const o = r as Record<string, unknown>;
     z = o.factor ?? o.zoom ?? o.value;
   }
-  return typeof z === 'number' && Number.isFinite(z) && z >= MIN && z <= MAX ? z : null;
+  return typeof z === 'number' && Number.isFinite(z) && z >= MIN && z <= MAX
+    ? z
+    : null;
 }
 
 function set(z: number): void {
@@ -156,14 +158,21 @@ export interface Viewport {
 
 /** window.innerWidth / innerHeight, kept current (one update per frame while resizing). */
 export function useViewport(): Viewport {
-  const [vp, setVp] = useState<Viewport>(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  const [vp, setVp] = useState<Viewport>(() => ({
+    w: window.innerWidth,
+    h: window.innerHeight,
+  }));
   useEffect(() => {
     let raf = 0;
     const on = () => {
       if (raf) return;
       raf = requestAnimationFrame(() => {
         raf = 0;
-        setVp((p) => (p.w === window.innerWidth && p.h === window.innerHeight ? p : { w: window.innerWidth, h: window.innerHeight }));
+        setVp((p) =>
+          p.w === window.innerWidth && p.h === window.innerHeight
+            ? p
+            : { w: window.innerWidth, h: window.innerHeight },
+        );
       });
     };
     window.addEventListener('resize', on, { passive: true });

@@ -9,20 +9,57 @@
 // (round 9), also reached from Results. Leaving #ai goes back to Results when it came from there.
 
 import {
-  DEMO_FITS, defaultFit, deriveFit, type BrowserSettings, type FitProfile, type InputClass, type ReaderProfile, type WarmupMetrics,
-} from '@webable/core';
+  DEMO_FITS,
+  defaultFit,
+  deriveFit,
+  type BrowserSettings,
+  type FitProfile,
+  type InputClass,
+  type ReaderProfile,
+  type WarmupMetrics,
+} from '@webable/engine';
 import type { JSX } from 'preact';
 import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { AiScreen } from './ai/AiScreen';
-import { importReader, ImportError, loadReader, readerHook, saveReader, type AiSource, type ImportProblem } from './ai/reader';
+import {
+  importReader,
+  ImportError,
+  loadReader,
+  readerHook,
+  saveReader,
+  type AiSource,
+  type ImportProblem,
+} from './ai/reader';
 import { SENTENCES } from './content/sentences';
-import { captureEnv, readBrowserSettings, readPageZoom, settingsUsed, type Env } from './logic/env';
+import {
+  captureEnv,
+  readBrowserSettings,
+  readPageZoom,
+  settingsUsed,
+  type Env,
+} from './logic/env';
 import { makeRng } from './logic/rand';
 import { RawCollector } from './logic/raw';
 import { demoEvidence } from './logic/demo';
 import { buildEvidence, type RunEvidence } from './logic/evidence';
-import { eyebrowFor, PART_OF, partSetLine, PARTS, partsFor, planSteps, wordsFor, type PartId, type StepId } from './logic/steps';
-import { closeThisTab, loadEvidence, loadFit, saveEvidence, saveFit } from './logic/storage';
+import {
+  eyebrowFor,
+  PART_OF,
+  partSetLine,
+  PARTS,
+  partsFor,
+  planSteps,
+  wordsFor,
+  type PartId,
+  type StepId,
+} from './logic/steps';
+import {
+  closeThisTab,
+  loadEvidence,
+  loadFit,
+  saveEvidence,
+  saveFit,
+} from './logic/storage';
 import { Results } from './results/Results';
 import { Welcome } from './screens/Welcome';
 import { DotsTask } from './tasks/Dots';
@@ -45,13 +82,25 @@ type View =
   | ResultsView
   /** Round 9: bring in how the person likes things explained; `back` is the Results it was opened from. */
   | { kind: 'ai'; back: ResultsView | null };
-type ResultsView = { kind: 'results'; fit: FitProfile; measured: boolean; evidence: RunEvidence | null };
+type ResultsView = {
+  kind: 'results';
+  fit: FitProfile;
+  measured: boolean;
+  evidence: RunEvidence | null;
+};
 
 /** Round 10: reading the AI answer from the last step, shown on Results ('reading' while the answer is read). */
-export type ReaderJob = { status: 'reading' | 'failed'; source: string | null; problem?: ImportProblem };
+export type ReaderJob = {
+  status: 'reading' | 'failed';
+  source: string | null;
+  problem?: ImportProblem;
+};
 
 /** The steps drawn from TaskProps; "Your context" is drawn on its own (it starts the AI answer's read). */
-const TASKS: Record<Exclude<StepId, 'context'>, (p: TaskProps) => JSX.Element> = {
+const TASKS: Record<
+  Exclude<StepId, 'context'>,
+  (p: TaskProps) => JSX.Element
+> = {
   size: SizeTask,
   truefalse: TrueFalseTask,
   faint: FaintTask,
@@ -74,18 +123,30 @@ const STAGE_CLASS: Record<StepId, string> = {
 const CLOSING_MS = 1600;
 /** "You're all set" waits this long at most for the AI answer to be read, so Results usually opens with it. */
 const READER_WAIT_MS = 12_000;
-const sleep = (ms: number): Promise<void> => new Promise((r) => window.setTimeout(r, ms));
+const sleep = (ms: number): Promise<void> =>
+  new Promise((r) => window.setTimeout(r, ms));
 const newSeed = (): number => (Math.random() * 2 ** 31) | 0;
 
 function safeEvidence(raw: RawCollector): RunEvidence {
   try {
     return buildEvidence(raw.toRaw(), raw.sites);
   } catch {
-    return { reading: null, faint: null, pointing: null, sites: [], busySlowdown: null, gotInWay: [] };
+    return {
+      reading: null,
+      faint: null,
+      pointing: null,
+      sites: [],
+      busySlowdown: null,
+      gotInWay: [],
+    };
   }
 }
 
-function safeDerive(raw: RawCollector, settings: BrowserSettings | null, metrics?: WarmupMetrics): FitProfile {
+function safeDerive(
+  raw: RawCollector,
+  settings: BrowserSettings | null,
+  metrics?: WarmupMetrics,
+): FitProfile {
   try {
     return deriveFit(raw.toRaw(), { settings, metrics: metrics ?? null });
   } catch {
@@ -111,7 +172,10 @@ export function App(): JSX.Element {
   const [aiKey, setAiKey] = useState(0);
   const touchedParts = useRef(new Set<PartId>());
   const anyDone = useRef(false);
-  const input = useRef<{ moved: boolean; pointerType: string | null }>({ moved: false, pointerType: null });
+  const input = useRef<{ moved: boolean; pointerType: string | null }>({
+    moved: false,
+    pointerType: null,
+  });
   const tickTimer = useRef(0);
   const closingTimer = useRef(0);
   /** Bumped by every finish (and retake), so a "You're all set" still waiting on the AI answer does nothing late. */
@@ -136,7 +200,12 @@ export function App(): JSX.Element {
       if (location.hash === '#settings') {
         const saved = await loadFit();
         if (saved) {
-          setView({ kind: 'results', fit: saved, measured: false, evidence: await loadEvidence() });
+          setView({
+            kind: 'results',
+            fit: saved,
+            measured: false,
+            evidence: await loadEvidence(),
+          });
           return;
         }
       }
@@ -153,7 +222,11 @@ export function App(): JSX.Element {
   useEffect(() => {
     const onHash = (): void => {
       if (location.hash === '#ai') {
-        setView((v) => (v.kind === 'boot' || v.kind === 'ai' ? v : { kind: 'ai', back: v.kind === 'results' ? v : null }));
+        setView((v) =>
+          v.kind === 'boot' || v.kind === 'ai'
+            ? v
+            : { kind: 'ai', back: v.kind === 'results' ? v : null },
+        );
         return;
       }
       setView((v) => (v.kind === 'ai' && v.back ? v.back : v));
@@ -192,7 +265,12 @@ export function App(): JSX.Element {
         setReader(r);
         setReaderJob(null);
       },
-      (err: unknown) => setReaderJob({ status: 'failed', source, problem: err instanceof ImportError ? err.problem : 'unavailable' }),
+      (err: unknown) =>
+        setReaderJob({
+          status: 'failed',
+          source,
+          problem: err instanceof ImportError ? err.problem : 'unavailable',
+        }),
     );
   };
 
@@ -224,7 +302,8 @@ export function App(): JSX.Element {
 
   /* ---------------- every press in the flow (Start buttons too), actions, hidden-tab time ---------------- */
 
-  const inFlow = view.kind === 'welcome' || view.kind === 'intro' || view.kind === 'task';
+  const inFlow =
+    view.kind === 'welcome' || view.kind === 'intro' || view.kind === 'task';
   useEffect(() => {
     if (!inFlow) return;
     const down = (e: PointerEvent) => {
@@ -233,7 +312,8 @@ export function App(): JSX.Element {
     };
     const up = (e: PointerEvent) => raw.onPointerUp(e);
     const key = (e: KeyboardEvent) => {
-      if (!e.repeat && !['Shift', 'Meta', 'Control', 'Alt'].includes(e.key)) raw.countAction();
+      if (!e.repeat && !['Shift', 'Meta', 'Control', 'Alt'].includes(e.key))
+        raw.countAction();
     };
     const vis = () => {
       if (document.hidden) raw.stopClock();
@@ -255,7 +335,9 @@ export function App(): JSX.Element {
 
   const openIntro = (step: StepId, plan: StepId[]) => {
     setView({ kind: 'intro', step });
-    setAnnounce(`${eyebrowFor(step, plan)}. ${wordsFor(step, raw.inputClass).title}`);
+    setAnnounce(
+      `${eyebrowFor(step, plan)}. ${wordsFor(step, raw.inputClass).title}`,
+    );
   };
 
   const start = (e: MouseEvent) => {
@@ -293,13 +375,17 @@ export function App(): JSX.Element {
   /** Bookkeeping for a step the person skipped (or never reached when they skip the rest). */
   const markSkipped = (step: StepId) => {
     if (step === 'size') raw.skippedSteps.add('size');
-    else if (step === 'truefalse') raw.endBlock('read', { trials: raw.ladder.length, skipped: true });
-    else if (step === 'faint') raw.endBlock('faint', { trials: raw.faint.length, skipped: true });
+    else if (step === 'truefalse')
+      raw.endBlock('read', { trials: raw.ladder.length, skipped: true });
+    else if (step === 'faint')
+      raw.endBlock('faint', { trials: raw.faint.length, skipped: true });
     else if (step === 'lightdark') raw.skippedSteps.add('light or dark');
-    else if (step === 'dots') raw.endBlock('point', { trials: 0, skipped: true });
+    else if (step === 'dots')
+      raw.endBlock('point', { trials: 0, skipped: true });
     else if (step === 'find') {
       // The sites may be done already, with only the questions skipped.
-      if (!raw.done.has('find')) raw.endBlock('find', { trials: raw.findTrials.length, skipped: true });
+      if (!raw.done.has('find'))
+        raw.endBlock('find', { trials: raw.findTrials.length, skipped: true });
       raw.endBlock('pick', { trials: 0, skipped: true });
     }
   };
@@ -324,7 +410,8 @@ export function App(): JSX.Element {
     const i = steps.indexOf(step);
     const next = steps[i + 1];
     const part = PART_OF[step];
-    if (!next || PART_OF[next] !== part) setDoneParts((s) => new Set(s).add(part));
+    if (!next || PART_OF[next] !== part)
+      setDoneParts((s) => new Set(s).add(part));
     setPrev(step);
     if (next) {
       openIntro(next, steps);
@@ -335,7 +422,9 @@ export function App(): JSX.Element {
     // Round 10: while "You're all set" shows, the AI answer from the last step is read (up to READER_WAIT_MS), so
     // Results opens with what WebAble took from it; a slower read finishes on Results.
     const gen = ++closingGen.current;
-    const reading = readerRun.current ? Promise.race([readerRun.current, sleep(READER_WAIT_MS)]) : Promise.resolve();
+    const reading = readerRun.current
+      ? Promise.race([readerRun.current, sleep(READER_WAIT_MS)])
+      : Promise.resolve();
     void Promise.all([reading, sleep(CLOSING_MS)]).then(() => {
       if (gen === closingGen.current) void finish(anyDone.current, true);
     });
@@ -345,7 +434,8 @@ export function App(): JSX.Element {
     if (step === 'truefalse') raw.endBlock('read', o);
     else if (step === 'faint') raw.endBlock('faint', o);
     else if (step === 'dots') raw.endBlock('point', o);
-    else if (step === 'find') raw.endBlock('pick', { trials: o.trials, stop: 'person' });
+    else if (step === 'find')
+      raw.endBlock('pick', { trials: o.trials, stop: 'person' });
     anyDone.current = true;
     touchedParts.current.add(PART_OF[step]);
     // The settings so far shape the next steps (sizes); they are never shown until the end.
@@ -363,14 +453,22 @@ export function App(): JSX.Element {
     if (view.kind === 'welcome') {
       const saved = await loadFit();
       if (saved) {
-        setView({ kind: 'results', fit: saved, measured: false, evidence: await loadEvidence() });
+        setView({
+          kind: 'results',
+          fit: saved,
+          measured: false,
+          evidence: await loadEvidence(),
+        });
         return;
       }
       for (const s of planSteps(raw.inputClass, settings)) markSkipped(s);
       await finish(false, false);
       return;
     }
-    const at = view.kind === 'intro' || view.kind === 'task' ? steps.indexOf(view.step) : steps.length;
+    const at =
+      view.kind === 'intro' || view.kind === 'task'
+        ? steps.indexOf(view.step)
+        : steps.length;
     for (const s of steps.slice(Math.max(0, at))) markSkipped(s);
     await finish(anyDone.current, false);
   };
@@ -409,14 +507,21 @@ export function App(): JSX.Element {
   // a matching demo evidence, and jumps straight to Results, as if the steps had run.
   useEffect(() => {
     (globalThis as { __fitting?: unknown }).__fitting = {
-      phase: () => (view.kind === 'intro' || view.kind === 'task' ? `${view.kind}:${view.step}` : view.kind),
+      phase: () =>
+        view.kind === 'intro' || view.kind === 'task'
+          ? `${view.kind}:${view.step}`
+          : view.kind,
       raw: () => raw.toRaw(),
-      evidence: () => (view.kind === 'results' ? view.evidence : safeEvidence(raw)),
+      evidence: () =>
+        view.kind === 'results' ? view.evidence : safeEvidence(raw),
       finish: async (name: keyof typeof DEMO_FITS = 'rosa') => {
         window.clearTimeout(closingTimer.current);
         closingGen.current++;
         const key: keyof typeof DEMO_FITS = name in DEMO_FITS ? name : 'rosa';
-        const fit: FitProfile = { ...(JSON.parse(JSON.stringify(DEMO_FITS[key])) as FitProfile), createdAt: new Date().toISOString() };
+        const fit: FitProfile = {
+          ...(JSON.parse(JSON.stringify(DEMO_FITS[key])) as FitProfile),
+          createdAt: new Date().toISOString(),
+        };
         const evidence = demoEvidence(key);
         await saveFit(fit);
         await saveEvidence(evidence);
@@ -429,7 +534,15 @@ export function App(): JSX.Element {
 
   if (view.kind === 'boot' || !env) return <div class="fl-app" />;
 
-  if (view.kind === 'ai') return <AiScreen key={aiKey} saved={reader} onSaved={setReader} onClose={closeAi} />;
+  if (view.kind === 'ai')
+    return (
+      <AiScreen
+        key={aiKey}
+        saved={reader}
+        onSaved={setReader}
+        onClose={closeAi}
+      />
+    );
 
   if (view.kind === 'results') {
     return (
@@ -457,7 +570,8 @@ export function App(): JSX.Element {
   }
 
   const parts = steps.length ? partsFor(steps) : PARTS;
-  const currentPart = view.kind === 'intro' || view.kind === 'task' ? PART_OF[view.step] : null;
+  const currentPart =
+    view.kind === 'intro' || view.kind === 'task' ? PART_OF[view.step] : null;
 
   let body: JSX.Element;
   if (view.kind === 'welcome') {
@@ -490,7 +604,11 @@ export function App(): JSX.Element {
   } else if (view.kind === 'intro') {
     // The step's empty stage waits behind the card, so Start reveals it in place.
     body = (
-      <TaskLayout title={wordsFor(view.step, raw.inputClass).title} stageClass={STAGE_CLASS[view.step]} actions={<span class="fl-actions-ghost" />} />
+      <TaskLayout
+        title={wordsFor(view.step, raw.inputClass).title}
+        stageClass={STAGE_CLASS[view.step]}
+        actions={<span class="fl-actions-ghost" />}
+      />
     );
   } else {
     body = (
@@ -505,11 +623,24 @@ export function App(): JSX.Element {
   }
 
   const intro = view.kind === 'intro' ? view.step : null;
-  const setLine = intro && prev && touchedParts.current.has(PART_OF[prev]) ? partSetLine(prev, intro) : null;
+  const setLine =
+    intro && prev && touchedParts.current.has(PART_OF[prev])
+      ? partSetLine(prev, intro)
+      : null;
 
   return (
     <div class="fl-app">
-      <TopBar parts={parts} current={currentPart} done={doneParts} ticking={ticking} onSkip={view.kind === 'welcome' || view.kind === 'closing' ? null : () => void skipAll()} />
+      <TopBar
+        parts={parts}
+        current={currentPart}
+        done={doneParts}
+        ticking={ticking}
+        onSkip={
+          view.kind === 'welcome' || view.kind === 'closing'
+            ? null
+            : () => void skipAll()
+        }
+      />
       <main class="fl-main">
         <div class="fl-col" inert={intro != null}>
           {body}

@@ -16,17 +16,53 @@
 //   chrome.storage.local (the answer is not). Paragraph calls get the saved reader added here, points switched off left out.
 // - Round 10: `compose` posts a page's groups to `/v1/compose` with the saved reader (points switched off left out), or
 //   null when there is none (laid out for a general reader).
+// - The website (Tune and the account pages) talks to the worker over externally_connectable: src/account/bridge.ts.
 
 import {
-  AI_ANSWER_MAX_CHARS, AI_ANSWER_MIN_CHARS, DEFAULT_SETTINGS, DEMO_FITS, SERVER_ORIGIN, addEvidence, applyFeedback, buildPassiveState,
-  demoHistory, emptyPassiveStore, isPassiveStore, siteName, withSettings,
-} from '@webable/core';
+  AI_ANSWER_MAX_CHARS,
+  AI_ANSWER_MIN_CHARS,
+  DEFAULT_SETTINGS,
+  DEMO_FITS,
+  SERVER_ORIGIN,
+  addEvidence,
+  applyFeedback,
+  buildPassiveState,
+  demoHistory,
+  emptyPassiveStore,
+  isPassiveStore,
+  siteName,
+  withSettings,
+} from '@webable/engine';
 import type {
-  AttributionAnswer, BrowserSettings, ComposeResponse, FitDimension, FitProfile, OverlayCloseResult, PageUnderstanding,
-  PassiveFitState, PassiveRecord, PassiveStore, ReaderProfile, RedesignResult, RewordScoreResult, RewordWriteResult, Settings,
-  StruggleJudgment, TabReport, VisualVerdict, VisualVerifyRequest,
-} from '@webable/core';
-import type { BusEnvelope, BusErrorCode, BusReply, ExtRequest, HealthInfo, ZoomInfo } from '../src/engine/bus';
+  AttributionAnswer,
+  BrowserSettings,
+  ComposeResponse,
+  FitDimension,
+  FitProfile,
+  OverlayCloseResult,
+  PageUnderstanding,
+  PassiveFitState,
+  PassiveRecord,
+  PassiveStore,
+  ReaderProfile,
+  RedesignResult,
+  RewordScoreResult,
+  RewordWriteResult,
+  Settings,
+  StruggleJudgment,
+  TabReport,
+  VisualVerdict,
+  VisualVerifyRequest,
+} from '@webable/engine';
+import type {
+  BusEnvelope,
+  BusErrorCode,
+  BusReply,
+  ExtRequest,
+  HealthInfo,
+  ZoomInfo,
+} from '../src/engine/bus';
+import { registerAccountBridge } from '../src/account/bridge';
 import { stripLocalData, stripOutlineData } from '../src/engine/extract/strip';
 import { registerSiteTasks } from '../src/sitetask/background';
 
@@ -37,7 +73,11 @@ import { registerSiteTasks } from '../src/sitetask/background';
 class BgError extends Error {
   readonly code: BusErrorCode;
   readonly status: number | null;
-  constructor(code: BusErrorCode, message: string, status: number | null = null) {
+  constructor(
+    code: BusErrorCode,
+    message: string,
+    status: number | null = null,
+  ) {
     super(message);
     this.code = code;
     this.status = status;
@@ -45,13 +85,24 @@ class BgError extends Error {
 }
 
 function toReply(err: unknown): BusReply {
-  if (err instanceof BgError) return { ok: false, code: err.code, error: err.message, status: err.status };
+  if (err instanceof BgError)
+    return {
+      ok: false,
+      code: err.code,
+      error: err.message,
+      status: err.status,
+    };
   const msg = err instanceof Error ? err.message : String(err);
   return { ok: false, code: 'network', error: msg };
 }
 
 function isEnvelope(msg: unknown): msg is BusEnvelope {
-  return !!msg && typeof msg === 'object' && (msg as { __wa?: unknown }).__wa === 1 && typeof (msg as { req?: { type?: unknown } }).req?.type === 'string';
+  return (
+    !!msg &&
+    typeof msg === 'object' &&
+    (msg as { __wa?: unknown }).__wa === 1 &&
+    typeof (msg as { req?: { type?: unknown } }).req?.type === 'string'
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -96,7 +147,12 @@ const READER_KEY = 'reader';
 
 function isReader(x: unknown): x is ReaderProfile {
   const r = x as Partial<ReaderProfile> | null;
-  return !!r && typeof r === 'object' && r.v === 'reader.1' && Array.isArray(r.points);
+  return (
+    !!r &&
+    typeof r === 'object' &&
+    r.v === 'reader.1' &&
+    Array.isArray(r.points)
+  );
 }
 
 async function getReader(): Promise<ReaderProfile | null> {
@@ -105,10 +161,16 @@ async function getReader(): Promise<ReaderProfile | null> {
   return isReader(r) ? r : null;
 }
 
-async function setReader(reader: ReaderProfile | null): Promise<ReaderProfile | null> {
+async function setReader(
+  reader: ReaderProfile | null,
+): Promise<ReaderProfile | null> {
   if (reader === null) await chrome.storage.local.remove(READER_KEY);
   else {
-    if (!isReader(reader)) throw new BgError('refused', 'That is not something WebAble saved from an AI answer');
+    if (!isReader(reader))
+      throw new BgError(
+        'refused',
+        'That is not something WebAble saved from an AI answer',
+      );
     await chrome.storage.local.set({ [READER_KEY]: reader });
   }
   return reader;
@@ -117,9 +179,17 @@ async function setReader(reader: ReaderProfile | null): Promise<ReaderProfile | 
 /** The saved reader as the server sees it: only the points the person left on. */
 async function readerToSend(): Promise<ReaderProfile> {
   const reader = await getReader();
-  if (!reader) throw new BgError('refused', 'No answer from an AI assistant has been added yet');
+  if (!reader)
+    throw new BgError(
+      'refused',
+      'No answer from an AI assistant has been added yet',
+    );
   const points = reader.points.filter((p) => p.on);
-  if (!points.length) throw new BgError('refused', 'Every point from the AI answer is switched off');
+  if (!points.length)
+    throw new BgError(
+      'refused',
+      'Every point from the AI answer is switched off',
+    );
   return { ...reader, points };
 }
 
@@ -143,7 +213,19 @@ const PASSIVE_REFIT_KEY = 'passiveRefit';
 const PASSIVE_UI_KEYS = ['passiveOffers', 'passiveSeen'];
 
 /** OS preferences a page reports (the service worker has no matchMedia). */
-type MediaFacts = Partial<Pick<BrowserSettings, 'reducedMotion' | 'contrastMore' | 'forcedColors' | 'colorScheme' | 'reducedTransparency' | 'languages' | 'pointer' | 'anyHover'>>;
+type MediaFacts = Partial<
+  Pick<
+    BrowserSettings,
+    | 'reducedMotion'
+    | 'contrastMore'
+    | 'forcedColors'
+    | 'colorScheme'
+    | 'reducedTransparency'
+    | 'languages'
+    | 'pointer'
+    | 'anyHover'
+  >
+>;
 
 function osName(): 'Mac' | 'Windows' | 'ChromeOS' | 'Linux' | null {
   const ua = typeof navigator !== 'undefined' ? navigator.userAgent : '';
@@ -183,7 +265,12 @@ async function loadPassiveStore(): Promise<PassiveStore> {
 }
 
 async function passiveState(store: PassiveStore): Promise<PassiveFitState> {
-  return buildPassiveState(store, { now: new Date(), sessionStart: await sessionStart(), base: await getFit(), os: osName() });
+  return buildPassiveState(store, {
+    now: new Date(),
+    sessionStart: await sessionStart(),
+    base: await getFit(),
+    os: osName(),
+  });
 }
 
 /**
@@ -202,7 +289,11 @@ function withPassive(
     const state = await passiveState(next);
     if (next !== store) {
       const refit = opts.refit || next.settingsAt !== store.settingsAt;
-      await chrome.storage.local.set({ [PASSIVE_STORE_KEY]: next, [PASSIVE_STATE_KEY]: state, ...(refit ? { [PASSIVE_REFIT_KEY]: Date.now() } : {}) });
+      await chrome.storage.local.set({
+        [PASSIVE_STORE_KEY]: next,
+        [PASSIVE_STATE_KEY]: state,
+        ...(refit ? { [PASSIVE_REFIT_KEY]: Date.now() } : {}),
+      });
     }
     return state;
   });
@@ -212,22 +303,33 @@ function withPassive(
 
 /** Recompute and publish the state without new evidence (the warm-up's fit changed). */
 function republishPassive(): void {
-  void (passiveChain = passiveChain.then(async () => {
-    const store = await loadPassiveStore();
-    await chrome.storage.local.set({ [PASSIVE_STATE_KEY]: await passiveState(store), [PASSIVE_REFIT_KEY]: Date.now() });
-  }).catch(() => undefined));
+  void (passiveChain = passiveChain
+    .then(async () => {
+      const store = await loadPassiveStore();
+      await chrome.storage.local.set({
+        [PASSIVE_STATE_KEY]: await passiveState(store),
+        [PASSIVE_REFIT_KEY]: Date.now(),
+      });
+    })
+    .catch(() => undefined));
 }
 
 /** Chrome's own text settings (no permission warning) and default zoom. */
-async function readChromeSettings(tabId?: number): Promise<Partial<BrowserSettings>> {
+async function readChromeSettings(
+  tabId?: number,
+): Promise<Partial<BrowserSettings>> {
   const out: Partial<BrowserSettings> = {};
   try {
-    out.defaultFontPx = (await chrome.fontSettings.getDefaultFontSize({})).pixelSize;
+    out.defaultFontPx = (
+      await chrome.fontSettings.getDefaultFontSize({})
+    ).pixelSize;
   } catch {
     /* fontSettings unavailable */
   }
   try {
-    out.minFontPx = (await chrome.fontSettings.getMinimumFontSize({})).pixelSize;
+    out.minFontPx = (
+      await chrome.fontSettings.getMinimumFontSize({})
+    ).pixelSize;
   } catch {
     /* fontSettings unavailable */
   }
@@ -235,11 +337,15 @@ async function readChromeSettings(tabId?: number): Promise<Partial<BrowserSettin
     let t = tabId;
     if (t === undefined) {
       const tabs = await chrome.tabs.query({});
-      t = tabs.find((x) => typeof x.id === 'number' && /^https?:/.test(x.url ?? ''))?.id ?? tabs[0]?.id;
+      t =
+        tabs.find(
+          (x) => typeof x.id === 'number' && /^https?:/.test(x.url ?? ''),
+        )?.id ?? tabs[0]?.id;
     }
     if (t !== undefined) {
       const z = await chrome.tabs.getZoomSettings(t);
-      if (typeof z.defaultZoomFactor === 'number' && z.defaultZoomFactor > 0) out.defaultZoom = Math.round(z.defaultZoomFactor * 100) / 100;
+      if (typeof z.defaultZoomFactor === 'number' && z.defaultZoomFactor > 0)
+        out.defaultZoom = Math.round(z.defaultZoomFactor * 100) / 100;
     }
   } catch {
     /* no tab to ask */
@@ -254,20 +360,33 @@ function pickMedia(m: MediaFacts | undefined): Partial<BrowserSettings> {
   if (typeof m.reducedMotion === 'boolean') out.reducedMotion = m.reducedMotion;
   if (typeof m.contrastMore === 'boolean') out.contrastMore = m.contrastMore;
   if (typeof m.forcedColors === 'boolean') out.forcedColors = m.forcedColors;
-  if (m.colorScheme === 'dark' || m.colorScheme === 'light') out.colorScheme = m.colorScheme;
-  if (typeof m.reducedTransparency === 'boolean') out.reducedTransparency = m.reducedTransparency;
-  if (Array.isArray(m.languages)) out.languages = m.languages.filter((l): l is string => typeof l === 'string').slice(0, 8);
-  if (m.pointer === 'fine' || m.pointer === 'coarse' || m.pointer === 'none') out.pointer = m.pointer;
+  if (m.colorScheme === 'dark' || m.colorScheme === 'light')
+    out.colorScheme = m.colorScheme;
+  if (typeof m.reducedTransparency === 'boolean')
+    out.reducedTransparency = m.reducedTransparency;
+  if (Array.isArray(m.languages))
+    out.languages = m.languages
+      .filter((l): l is string => typeof l === 'string')
+      .slice(0, 8);
+  if (m.pointer === 'fine' || m.pointer === 'coarse' || m.pointer === 'none')
+    out.pointer = m.pointer;
   if (typeof m.anyHover === 'boolean') out.anyHover = m.anyHover;
   return out;
 }
 
-async function getPassive(media?: MediaFacts, tabId?: number): Promise<PassiveFitState> {
+async function getPassive(
+  media?: MediaFacts,
+  tabId?: number,
+): Promise<PassiveFitState> {
   return withPassive(async (store) => {
     let next = store;
     const m = pickMedia(media);
     if (Object.keys(m).length) next = withSettings(next, m);
-    if (!next.settings || next.settings.defaultFontPx === null || Date.now() - chromeReadAt > 30_000) {
+    if (
+      !next.settings ||
+      next.settings.defaultFontPx === null ||
+      Date.now() - chromeReadAt > 30_000
+    ) {
       chromeReadAt = Date.now();
       next = withSettings(next, await readChromeSettings(tabId));
     }
@@ -283,7 +402,9 @@ async function notePersonSiteZoom(tabId: number, zoom: number): Promise<void> {
   let host: string | null = null;
   try {
     const tab = await chrome.tabs.get(tabId);
-    host = /^https?:/.test(tab.url ?? '') ? siteName(new URL(tab.url as string).hostname) : null;
+    host = /^https?:/.test(tab.url ?? '')
+      ? siteName(new URL(tab.url as string).hostname)
+      : null;
   } catch {
     host = null;
   }
@@ -291,8 +412,11 @@ async function notePersonSiteZoom(tabId: number, zoom: number): Promise<void> {
   const site = host;
   await withPassive((store) => {
     const def = store.settings?.defaultZoom ?? 1;
-    const list = (store.settings?.siteZooms ?? []).filter((z) => z.site !== site);
-    if (Math.abs(zoom - def) > 0.005) list.push({ site, zoom: Math.round(zoom * 100) / 100 });
+    const list = (store.settings?.siteZooms ?? []).filter(
+      (z) => z.site !== site,
+    );
+    if (Math.abs(zoom - def) > 0.005)
+      list.push({ site, zoom: Math.round(zoom * 100) / 100 });
     return withSettings(store, { siteZooms: list });
   }).catch(() => undefined);
 }
@@ -307,11 +431,13 @@ async function passiveInstallScan(): Promise<void> {
   const zooms: Array<{ site: string; zoom: number }> = [];
   try {
     for (const tab of await chrome.tabs.query({})) {
-      if (typeof tab.id !== 'number' || !/^https?:/.test(tab.url ?? '')) continue;
+      if (typeof tab.id !== 'number' || !/^https?:/.test(tab.url ?? ''))
+        continue;
       const site = siteName(new URL(tab.url as string).hostname);
       if (!site || zooms.some((z) => z.site === site)) continue;
       const z = await chrome.tabs.getZoom(tab.id).catch(() => def);
-      if (Math.abs(z - def) > 0.005) zooms.push({ site, zoom: Math.round(z * 100) / 100 });
+      if (Math.abs(z - def) > 0.005)
+        zooms.push({ site, zoom: Math.round(z * 100) / 100 });
     }
   } catch {
     /* no tabs */
@@ -319,10 +445,19 @@ async function passiveInstallScan(): Promise<void> {
   const now = new Date().toISOString();
   await withPassive((store) => {
     let next = withSettings(store, { ...chromeSettings, siteZooms: zooms });
-    const items: PassiveRecord[] = zooms.filter((z) => z.zoom > def + 0.005).map((z) => ({
-      dim: 'text_size', weight: 0.5, what: `Chrome had ${z.site} zoomed to ${Math.round(z.zoom * 100)}%`, site: z.site, at: now,
-      layer: 'usual', value: Math.round(z.zoom * 16 * 2) / 2, kind: 'site_zoom', zoom: z.zoom,
-    }));
+    const items: PassiveRecord[] = zooms
+      .filter((z) => z.zoom > def + 0.005)
+      .map((z) => ({
+        dim: 'text_size',
+        weight: 0.5,
+        what: `Chrome had ${z.site} zoomed to ${Math.round(z.zoom * 100)}%`,
+        site: z.site,
+        at: now,
+        layer: 'usual',
+        value: Math.round(z.zoom * 16 * 2) / 2,
+        kind: 'site_zoom',
+        zoom: z.zoom,
+      }));
     if (items.length) next = addEvidence(next, items);
     return next;
   }).catch(() => undefined);
@@ -331,12 +466,24 @@ async function passiveInstallScan(): Promise<void> {
 const NOT_RIGHT_SNOOZE_MS = 7 * 24 * 3600 * 1000;
 
 /** Keep one need's learned offer off pages until `ms` from now (the controller's offer memory, never shortened). */
-async function snoozePassiveOffer(dim: FitDimension, ms: number): Promise<void> {
+async function snoozePassiveOffer(
+  dim: FitDimension,
+  ms: number,
+): Promise<void> {
   try {
     const got = await chrome.storage.local.get('passiveOffers');
-    const mem = (got.passiveOffers && typeof got.passiveOffers === 'object' ? got.passiveOffers : {}) as Record<string, { snoozedUntil?: number }>;
+    const mem = (
+      got.passiveOffers && typeof got.passiveOffers === 'object'
+        ? got.passiveOffers
+        : {}
+    ) as Record<string, { snoozedUntil?: number }>;
     const until = Math.max(mem[dim]?.snoozedUntil ?? 0, Date.now() + ms);
-    await chrome.storage.local.set({ passiveOffers: { ...mem, [dim]: { ...(mem[dim] ?? {}), snoozedUntil: until } } });
+    await chrome.storage.local.set({
+      passiveOffers: {
+        ...mem,
+        [dim]: { ...(mem[dim] ?? {}), snoozedUntil: until },
+      },
+    });
   } catch {
     /* storage unavailable: the −2 alone still lowers it */
   }
@@ -345,14 +492,28 @@ async function snoozePassiveOffer(dim: FitDimension, ms: number): Promise<void> 
 /** "Show a week of learning": a realistic week of evidence (settings and the warm-up stay as they are). */
 async function seedDemoHistory(): Promise<PassiveFitState> {
   await chrome.storage.local.remove(PASSIVE_UI_KEYS).catch(() => undefined);
-  return withPassive((store) => ({ ...store, records: demoHistory(new Date()), locks: {} }), { refit: true });
+  return withPassive(
+    (store) => ({ ...store, records: demoHistory(new Date()), locks: {} }),
+    { refit: true },
+  );
 }
 
 /** "Start fresh": forget everything learned and every choice made in the panel; Chrome's settings are read again. */
 async function resetPassive(): Promise<PassiveFitState> {
   await chrome.storage.local.remove(PASSIVE_UI_KEYS).catch(() => undefined);
   chromeReadAt = 0;
-  return withPassive(async (store) => withSettings({ ...emptyPassiveStore(), settings: store.settings, settingsAt: store.settingsAt }, await readChromeSettings()), { refit: true });
+  return withPassive(
+    async (store) =>
+      withSettings(
+        {
+          ...emptyPassiveStore(),
+          settings: store.settings,
+          settingsAt: store.settingsAt,
+        },
+        await readChromeSettings(),
+      ),
+    { refit: true },
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -362,10 +523,16 @@ async function resetPassive(): Promise<PassiveFitState> {
 async function serverOrigin(): Promise<string> {
   const s = await getSettings();
   const o = (s.serverOrigin || SERVER_ORIGIN).replace(/\/+$/, '');
-  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(o) ? o : SERVER_ORIGIN;
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(o)
+    ? o
+    : SERVER_ORIGIN;
 }
 
-async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<T> {
+async function post<T>(
+  path: string,
+  body: unknown,
+  timeoutMs: number,
+): Promise<T> {
   const origin = await serverOrigin();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
@@ -380,16 +547,30 @@ async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<
     });
   } catch (err) {
     clearTimeout(timer);
-    if (ctrl.signal.aborted) throw new BgError('timeout', `The WebAble server did not answer ${path} within ${timeoutMs / 1000} s`);
-    throw new BgError('network', `The WebAble server at ${origin} could not be reached`);
+    if (ctrl.signal.aborted)
+      throw new BgError(
+        'timeout',
+        `The WebAble server did not answer ${path} within ${timeoutMs / 1000} s`,
+      );
+    throw new BgError(
+      'network',
+      `The WebAble server at ${origin} could not be reached`,
+    );
   }
   let text = '';
   try {
     text = await res.text();
   } catch {
     clearTimeout(timer);
-    if (ctrl.signal.aborted) throw new BgError('timeout', `The WebAble server did not finish ${path} within ${timeoutMs / 1000} s`);
-    throw new BgError('network', 'The answer from the WebAble server was cut off');
+    if (ctrl.signal.aborted)
+      throw new BgError(
+        'timeout',
+        `The WebAble server did not finish ${path} within ${timeoutMs / 1000} s`,
+      );
+    throw new BgError(
+      'network',
+      'The answer from the WebAble server was cut off',
+    );
   }
   clearTimeout(timer);
   let json: unknown = null;
@@ -400,10 +581,20 @@ async function post<T>(path: string, body: unknown, timeoutMs: number): Promise<
   }
   if (!res.ok) {
     const j = (json ?? {}) as { error?: unknown; message?: unknown };
-    const msg = typeof j.message === 'string' ? j.message : typeof j.error === 'string' ? j.error : `HTTP ${res.status}`;
-    throw new BgError(res.status === 422 ? 'refused' : 'server', msg, res.status);
+    const msg =
+      typeof j.message === 'string'
+        ? j.message
+        : typeof j.error === 'string'
+          ? j.error
+          : `HTTP ${res.status}`;
+    throw new BgError(
+      res.status === 422 ? 'refused' : 'server',
+      msg,
+      res.status,
+    );
   }
-  if (json === null) throw new BgError('bad_response', `Empty answer from ${path}`);
+  if (json === null)
+    throw new BgError('bad_response', `Empty answer from ${path}`);
   return json as T;
 }
 
@@ -414,19 +605,36 @@ async function health(): Promise<HealthInfo> {
   const timer = setTimeout(() => ctrl.abort(), 4000);
   try {
     const res = await fetch(`${origin}/health`, { signal: ctrl.signal });
-    const j = (await res.json()) as { ok?: unknown; jev?: { warm?: unknown; model?: unknown }; ai?: unknown; openai?: unknown };
+    const j = (await res.json()) as {
+      ok?: unknown;
+      jev?: { warm?: unknown; model?: unknown };
+      ai?: unknown;
+      openai?: unknown;
+    };
     const ok = res.ok && j.ok !== false;
     // HealthStatus.ai ('on' | 'off' | 'no_credits'); an older server only says openai: boolean.
-    const ai: HealthInfo['ai'] = j.ai === 'on' || j.ai === 'off' || j.ai === 'no_credits'
-      ? j.ai
-      : ok && j.openai !== false ? 'on' : 'off';
+    const ai: HealthInfo['ai'] =
+      j.ai === 'on' || j.ai === 'off' || j.ai === 'no_credits'
+        ? j.ai
+        : ok && j.openai !== false
+          ? 'on'
+          : 'off';
     const info: HealthInfo = { ok, ai, ms: Math.round(performance.now() - t0) };
-    if (j.jev && typeof j.jev === 'object') info.jev = { warm: !!j.jev.warm, model: typeof j.jev.model === 'string' ? j.jev.model : '' };
+    if (j.jev && typeof j.jev === 'object')
+      info.jev = {
+        warm: !!j.jev.warm,
+        model: typeof j.jev.model === 'string' ? j.jev.model : '',
+      };
     if (typeof j.openai === 'boolean') info.openai = j.openai;
     else info.openai = ai === 'on';
     return info;
   } catch {
-    return { ok: false, ai: 'off', ms: Math.round(performance.now() - t0), error: ctrl.signal.aborted ? 'timeout' : `not reachable at ${origin}` };
+    return {
+      ok: false,
+      ai: 'off',
+      ms: Math.round(performance.now() - t0),
+      error: ctrl.signal.aborted ? 'timeout' : `not reachable at ${origin}`,
+    };
   } finally {
     clearTimeout(timer);
   }
@@ -447,7 +655,9 @@ const settingZoom = new Map<number, Array<{ f: number; at: number }>>();
 const OUR_ZOOM_WINDOW_MS = 2500;
 function wasOurZoom(tabId: number, factor: number): boolean {
   const now = Date.now();
-  const list = (settingZoom.get(tabId) ?? []).filter((z) => now - z.at < OUR_ZOOM_WINDOW_MS);
+  const list = (settingZoom.get(tabId) ?? []).filter(
+    (z) => now - z.at < OUR_ZOOM_WINDOW_MS,
+  );
   settingZoom.set(tabId, list);
   return list.some((z) => Math.abs(z.f - factor) < 0.005);
 }
@@ -457,7 +667,8 @@ async function zoomState(tabId: number): Promise<void> {
   if (ourZoom.has(tabId)) return;
   try {
     const got = await chrome.storage.session.get(`zoom:${tabId}`);
-    const v = got[`zoom:${tabId}`] as { ours: number; person: boolean } | undefined;
+    const v = got[`zoom:${tabId}`] as
+      { ours: number; person: boolean } | undefined;
     if (v) {
       ourZoom.set(tabId, v.ours);
       if (v.person) personZoomed.add(tabId);
@@ -473,16 +684,27 @@ function saveZoomState(tabId: number): void {
     void chrome.storage.session.remove(`zoom:${tabId}`).catch(() => undefined);
     return;
   }
-  void chrome.storage.session.set({ [`zoom:${tabId}`]: { ours, person: personZoomed.has(tabId) } }).catch(() => undefined);
+  void chrome.storage.session
+    .set({ [`zoom:${tabId}`]: { ours, person: personZoomed.has(tabId) } })
+    .catch(() => undefined);
 }
 
 async function setZoom(tabId: number, factor: number): Promise<number> {
   const f = Math.min(5, Math.max(0.25, Math.round(factor * 100) / 100));
-  settingZoom.set(tabId, [...(settingZoom.get(tabId) ?? []).filter((z) => Date.now() - z.at < OUR_ZOOM_WINDOW_MS), { f, at: Date.now() }]);
+  settingZoom.set(tabId, [
+    ...(settingZoom.get(tabId) ?? []).filter(
+      (z) => Date.now() - z.at < OUR_ZOOM_WINDOW_MS,
+    ),
+    { f, at: Date.now() },
+  ]);
   try {
     // Switching scope fires a zoom change of its own: only when the tab is not per-tab yet (round 6: fewer changes).
     const zs = await chrome.tabs.getZoomSettings(tabId).catch(() => null);
-    if (!zs || zs.scope !== 'per-tab' || zs.mode !== 'automatic') await chrome.tabs.setZoomSettings(tabId, { mode: 'automatic', scope: 'per-tab' });
+    if (!zs || zs.scope !== 'per-tab' || zs.mode !== 'automatic')
+      await chrome.tabs.setZoomSettings(tabId, {
+        mode: 'automatic',
+        scope: 'per-tab',
+      });
   } catch {
     /* some pages (chrome://) refuse; setZoom below reports it */
   }
@@ -503,12 +725,15 @@ const beforeShots = new Map<number, string>();
 
 function bytesToBase64(bytes: Uint8Array): string {
   let s = '';
-  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  for (let i = 0; i < bytes.length; i += 0x8000)
+    s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
   return btoa(s);
 }
 
 async function capture(windowId: number): Promise<string> {
-  const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: 'png' });
+  const dataUrl = await chrome.tabs.captureVisibleTab(windowId, {
+    format: 'png',
+  });
   const blob = await (await fetch(dataUrl)).blob();
   const bmp = await createImageBitmap(blob);
   const long = Math.max(bmp.width, bmp.height);
@@ -535,49 +760,97 @@ async function capture(windowId: number): Promise<string> {
 
 function updateBadge(tabId: number, report: TabReport): void {
   const applied = report.ops.filter((o) => o.status === 'applied').length;
-  const text = report.phase === 'idle' || report.phase === 'error' ? '' : applied ? String(Math.min(applied, 99)) : '';
+  const text =
+    report.phase === 'idle' || report.phase === 'error'
+      ? ''
+      : applied
+        ? String(Math.min(applied, 99))
+        : '';
   void chrome.action.setBadgeText({ tabId, text }).catch(() => undefined);
-  void chrome.action.setBadgeBackgroundColor({ tabId, color: '#3A7D44' }).catch(() => undefined);
-  void chrome.action.setTitle({ tabId, title: applied ? `WebAble: ${applied} change${applied === 1 ? '' : 's'} on this page` : 'WebAble' }).catch(() => undefined);
+  void chrome.action
+    .setBadgeBackgroundColor({ tabId, color: '#3A7D44' })
+    .catch(() => undefined);
+  void chrome.action
+    .setTitle({
+      tabId,
+      title: applied
+        ? `WebAble: ${applied} change${applied === 1 ? '' : 's'} on this page`
+        : 'WebAble',
+    })
+    .catch(() => undefined);
 }
 
 /* ------------------------------------------------------------------ */
 /* Request routing                                                     */
 /* ------------------------------------------------------------------ */
 
-async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Promise<unknown> {
+async function handle(
+  req: ExtRequest,
+  sender: chrome.runtime.MessageSender,
+): Promise<unknown> {
   const tabId = sender.tab?.id;
   const needTab = (): number => {
-    if (tabId === undefined) throw new BgError('refused', 'This request needs a browser tab');
+    if (tabId === undefined)
+      throw new BgError('refused', 'This request needs a browser tab');
     return tabId;
   };
   switch (req.type) {
     case 'understand':
       // noCache: the page's first read in this session is a live Jev read (honest metrics); later views may be cached.
-      return post<PageUnderstanding>('/v1/understand', req.noCache ? { digest: req.digest, noCache: true } : { digest: req.digest }, 12000);
+      return post<PageUnderstanding>(
+        '/v1/understand',
+        req.noCache
+          ? { digest: req.digest, noCache: true }
+          : { digest: req.digest },
+        12000,
+      );
     case 'struggle':
-      return post<StruggleJudgment>('/v1/struggle', { signals: req.signals }, 6000);
+      return post<StruggleJudgment>(
+        '/v1/struggle',
+        { signals: req.signals },
+        6000,
+      );
     case 'redesign':
-      return post<RedesignResult>('/v1/redesign', { outline: stripOutlineData(req.outline), fit: req.fit, roles: req.roles }, 22000);
+      return post<RedesignResult>(
+        '/v1/redesign',
+        {
+          outline: stripOutlineData(req.outline),
+          fit: req.fit,
+          roles: req.roles,
+        },
+        22000,
+      );
     case 'visualVerify': {
       const t = needTab();
       const windowId = sender.tab?.windowId;
-      if (windowId === undefined || !sender.tab?.active) throw new BgError('refused', 'Screenshots need the tab to be in front');
+      if (windowId === undefined || !sender.tab?.active)
+        throw new BgError('refused', 'Screenshots need the tab to be in front');
       const shot = await capture(windowId);
       if (req.phase === 'before') {
         beforeShots.set(t, shot);
-        void chrome.storage.session.set({ [`vv:${t}`]: shot }).catch(() => undefined);
+        void chrome.storage.session
+          .set({ [`vv:${t}`]: shot })
+          .catch(() => undefined);
         return { ok: true };
       }
       let before = beforeShots.get(t);
       if (!before) {
-        const got = await chrome.storage.session.get(`vv:${t}`).catch(() => ({} as Record<string, unknown>));
+        const got = await chrome.storage.session
+          .get(`vv:${t}`)
+          .catch(() => ({}) as Record<string, unknown>);
         before = got[`vv:${t}`] as string | undefined;
       }
-      if (!before) throw new BgError('refused', 'No "before" screenshot for this tab');
+      if (!before)
+        throw new BgError('refused', 'No "before" screenshot for this tab');
       beforeShots.delete(t);
       void chrome.storage.session.remove(`vv:${t}`).catch(() => undefined);
-      const body: VisualVerifyRequest = { before, after: shot, controls: req.controls, help: req.help, mainLabel: req.mainLabel };
+      const body: VisualVerifyRequest = {
+        before,
+        after: shot,
+        controls: req.controls,
+        help: req.help,
+        mainLabel: req.mainLabel,
+      };
       return post<VisualVerdict>('/v1/verify-visual', body, 15000);
     }
     case 'setZoom':
@@ -588,10 +861,16 @@ async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Pr
       const t = needTab();
       await zoomState(t);
       const factor = await chrome.tabs.getZoom(t);
-      const info: ZoomInfo = { factor, ours: ourZoom.get(t) ?? null, personChanged: personZoomed.has(t) };
+      const info: ZoomInfo = {
+        factor,
+        ours: ourZoom.get(t) ?? null,
+        personChanged: personZoomed.has(t),
+      };
       // Round 4: the person's latest own zoom change in this tab (any, not only after WebAble's), for held zooms.
       const pz = personZoom.get(t);
-      return pz ? { ...info, personAt: pz.at, personFrom: pz.from, personTo: pz.to } : info;
+      return pz
+        ? { ...info, personAt: pz.at, personFrom: pz.from, personTo: pz.to }
+        : info;
     }
     case 'pageStart': {
       // A new document in this tab: per-tab zoom was reset by the navigation; forget what WebAble set.
@@ -614,16 +893,24 @@ async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Pr
     }
     case 'openFitting': {
       // The WebAble sheet's "Your settings" asks for the settings view ({ hash: 'settings' }).
-      const hash = (req as { hash?: unknown }).hash === 'settings' ? '#settings' : '';
-      await chrome.tabs.create({ url: chrome.runtime.getURL(`/fitting.html${hash}`) });
+      const hash =
+        (req as { hash?: unknown }).hash === 'settings' ? '#settings' : '';
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL(`/fitting.html${hash}`),
+      });
       return { ok: true };
     }
     case 'health':
       return health();
     case 'overlayClose':
       // Jev finds an overlay's own minimise/close button (never asked for consent notices).
-      if (req.overlay.kind_hint === 'consent') throw new BgError('refused', 'WebAble never closes consent notices');
-      return post<OverlayCloseResult>('/v1/overlay-close', { overlay: req.overlay, candidates: req.candidates.slice(0, 8) }, 8000);
+      if (req.overlay.kind_hint === 'consent')
+        throw new BgError('refused', 'WebAble never closes consent notices');
+      return post<OverlayCloseResult>(
+        '/v1/overlay-close',
+        { overlay: req.overlay, candidates: req.candidates.slice(0, 8) },
+        8000,
+      );
     case 'setFit':
       return setFit(req.fit);
     case 'setSettings':
@@ -639,37 +926,75 @@ async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Pr
       // Hostnames only. A record without a site gets the sending tab's.
       let site: string | null = null;
       try {
-        site = sender.tab?.url && /^https?:/.test(sender.tab.url) ? siteName(new URL(sender.tab.url).hostname) : null;
+        site =
+          sender.tab?.url && /^https?:/.test(sender.tab.url)
+            ? siteName(new URL(sender.tab.url).hostname)
+            : null;
       } catch {
         site = null;
       }
-      const items = (Array.isArray(req.items) ? req.items : []).slice(0, 40).map((x) => (x && typeof x === 'object' && !x.site && site ? { ...x, site } : x));
+      const items = (Array.isArray(req.items) ? req.items : [])
+        .slice(0, 40)
+        .map((x) =>
+          x && typeof x === 'object' && !x.site && site ? { ...x, site } : x,
+        );
       // The person's Undo or "no" changes what every open page should show; plain evidence waits for the next page.
-      const person = items.some((x) => ['undo', 'answer_no'].includes(String((x as { kind?: unknown } | null)?.kind)));
-      return withPassive((store) => addEvidence(store, items), { refit: person });
+      const person = items.some((x) =>
+        ['undo', 'answer_no'].includes(
+          String((x as { kind?: unknown } | null)?.kind),
+        ),
+      );
+      return withPassive((store) => addEvidence(store, items), {
+        refit: person,
+      });
     }
     case 'passiveFeedback': {
       const dim: FitDimension = req.dim;
       // "Not right" also keeps this need's offer away for a week, from the panel and the popup alike.
-      if (req.action === 'not_right') await snoozePassiveOffer(dim, NOT_RIGHT_SNOOZE_MS);
-      return withPassive(async (store) => {
-        const current = (await passiveState(store)).beliefs[dim] ?? null;
-        return applyFeedback(store, current, dim, req.action);
-      }, { refit: true });
+      if (req.action === 'not_right')
+        await snoozePassiveOffer(dim, NOT_RIGHT_SNOOZE_MS);
+      return withPassive(
+        async (store) => {
+          const current = (await passiveState(store)).beliefs[dim] ?? null;
+          return applyFeedback(store, current, dim, req.action);
+        },
+        { refit: true },
+      );
     }
     case 'attribute':
       // Jev attribution (a weight for a held zoom or a page's missed clicks). Structure-only evidence; fails closed.
-      return post<AttributionAnswer>('/v1/attribute', { question: req.question }, 6000);
+      return post<AttributionAnswer>(
+        '/v1/attribute',
+        { question: req.question },
+        6000,
+      );
     case 'meaning':
       // Round 7 meaning check: structure-only summaries of the original page and the Calm plan.
       return post<unknown>('/v1/meaning', { req: req.req }, 6000);
     case 'readerImport': {
       // The answer is sent once, broken down on the server and not kept; only the points are saved, on this laptop.
-      const text = String(req.req?.text ?? '').trim().slice(0, AI_ANSWER_MAX_CHARS);
-      if (text.length < AI_ANSWER_MIN_CHARS) throw new BgError('refused', 'That answer is too short to learn from. Paste the whole answer.');
-      const source = typeof req.req.source === 'string' && req.req.source ? req.req.source : undefined;
-      const reader = await post<ReaderProfile>('/v1/reader', { req: source ? { text, source } : { text } }, 45000);
-      if (!isReader(reader)) throw new BgError('bad_response', 'The WebAble server sent back something unexpected');
+      const text = String(req.req?.text ?? '')
+        .trim()
+        .slice(0, AI_ANSWER_MAX_CHARS);
+      if (text.length < AI_ANSWER_MIN_CHARS)
+        throw new BgError(
+          'refused',
+          'That answer is too short to learn from. Paste the whole answer.',
+        );
+      const source =
+        typeof req.req.source === 'string' && req.req.source
+          ? req.req.source
+          : undefined;
+      const reader = await post<ReaderProfile>(
+        '/v1/reader',
+        { req: source ? { text, source } : { text } },
+        45000,
+      );
+      if (!isReader(reader))
+        throw new BgError(
+          'bad_response',
+          'The WebAble server sent back something unexpected',
+        );
       return setReader(reader);
     }
     case 'getReader':
@@ -679,29 +1004,55 @@ async function handle(req: ExtRequest, sender: chrome.runtime.MessageSender): Pr
     case 'rewordScore': {
       // The saved reader goes with every call (points the person switched off never leave the laptop).
       const reader = await readerToSend();
-      const paras = (Array.isArray(req.req.paras) ? req.req.paras : []).slice(0, 40);
-      return post<RewordScoreResult>('/v1/reword/score', { req: { ...req.req, paras, reader } }, 10000);
+      const paras = (Array.isArray(req.req.paras) ? req.req.paras : []).slice(
+        0,
+        40,
+      );
+      return post<RewordScoreResult>(
+        '/v1/reword/score',
+        { req: { ...req.req, paras, reader } },
+        10000,
+      );
     }
     case 'rewordWrite': {
       const reader = await readerToSend();
-      const items = (Array.isArray(req.req.items) ? req.req.items : []).slice(0, 8);
-      return post<RewordWriteResult>('/v1/reword/write', { req: { ...req.req, items, reader } }, 25000);
+      const items = (Array.isArray(req.req.items) ? req.req.items : []).slice(
+        0,
+        8,
+      );
+      return post<RewordWriteResult>(
+        '/v1/reword/write',
+        { req: { ...req.req, items, reader } },
+        25000,
+      );
     }
     case 'compose': {
       // Round 10: groups of the WebAble page laid out for the person (at most 4 a call).
       const reader = await readerOrNull();
-      const groups = (Array.isArray(req.req.groups) ? req.req.groups : []).slice(0, 4);
-      return post<ComposeResponse>('/v1/compose', { req: { ...req.req, groups, reader } }, 20000);
+      const groups = (
+        Array.isArray(req.req.groups) ? req.req.groups : []
+      ).slice(0, 4);
+      return post<ComposeResponse>(
+        '/v1/compose',
+        { req: { ...req.req, groups, reader } },
+        20000,
+      );
     }
     default: {
       const never: never = req;
-      throw new BgError('refused', `Unknown request ${(never as { type?: string }).type ?? ''}`);
+      throw new BgError(
+        'refused',
+        `Unknown request ${(never as { type?: string }).type ?? ''}`,
+      );
     }
   }
 }
 
 async function activeTabId(): Promise<number | undefined> {
-  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    lastFocusedWindow: true,
+  });
   return tab?.id;
 }
 
@@ -727,7 +1078,8 @@ const hooks: WebableHooks = {
   async setFit(fit) {
     if (typeof fit === 'string') {
       const demo = (DEMO_FITS as Record<string, FitProfile>)[fit];
-      if (!demo) throw new Error(`Unknown demo fit "${fit}" (rosa, typical, reader)`);
+      if (!demo)
+        throw new Error(`Unknown demo fit "${fit}" (rosa, typical, reader)`);
       return setFit({ ...demo, createdAt: new Date().toISOString() });
     }
     return setFit(fit);
@@ -738,7 +1090,11 @@ const hooks: WebableHooks = {
       // A URL (or part of one): the most recent report whose url contains it.
       const all = await chrome.storage.session.get(null);
       for (const [k, v] of Object.entries(all)) {
-        if (k.startsWith('report:') && (v as TabReport | undefined)?.url?.includes(target)) return v as TabReport;
+        if (
+          k.startsWith('report:') &&
+          (v as TabReport | undefined)?.url?.includes(target)
+        )
+          return v as TabReport;
       }
       return null;
     }
@@ -759,10 +1115,31 @@ export default defineBackground(() => {
   (globalThis as { __webable?: WebableHooks }).__webable = hooks;
 
   // Content scripts may read and write session storage (the Calm view cache).
-  void chrome.storage.session.setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' }).catch(() => undefined);
+  void chrome.storage.session
+    .setAccessLevel({ accessLevel: 'TRUSTED_AND_UNTRUSTED_CONTEXTS' })
+    .catch(() => undefined);
 
   // Round 8c: the onboarding's real-website tasks (messages with a `siteTask` field; its own listener).
   registerSiteTasks();
+
+  // The website: connect to the person's account, pull the fit Tune saved, list and pause sites.
+  registerAccountBridge({
+    getFit,
+    setFit,
+    getSettings,
+    setSettings,
+    async openFitting() {
+      const url = chrome.runtime.getURL('/fitting.html');
+      const [open] = await chrome.tabs.query({ url: `${url}*` });
+      if (open?.id !== undefined) {
+        await chrome.tabs.update(open.id, { active: true });
+        if (open.windowId !== undefined)
+          await chrome.windows.update(open.windowId, { focused: true });
+        return;
+      }
+      await chrome.tabs.create({ url });
+    },
+  });
 
   chrome.runtime.onMessage.addListener((msg: unknown, sender, sendResponse) => {
     if (!isEnvelope(msg)) return false;
@@ -776,7 +1153,8 @@ export default defineBackground(() => {
       return true;
     }
     handle(msg.req, sender).then(
-      (data) => sendResponse({ ok: true, data: data ?? null } satisfies BusReply),
+      (data) =>
+        sendResponse({ ok: true, data: data ?? null } satisfies BusReply),
       (err: unknown) => sendResponse(toReply(err)),
     );
     return true; // async reply
@@ -804,8 +1182,13 @@ export default defineBackground(() => {
       const ours = ourZoom.get(tabId);
       if (ours !== undefined && Math.abs(ours - newZoomFactor) < 0.005) return;
       // The person's own change (Ctrl/Cmd +/−, pinch, Chrome's menu). Round 4: noted for held-zoom evidence.
-      personZoom.set(tabId, { at, from: info.oldZoomFactor, to: newZoomFactor });
-      if (info.zoomSettings?.scope === 'per-origin' && ours === undefined) void notePersonSiteZoom(tabId, newZoomFactor);
+      personZoom.set(tabId, {
+        at,
+        from: info.oldZoomFactor,
+        to: newZoomFactor,
+      });
+      if (info.zoomSettings?.scope === 'per-origin' && ours === undefined)
+        void notePersonSiteZoom(tabId, newZoomFactor);
       if (ours === undefined) return;
       // After WebAble set it: the person's own zoom wins from now on in this tab.
       personZoomed.add(tabId);
@@ -826,7 +1209,9 @@ export default defineBackground(() => {
     personZoomed.delete(tabId);
     beforeShots.delete(tabId);
     loadingAt.delete(tabId);
-    void chrome.storage.session.remove([`report:${tabId}`, `vv:${tabId}`, `zoom:${tabId}`]).catch(() => undefined);
+    void chrome.storage.session
+      .remove([`report:${tabId}`, `vv:${tabId}`, `zoom:${tabId}`])
+      .catch(() => undefined);
   });
 
   // Round 4: Chrome's font sizes changed: read them again (pages fit again if the effective fit changes).

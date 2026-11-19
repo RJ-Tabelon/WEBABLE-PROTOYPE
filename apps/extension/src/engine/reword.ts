@@ -13,10 +13,24 @@
 // Off on pages with password or payment fields, on mail, chat and banking sites, and on pages not in English.
 
 import type {
-  BgRequest, LedgerEntry, ReaderProfile, RewordKind, RewordOut, RewordPage, RewordPara, RewordScore, RewordScoreResult,
-  RewordWriteResult, RewordWritten,
-} from '@webable/core';
-import type { EngineState, RewordInline, RewordItem, RewordView } from '../contracts';
+  BgRequest,
+  LedgerEntry,
+  ReaderProfile,
+  RewordKind,
+  RewordOut,
+  RewordPage,
+  RewordPara,
+  RewordScore,
+  RewordScoreResult,
+  RewordWriteResult,
+  RewordWritten,
+} from '@webable/engine';
+import type {
+  EngineState,
+  RewordInline,
+  RewordItem,
+  RewordView,
+} from '../contracts';
 import { plainError } from './bus';
 import { isExcludedHost } from './hosts';
 
@@ -40,12 +54,46 @@ const MAX_CHARS = 1800;
 const MAX_LINK_SHARE = 0.5;
 
 /** What a paragraph may hold: text and inline elements only (no controls, pictures or frames). */
-const INLINE = new Set(['A', 'B', 'STRONG', 'EM', 'I', 'SPAN', 'SUP', 'SUB', 'ABBR', 'CODE', 'SMALL', 'BR', 'MARK', 'TIME', 'CITE', 'Q', 'U', 'S', 'FONT']);
+const INLINE = new Set([
+  'A',
+  'B',
+  'STRONG',
+  'EM',
+  'I',
+  'SPAN',
+  'SUP',
+  'SUB',
+  'ABBR',
+  'CODE',
+  'SMALL',
+  'BR',
+  'MARK',
+  'TIME',
+  'CITE',
+  'Q',
+  'U',
+  'S',
+  'FONT',
+]);
 /** Places that are not reading text, and WebAble's own UI (and paragraphs already rewritten). */
 const SKIP_INSIDE = [
-  'nav', 'header', 'footer', 'aside', 'form', '[role="navigation"]', '[role="banner"]', '[role="contentinfo"]',
-  '[role="complementary"]', '[contenteditable]:not([contenteditable="false"])', 'dialog', '[role="dialog"]',
-  '[role="alertdialog"]', '[aria-modal="true"]', 'a[href]', 'webable-ui', '[data-wa-rw]',
+  'nav',
+  'header',
+  'footer',
+  'aside',
+  'form',
+  '[role="navigation"]',
+  '[role="banner"]',
+  '[role="contentinfo"]',
+  '[role="complementary"]',
+  '[contenteditable]:not([contenteditable="false"])',
+  'dialog',
+  '[role="dialog"]',
+  '[role="alertdialog"]',
+  '[aria-modal="true"]',
+  'a[href]',
+  'webable-ui',
+  '[data-wa-rw]',
 ].join(', ');
 /** Where a paragraph hidden by a closed section (an accordion, a tab) still counts: the page's main content. */
 const MAIN_CONTENT = 'main, [role="main"], article';
@@ -85,14 +133,26 @@ export function paraOf(c: Candidate): RewordPara {
     id: c.id,
     text: c.text,
     links: c.links.length,
-    linkTexts: c.links.map((a) => (a.textContent ?? '').replace(/[⟦⟧]/g, '').replace(/\s+/g, ' ').trim().slice(0, 200)),
+    linkTexts: c.links.map((a) =>
+      (a.textContent ?? '')
+        .replace(/[⟦⟧]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 200),
+    ),
   };
 }
 
-interface Serialized { text: string; plain: string; links: HTMLAnchorElement[]; linkChars: number }
+interface Serialized {
+  text: string;
+  plain: string;
+  links: HTMLAnchorElement[];
+  linkChars: number;
+}
 
 function inlineOnly(e: Element): boolean {
-  for (const c of Array.from(e.getElementsByTagName('*'))) if (!INLINE.has(c.tagName.toUpperCase())) return false;
+  for (const c of Array.from(e.getElementsByTagName('*')))
+    if (!INLINE.has(c.tagName.toUpperCase())) return false;
   return true;
 }
 
@@ -137,7 +197,9 @@ export function serialize(root: Element): Serialized | null {
  */
 function defaultVisible(el: Element): boolean {
   const he = el as HTMLElement & { checkVisibility?: (o?: object) => boolean };
-  const shown = typeof he.checkVisibility !== 'function' || he.checkVisibility({ visibilityProperty: true });
+  const shown =
+    typeof he.checkVisibility !== 'function' ||
+    he.checkVisibility({ visibilityProperty: true });
   const r = el.getBoundingClientRect();
   if (shown && r.width >= 40 && r.height >= 8) return true;
   return behindClosedSection(el);
@@ -159,14 +221,25 @@ function behindClosedSection(el: Element): boolean {
 /** Laid out where the person can see it (not behind a closed section). */
 function laidOut(el: Element): boolean {
   const he = el as HTMLElement & { checkVisibility?: (o?: object) => boolean };
-  if (typeof he.checkVisibility === 'function' && !he.checkVisibility({ visibilityProperty: true, contentVisibilityAuto: true })) return false;
+  if (
+    typeof he.checkVisibility === 'function' &&
+    !he.checkVisibility({
+      visibilityProperty: true,
+      contentVisibilityAuto: true,
+    })
+  )
+    return false;
   const r = el.getBoundingClientRect();
   return r.width > 1 && r.height > 1;
 }
 
 /** Inside something fixed or sticky (a consent bar, a pinned panel): not reading text. */
 function floating(el: Element): boolean {
-  for (let e: Element | null = el; e && e !== document.body; e = e.parentElement) {
+  for (
+    let e: Element | null = el;
+    e && e !== document.body;
+    e = e.parentElement
+  ) {
     try {
       const pos = getComputedStyle(e).position;
       if (pos === 'fixed' || pos === 'sticky') return true;
@@ -180,27 +253,46 @@ function floating(el: Element): boolean {
 /** The page's reading paragraphs, in document order, at most 40. English pages only. */
 export function collectParagraphs(o: CollectOptions = {}): Candidate[] {
   const doc = o.doc ?? document;
-  const lang = (doc.documentElement.getAttribute('lang') ?? '').trim().toLowerCase();
+  const lang = (doc.documentElement.getAttribute('lang') ?? '')
+    .trim()
+    .toLowerCase();
   if (lang && !lang.startsWith('en')) return [];
   const visible = o.visible ?? defaultVisible;
   const out: Candidate[] = [];
   let k = o.firstId ?? 1;
-  const els = doc.body ? doc.body.querySelectorAll<HTMLElement>('p, div, section') : [];
+  const els = doc.body
+    ? doc.body.querySelectorAll<HTMLElement>('p, div, section')
+    : [];
   for (const el of Array.from(els)) {
     if (out.length >= MAX_PARAS) break;
     const isP = el.tagName.toUpperCase() === 'P';
     // Cheap tests first: most divs hold blocks.
-    if (!isP && Array.from(el.children).some((c) => !INLINE.has(c.tagName.toUpperCase()))) continue;
+    if (
+      !isP &&
+      Array.from(el.children).some((c) => !INLINE.has(c.tagName.toUpperCase()))
+    )
+      continue;
     if ((el.textContent ?? '').length < MIN_CHARS) continue;
     const s = serialize(el);
     if (!s) continue;
     const words = s.plain ? s.plain.split(' ').length : 0;
-    if (words < (isP ? MIN_WORDS : LEAF_MIN_WORDS) || s.plain.length < MIN_CHARS || s.text.length > MAX_CHARS) continue;
+    if (
+      words < (isP ? MIN_WORDS : LEAF_MIN_WORDS) ||
+      s.plain.length < MIN_CHARS ||
+      s.text.length > MAX_CHARS
+    )
+      continue;
     if (s.linkChars / Math.max(1, s.plain.length) >= MAX_LINK_SHARE) continue;
     if (el.closest(SKIP_INSIDE)) continue;
     if (o.isOurs?.(el)) continue;
     if (!visible(el) || floating(el)) continue;
-    out.push({ id: `w${k++}`, el, text: s.text, plain: s.plain, links: s.links });
+    out.push({
+      id: `w${k++}`,
+      el,
+      text: s.text,
+      plain: s.plain,
+      links: s.links,
+    });
   }
   return out;
 }
@@ -210,7 +302,12 @@ export function collectParagraphs(o: CollectOptions = {}): Candidate[] {
 /* ------------------------------------------------------------------ */
 
 /** Whether a written paragraph may change now (never what the person is reading after they started). */
-export function canSwapNow(o: { sinceStartMs: number; interacted: boolean; onScreen: boolean; calmOpen: boolean }): boolean {
+export function canSwapNow(o: {
+  sinceStartMs: number;
+  interacted: boolean;
+  onScreen: boolean;
+  calmOpen: boolean;
+}): boolean {
   if (!o.interacted && o.sinceStartMs <= APPLY_ANYWAY_MS) return true;
   // The simplified page covers this one and WebAble can't tell what is on its screen: wait until it closes.
   if (o.calmOpen) return false;
@@ -218,16 +315,22 @@ export function canSwapNow(o: { sinceStartMs: number; interacted: boolean; onScr
 }
 
 /** Picks in the order they are written: first-screen ones nearest the top first, then document order; at most `cap`. */
-export function orderPicks<T extends { idx: number; top: number; bottom: number }>(items: T[], vh: number, cap = MAX_PICKS): T[] {
+export function orderPicks<
+  T extends { idx: number; top: number; bottom: number },
+>(items: T[], vh: number, cap = MAX_PICKS): T[] {
   const first = (x: T) => x.bottom > 0 && x.top < vh;
-  const a = items.filter(first).sort((x, y) => Math.max(0, x.top) - Math.max(0, y.top) || x.idx - y.idx);
+  const a = items
+    .filter(first)
+    .sort((x, y) => Math.max(0, x.top) - Math.max(0, y.top) || x.idx - y.idx);
   const b = items.filter((x) => !first(x)).sort((x, y) => x.idx - y.idx);
   return [...a, ...b].slice(0, cap);
 }
 
 /** Numbers as written (thousands separators and trailing .0 ignored). */
 export function numbersIn(s: string): string[] {
-  return (s.match(/\d[\d,.]*\d|\d/g) ?? []).map((x) => x.replace(/,/g, '').replace(/\.0+$/, ''));
+  return (s.match(/\d[\d,.]*\d|\d/g) ?? []).map((x) =>
+    x.replace(/,/g, '').replace(/\.0+$/, ''),
+  );
 }
 
 /** Text and ⟦n⟧ markers, in order. */
@@ -248,18 +351,30 @@ export function pieces(s: string): Array<string | number> {
  * Code's own check of a rewrite before it touches the page (the server's code and Jev checked it already): every link
  * marker exactly once and no others, some words, and every number of the original still there. Null when it passes.
  */
-export function checkOut(out: RewordOut | null, links: number, original: string): string | null {
-  if (!out || typeof out.lead !== 'string' || !Array.isArray(out.items) || out.items.some((x) => typeof x !== 'string')) return 'empty';
+export function checkOut(
+  out: RewordOut | null,
+  links: number,
+  original: string,
+): string | null {
+  if (
+    !out ||
+    typeof out.lead !== 'string' ||
+    !Array.isArray(out.items) ||
+    out.items.some((x) => typeof x !== 'string')
+  )
+    return 'empty';
   const all = [out.lead, ...out.items].join(' ');
   const seen = new Map<number, number>();
-  for (const m of all.matchAll(MARK_RE)) seen.set(Number(m[1]), (seen.get(Number(m[1])) ?? 0) + 1);
+  for (const m of all.matchAll(MARK_RE))
+    seen.set(Number(m[1]), (seen.get(Number(m[1])) ?? 0) + 1);
   for (let n = 1; n <= links; n++) if (seen.get(n) !== 1) return 'links';
   for (const n of seen.keys()) if (n < 1 || n > links) return 'links';
   const words = all.replace(MARK_RE, ' ');
   if (/[⟦⟧]/.test(words)) return 'links';
   if (!squash(words)) return 'empty';
   const has = new Set(numbersIn(words));
-  for (const n of numbersIn(original.replace(MARK_RE, ' '))) if (!has.has(n)) return 'numbers';
+  for (const n of numbersIn(original.replace(MARK_RE, ' ')))
+    if (!has.has(n)) return 'numbers';
   return null;
 }
 
@@ -267,14 +382,24 @@ export function checkOut(out: RewordOut | null, links: number, original: string)
 /* Building the new words, and the mark                                */
 /* ------------------------------------------------------------------ */
 
-interface Built { nodes: Node[]; lead: RewordInline[]; items: RewordInline[][]; ordered: boolean }
+interface Built {
+  nodes: Node[];
+  lead: RewordInline[];
+  items: RewordInline[][];
+  ordered: boolean;
+}
 
 function important(el: HTMLElement, styles: Record<string, string>): void {
-  for (const [k, v] of Object.entries(styles)) el.style.setProperty(k, v, 'important');
+  for (const [k, v] of Object.entries(styles))
+    el.style.setProperty(k, v, 'important');
 }
 
 /** New nodes for a rewrite: text nodes, and clones of the page's own anchors at each ⟦n⟧; a list for 'list'. */
-export function buildNodes(doc: Document, out: RewordOut, anchors: HTMLAnchorElement[]): Built {
+export function buildNodes(
+  doc: Document,
+  out: RewordOut,
+  anchors: HTMLAnchorElement[],
+): Built {
   const clones = anchors.map((a) => a.cloneNode(true) as HTMLAnchorElement);
   const put = (s: string, sink: Node[]): RewordInline[] => {
     const inl: RewordInline[] = [];
@@ -286,7 +411,12 @@ export function buildNodes(doc: Document, out: RewordOut, anchors: HTMLAnchorEle
         const a = clones[p - 1];
         if (!a) continue;
         sink.push(a);
-        inl.push({ t: 'link', el: a, text: squash(a.textContent ?? ''), href: a.getAttribute('href') });
+        inl.push({
+          t: 'link',
+          el: a,
+          text: squash(a.textContent ?? ''),
+          href: a.getAttribute('href'),
+        });
       }
     }
     return inl;
@@ -301,12 +431,22 @@ export function buildNodes(doc: Document, out: RewordOut, anchors: HTMLAnchorEle
     list.setAttribute('data-wa-rw-list', '');
     // Inline and important, so bullets and numbers show even on sites that reset lists.
     important(list, {
-      display: 'block', 'list-style-type': out.ordered ? 'decimal' : 'disc', 'list-style-position': 'outside',
-      'list-style-image': 'none', 'padding-left': '1.4em', 'margin-top': '.4em', 'margin-bottom': '.4em', 'margin-left': '0',
+      display: 'block',
+      'list-style-type': out.ordered ? 'decimal' : 'disc',
+      'list-style-position': 'outside',
+      'list-style-image': 'none',
+      'padding-left': '1.4em',
+      'margin-top': '.4em',
+      'margin-bottom': '.4em',
+      'margin-left': '0',
     });
     for (const t of texts) {
       const li = doc.createElement('li');
-      important(li, { display: 'list-item', 'margin-top': '.2em', 'margin-bottom': '.2em' });
+      important(li, {
+        display: 'list-item',
+        'margin-top': '.2em',
+        'margin-bottom': '.2em',
+      });
       const sink: Node[] = [];
       items.push(put(t, sink));
       li.append(...sink);
@@ -429,7 +569,13 @@ export interface RewordRunner {
 }
 
 export interface LayoutBefore {
-  clips: Array<{ el: Element; x: boolean; y: boolean; overX: boolean; overY: boolean }>;
+  clips: Array<{
+    el: Element;
+    x: boolean;
+    y: boolean;
+    overX: boolean;
+    overY: boolean;
+  }>;
   overX: boolean;
   overY: boolean;
 }
@@ -439,13 +585,28 @@ const SLACK = 2;
 function layoutBefore(el: HTMLElement): LayoutBefore {
   const clips: LayoutBefore['clips'] = [];
   let e: Element | null = el;
-  for (let i = 0; e && i < 8 && e !== document.body && e !== document.documentElement; i++, e = e.parentElement) {
+  for (
+    let i = 0;
+    e && i < 8 && e !== document.body && e !== document.documentElement;
+    i++, e = e.parentElement
+  ) {
     const cs = getComputedStyle(e);
     const x = /hidden|clip/.test(cs.overflowX);
     const y = /hidden|clip/.test(cs.overflowY);
-    if (x || y) clips.push({ el: e, x, y, overX: e.scrollWidth > e.clientWidth + SLACK, overY: e.scrollHeight > e.clientHeight + SLACK });
+    if (x || y)
+      clips.push({
+        el: e,
+        x,
+        y,
+        overX: e.scrollWidth > e.clientWidth + SLACK,
+        overY: e.scrollHeight > e.clientHeight + SLACK,
+      });
   }
-  return { clips, overX: el.scrollWidth > el.clientWidth + SLACK, overY: el.scrollHeight > el.clientHeight + SLACK };
+  return {
+    clips,
+    overX: el.scrollWidth > el.clientWidth + SLACK,
+    overY: el.scrollHeight > el.clientHeight + SLACK,
+  };
 }
 
 /** After a swap: no clipping box newly overflows or cuts the paragraph off, and the paragraph doesn't spill out of its box. */
@@ -455,8 +616,10 @@ function defaultLayoutOk(el: HTMLElement, before: LayoutBefore): boolean {
   const r = el.getBoundingClientRect();
   for (const c of before.clips) {
     if (!c.el.isConnected) continue;
-    if (c.x && !c.overX && c.el.scrollWidth > c.el.clientWidth + SLACK) return false;
-    if (c.y && !c.overY && c.el.scrollHeight > c.el.clientHeight + SLACK) return false;
+    if (c.x && !c.overX && c.el.scrollWidth > c.el.clientWidth + SLACK)
+      return false;
+    if (c.y && !c.overY && c.el.scrollHeight > c.el.clientHeight + SLACK)
+      return false;
     if (c.el === el) continue;
     const b = c.el.getBoundingClientRect();
     if (c.y && r.bottom > b.bottom + SLACK) return false;
@@ -465,7 +628,13 @@ function defaultLayoutOk(el: HTMLElement, before: LayoutBefore): boolean {
   return true;
 }
 
-const ZERO_HOW: Record<RewordKind | 'keep', number> = { keep: 1, plain: 0, list: 0, shorter: 0, point_first: 0 };
+const ZERO_HOW: Record<RewordKind | 'keep', number> = {
+  keep: 1,
+  plain: 0,
+  list: 0,
+  shorter: 0,
+  point_first: 0,
+};
 
 function snippetOf(plain: string): string {
   const words = plain.split(' ');
@@ -473,11 +642,19 @@ function snippetOf(plain: string): string {
 }
 
 function isScoreResult(x: unknown): x is RewordScoreResult {
-  return !!x && typeof x === 'object' && Array.isArray((x as RewordScoreResult).scores);
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    Array.isArray((x as RewordScoreResult).scores)
+  );
 }
 
 function isWriteResult(x: unknown): x is RewordWriteResult {
-  return !!x && typeof x === 'object' && Array.isArray((x as RewordWriteResult).results);
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    Array.isArray((x as RewordWriteResult).results)
+  );
 }
 
 export function createReword(host: RewordHost): RewordRunner {
@@ -503,16 +680,30 @@ export function createReword(host: RewordHost): RewordRunner {
 
   const publish = () => {
     version++;
-    const applied = [...entries.values()].filter((e) => e.state === 'rewritten' || e.state === 'original');
+    const applied = [...entries.values()].filter(
+      (e) => e.state === 'rewritten' || e.state === 'original',
+    );
     host.publish({
       status,
       source,
-      items: order.map((id) => entries.get(id)).filter((e): e is Entry => !!e).map((e) => {
-        const item: RewordItem = { id: e.id, need: e.need, how: e.how, pick: e.pick, state: e.state, snippet: e.snippet };
-        if (e.reason) item.reason = e.reason;
-        return item;
-      }),
-      showingOriginal: pageOriginalOn || (applied.length > 0 && applied.every((e) => e.showing === 'original')),
+      items: order
+        .map((id) => entries.get(id))
+        .filter((e): e is Entry => !!e)
+        .map((e) => {
+          const item: RewordItem = {
+            id: e.id,
+            need: e.need,
+            how: e.how,
+            pick: e.pick,
+            state: e.state,
+            snippet: e.snippet,
+          };
+          if (e.reason) item.reason = e.reason;
+          return item;
+        }),
+      showingOriginal:
+        pageOriginalOn ||
+        (applied.length > 0 && applied.every((e) => e.showing === 'original')),
       version,
     });
   };
@@ -524,14 +715,21 @@ export function createReword(host: RewordHost): RewordRunner {
   const listen = () => {
     if (listening) return;
     listening = true;
-    for (const t of INTERACT) window.addEventListener(t, onInteract, { capture: true, passive: true });
+    for (const t of INTERACT)
+      window.addEventListener(t, onInteract, { capture: true, passive: true });
   };
 
   const onScreen = (el: Element): boolean => {
     const r = el.getBoundingClientRect();
     const vh = document.documentElement.clientHeight || innerHeight;
     const vw = document.documentElement.clientWidth || innerWidth;
-    return r.bottom > 0 && r.top < vh && r.right > 0 && r.left < vw && (r.width > 0 || r.height > 0);
+    return (
+      r.bottom > 0 &&
+      r.top < vh &&
+      r.right > 0 &&
+      r.left < vw &&
+      (r.width > 0 || r.height > 0)
+    );
   };
 
   /* ---------------- the DOM side ---------------- */
@@ -599,7 +797,10 @@ export function createReword(host: RewordHost): RewordRunner {
     // Keep the mark visible on paragraphs at the window's left edge, or that clip their own overflow.
     // Behind a closed section (an accordion) the paragraph has no real layout to read or check.
     const shown = laidOut(el);
-    e.edge = shown && (el.getBoundingClientRect().left < 18 || (!!cs && /hidden|clip/.test(cs.overflowX)));
+    e.edge =
+      shown &&
+      (el.getBoundingClientRect().left < 18 ||
+        (!!cs && /hidden|clip/.test(cs.overflowX)));
     const checkable = shown || !!host.layoutOk;
     const before = layoutBefore(el);
     attach(e, 'new');
@@ -622,7 +823,10 @@ export function createReword(host: RewordHost): RewordRunner {
     }
     if (fade && !host.reducedMotion() && typeof el.animate === 'function') {
       try {
-        el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: FADE_MS, easing: 'cubic-bezier(.2,.8,.2,1)' });
+        el.animate([{ opacity: 0 }, { opacity: 1 }], {
+          duration: FADE_MS,
+          easing: 'cubic-bezier(.2,.8,.2,1)',
+        });
       } catch {
         /* no fade */
       }
@@ -657,7 +861,14 @@ export function createReword(host: RewordHost): RewordRunner {
     }
     const el = e.cand.el;
     const vis = onScreen(el);
-    if (canSwapNow({ sinceStartMs: now() - startedAt, interacted, onScreen: vis, calmOpen: host.calmOpen() })) {
+    if (
+      canSwapNow({
+        sinceStartMs: now() - startedAt,
+        interacted,
+        onScreen: vis,
+        calmOpen: host.calmOpen(),
+      })
+    ) {
       swap(e, vis && !host.calmOpen());
       return;
     }
@@ -667,13 +878,26 @@ export function createReword(host: RewordHost): RewordRunner {
 
   /* ---------------- the run ---------------- */
 
-  const writeBatch = async (my: number, page: RewordPage, batch: Entry[]): Promise<'ok' | 'down'> => {
+  const writeBatch = async (
+    my: number,
+    page: RewordPage,
+    batch: Entry[],
+  ): Promise<'ok' | 'down'> => {
     let res: RewordWriteResult;
     try {
-      const got = await host.ask<unknown>({
-        type: 'rewordWrite',
-        req: { page, items: batch.map((e) => ({ ...paraOf(e.cand), kind: e.kind as RewordKind })) },
-      }, WRITE_TIMEOUT_MS);
+      const got = await host.ask<unknown>(
+        {
+          type: 'rewordWrite',
+          req: {
+            page,
+            items: batch.map((e) => ({
+              ...paraOf(e.cand),
+              kind: e.kind as RewordKind,
+            })),
+          },
+        },
+        WRITE_TIMEOUT_MS,
+      );
       if (!isWriteResult(got)) throw new Error('Unexpected answer');
       res = got;
     } catch {
@@ -683,7 +907,9 @@ export function createReword(host: RewordHost): RewordRunner {
       return 'down';
     }
     if (my !== run) return 'ok';
-    const got = new Map<string, RewordWritten>(res.results.map((w) => [w.id, w] as const));
+    const got = new Map<string, RewordWritten>(
+      res.results.map((w) => [w.id, w] as const),
+    );
     for (const e of batch) {
       const w = got.get(e.id);
       if (!w) fail(e, 'llm_unavailable');
@@ -722,18 +948,29 @@ export function createReword(host: RewordHost): RewordRunner {
     }
     let reader: ReaderProfile | null = null;
     try {
-      reader = await host.ask<ReaderProfile | null>({ type: 'getReader' }, 3000);
+      reader = await host.ask<ReaderProfile | null>(
+        { type: 'getReader' },
+        3000,
+      );
     } catch {
       reader = null;
     }
     if (my !== run) return;
-    if (!reader || !Array.isArray(reader.points) || !reader.points.some((p) => p.on)) {
+    if (
+      !reader ||
+      !Array.isArray(reader.points) ||
+      !reader.points.some((p) => p.on)
+    ) {
       status = 'off';
       publish();
       return;
     }
     source = reader.source || 'your AI';
-    const cands = collectParagraphs({ visible: host.visible, isOurs: host.isOurs, firstId: nextK });
+    const cands = collectParagraphs({
+      visible: host.visible,
+      isOurs: host.isOurs,
+      firstId: nextK,
+    });
     nextK += cands.length;
     if (cands.length < 2) {
       status = 'off';
@@ -742,9 +979,24 @@ export function createReword(host: RewordHost): RewordRunner {
     }
     const t0 = now();
     const fresh: Entry[] = cands.map((c, idx) => ({
-      id: c.id, need: 0, how: { ...ZERO_HOW }, pick: null, state: 'kept', snippet: snippetOf(c.plain),
-      cand: c, idx, kind: null, out: null, showing: 'new', orig: null, built: null, mark: null,
-      attached: false, pending: false, rel: false, edge: false,
+      id: c.id,
+      need: 0,
+      how: { ...ZERO_HOW },
+      pick: null,
+      state: 'kept',
+      snippet: snippetOf(c.plain),
+      cand: c,
+      idx,
+      kind: null,
+      out: null,
+      showing: 'new',
+      orig: null,
+      built: null,
+      mark: null,
+      attached: false,
+      pending: false,
+      rel: false,
+      edge: false,
     }));
     for (const e of fresh) {
       entries.set(e.id, e);
@@ -754,18 +1006,31 @@ export function createReword(host: RewordHost): RewordRunner {
     status = 'scoring';
     publish();
 
-    let page: RewordPage = { title: document.title.slice(0, 200), host: host0, purpose: host.purpose() };
+    let page: RewordPage = {
+      title: document.title.slice(0, 200),
+      host: host0,
+      purpose: host.purpose(),
+    };
     let scores: RewordScore[];
     try {
       const paras: RewordPara[] = cands.map(paraOf);
-      const got = await host.ask<unknown>({ type: 'rewordScore', req: { page, paras } }, SCORE_TIMEOUT_MS);
+      const got = await host.ask<unknown>(
+        { type: 'rewordScore', req: { page, paras } },
+        SCORE_TIMEOUT_MS,
+      );
       if (!isScoreResult(got)) throw new Error('Unexpected answer from Jev');
       scores = got.scores;
     } catch (err) {
       if (my !== run) return;
       status = 'error';
       publish();
-      host.log({ source: 'jev', title: 'Couldn’t rewrite paragraphs for you right now; the page keeps its own words', detail: plainError(err), action: 'skipped' });
+      host.log({
+        source: 'jev',
+        title:
+          'Couldn’t rewrite paragraphs for you right now; the page keeps its own words',
+        detail: plainError(err),
+        action: 'skipped',
+      });
       return;
     }
     if (my !== run) return;
@@ -779,10 +1044,13 @@ export function createReword(host: RewordHost): RewordRunner {
     }
     const picked = fresh.filter((e) => e.pick);
     const vh = document.documentElement.clientHeight || innerHeight;
-    const ordered = orderPicks(picked.map((e) => {
-      const r = e.cand.el.getBoundingClientRect();
-      return { e, idx: e.idx, top: r.top, bottom: r.bottom };
-    }), vh).map((x) => x.e);
+    const ordered = orderPicks(
+      picked.map((e) => {
+        const r = e.cand.el.getBoundingClientRect();
+        return { e, idx: e.idx, top: r.top, bottom: r.bottom };
+      }),
+      vh,
+    ).map((x) => x.e);
     const chosen = new Set(ordered);
     for (const e of picked) {
       if (chosen.has(e)) {
@@ -793,7 +1061,16 @@ export function createReword(host: RewordHost): RewordRunner {
     if (!ordered.length) {
       status = 'none';
       publish();
-      summary = { opId: `reword-${my}`, source, looked: fresh.length, picked: 0, changed: 0, failed: 0, overCap: 0, ms: Math.round(now() - t0) };
+      summary = {
+        opId: `reword-${my}`,
+        source,
+        looked: fresh.length,
+        picked: 0,
+        changed: 0,
+        failed: 0,
+        overCap: 0,
+        ms: Math.round(now() - t0),
+      };
       host.finished(summary);
       return;
     }
@@ -802,7 +1079,8 @@ export function createReword(host: RewordHost): RewordRunner {
     // Jev may have answered the page's purpose by now.
     page = { ...page, purpose: page.purpose ?? host.purpose() };
     const batches: Entry[][] = [];
-    for (let i = 0; i < ordered.length; i += BATCH) batches.push(ordered.slice(i, i + BATCH));
+    for (let i = 0; i < ordered.length; i += BATCH)
+      batches.push(ordered.slice(i, i + BATCH));
     let next = 0;
     let down = 0;
     const worker = async () => {
@@ -811,28 +1089,56 @@ export function createReword(host: RewordHost): RewordRunner {
         if (b && (await writeBatch(my, page, b)) === 'down') down++;
       }
     };
-    await Promise.all(Array.from({ length: Math.min(IN_FLIGHT, batches.length) }, () => worker()));
+    await Promise.all(
+      Array.from({ length: Math.min(IN_FLIGHT, batches.length) }, () =>
+        worker(),
+      ),
+    );
     if (my !== run) return;
-    const changed = ordered.filter((e) => e.state === 'rewritten' || e.state === 'original' || (e.pending && e.out)).length;
+    const changed = ordered.filter(
+      (e) =>
+        e.state === 'rewritten' ||
+        e.state === 'original' ||
+        (e.pending && e.out),
+    ).length;
     const failed = ordered.filter((e) => e.state === 'failed').length;
     if (down === batches.length) {
       status = 'error';
       publish();
-      host.log({ source: 'jev', title: 'Couldn’t rewrite paragraphs for you right now; the page keeps its own words', detail: 'The WebAble server could not write the new versions.', action: 'skipped' });
+      host.log({
+        source: 'jev',
+        title:
+          'Couldn’t rewrite paragraphs for you right now; the page keeps its own words',
+        detail: 'The WebAble server could not write the new versions.',
+        action: 'skipped',
+      });
       return;
     }
     status = changed ? 'done' : 'none';
     publish();
     const opId = `reword-${my}`;
     ops.add(opId);
-    summary = { opId, source, looked: fresh.length, picked: picked.length, changed, failed, overCap: picked.length - ordered.length, ms: Math.round(now() - t0) };
+    summary = {
+      opId,
+      source,
+      looked: fresh.length,
+      picked: picked.length,
+      changed,
+      failed,
+      overCap: picked.length - ordered.length,
+      ms: Math.round(now() - t0),
+    };
     host.finished(summary);
   }
 
   /** Keep only rewrites still on the page (a new page's paragraphs get new ids). */
   function prune(): void {
     for (const [id, e] of [...entries]) {
-      if (e.cand.el.isConnected && (e.state === 'rewritten' || e.state === 'original')) continue;
+      if (
+        e.cand.el.isConnected &&
+        (e.state === 'rewritten' || e.state === 'original')
+      )
+        continue;
       detach(e);
       entries.delete(id);
     }
@@ -869,7 +1175,8 @@ export function createReword(host: RewordHost): RewordRunner {
     pageOriginalOn = on;
     for (const e of entries.values()) {
       if (on) detach(e);
-      else if (e.state === 'rewritten' || e.state === 'original') attach(e, e.showing);
+      else if (e.state === 'rewritten' || e.state === 'original')
+        attach(e, e.showing);
     }
     if (!on) for (const e of entries.values()) if (e.pending && e.out) place(e);
     publish();
@@ -904,8 +1211,22 @@ export function createReword(host: RewordHost): RewordRunner {
     if (!p) return null;
     const id = byEl.get(p) ?? p.getAttribute('data-wa-rw');
     const e = id ? entries.get(id) : undefined;
-    if (!e || !e.built || !e.attached || !e.kind || (e.state !== 'rewritten' && e.state !== 'original')) return null;
-    return { id: e.id, kind: e.kind, showing: e.showing, lead: e.built.lead, items: e.built.items, ordered: e.built.ordered };
+    if (
+      !e ||
+      !e.built ||
+      !e.attached ||
+      !e.kind ||
+      (e.state !== 'rewritten' && e.state !== 'original')
+    )
+      return null;
+    return {
+      id: e.id,
+      kind: e.kind,
+      showing: e.showing,
+      lead: e.built.lead,
+      items: e.built.items,
+      ordered: e.built.ordered,
+    };
   }
 
   return {
@@ -930,7 +1251,9 @@ export function createReword(host: RewordHost): RewordRunner {
     lastSummary: () => summary,
     dispose: () => {
       reset();
-      if (listening) for (const t of INTERACT) window.removeEventListener(t, onInteract, { capture: true });
+      if (listening)
+        for (const t of INTERACT)
+          window.removeEventListener(t, onInteract, { capture: true });
       listening = false;
     },
   };

@@ -36,7 +36,11 @@ export function sha256(s: string): string {
 }
 
 export function hashOf(...parts: unknown[]): string {
-  return sha256(parts.map((p) => (typeof p === 'string' ? p : canonicalJson(p))).join('\u0000'));
+  return sha256(
+    parts
+      .map((p) => (typeof p === 'string' ? p : canonicalJson(p)))
+      .join('\u0000'),
+  );
 }
 
 export const round = (v: number, digits = 0): number => {
@@ -44,7 +48,8 @@ export const round = (v: number, digits = 0): number => {
   return Math.round(v * f) / f;
 };
 
-export const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+export const sleep = (ms: number): Promise<void> =>
+  new Promise((r) => setTimeout(r, ms));
 
 export function errorMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
@@ -60,7 +65,10 @@ export function median(xs: number[]): number | null {
 }
 
 /** One log line per event. Never pass bodies, page text or keys here. */
-export function log(event: string, fields: Record<string, string | number | boolean | null | undefined> = {}): void {
+export function log(
+  event: string,
+  fields: Record<string, string | number | boolean | null | undefined> = {},
+): void {
   const parts = Object.entries(fields)
     .filter(([, v]) => v !== undefined && v !== null && v !== '')
     .map(([k, v]) => `${k}=${v}`);

@@ -6,12 +6,30 @@ import { render } from 'preact';
 import { useState } from 'preact/hooks';
 import type { JSX } from 'preact';
 import { tokensFor, tokensToStyle } from '../../tokens';
-import { DataTable, LogoMark, Recipe, ScheduleList, Scoreboard, StatGrid, componentsCss } from './index';
-import type { Picture, RecipeProps, ScheduleItem, ScoreboardProps, StatItem } from './types';
+import {
+  DataTable,
+  LogoMark,
+  Recipe,
+  ScheduleList,
+  Scoreboard,
+  StatGrid,
+  componentsCss,
+} from './index';
+import type {
+  Picture,
+  RecipeProps,
+  ScheduleItem,
+  ScoreboardProps,
+  StatItem,
+} from './types';
 
 function mark(letter: string, background: string, alt: string): Picture {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="10" fill="${background}"/><text x="32" y="43" text-anchor="middle" font-family="Arial,sans-serif" font-size="34" font-weight="700" fill="#FFFFFF">${letter}</text></svg>`;
-  return { src: `data:image/svg+xml,${encodeURIComponent(svg)}`, alt, ratio: 1 };
+  return {
+    src: `data:image/svg+xml,${encodeURIComponent(svg)}`,
+    alt,
+    ratio: 1,
+  };
 }
 
 const floridaMark = mark('F', '#0021A5', 'Florida');
@@ -37,8 +55,20 @@ export const gatorsScore: ScoreboardProps = {
   date: '11/8/2025',
   joiner: 'at',
   sides: [
-    { name: 'Florida', score: '7', side: 'away', winner: false, logo: floridaMark },
-    { name: 'Kentucky', score: '38', side: 'home', winner: true, logo: kentuckyMark },
+    {
+      name: 'Florida',
+      score: '7',
+      side: 'away',
+      winner: false,
+      logo: floridaMark,
+    },
+    {
+      name: 'Kentucky',
+      score: '38',
+      side: 'home',
+      winner: true,
+      logo: kentuckyMark,
+    },
   ],
   periods: {
     labels: ['1', '2', '3', '4'],
@@ -147,21 +177,33 @@ function splitScore(score: string): { florida: string; kentucky: string } {
   return { florida: String(a), kentucky: String(b) };
 }
 
-export const gatorsColumns = ['Date', 'Season', 'Site', 'Place', 'Result', 'Florida', 'Kentucky', 'Media'];
+export const gatorsColumns = [
+  'Date',
+  'Season',
+  'Site',
+  'Place',
+  'Result',
+  'Florida',
+  'Kentucky',
+  'Media',
+];
 export const gatorsNumericCols = [1, 5, 6];
 export const gatorsShowFirst = 8;
 
-export const gatorsRows: string[][] = GAME_LINES.trim().split('\n').filter(Boolean).map((line) => {
-  const parts = line.split('|').map((s) => s.trim());
-  const date = parts[0] ?? '';
-  const season = parts[1] ?? '';
-  const location = parts[2] ?? '';
-  const score = parts[3] ?? '';
-  const media = parts[4] ?? '';
-  const { site, place } = splitPlace(location);
-  const { florida, kentucky } = splitScore(score);
-  return [date, season, site, place, score, florida, kentucky, media];
-});
+export const gatorsRows: string[][] = GAME_LINES.trim()
+  .split('\n')
+  .filter(Boolean)
+  .map((line) => {
+    const parts = line.split('|').map((s) => s.trim());
+    const date = parts[0] ?? '';
+    const season = parts[1] ?? '';
+    const location = parts[2] ?? '';
+    const score = parts[3] ?? '';
+    const media = parts[4] ?? '';
+    const { site, place } = splitPlace(location);
+    const { florida, kentucky } = splitScore(score);
+    return [date, season, site, place, score, florida, kentucky, media];
+  });
 
 export const gatorsSchedule: ScheduleItem[] = [
   {
@@ -172,9 +214,27 @@ export const gatorsSchedule: ScheduleItem[] = [
     logo: kentuckyMark,
     href: 'https://floridagators.com/sports/football/stats/2025/kentucky/boxscore/27203',
   },
-  { date: '10/19/2024', title: 'Kentucky', detail: 'Gainesville, Fla.', result: 'W 48-20', logo: floridaMark },
-  { date: '9/30/2023', title: 'at Kentucky', detail: 'Lexington, Ky.', result: 'L 14-33', logo: kentuckyMark },
-  { date: '9/10/2022', title: 'Kentucky', detail: 'Gainesville, Fla.', result: 'L 16-26', logo: floridaMark },
+  {
+    date: '10/19/2024',
+    title: 'Kentucky',
+    detail: 'Gainesville, Fla.',
+    result: 'W 48-20',
+    logo: floridaMark,
+  },
+  {
+    date: '9/30/2023',
+    title: 'at Kentucky',
+    detail: 'Lexington, Ky.',
+    result: 'L 14-33',
+    logo: kentuckyMark,
+  },
+  {
+    date: '9/10/2022',
+    title: 'Kentucky',
+    detail: 'Gainesville, Fla.',
+    result: 'L 16-26',
+    logo: floridaMark,
+  },
 ];
 
 export const sampleRecipe: RecipeProps = {
@@ -229,7 +289,11 @@ export function Preview(): JSX.Element {
         showFirst={gatorsShowFirst}
       />
       <ScheduleList title="Recent games" items={items} currentIndex={0} />
-      {opened ? <p class="wa-preview__status" role="status">Opened {opened}</p> : null}
+      {opened ? (
+        <p class="wa-preview__status" role="status">
+          Opened {opened}
+        </p>
+      ) : null}
       <Recipe {...sampleRecipe} />
       <div class="wa-preview__logos" role="group" aria-label="Logos">
         <LogoMark picture={floridaMark} label="Florida" size="small" />
@@ -252,11 +316,18 @@ html,body{margin:0;background:var(--wa-canvas,#fff);color:var(--wa-ink,#121317)}
 /** Used by preview.html. Does nothing when this module is imported from a test. */
 export function mountPreview(root: HTMLElement): void {
   const tokens = tokensToStyle(tokensFor(null, 'light', { surface: 'calm' }));
-  const tokenCss = Object.entries(tokens).map(([k, v]) => `${k}:${v};`).join('');
+  const tokenCss = Object.entries(tokens)
+    .map(([k, v]) => `${k}:${v};`)
+    .join('');
   const style = document.createElement('style');
   style.textContent = `:root{${tokenCss}}${componentsCss}${previewCss}`;
   document.head.appendChild(style);
-  render(<main class="wa-preview" style={tokens}><Preview /></main>, root);
+  render(
+    <main class="wa-preview" style={tokens}>
+      <Preview />
+    </main>,
+    root,
+  );
 }
 
 if (typeof document !== 'undefined') {

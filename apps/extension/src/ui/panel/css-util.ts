@@ -4,13 +4,15 @@
 export const u = (n: number): string => `calc(${n} * var(--u, 1px))`;
 
 /** The person's minimum control size (CSS px), with an optional multiplier. */
-export const target = (k = 1): string => (k === 1 ? 'var(--wa-target, 44px)' : `calc(${k} * var(--wa-target, 44px))`);
+export const target = (k = 1): string =>
+  k === 1 ? 'var(--wa-target, 44px)' : `calc(${k} * var(--wa-target, 44px))`;
 
 export const FONT_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 export const DISPLAY_STACK =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-export const MONO_STACK = 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
+export const MONO_STACK =
+  'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 
 /** Verdict colours for the Lens. Fixed across themes; white text on each is at least 4.5:1. */
 export const VERDICT = {

@@ -10,8 +10,21 @@
 //  - nothing is hidden, nothing moves (except unpinning a tall sticky header), ARIA, names, focus order and keyboard
 //    handling are never touched, and no url() appears in any CSS.
 
-import { contrastRatio, liftToRatio, parseColor, planHeadingScale, planPageZoom } from '@webable/core';
-import type { FitProfile, HeadingSample, LedgerEntry, OpKind, OpRecord, ZoomPlan } from '@webable/core';
+import {
+  contrastRatio,
+  liftToRatio,
+  parseColor,
+  planHeadingScale,
+  planPageZoom,
+} from '@webable/engine';
+import type {
+  FitProfile,
+  HeadingSample,
+  LedgerEntry,
+  OpKind,
+  OpRecord,
+  ZoomPlan,
+} from '@webable/engine';
 import type { ReadResult, TextSample } from './reader';
 import { parseRgb, ratio as wcagRatio, visibleTextOf } from './reader';
 
@@ -58,7 +71,7 @@ export interface ColumnOp extends Op {
 }
 
 export interface TailorHost {
-  ask<T>(req: import('@webable/core').BgRequest): Promise<T>;
+  ask<T>(req: import('@webable/engine').BgRequest): Promise<T>;
   zoomInfo(): Promise<{ factor: number; personChanged: boolean }>;
   isOurUi(t: EventTarget | null): boolean;
   idOf(el: Element): string;
@@ -113,7 +126,9 @@ export class SheetLayer {
   detach(sheet: CSSStyleSheet): void {
     this.sheets.delete(sheet);
     try {
-      document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet);
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (s) => s !== sheet,
+      );
     } catch {
       /* page replaced the array with something odd; nothing to remove */
     }
@@ -193,11 +208,23 @@ function opId(kind: OpKind): string {
 }
 
 /** A new op record (unique id per page view). Shared with the overlay module. */
-export function makeOpRecord(kind: OpKind, scope: OpRecord['scope'], targets: Element[], reason: string, idOf: (el: Element) => string): OpRecord {
+export function makeOpRecord(
+  kind: OpKind,
+  scope: OpRecord['scope'],
+  targets: Element[],
+  reason: string,
+  idOf: (el: Element) => string,
+): OpRecord {
   return record(kind, scope, targets, reason, idOf);
 }
 
-function record(kind: OpKind, scope: OpRecord['scope'], targets: Element[], reason: string, idOf: (el: Element) => string): OpRecord {
+function record(
+  kind: OpKind,
+  scope: OpRecord['scope'],
+  targets: Element[],
+  reason: string,
+  idOf: (el: Element) => string,
+): OpRecord {
   return {
     id: opId(kind),
     kind,
@@ -212,7 +239,9 @@ function record(kind: OpKind, scope: OpRecord['scope'], targets: Element[], reas
 /* Colour helpers (core first, a local fallback if it is unavailable)  */
 /* ------------------------------------------------------------------ */
 
-function rgbaOf(css: string): { r: number; g: number; b: number; a: number } | null {
+function rgbaOf(
+  css: string,
+): { r: number; g: number; b: number; a: number } | null {
   const local = parseRgb(css);
   if (local) return local;
   try {
@@ -222,7 +251,10 @@ function rgbaOf(css: string): { r: number; g: number; b: number; a: number } | n
   }
 }
 
-function safeRatio(fg: { r: number; g: number; b: number; a: number }, bg: { r: number; g: number; b: number; a: number }): number {
+function safeRatio(
+  fg: { r: number; g: number; b: number; a: number },
+  bg: { r: number; g: number; b: number; a: number },
+): number {
   try {
     const v = contrastRatio(fg, bg);
     if (Number.isFinite(v)) return v;
@@ -232,13 +264,22 @@ function safeRatio(fg: { r: number; g: number; b: number; a: number }, bg: { r: 
   return wcagRatio(fg, bg);
 }
 
-function localLift(fg: { r: number; g: number; b: number; a: number }, bg: { r: number; g: number; b: number; a: number }, target: number): string {
+function localLift(
+  fg: { r: number; g: number; b: number; a: number },
+  bg: { r: number; g: number; b: number; a: number },
+  target: number,
+): string {
   // Mix toward black or white (whichever raises contrast) with a binary search on the mix amount: hue is kept.
   const lb = 0.2126 * bg.r + 0.7152 * bg.g + 0.0722 * bg.b;
   const toward = lb > 128 ? 0 : 255;
   let lo = 0;
   let hi = 1;
-  const mix = (t: number) => ({ r: fg.r + (toward - fg.r) * t, g: fg.g + (toward - fg.g) * t, b: fg.b + (toward - fg.b) * t, a: 1 });
+  const mix = (t: number) => ({
+    r: fg.r + (toward - fg.r) * t,
+    g: fg.g + (toward - fg.g) * t,
+    b: fg.b + (toward - fg.b) * t,
+    a: 1,
+  });
   for (let i = 0; i < 18; i++) {
     const mid = (lo + hi) / 2;
     if (wcagRatio(mix(mid), bg) >= target) hi = mid;
@@ -248,7 +289,11 @@ function localLift(fg: { r: number; g: number; b: number; a: number }, bg: { r: 
   return `rgb(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)})`;
 }
 
-function safeLift(fg: { r: number; g: number; b: number; a: number }, bg: { r: number; g: number; b: number; a: number }, target: number): string {
+function safeLift(
+  fg: { r: number; g: number; b: number; a: number },
+  bg: { r: number; g: number; b: number; a: number },
+  target: number,
+): string {
   try {
     const v = liftToRatio(fg, bg, target);
     if (typeof v === 'string' && v && !/url\(/i.test(v)) {
@@ -293,7 +338,11 @@ export function effectiveBackground(el: Element): Rgba | null {
   let depth = 0;
   while (n && depth < 40) {
     const cs = getComputedStyle(n);
-    if (cs.backgroundImage !== 'none' || (cs.filter !== 'none' && cs.filter !== '') || cs.mixBlendMode !== 'normal') {
+    if (
+      cs.backgroundImage !== 'none' ||
+      (cs.filter !== 'none' && cs.filter !== '') ||
+      cs.mixBlendMode !== 'normal'
+    ) {
       unknown = true;
       break;
     }
@@ -354,7 +403,12 @@ const MAIN_CSS = `
 ${sel('data-wa-main')} { outline: 3px solid #0071E3 !important; outline-offset: 3px !important; }
 `;
 
-function targetCss(attrX: string, attrY: string, attrPos: string, attrOn: string): string {
+function targetCss(
+  attrX: string,
+  attrY: string,
+  attrPos: string,
+  attrOn: string,
+): string {
   const rules: string[] = [];
   rules.push(`${sel(attrPos)} { position: relative !important; }`);
   rules.push(`${sel(attrOn)}::after {
@@ -376,7 +430,12 @@ function targetCss(attrX: string, attrY: string, attrPos: string, attrOn: string
   return rules.join('\n');
 }
 
-const TARGET_CSS = targetCss('data-wa-tx', 'data-wa-ty', 'data-wa-tp', 'data-wa-t');
+const TARGET_CSS = targetCss(
+  'data-wa-tx',
+  'data-wa-ty',
+  'data-wa-tp',
+  'data-wa-t',
+);
 
 /** A short outline on enlarged click areas, so "Make bigger" shows what changed (the areas themselves are invisible). */
 const FLASH_CSS = `
@@ -393,7 +452,13 @@ ${sel('data-wa-flash')}:not([data-wa-t]) { outline: 2px solid #0071E3 !important
 /* Hit-area planning (shared by targets and promote_main)              */
 /* ------------------------------------------------------------------ */
 
-interface Box { l: number; t: number; r: number; b: number; el: Element }
+interface Box {
+  l: number;
+  t: number;
+  r: number;
+  b: number;
+  el: Element;
+}
 
 function activatableFor(el: Element): Element {
   // Replaced inputs (checkbox, radio) expand their <label> instead.
@@ -402,43 +467,61 @@ function activatableFor(el: Element): Element {
     const label = labels && labels.length ? labels[0] : null;
     if (label) {
       const r = label.getBoundingClientRect();
-      if (r.width > 0 && r.width <= 700 && r.height > 0 && r.height <= 140) return label;
+      if (r.width > 0 && r.width <= 700 && r.height > 0 && r.height <= 140)
+        return label;
     }
   }
   return el;
 }
 
 function canExpand(el: Element): { ok: boolean; needsPosition: boolean } {
-  if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA' || el.tagName === 'IMG' || el.tagName === 'IFRAME') {
+  if (
+    el.tagName === 'INPUT' ||
+    el.tagName === 'SELECT' ||
+    el.tagName === 'TEXTAREA' ||
+    el.tagName === 'IMG' ||
+    el.tagName === 'IFRAME'
+  ) {
     return { ok: false, needsPosition: false };
   }
   const cs = getComputedStyle(el);
-  if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') return { ok: false, needsPosition: false };
+  if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible')
+    return { ok: false, needsPosition: false };
   const after = getComputedStyle(el, '::after').content;
-  if (after && after !== 'none' && after !== 'normal') return { ok: false, needsPosition: false };
-  if (cs.display === 'inline' && el.getClientRects().length > 1) return { ok: false, needsPosition: false };
-  if (cs.display === 'contents' || cs.display === 'none') return { ok: false, needsPosition: false };
+  if (after && after !== 'none' && after !== 'normal')
+    return { ok: false, needsPosition: false };
+  if (cs.display === 'inline' && el.getClientRects().length > 1)
+    return { ok: false, needsPosition: false };
+  if (cs.display === 'contents' || cs.display === 'none')
+    return { ok: false, needsPosition: false };
   if (cs.position !== 'static') return { ok: true, needsPosition: false };
   // Adding position: relative is safe only without absolute/fixed descendants.
   const desc = el.querySelectorAll('*');
   if (desc.length > 40) return { ok: false, needsPosition: false };
   for (const d of Array.from(desc)) {
     const p = getComputedStyle(d).position;
-    if (p === 'absolute' || p === 'fixed') return { ok: false, needsPosition: false };
+    if (p === 'absolute' || p === 'fixed')
+      return { ok: false, needsPosition: false };
   }
   return { ok: true, needsPosition: true };
 }
 
 /** Plan hit-area pads for `targets` at size T, capped at half the gap to the nearest other control. */
 function planPads(
-  targets: Element[], neighbours: Element[], T: number,
+  targets: Element[],
+  neighbours: Element[],
+  T: number,
 ): Array<{ el: Element; padX: number; padY: number; needsPosition: boolean }> {
   const boxes: Box[] = [];
   const CELL = 128;
   const grid = new Map<string, Box[]>();
   const put = (b: Box) => {
     for (let gx = Math.floor(b.l / CELL); gx <= Math.floor(b.r / CELL); gx++) {
-      for (let gy = Math.floor(b.t / CELL); gy <= Math.floor(b.b / CELL); gy++) {
+      for (
+        let gy = Math.floor(b.t / CELL);
+        gy <= Math.floor(b.b / CELL);
+        gy++
+      ) {
         const k = `${gx},${gy}`;
         const arr = grid.get(k);
         if (arr) arr.push(b);
@@ -447,29 +530,55 @@ function planPads(
     }
   };
   // Sizes in the page's own CSS px: the page column draws the body at a CSS zoom, and hit areas are set in its units.
-  const zb = (document.body as (HTMLElement & { currentCSSZoom?: number }) | null)?.currentCSSZoom;
+  const zb = (
+    document.body as (HTMLElement & { currentCSSZoom?: number }) | null
+  )?.currentCSSZoom;
   const u = typeof zb === 'number' && zb > 0 && Number.isFinite(zb) ? zb : 1;
   for (const el of neighbours) {
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) continue;
-    const b = { l: (r.left + scrollX) / u, t: (r.top + scrollY) / u, r: (r.right + scrollX) / u, b: (r.bottom + scrollY) / u, el };
+    const b = {
+      l: (r.left + scrollX) / u,
+      t: (r.top + scrollY) / u,
+      r: (r.right + scrollX) / u,
+      b: (r.bottom + scrollY) / u,
+      el,
+    };
     boxes.push(b);
     put(b);
   }
-  const out: Array<{ el: Element; padX: number; padY: number; needsPosition: boolean }> = [];
+  const out: Array<{
+    el: Element;
+    padX: number;
+    padY: number;
+    needsPosition: boolean;
+  }> = [];
   for (const el of targets) {
     const r = el.getBoundingClientRect();
     if (r.width <= 0 || r.height <= 0) continue;
     if (Math.min(r.width, r.height) / u >= T) continue;
     const ex = canExpand(el);
     if (!ex.ok) continue;
-    const me = { l: (r.left + scrollX) / u, t: (r.top + scrollY) / u, r: (r.right + scrollX) / u, b: (r.bottom + scrollY) / u };
+    const me = {
+      l: (r.left + scrollX) / u,
+      t: (r.top + scrollY) / u,
+      r: (r.right + scrollX) / u,
+      b: (r.bottom + scrollY) / u,
+    };
     const reach = T / 2 + 24;
     let gapX = Infinity;
     let gapY = Infinity;
     const seen = new Set<Box>();
-    for (let gx = Math.floor((me.l - reach) / CELL); gx <= Math.floor((me.r + reach) / CELL); gx++) {
-      for (let gy = Math.floor((me.t - reach) / CELL); gy <= Math.floor((me.b + reach) / CELL); gy++) {
+    for (
+      let gx = Math.floor((me.l - reach) / CELL);
+      gx <= Math.floor((me.r + reach) / CELL);
+      gx++
+    ) {
+      for (
+        let gy = Math.floor((me.t - reach) / CELL);
+        gy <= Math.floor((me.b + reach) / CELL);
+        gy++
+      ) {
         for (const n of grid.get(`${gx},${gy}`) ?? []) {
           if (seen.has(n)) continue;
           seen.add(n);
@@ -493,8 +602,10 @@ function planPads(
       }
     }
     const want = (side: number) => Math.max(0, (T - side) / 2);
-    const cap = (gap: number) => (gap === Infinity ? 24 : Math.max(0, Math.floor(gap / 2) - 1));
-    const even = (v: number) => Math.max(0, Math.min(24, Math.floor(v / 2) * 2));
+    const cap = (gap: number) =>
+      gap === Infinity ? 24 : Math.max(0, Math.floor(gap / 2) - 1);
+    const even = (v: number) =>
+      Math.max(0, Math.min(24, Math.floor(v / 2) * 2));
     const padX = even(Math.min(want(r.width / u), cap(gapX), 24));
     const padY = even(Math.min(want(r.height / u), cap(gapY), 24));
     if (padX === 0 && padY === 0) continue;
@@ -503,7 +614,14 @@ function planPads(
   return out;
 }
 
-function applyPads(pads: Array<{ el: Element; padX: number; padY: number; needsPosition: boolean }>): void {
+function applyPads(
+  pads: Array<{
+    el: Element;
+    padX: number;
+    padY: number;
+    needsPosition: boolean;
+  }>,
+): void {
   const writes: Array<[Element, string, string]> = [];
   for (const p of pads) {
     writes.push([p.el, 'data-wa-t', '']);
@@ -520,13 +638,16 @@ const TARGET_ATTRS = ['data-wa-t', 'data-wa-tx', 'data-wa-ty', 'data-wa-tp'];
 /* The tailor                                                          */
 /* ------------------------------------------------------------------ */
 
-const ACTIVATABLE = 'a[href], button, summary, label, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="tab"], [role="option"], input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], input[type="reset"]';
-const NO_CAPTURE = '[draggable="true"], [contenteditable=""], [contenteditable="true"], input[type="range"], input[type="text"], input[type="search"], input[type="email"], input[type="number"], textarea, select, canvas, video, audio, iframe, [role="slider"]';
+const ACTIVATABLE =
+  'a[href], button, summary, label, [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="tab"], [role="option"], input[type="checkbox"], input[type="radio"], input[type="submit"], input[type="button"], input[type="reset"]';
+const NO_CAPTURE =
+  '[draggable="true"], [contenteditable=""], [contenteditable="true"], input[type="range"], input[type="text"], input[type="search"], input[type="email"], input[type="number"], textarea, select, canvas, video, audio, iframe, [role="slider"]';
 
 export class Tailor {
   readonly sheets = new SheetLayer();
   private host: TailorHost;
-  private canvasCtx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
+  private canvasCtx:
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null;
 
   constructor(host: TailorHost) {
     this.host = host;
@@ -539,18 +660,36 @@ export class Tailor {
    * capped at 200% / 250%), plus the person's own A−/A+ steps on this site. When the person changed the zoom
    * themselves after WebAble set it, their choice wins.
    */
-  planZoom(fit: FitProfile, pageBodyPx: number, ownZoom: number, personChanged: boolean, step = 0): ZoomPlan {
+  planZoom(
+    fit: FitProfile,
+    pageBodyPx: number,
+    ownZoom: number,
+    personChanged: boolean,
+    step = 0,
+  ): ZoomPlan {
     let plan: ZoomPlan;
     try {
       plan = planPageZoom(fit, pageBodyPx, { ownZoom, step });
     } catch {
       plan = {
-        zoom: ownZoom, fitZoom: ownZoom, ownZoom, cap: 2, capped: false, step: 0, bodyPx: pageBodyPx,
-        targetPx: fit.text.override ?? fit.text.bodyPx, effectiveBodyPx: Math.round(pageBodyPx * ownZoom * 10) / 10, shortPx: 0,
+        zoom: ownZoom,
+        fitZoom: ownZoom,
+        ownZoom,
+        cap: 2,
+        capped: false,
+        step: 0,
+        bodyPx: pageBodyPx,
+        targetPx: fit.text.override ?? fit.text.bodyPx,
+        effectiveBodyPx: Math.round(pageBodyPx * ownZoom * 10) / 10,
+        shortPx: 0,
       };
     }
     if (personChanged && !step) {
-      plan = { ...plan, zoom: ownZoom, effectiveBodyPx: Math.round(pageBodyPx * ownZoom * 10) / 10 };
+      plan = {
+        ...plan,
+        zoom: ownZoom,
+        effectiveBodyPx: Math.round(pageBodyPx * ownZoom * 10) / 10,
+      };
     }
     return plan;
   }
@@ -560,7 +699,13 @@ export class Tailor {
     const host = this.host;
     const shown = Math.round(plan.bodyPx * plan.zoom);
     const op: Op = {
-      rec: record('page_zoom', 'page', [], `zoom ${pct(plan.zoom)} (own ${pct(plan.ownZoom)}) for body ${plan.bodyPx} px, target ${plan.targetPx} px${plan.step ? `, ${plan.step > 0 ? '+' : ''}${plan.step} step` : ''}`, host.idOf),
+      rec: record(
+        'page_zoom',
+        'page',
+        [],
+        `zoom ${pct(plan.zoom)} (own ${pct(plan.ownZoom)}) for body ${plan.bodyPx} px, target ${plan.targetPx} px${plan.step ? `, ${plan.step > 0 ? '+' : ''}${plan.step} step` : ''}`,
+        host.idOf,
+      ),
       elements: [],
       risk: 1,
       active: false,
@@ -575,7 +720,9 @@ export class Tailor {
       },
       async revert() {
         op.active = false;
-        const info = await host.zoomInfo().catch(() => ({ factor: plan.zoom, personChanged: false }));
+        const info = await host
+          .zoomInfo()
+          .catch(() => ({ factor: plan.zoom, personChanged: false }));
         if (info.personChanged) return; // the person's own choice wins
         await host.ask<number>({ type: 'setZoom', factor: fromZoom });
         host.onZoom?.(fromZoom);
@@ -590,7 +737,11 @@ export class Tailor {
    * `column`: the page is held to a column, which keeps line length page-wide; the per-paragraph measure op then stays
    * off (it limits some paragraphs and skips others in flex or grid boxes, which gives a ragged, uneven edge).
    */
-  planFitOps(fit: FitProfile, read: ReadResult, opts: { column?: boolean } = {}): Op[] {
+  planFitOps(
+    fit: FitProfile,
+    read: ReadResult,
+    opts: { column?: boolean } = {},
+  ): Op[] {
     const ops: Op[] = [];
     const live = read.texts.filter((t) => t.el.isConnected);
     const sp = this.spacingOp(fit, live);
@@ -603,13 +754,27 @@ export class Tailor {
     if (ct) ops.push(ct);
     const tg = this.targetsOp(fit.targets.minPx, read);
     if (tg) ops.push(tg);
-    if (fit.clicks.steady.on && fit.inputClass !== 'touch' && fit.inputClass !== 'keyboard') {
-      ops.push(this.steadyOp(fit.clicks.steady.windowMs, fit.clicks.steady.radiusPx));
+    if (
+      fit.clicks.steady.on &&
+      fit.inputClass !== 'touch' &&
+      fit.inputClass !== 'keyboard'
+    ) {
+      ops.push(
+        this.steadyOp(fit.clicks.steady.windowMs, fit.clicks.steady.radiusPx),
+      );
     }
-    if (fit.clicks.debounce && fit.inputClass !== 'keyboard') ops.push(this.debounceOp());
-    const reduceMotion = fit.attention.motion.on || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (fit.clicks.debounce && fit.inputClass !== 'keyboard')
+      ops.push(this.debounceOp());
+    const reduceMotion =
+      fit.attention.motion.on ||
+      matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduceMotion) ops.push(this.motionOp(read));
-    if (fit.contrast.band !== 'N' || (fit.targets.minPx ?? 0) >= 44 || fit.inputClass === 'keyboard') ops.push(this.focusOp());
+    if (
+      fit.contrast.band !== 'N' ||
+      (fit.targets.minPx ?? 0) >= 44 ||
+      fit.inputClass === 'keyboard'
+    )
+      ops.push(this.focusOp());
     const up = this.unpinOp(read);
     if (up) ops.push(up);
     return ops;
@@ -623,19 +788,38 @@ export class Tailor {
   spacingOp(fit: FitProfile, texts: TextSample[]): Op | null {
     const L = Math.min(1.5, fit.spacing.lineHeight);
     const W = Math.min(0.16, Math.max(0, fit.spacing.wordEm));
-    const Lt = fit.spacing.letterEm > 0 && W >= fit.spacing.letterEm ? Math.min(0.12, fit.spacing.letterEm) : 0;
+    const Lt =
+      fit.spacing.letterEm > 0 && W >= fit.spacing.letterEm
+        ? Math.min(0.12, fit.spacing.letterEm)
+        : 0;
     if (L <= 1.25 && W <= 0 && Lt <= 0) return null;
-    const riskySigs = new Set(texts.filter((t) => t.clipRisk).map((t) => t.sig));
+    const riskySigs = new Set(
+      texts.filter((t) => t.clipRisk).map((t) => t.sig),
+    );
     const els: Element[] = [];
     const paras: Element[] = [];
     const seen = new Set<Element>();
     for (const t of texts) {
-      if (!t.inMain || t.control || t.iconFont || riskySigs.has(t.sig) || t.headingLevel !== null || !t.running) continue;
+      if (
+        !t.inMain ||
+        t.control ||
+        t.iconFont ||
+        riskySigs.has(t.sig) ||
+        t.headingLevel !== null ||
+        !t.running
+      )
+        continue;
       if (seen.has(t.el)) continue;
       seen.add(t.el);
       const tag = t.el.tagName;
-      if (tag === 'PRE' || tag === 'CODE' || tag === 'KBD' || tag === 'SAMP') continue;
-      if (t.el.closest('nav, button, [role="tab"], [role="tablist"], [role="menu"], [role="navigation"]')) continue;
+      if (tag === 'PRE' || tag === 'CODE' || tag === 'KBD' || tag === 'SAMP')
+        continue;
+      if (
+        t.el.closest(
+          'nav, button, [role="tab"], [role="tablist"], [role="menu"], [role="navigation"]',
+        )
+      )
+        continue;
       const rel = relativeLineHeight(t.el);
       if (rel === null) continue; // fixed px (or unknown): leave it
       const ratio = rel === 'normal' ? 1.2 : rel;
@@ -656,17 +840,30 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const layer = this.sheets;
     const sheet = layer.make(css);
     const op: Op = {
-      rec: record('spacing', 'page', els, `line height ${L} on ${els.length} blocks with relative line height${W ? `, word ${W}em` : ''}${Lt ? `, letter ${Lt}em` : ''}`, this.host.idOf),
+      rec: record(
+        'spacing',
+        'page',
+        els,
+        `line height ${L} on ${els.length} blocks with relative line height${W ? `, word ${W}em` : ''}${Lt ? `, letter ${Lt}em` : ''}`,
+        this.host.idOf,
+      ),
       elements: els,
       risk: 8,
       active: false,
       persistent: false,
       source: 'fit',
       title: `Lines in paragraphs are spaced ${L}×${W ? ' with a little more room between words' : ''}`,
-      detail: 'Only paragraphs in the main part of the page whose spacing can grow; buttons, headings, tabs and menus are left as they are.',
+      detail:
+        'Only paragraphs in the main part of the page whose spacing can grow; buttons, headings, tabs and menus are left as they are.',
       apply() {
-        setTokens(els.map((el) => [el, 'data-wa-sp', ''] as [Element, string, string]));
-        setTokens(paras.map((el) => [el, 'data-wa-pg', ''] as [Element, string, string]));
+        setTokens(
+          els.map((el) => [el, 'data-wa-sp', ''] as [Element, string, string]),
+        );
+        setTokens(
+          paras.map(
+            (el) => [el, 'data-wa-pg', ''] as [Element, string, string],
+          ),
+        );
         layer.attach(sheet);
         op.active = true;
       },
@@ -688,10 +885,20 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
    * check is dropped on its own (`drop`), the rest stay.
    */
   headingScaleOp(read: ReadResult, bodyPx: number): Op | null {
-    interface Head { el: Element; level: number; texts: TextSample[] }
+    interface Head {
+      el: Element;
+      level: number;
+      texts: TextSample[];
+    }
     const heads = new Map<Element, Head>();
     for (const n of read.nodes.values()) {
-      if (n.kind !== 'heading' || !n.inMain || !n.el.isConnected || this.host.isOurUi(n.el)) continue;
+      if (
+        n.kind !== 'heading' ||
+        !n.inMain ||
+        !n.el.isConnected ||
+        this.host.isOurUi(n.el)
+      )
+        continue;
       const level = n.headingLevel ?? 9;
       if (level > 3) continue;
       heads.set(n.el, { el: n.el, level, texts: [] });
@@ -736,19 +943,34 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const samples: HeadingSample[] = [];
     const byId = new Map<string, Head>();
     for (const h of heads.values()) {
-      if (!h.texts.length || h.texts.some((t) => t.clipRisk || t.iconFont)) continue;
+      if (!h.texts.length || h.texts.some((t) => t.clipRisk || t.iconFont))
+        continue;
       const sizes = new Map<number, number>();
-      for (const t of h.texts) sizes.set(live(t), (sizes.get(live(t)) ?? 0) + t.chars);
+      for (const t of h.texts)
+        sizes.set(live(t), (sizes.get(live(t)) ?? 0) + t.chars);
       const top = [...sizes.entries()].sort((a, b) => b[1] - a[1])[0];
       if (!top) continue;
       const fontPx = top[0];
       const main = h.texts.filter((t) => Math.abs(live(t) - fontPx) < 0.5);
       const weight = Math.min(...main.map((t) => t.weight));
       const chars = h.texts.reduce((a, t) => a + t.chars, 0);
-      if (!headingFluid(h.el, main.map((t) => t.el))) continue;
+      if (
+        !headingFluid(
+          h.el,
+          main.map((t) => t.el),
+        )
+      )
+        continue;
       const id = this.host.idOf(h.el);
       byId.set(id, h);
-      samples.push({ id, level: h.level, fontPx, weight, chars, ceilPx: ceilOf(fontPx) });
+      samples.push({
+        id,
+        level: h.level,
+        fontPx,
+        weight,
+        chars,
+        ceilPx: ceilOf(fontPx),
+      });
     }
     let changes: ReturnType<typeof planHeadingScale> = [];
     try {
@@ -766,12 +988,26 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       if (!h) continue;
       const group: Element[] = [];
       const targets = h.texts.filter((t) => Math.abs(live(t) - c.fromPx) < 0.5);
-      const els = new Map<Element, TextSample | null>(targets.map((t) => [t.el, t] as const));
+      const els = new Map<Element, TextSample | null>(
+        targets.map((t) => [t.el, t] as const),
+      );
       // The heading element itself too, so text inherited from it grows with it.
-      if (!els.has(h.el) && Math.abs(parseFloat(getComputedStyle(h.el).fontSize) - c.fromPx) < 0.5) els.set(h.el, null);
+      if (
+        !els.has(h.el) &&
+        Math.abs(parseFloat(getComputedStyle(h.el).fontSize) - c.fromPx) < 0.5
+      )
+        els.set(h.el, null);
       for (const [el, t] of els) {
-        const lhPx = t ? t.lineHeightPx : (() => { const v = parseFloat(getComputedStyle(el).lineHeight); return Number.isFinite(v) ? v : null; })();
-        const fixLh = relativeLineHeight(el) === null && lhPx !== null && lhPx < 1.15 * c.toPx;
+        const lhPx = t
+          ? t.lineHeightPx
+          : (() => {
+              const v = parseFloat(getComputedStyle(el).lineHeight);
+              return Number.isFinite(v) ? v : null;
+            })();
+        const fixLh =
+          relativeLineHeight(el) === null &&
+          lhPx !== null &&
+          lhPx < 1.15 * c.toPx;
         const key = `${c.toPx}|${c.weight ?? ''}|${fixLh ? 1 : 0}`;
         let idx = buckets.get(key);
         if (idx === undefined) {
@@ -793,14 +1029,21 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const els = writes.map((w) => w[0]);
     const levels = [...new Set(changes.map((c) => c.level))].sort();
     const op: Op = {
-      rec: record('heading_scale', 'page', els, `${changes.length} headings raised against body ${bodyPx} px (levels ${levels.join(', ')})`, this.host.idOf),
+      rec: record(
+        'heading_scale',
+        'page',
+        els,
+        `${changes.length} headings raised against body ${bodyPx} px (levels ${levels.join(', ')})`,
+        this.host.idOf,
+      ),
       elements: els,
       risk: 9,
       active: false,
       persistent: false,
       source: 'fit',
       title: `Made ${changes.length} heading${changes.length === 1 ? '' : 's'} larger so ${changes.length === 1 ? 'it stands' : 'they stand'} out from the text`,
-      detail: 'Page titles are at least 1.75×, section headings 1.4× and smaller headings 1.2× the size of body text, in semibold. Headings that already stood out were left as they are.',
+      detail:
+        'Page titles are at least 1.75×, section headings 1.4× and smaller headings 1.2× the size of body text, in semibold. Headings that already stood out were left as they are.',
       apply() {
         setTokens(writes.filter(([el]) => op.elements.includes(el)));
         layer.attach(sheet);
@@ -828,74 +1071,49 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
   /* ---------------- the page column ---------------- */
 
   /**
-   * column: the page in a narrower virtual window, centred, with the page's own background at the sides (Caden's
-   * 2.webp, where he narrowed the window by hand).
-   *
-   * A narrower body alone squeezes the layout the site made for the whole window (its media queries, `vw` units and
-   * scripts still see the full width), which breaks rigid layouts. So the column narrows what the site sees instead:
-   * the tab's zoom rises by 1/k (k = column ÷ screen width), which narrows the CSS viewport to the column's CSS width,
-   * and the body is laid out exactly that wide and drawn at k with CSS `zoom`, so text stays the person's size. Media
-   * queries, `vw` units, `innerWidth` and the body's own layout all agree on one width, and the site picks the layout
-   * it made for it, as it does in a narrower window. Fixed and sticky layers keep the whole window; WebAble's own UI
-   * sits outside <body>, so it keeps its size. `setWidth` follows window and zoom changes without a new op.
+   * An explicitly requested column narrows and centres the body through CSS.
+   * It preserves the person's browser zoom; verification rejects layouts that cannot reflow safely.
    */
   columnOp(spec: ColumnSpec): ColumnOp {
     const layer = this.sheets;
-    const host = this.host;
     const bg = pageBackground();
     const body = document.body;
-    // The body's own side margins, unless they centre it (auto): the virtual window keeps them.
-    let marginX = 0;
-    if (body) {
-      const bcs = getComputedStyle(body);
-      const isAuto = (prop: string): boolean => {
-        try {
-          const v = body.computedStyleMap?.().get(prop);
-          return !!v && typeof (v as { value?: unknown }).value === 'string' && (v as { value: string }).value === 'auto';
-        } catch {
-          return false;
-        }
-      };
-      if (!isAuto('margin-left')) marginX += parseFloat(bcs.marginLeft) || 0;
-      if (!isAuto('margin-right')) marginX += parseFloat(bcs.marginRight) || 0;
-    }
     let current = { ...spec };
-    let k = 1;
-    const kFor = (widthPx: number): number => {
-      const sw = host.screenWidth?.() ?? (document.documentElement.clientWidth || innerWidth);
-      return sw > 0 ? Math.min(1, Math.max(0.4, widthPx / sw)) : 1;
-    };
-    const cssFor = (scale: number): string => {
-      // In the body's own (zoomed) units, 100vw is the CSS viewport; take off the scrollbar and the site's margins.
-      const sbw = Math.max(0, Math.round((innerWidth - document.documentElement.clientWidth) * 100) / 100);
-      const sub = Math.round((sbw + marginX) * 100) / 100;
-      const z = Math.round(scale * 10000) / 10000;
-      // left/right 0 centre a body that a scroll lock made position: fixed; they do nothing to a static body.
+    const cssFor = (): string => {
+      const max = Math.round(current.widthPx / Math.max(0.25, current.zoom));
       const lines = [
-        `html${sel('data-wa-col')} > body { zoom: ${z} !important; width: ${sub > 0 ? `calc(100vw - ${sub}px)` : '100vw'} !important; ` +
-          'margin-left: auto !important; margin-right: auto !important; left: 0 !important; right: 0 !important; box-sizing: border-box !important; }',
+        `html${sel('data-wa-col')} > body { width: min(100%, ${max}px) !important; max-width: ${max}px !important; ` +
+          'margin-left: auto !important; margin-right: auto !important; box-sizing: border-box !important; }',
       ];
-      if (bg) lines.push(`html${sel('data-wa-col')} { background-color: ${bg} !important; }`);
+      if (bg)
+        lines.push(
+          `html${sel('data-wa-col')} { background-color: ${bg} !important; }`,
+        );
       return lines.join('\n');
     };
     const sheet = layer.make('');
     const cssPx = Math.round(spec.widthPx / (spec.zoom > 0 ? spec.zoom : 1));
     const op: ColumnOp = {
-      rec: record('column', 'page', body ? [body] : [], `${spec.widthPx} px column (${cssPx} CSS px at ${pct(spec.zoom)})${spec.mode === 'person' ? ', set by you' : ''}`, this.host.idOf),
+      rec: record(
+        'column',
+        'page',
+        body ? [body] : [],
+        `${spec.widthPx} px column (${cssPx} CSS px at ${pct(spec.zoom)})${spec.mode === 'person' ? ', set by you' : ''}`,
+        this.host.idOf,
+      ),
       elements: body ? [body] : [],
       risk: 7,
       active: false,
       persistent: true,
       source: spec.mode === 'person' ? 'person' : 'fit',
       title: `Held the page to a ${spec.widthPx} px column so lines stay a readable length`,
-      detail: 'The site lays itself out for that width, as in a narrower window, and the page keeps its own background at the sides. Narrower, Wider and Full width are in the WebAble panel.',
+      detail:
+        'The site lays itself out for that width, as in a narrower window, and the page keeps its own background at the sides. Narrower, Wider and Full width are in the WebAble panel.',
       spec: current,
       async apply() {
-        const want = current.scale && current.scale > 0 && current.scale <= 1 ? current.scale : kFor(current.widthPx);
-        k = host.columnScale ? await host.columnScale(want) : 1;
-        current = { ...current, scale: k };
+        current = { ...current, scale: 1 };
         op.spec = current;
-        sheet.replaceSync(cssFor(k));
+        sheet.replaceSync(cssFor());
         document.documentElement.setAttribute('data-wa-col', '');
         layer.attach(sheet);
         op.active = true;
@@ -904,8 +1122,7 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
         layer.detach(sheet);
         document.documentElement.removeAttribute('data-wa-col');
         op.active = false;
-        k = 1;
-        if (host.columnScale) await host.columnScale(1);
+        // CSS width has no browser zoom to restore.
       },
       release() {
         layer.detach(sheet);
@@ -915,22 +1132,14 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       setWidth(widthPx: number, zoom: number) {
         current = { ...current, widthPx, zoom };
         op.spec = current;
-        const want = kFor(widthPx);
         const write = () => {
           try {
-            sheet.replaceSync(cssFor(k));
+            sheet.replaceSync(cssFor());
           } catch {
             /* keep the last width */
           }
         };
-        if (op.active && host.columnScale && Math.abs(want - k) > 0.004) {
-          void host.columnScale(want).then((got) => {
-            k = got;
-            current = { ...current, scale: k };
-            op.spec = current;
-            if (op.active) write();
-          });
-        } else write();
+        write();
       },
     };
     return op;
@@ -947,14 +1156,24 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const rows: Array<[number, number]> = [];
     const seen = new Set<Element>();
     for (const t of read.texts) {
-      if (!t.inMain || !t.running || t.control || t.chars < 160 || !t.el.isConnected || seen.has(t.el)) continue;
+      if (
+        !t.inMain ||
+        !t.running ||
+        t.control ||
+        t.chars < 160 ||
+        !t.el.isConnected ||
+        seen.has(t.el)
+      )
+        continue;
       seen.add(t.el);
       const sample = visibleTextOf(t.el, 300);
       if (sample.length < 80) continue;
       const cs = getComputedStyle(t.el);
       ctx.font = `${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
       const z = (t.el as Element & { currentCSSZoom?: number }).currentCSSZoom;
-      const charW = (ctx.measureText(sample).width / sample.length) * (typeof z === 'number' && z > 0 ? z : 1);
+      const charW =
+        (ctx.measureText(sample).width / sample.length) *
+        (typeof z === 'number' && z > 0 ? z : 1);
       if (!(charW > 0)) continue;
       const range = document.createRange();
       range.selectNodeContents(t.el);
@@ -963,12 +1182,23 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
         if (r.width < 4 || r.height < 4) continue;
         const k = Math.round(r.top / 4);
         const cur = tops.get(k);
-        tops.set(k, cur ? [Math.min(cur[0], r.left), Math.max(cur[1], r.right)] : [r.left, r.right]);
+        tops.set(
+          k,
+          cur
+            ? [Math.min(cur[0], r.left), Math.max(cur[1], r.right)]
+            : [r.left, r.right],
+        );
       }
-      const widths = [...tops.entries()].sort((a, b) => a[0] - b[0]).slice(0, -1).map(([, [l, rr]]) => rr - l);
+      const widths = [...tops.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .slice(0, -1)
+        .map(([, [l, rr]]) => rr - l);
       if (widths.length < 2) continue;
       widths.sort((a, b) => a - b);
-      rows.push([(widths[Math.floor(widths.length / 2)] ?? 0) / charW, t.chars]);
+      rows.push([
+        (widths[Math.floor(widths.length / 2)] ?? 0) / charW,
+        t.chars,
+      ]);
       if (rows.length >= 40) break;
     }
     if (rows.length < 2) return null;
@@ -999,7 +1229,8 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       const parent = el.parentElement;
       if (!parent) continue;
       const pcs = getComputedStyle(parent);
-      if (pcs.display.includes('flex') || pcs.display.includes('grid')) continue;
+      if (pcs.display.includes('flex') || pcs.display.includes('grid'))
+        continue;
       const cs = getComputedStyle(el);
       if (cs.float !== 'none' || cs.display.startsWith('inline')) continue;
       const r = el.getBoundingClientRect();
@@ -1012,18 +1243,32 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       const charW = avg;
       const cpl = r.width / charW;
       if (cpl <= maxCpl) continue;
-      const width = Math.max(13 * charW, Math.round((targetCpl * charW) / 8) * 8);
+      const width = Math.max(
+        13 * charW,
+        Math.round((targetCpl * charW) / 8) * 8,
+      );
       if (width >= r.width - 8) continue;
       widths.add(width);
       writes.push([el, 'data-wa-m', String(width)]);
     }
     if (!writes.length) return null;
-    const rules = [...widths].map((w) => `${sel('data-wa-m', String(w))} { max-inline-size: ${w}px !important; }`).join('\n');
+    const rules = [...widths]
+      .map(
+        (w) =>
+          `${sel('data-wa-m', String(w))} { max-inline-size: ${w}px !important; }`,
+      )
+      .join('\n');
     const layer = this.sheets;
     const sheet = layer.make(rules);
     const els = writes.map((w) => w[0]);
     const op: Op = {
-      rec: record('measure', 'page', els, `target ${targetCpl} characters per line (max ${maxCpl})`, this.host.idOf),
+      rec: record(
+        'measure',
+        'page',
+        els,
+        `target ${targetCpl} characters per line (max ${maxCpl})`,
+        this.host.idOf,
+      ),
       elements: els,
       risk: 7,
       active: false,
@@ -1047,8 +1292,13 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
 
   /** weight: raise thin text to the fit's floor (never above 500 for running text, never synthetic bold). */
   weightOp(fit: FitProfile, texts: TextSample[]): Op | null {
-    const floor = Math.min(500, Math.max(400, Math.round(fit.weight.floor / 100) * 100));
-    const riskySigs = new Set(texts.filter((t) => t.clipRisk).map((t) => t.sig));
+    const floor = Math.min(
+      500,
+      Math.max(400, Math.round(fit.weight.floor / 100) * 100),
+    );
+    const riskySigs = new Set(
+      texts.filter((t) => t.clipRisk).map((t) => t.sig),
+    );
     const els: Element[] = [];
     for (const t of texts) {
       if (t.iconFont || t.headingLevel !== null || t.weight >= floor) continue;
@@ -1059,9 +1309,17 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     }
     if (!els.length) return null;
     const layer = this.sheets;
-    const sheet = layer.make(`${sel('data-wa-w')} { font-weight: ${floor} !important; }`);
+    const sheet = layer.make(
+      `${sel('data-wa-w')} { font-weight: ${floor} !important; }`,
+    );
     const op: Op = {
-      rec: record('weight', 'page', els, `weight floor ${floor}`, this.host.idOf),
+      rec: record(
+        'weight',
+        'page',
+        els,
+        `weight floor ${floor}`,
+        this.host.idOf,
+      ),
       elements: els,
       risk: 6,
       active: false,
@@ -1069,7 +1327,9 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       source: 'fit',
       title: `Thin text is a little heavier (at least ${floor})`,
       apply() {
-        setTokens(els.map((el) => [el, 'data-wa-w', ''] as [Element, string, string]));
+        setTokens(
+          els.map((el) => [el, 'data-wa-w', ''] as [Element, string, string]),
+        );
         layer.attach(sheet);
         op.active = true;
       },
@@ -1088,12 +1348,24 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const band = fit.contrast.band;
     const normal = Math.max(4.5, fit.contrast.floor || 4.5);
     const large = band === 'N' ? 3 : band === 'M' ? 4.5 : 7;
-    interface Pair { fg: Rgba; bg: Rgba; target: number; chars: number; els: Element[]; key: string }
+    interface Pair {
+      fg: Rgba;
+      bg: Rgba;
+      target: number;
+      chars: number;
+      els: Element[];
+      key: string;
+    }
     const pairs = new Map<string, Pair>();
     let sampled = 0;
     for (const t of texts) {
       if (t.disabled || t.iconFont || t.opacity < 0.95) continue;
-      if (t.el.closest('img, svg, picture, video, canvas, [aria-disabled="true"], :disabled')) continue;
+      if (
+        t.el.closest(
+          'img, svg, picture, video, canvas, [aria-disabled="true"], :disabled',
+        )
+      )
+        continue;
       const fg = rgbaOf(t.color);
       if (!fg || fg.a < 0.6) continue;
       const bg = effectiveBackground(t.el);
@@ -1109,17 +1381,29 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       if (p) {
         p.chars += t.chars;
         p.els.push(t.el);
-      } else pairs.set(key, { fg: fgFlat, bg, target, chars: t.chars, els: [t.el], key });
+      } else
+        pairs.set(key, {
+          fg: fgFlat,
+          bg,
+          target,
+          chars: t.chars,
+          els: [t.el],
+          key,
+        });
       if (sampled > 3000) break;
     }
     if (!pairs.size) return null;
-    const chosen = [...pairs.values()].sort((a, b) => b.chars - a.chars).slice(0, 16);
+    const chosen = [...pairs.values()]
+      .sort((a, b) => b.chars - a.chars)
+      .slice(0, 16);
     const writes: Array<[Element, string, string]> = [];
     const rules: string[] = [];
     chosen.forEach((p, i) => {
       const color = safeLift(p.fg, p.bg, p.target + 0.1);
       if (/url\(/i.test(color)) return;
-      rules.push(`${sel('data-wa-c', String(i))} { color: ${color} !important; }`);
+      rules.push(
+        `${sel('data-wa-c', String(i))} { color: ${color} !important; }`,
+      );
       for (const el of p.els) writes.push([el, 'data-wa-c', String(i)]);
     });
     if (!writes.length) return null;
@@ -1127,14 +1411,21 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const sheet = layer.make(rules.join('\n'));
     const els = writes.map((w) => w[0]);
     const op: Op = {
-      rec: record('contrast', 'page', els, `floor ${normal}:1 (large text ${large}:1), ${chosen.length} colours`, this.host.idOf),
+      rec: record(
+        'contrast',
+        'page',
+        els,
+        `floor ${normal}:1 (large text ${large}:1), ${chosen.length} colours`,
+        this.host.idOf,
+      ),
       elements: els,
       risk: 4,
       active: false,
       persistent: false,
       source: 'fit',
       title: `Darkened ${els.length} faint text item${els.length === 1 ? '' : 's'} to at least ${normal}:1 contrast`,
-      detail: 'Only text below your contrast floor changed, and each colour kept its hue.',
+      detail:
+        'Only text below your contrast floor changed, and each colour kept its hue.',
       apply() {
         setTokens(writes);
         layer.attach(sheet);
@@ -1150,7 +1441,11 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
   }
 
   /** targets: invisible hit-area expansion (::after) to the fit's size, capped at half the gap to neighbours. */
-  targetsOp(minPx: number | null, read: ReadResult, source: LedgerEntry['source'] = 'fit'): Op | null {
+  targetsOp(
+    minPx: number | null,
+    read: ReadResult,
+    source: LedgerEntry['source'] = 'fit',
+  ): Op | null {
     if (minPx === null || minPx <= 24) return null;
     const T = Math.min(96, minPx);
     const candidates: Element[] = [];
@@ -1169,20 +1464,36 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       seen.add(target);
       candidates.push(target);
     }
-    const neighbours = read.controls.filter((c) => c.el.isConnected).map((c) => activatableFor(c.el));
+    const neighbours = read.controls
+      .filter((c) => c.el.isConnected)
+      .map((c) => activatableFor(c.el));
     const pads = planPads(candidates, neighbours, T);
     if (!pads.length) return null;
     return this.padsOp('targets', pads, T, source, inlineSkipped);
   }
 
   private padsOp(
-    kind: 'targets' | 'promote_main', pads: Array<{ el: Element; padX: number; padY: number; needsPosition: boolean }>,
-    T: number, source: LedgerEntry['source'], inlineSkipped: number,
+    kind: 'targets' | 'promote_main',
+    pads: Array<{
+      el: Element;
+      padX: number;
+      padY: number;
+      needsPosition: boolean;
+    }>,
+    T: number,
+    source: LedgerEntry['source'],
+    inlineSkipped: number,
   ): Op {
     const sheet = this.sheets.shared('targets', TARGET_CSS);
     const els = pads.map((p) => p.el);
     const op: Op = {
-      rec: record(kind, kind === 'targets' ? 'page' : 'element', els, `hit area ${T} px on ${els.length} controls`, this.host.idOf),
+      rec: record(
+        kind,
+        kind === 'targets' ? 'page' : 'element',
+        els,
+        `hit area ${T} px on ${els.length} controls`,
+        this.host.idOf,
+      ),
       elements: els,
       risk: 5,
       active: false,
@@ -1195,7 +1506,9 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       hitProbes: pads.map((p) => ({ el: p.el, padX: p.padX, padY: p.padY })),
       apply() {
         sheet.attach();
-        applyPads(pads.filter((p) => p.el.isConnected && op.elements.includes(p.el)));
+        applyPads(
+          pads.filter((p) => p.el.isConnected && op.elements.includes(p.el)),
+        );
         op.active = true;
       },
       revert() {
@@ -1218,7 +1531,13 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const T = Math.min(400, Math.max(200, windowMs || 300));
     const r = Math.min(24, Math.max(4, radiusPx || 10));
     const host = this.host;
-    let st: { el: Element; id: number; x: number; y: number; t0: number } | null = null;
+    let st: {
+      el: Element;
+      id: number;
+      x: number;
+      y: number;
+      t0: number;
+    } | null = null;
     const release = () => {
       if (!st) return;
       try {
@@ -1229,7 +1548,12 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       st = null;
     };
     const down = (e: PointerEvent) => {
-      if (!e.isTrusted || e.button !== 0 || (e.pointerType !== 'mouse' && e.pointerType !== 'pen')) return;
+      if (
+        !e.isTrusted ||
+        e.button !== 0 ||
+        (e.pointerType !== 'mouse' && e.pointerType !== 'pen')
+      )
+        return;
       if (host.isOurUi(e.target)) return;
       const origin = e.target instanceof Element ? e.target : null;
       // Never capture a press that starts in a text field, slider, editor or media (even inside a label).
@@ -1238,7 +1562,13 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       if (!t || t.closest(NO_CAPTURE)) return;
       try {
         t.setPointerCapture(e.pointerId);
-        st = { el: t, id: e.pointerId, x: e.clientX, y: e.clientY, t0: e.timeStamp };
+        st = {
+          el: t,
+          id: e.pointerId,
+          x: e.clientX,
+          y: e.clientY,
+          t0: e.timeStamp,
+        };
       } catch {
         st = null;
       }
@@ -1258,7 +1588,13 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     };
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const op: Op = {
-      rec: record('steady_clicks', 'page', [], `window ${T} ms, radius ${r} px`, host.idOf),
+      rec: record(
+        'steady_clicks',
+        'page',
+        [],
+        `window ${T} ms, radius ${r} px`,
+        host.idOf,
+      ),
       elements: [],
       risk: 0,
       active: false,
@@ -1295,8 +1631,15 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const click = (e: MouseEvent) => {
       if (!e.isTrusted || e.detail === 0 || e.button !== 0) return;
       if (host.isOurUi(e.target)) return;
-      const t = e.target instanceof Element ? e.target.closest(ACTIVATABLE) : null;
-      if (!t || t.matches('input[type="number"], [role="spinbutton"], [role="slider"]') || t.closest('[ondblclick]')) {
+      const t =
+        e.target instanceof Element ? e.target.closest(ACTIVATABLE) : null;
+      if (
+        !t ||
+        t.matches(
+          'input[type="number"], [role="spinbutton"], [role="slider"]',
+        ) ||
+        t.closest('[ondblclick]')
+      ) {
         last = null;
         return;
       }
@@ -1312,7 +1655,13 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     };
     const opts: AddEventListenerOptions = { capture: true };
     const op: Op = {
-      rec: record('debounce', 'page', [], `drop repeat clicks within ${WINDOW} ms${skipPage ? ' (skipped: page uses double clicks)' : ''}`, host.idOf),
+      rec: record(
+        'debounce',
+        'page',
+        [],
+        `drop repeat clicks within ${WINDOW} ms${skipPage ? ' (skipped: page uses double clicks)' : ''}`,
+        host.idOf,
+      ),
       elements: [],
       risk: 0,
       active: false,
@@ -1395,24 +1744,54 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
         }
         for (const root of read.carousels) {
           if (!root.isConnected) continue;
-          const pause = Array.from(root.querySelectorAll('button, [role="button"]')).find((b) => /\b(pause|stop)\b/i.test(`${b.getAttribute('aria-label') ?? ''} ${b.textContent ?? ''}`));
+          const pause = Array.from(
+            root.querySelectorAll('button, [role="button"]'),
+          ).find((b) =>
+            /\b(pause|stop)\b/i.test(
+              `${b.getAttribute('aria-label') ?? ''} ${b.textContent ?? ''}`,
+            ),
+          );
           if (pause instanceof HTMLElement) {
             pause.click(); // the site's own pause control (WCAG 2.2.2)
             summary.carousels++;
           } else {
             // Many carousels pause while hovered: tell it the pointer is over it.
-            for (const type of ['pointerover', 'pointerenter', 'mouseover', 'mouseenter'] as const) {
-              const Ctor = type.startsWith('pointer') ? PointerEvent : MouseEvent;
-              root.dispatchEvent(new Ctor(type, { bubbles: type.endsWith('over'), cancelable: false, composed: true }));
+            for (const type of [
+              'pointerover',
+              'pointerenter',
+              'mouseover',
+              'mouseenter',
+            ] as const) {
+              const Ctor = type.startsWith('pointer')
+                ? PointerEvent
+                : MouseEvent;
+              root.dispatchEvent(
+                new Ctor(type, {
+                  bubbles: type.endsWith('over'),
+                  cancelable: false,
+                  composed: true,
+                }),
+              );
             }
             hovered.push(root);
           }
         }
         const bits: string[] = [];
-        if (summary.animations) bits.push(`${summary.animations} animation${summary.animations === 1 ? '' : 's'} finished or paused`);
-        if (summary.videos) bits.push(`${summary.videos} muted video${summary.videos === 1 ? '' : 's'} paused`);
-        if (summary.carousels) bits.push(`pressed the pause button on ${summary.carousels} moving banner${summary.carousels === 1 ? '' : 's'}`);
-        op.detail = bits.length ? `${bits.join(', ')}.` : 'Animations and transitions jump to their end state.';
+        if (summary.animations)
+          bits.push(
+            `${summary.animations} animation${summary.animations === 1 ? '' : 's'} finished or paused`,
+          );
+        if (summary.videos)
+          bits.push(
+            `${summary.videos} muted video${summary.videos === 1 ? '' : 's'} paused`,
+          );
+        if (summary.carousels)
+          bits.push(
+            `pressed the pause button on ${summary.carousels} moving banner${summary.carousels === 1 ? '' : 's'}`,
+          );
+        op.detail = bits.length
+          ? `${bits.join(', ')}.`
+          : 'Animations and transitions jump to their end state.';
         op.active = true;
       },
       revert() {
@@ -1424,7 +1803,8 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
             /* gone */
           }
         }
-        for (const v of pausedVideos.splice(0)) void v.play().catch(() => undefined);
+        for (const v of pausedVideos.splice(0))
+          void v.play().catch(() => undefined);
         for (const s of pausedSvgs.splice(0)) {
           try {
             s.unpauseAnimations();
@@ -1433,9 +1813,20 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
           }
         }
         for (const root of hovered.splice(0)) {
-          for (const type of ['pointerout', 'pointerleave', 'mouseout', 'mouseleave'] as const) {
+          for (const type of [
+            'pointerout',
+            'pointerleave',
+            'mouseout',
+            'mouseleave',
+          ] as const) {
             const Ctor = type.startsWith('pointer') ? PointerEvent : MouseEvent;
-            root.dispatchEvent(new Ctor(type, { bubbles: type.endsWith('out'), cancelable: false, composed: true }));
+            root.dispatchEvent(
+              new Ctor(type, {
+                bubbles: type.endsWith('out'),
+                cancelable: false,
+                composed: true,
+              }),
+            );
           }
         }
         op.active = false;
@@ -1449,7 +1840,13 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
     const layer = this.sheets;
     const sheet = layer.make(FOCUS_CSS);
     const op: Op = {
-      rec: record('focus_ring', 'page', [], 'two-tone focus ring', this.host.idOf),
+      rec: record(
+        'focus_ring',
+        'page',
+        [],
+        'two-tone focus ring',
+        this.host.idOf,
+      ),
       elements: [],
       risk: 0,
       active: false,
@@ -1477,10 +1874,17 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       return r.top <= 2 && r.height > 0 && r.bottom < vh * 0.6;
     });
     // A bar inside another bar is the same bar (a header and its inner row): keep the outermost.
-    const bars = live.filter((el) => !live.some((o) => o !== el && o.contains(el)));
+    const bars = live.filter(
+      (el) => !live.some((o) => o !== el && o.contains(el)),
+    );
     if (!bars.length) return null;
     // Screen covered: the union of the bars' vertical extents (stacked bars add up, overlapping ones do not).
-    const spans = bars.map((el) => el.getBoundingClientRect()).map((r) => [Math.max(0, r.top), Math.min(vh, r.bottom)] as [number, number]).sort((a, b) => a[0] - b[0]);
+    const spans = bars
+      .map((el) => el.getBoundingClientRect())
+      .map(
+        (r) => [Math.max(0, r.top), Math.min(vh, r.bottom)] as [number, number],
+      )
+      .sort((a, b) => a[0] - b[0]);
     let covered = 0;
     let end = -Infinity;
     for (const [top, bottom] of spans) {
@@ -1489,13 +1893,24 @@ ${sel('data-wa-pg')} { margin-block-end: 1em !important; }`;
       end = Math.max(end, bottom);
     }
     if (covered <= 0.2 * vh) return null;
-    const writes: Array<[Element, string, string]> = bars.map((el) => [el, 'data-wa-unpin', getComputedStyle(el).position === 'fixed' ? 'f' : 's']);
+    const writes: Array<[Element, string, string]> = bars.map((el) => [
+      el,
+      'data-wa-unpin',
+      getComputedStyle(el).position === 'fixed' ? 'f' : 's',
+    ]);
     const layer = this.sheets;
-    const sheet = layer.make(`${sel('data-wa-unpin', 's')} { position: relative !important; top: auto !important; }
+    const sheet =
+      layer.make(`${sel('data-wa-unpin', 's')} { position: relative !important; top: auto !important; }
 ${sel('data-wa-unpin', 'f')} { position: absolute !important; }`);
     const share = Math.round((covered / vh) * 100);
     const op: Op = {
-      rec: record('unpin_sticky', 'element', bars, `sticky top bars cover ${share}% of the screen`, this.host.idOf),
+      rec: record(
+        'unpin_sticky',
+        'element',
+        bars,
+        `sticky top bars cover ${share}% of the screen`,
+        this.host.idOf,
+      ),
       elements: bars,
       risk: 3,
       active: false,
@@ -1519,7 +1934,12 @@ ${sel('data-wa-unpin', 'f')} { position: absolute !important; }`);
   /* ---------------- batch 2: ops from Jev's decisions ---------------- */
 
   /** dim folded distractions (opacity 0.35, grayscale when safe; restored on hover and focus). */
-  dimOp(target: Element | Element[], title: string, detail: string, p: number): Op {
+  dimOp(
+    target: Element | Element[],
+    title: string,
+    detail: string,
+    p: number,
+  ): Op {
     const els = Array.isArray(target) ? target : [target];
     const grayOk = (el: Element) => {
       for (const d of Array.from(el.querySelectorAll('*')).slice(0, 400)) {
@@ -1538,10 +1958,12 @@ ${sel('data-wa-unpin', 'f')} { position: absolute !important; }`);
       persistent: false,
       source: 'jev',
       title,
-      detail: 'Faded, not hidden: it comes back when you point at it or move to it with the keyboard.',
+      detail:
+        'Faded, not hidden: it comes back when you point at it or move to it with the keyboard.',
       p,
       apply() {
-        for (const el of els) el.setAttribute('data-wa-dim', gray.get(el) ? 'g' : '');
+        for (const el of els)
+          el.setAttribute('data-wa-dim', gray.get(el) ? 'g' : '');
         sheet.attach();
         op.active = true;
       },
@@ -1555,16 +1977,32 @@ ${sel('data-wa-unpin', 'f')} { position: absolute !important; }`);
   }
 
   /** promote_main: an outline and a hit area on the main action; it never moves. */
-  promoteOp(el: Element, read: ReadResult | null, minPx: number | null, title: string, p: number): Op {
+  promoteOp(
+    el: Element,
+    read: ReadResult | null,
+    minPx: number | null,
+    title: string,
+    p: number,
+  ): Op {
     const T = Math.max(44, Math.min(96, minPx ?? 44));
     const target = activatableFor(el);
-    const neighbours = read ? read.controls.filter((c) => c.el.isConnected).map((c) => activatableFor(c.el)) : [];
+    const neighbours = read
+      ? read.controls
+          .filter((c) => c.el.isConnected)
+          .map((c) => activatableFor(c.el))
+      : [];
     const pads = planPads([target], neighbours, T);
     const outlineSheet = this.sheets.shared('main', MAIN_CSS);
     const targetSheet = this.sheets.shared('targets', TARGET_CSS);
     let ownPads = false;
     const op: Op = {
-      rec: record('promote_main', 'element', [target], `outline and ${T} px hit area`, this.host.idOf),
+      rec: record(
+        'promote_main',
+        'element',
+        [target],
+        `outline and ${T} px hit area`,
+        this.host.idOf,
+      ),
       elements: [target],
       risk: 2,
       active: false,
@@ -1610,13 +2048,17 @@ ${sel('data-wa-unpin', 'f')} { position: absolute !important; }`);
     const sheet = this.sheets.shared('flash', FLASH_CSS);
     sheet.attach();
     for (const el of list) el.setAttribute('data-wa-flash', '');
-    setTimeout(() => {
-      for (const el of list) el.removeAttribute('data-wa-flash');
-      sheet.detach();
-    }, Math.max(200, ms));
+    setTimeout(
+      () => {
+        for (const el of list) el.removeAttribute('data-wa-flash');
+        sheet.detach();
+      },
+      Math.max(200, ms),
+    );
   }
 
-  private canvas(): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null {
+  private canvas():
+    CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null {
     if (this.canvasCtx) return this.canvasCtx;
     try {
       this.canvasCtx = new OffscreenCanvas(8, 8).getContext('2d');
@@ -1636,7 +2078,8 @@ export function relativeLineHeight(el: Element): number | 'normal' | null {
   try {
     const v = (el as HTMLElement).computedStyleMap?.().get('line-height');
     if (!v) return null;
-    if (v instanceof CSSKeywordValue) return v.value === 'normal' ? 'normal' : null;
+    if (v instanceof CSSKeywordValue)
+      return v.value === 'normal' ? 'normal' : null;
     if (v instanceof CSSUnitValue && v.unit === 'number') return v.value;
     return null;
   } catch {
@@ -1647,7 +2090,11 @@ export function relativeLineHeight(el: Element): number | 'normal' | null {
 /** The element and `levels` ancestors grow with their content (height and max-height are auto / none). */
 export function fluidHeight(el: Element, levels: number): boolean {
   let n: Element | null = el;
-  for (let d = 0; n && d <= levels && n !== document.body && n !== document.documentElement; d++) {
+  for (
+    let d = 0;
+    n && d <= levels && n !== document.body && n !== document.documentElement;
+    d++
+  ) {
     try {
       const m = (n as HTMLElement).computedStyleMap?.();
       if (!m) return false;
@@ -1674,7 +2121,10 @@ function headingFluid(heading: Element, textEls: Element[]): boolean {
     const p = getComputedStyle(n).position;
     if (p === 'absolute' || p === 'fixed' || p === 'sticky') return false;
   }
-  return fluidHeight(heading, 3) && textEls.every((el) => el === heading || fluidHeight(el, 0));
+  return (
+    fluidHeight(heading, 3) &&
+    textEls.every((el) => el === heading || fluidHeight(el, 0))
+  );
 }
 
 /**
@@ -1688,19 +2138,30 @@ function pageBackground(): string | null {
     return !!p && p.a > 0.01;
   };
   const html = getComputedStyle(document.documentElement);
-  if (opaque(html.backgroundColor) || html.backgroundImage !== 'none') return null;
+  if (opaque(html.backgroundColor) || html.backgroundImage !== 'none')
+    return null;
   const body = document.body;
   if (!body) return null;
   const bcs = getComputedStyle(body);
-  if (opaque(bcs.backgroundColor) || bcs.backgroundImage !== 'none') return null;
+  if (opaque(bcs.backgroundColor) || bcs.backgroundImage !== 'none')
+    return null;
   const vw = document.documentElement.clientWidth || innerWidth;
-  const docH = Math.max(document.documentElement.scrollHeight, body.scrollHeight, 1);
+  const docH = Math.max(
+    document.documentElement.scrollHeight,
+    body.scrollHeight,
+    1,
+  );
   let level: Element[] = Array.from(body.children);
   for (let depth = 0; depth < 3 && level.length; depth++) {
     let next: Element[] = [];
     for (const child of level.slice(0, 40)) {
       const cs = getComputedStyle(child);
-      if (cs.position === 'fixed' || cs.display === 'none' || child.tagName === 'WEBABLE-UI') continue;
+      if (
+        cs.position === 'fixed' ||
+        cs.display === 'none' ||
+        child.tagName === 'WEBABLE-UI'
+      )
+        continue;
       const r = child.getBoundingClientRect();
       if (r.width < 0.8 * vw || r.height < 0.4 * docH) continue;
       if (opaque(cs.backgroundColor)) return cs.backgroundColor;

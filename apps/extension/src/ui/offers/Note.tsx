@@ -6,7 +6,11 @@ import type { EngineApi, Toast } from '../../contracts';
 export const NOTE_MS = 5000;
 
 /** The note to show now, or null. Each toast is shown at most once, then cleared from the engine. */
-export function useNote(api: EngineApi, toasts: Toast[], ms = NOTE_MS): Toast | null {
+export function useNote(
+  api: EngineApi,
+  toasts: Toast[],
+  ms = NOTE_MS,
+): Toast | null {
   const [shown, setShown] = useState<Toast | null>(null);
   const seen = useRef(new Set<string>());
   const last = toasts.length > 0 ? toasts[toasts.length - 1]! : null;

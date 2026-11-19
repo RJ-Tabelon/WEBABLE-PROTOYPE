@@ -4,7 +4,10 @@ import { HttpError } from '../util';
 import { zodIssues } from '../schemas';
 
 /** Parse and validate a JSON body. Errors name the field at fault, never its value. */
-export async function readBody<T>(c: Context, schema: z.ZodType<T, unknown>): Promise<T> {
+export async function readBody<T>(
+  c: Context,
+  schema: z.ZodType<T, unknown>,
+): Promise<T> {
   let raw: unknown;
   try {
     raw = await c.req.json();
@@ -12,7 +15,13 @@ export async function readBody<T>(c: Context, schema: z.ZodType<T, unknown>): Pr
     throw new HttpError(400, 'bad_json', 'The request body is not valid JSON.');
   }
   const parsed = schema.safeParse(raw);
-  if (!parsed.success) throw new HttpError(400, 'invalid_body', 'The request body does not match the contract.', zodIssues(parsed.error));
+  if (!parsed.success)
+    throw new HttpError(
+      400,
+      'invalid_body',
+      'The request body does not match the contract.',
+      zodIssues(parsed.error),
+    );
   return parsed.data;
 }
 

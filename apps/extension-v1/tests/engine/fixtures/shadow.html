@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shadow components</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Components</h1>
+      <p style="font-size: 18px">
+        Light DOM text at a comfortable size, next to a web component.
+      </p>
+      <product-card id="card"></product-card>
+    </main>
+    <script>
+      customElements.define(
+        'product-card',
+        class extends HTMLElement {
+          constructor() {
+            super();
+            const root = this.attachShadow({ mode: 'open' });
+            root.innerHTML = `
+              <style>
+                :host { display: block; border: 1px solid #ccc; padding: 12px; margin-top: 16px; }
+                p { font-size: 12px; line-height: 15px; color: #444; margin: 0 0 8px; }
+                button { font-size: 11px; width: 20px; height: 20px; padding: 0; }
+                button:focus { outline: none; }
+                .pulse { width: 12px; height: 12px; background: #2d6a3e; animation: pulse 1s ease-in-out infinite; }
+                @keyframes pulse { 50% { opacity: 0.2; } }
+              </style>
+              <p class="desc">A small description inside a shadow root, written in tiny type on purpose.</p>
+              <button type="button" aria-label="Add">+</button>
+              <button type="button" aria-label="Remove">-</button>
+              <div class="pulse"></div>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>

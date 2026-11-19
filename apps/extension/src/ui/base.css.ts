@@ -67,7 +67,8 @@ export const calmChromeCss: string = `
 
 const C = '.wa-calm';
 /** A band that holds only a folded part or one row (end matter that stacks into one list). */
-const END = ':is(.wa-band,.wa-isec):is(:has(>.wa-disc:only-child),:has(>.wa-rows:only-child>.wa-row:only-child))';
+const END =
+  ':is(.wa-band,.wa-isec):is(:has(>.wa-disc:only-child),:has(>.wa-rows:only-child>.wa-row:only-child))';
 
 /*
  * Calm view v3 (design.md §2): the AI-lab research-site language. A white page with no boxed cards; one family at

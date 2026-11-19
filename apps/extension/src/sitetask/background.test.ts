@@ -4,9 +4,30 @@ import { LOAD_TIMEOUT_MS, type RunState } from './shared';
 import type { SiteTaskResult, SiteTaskSpec } from './types';
 
 const TASKS: SiteTaskSpec[] = [
-  { id: 'a', name: 'Quiet', url: 'https://en.wikipedia.org/wiki/X', prompt: 'X', target: { text: ['X'] }, busy: false },
-  { id: 'b', name: 'Busy', url: 'https://www.cnn.com/', prompt: 'Health', target: { text: ['Health'] }, busy: true },
-  { id: 'c', name: 'Food', url: 'https://www.allrecipes.com/recipe/1/', prompt: 'Jump', target: { text: ['Jump'] }, busy: true },
+  {
+    id: 'a',
+    name: 'Quiet',
+    url: 'https://en.wikipedia.org/wiki/X',
+    prompt: 'X',
+    target: { text: ['X'] },
+    busy: false,
+  },
+  {
+    id: 'b',
+    name: 'Busy',
+    url: 'https://www.cnn.com/',
+    prompt: 'Health',
+    target: { text: ['Health'] },
+    busy: true,
+  },
+  {
+    id: 'c',
+    name: 'Food',
+    url: 'https://www.allrecipes.com/recipe/1/',
+    prompt: 'Jump',
+    target: { text: ['Jump'] },
+    busy: true,
+  },
 ];
 
 function fakeHost() {
@@ -74,7 +95,19 @@ function fakeHost() {
 }
 
 const opener = { tabId: 7, windowId: 1, index: 3 };
-const found = (id: string, ms = 3000) => ({ id, found: true, skipped: false, ms, wrongClicks: 2, nearMisses: 1, slips: 1, presses: 4, scrollScreens: 0.5, motionSeen: true, adsSeen: 6 });
+const found = (id: string, ms = 3000) => ({
+  id,
+  found: true,
+  skipped: false,
+  ms,
+  wrongClicks: 2,
+  nearMisses: 1,
+  slips: 1,
+  presses: 4,
+  scrollScreens: 0.5,
+  motionSeen: true,
+  adsSeen: 6,
+});
 
 describe('SiteTaskRunner', () => {
   it('walks one tab through every site and hands the results back', async () => {
@@ -85,13 +118,19 @@ describe('SiteTaskRunner', () => {
     expect(f.log).toEqual([`open ${TASKS[0]!.url}`]);
 
     expect(await r.whoami(999, TASKS[0]!.url)).toBeNull(); // another tab: an ordinary page
-    expect(await r.whoami(tab, 'https://en.m.wikipedia.org/wiki/X')).toEqual({ task: TASKS[0], index: 0, total: 3 });
+    expect(await r.whoami(tab, 'https://en.m.wikipedia.org/wiki/X')).toEqual({
+      task: TASKS[0],
+      index: 0,
+      total: 3,
+    });
     await r.done(tab, { id: 'b' }); // stale: not the current site
     expect(r.current!.index).toBe(0);
     await r.done(tab, found('a'));
     expect(f.log.at(-1)).toBe(`nav ${tab} ${TASKS[1]!.url}`);
 
-    expect(await r.whoami(tab, 'https://edition.cnn.com/')).toMatchObject({ index: 1 });
+    expect(await r.whoami(tab, 'https://edition.cnn.com/')).toMatchObject({
+      index: 1,
+    });
     await r.done(tab, found('b', 9000));
     expect(await r.whoami(tab, TASKS[2]!.url)).toMatchObject({ index: 2 });
     await r.done(tab, { id: 'c', skipped: true });
@@ -102,7 +141,12 @@ describe('SiteTaskRunner', () => {
       ['b', true, false, 9000],
       ['c', false, true, null],
     ]);
-    expect(f.finished![1]).toMatchObject({ name: 'Busy', busy: true, adsSeen: 6, motionSeen: true });
+    expect(f.finished![1]).toMatchObject({
+      name: 'Busy',
+      busy: true,
+      adsSeen: 6,
+      motionSeen: true,
+    });
     expect(f.stored).toBeNull();
     expect(r.current).toBeNull();
   });
@@ -111,7 +155,9 @@ describe('SiteTaskRunner', () => {
     const f = fakeHost();
     const r = new SiteTaskRunner(f.host);
     await r.start(TASKS, opener);
-    expect(await r.whoami(r.current!.taskTabId, 'https://example.org/')).toEqual({ task: null });
+    expect(
+      await r.whoami(r.current!.taskTabId, 'https://example.org/'),
+    ).toEqual({ task: null });
   });
 
   it('skips a site whose card never shows within 20 s', async () => {
@@ -159,7 +205,9 @@ describe('SiteTaskRunner', () => {
     const f = fakeHost();
     const r = new SiteTaskRunner(f.host);
     expect(await r.start([], opener)).toBe(false);
-    expect(await r.start([{ ...TASKS[0]!, url: 'javascript:alert(1)' }], opener)).toBe(false);
+    expect(
+      await r.start([{ ...TASKS[0]!, url: 'javascript:alert(1)' }], opener),
+    ).toBe(false);
     expect(f.log).toEqual([]);
   });
 });

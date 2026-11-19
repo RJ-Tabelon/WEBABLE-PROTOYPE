@@ -15,21 +15,36 @@ const sentence = (i: number) =>
 
 describe('repeatedCards', () => {
   it('a run of paragraphs with inline links is prose, not cards', () => {
-    expect(repeatedCards(box(Array.from({ length: 12 }, (_, i) => sentence(i)).join('')))).toBe(0);
+    expect(
+      repeatedCards(
+        box(Array.from({ length: 12 }, (_, i) => sentence(i)).join('')),
+      ),
+    ).toBe(0);
   });
 
   it('repeated blocks whose only link is a word inside a sentence are not cards', () => {
-    const html = Array.from({ length: 8 }, (_, i) => `<div class="para">${sentence(i).slice(3, -4)}</div>`).join('');
+    const html = Array.from(
+      { length: 8 },
+      (_, i) => `<div class="para">${sentence(i).slice(3, -4)}</div>`,
+    ).join('');
     expect(repeatedCards(box(html))).toBe(0);
   });
 
   it('teasers titled by a link are cards', () => {
-    const html = Array.from({ length: 6 }, (_, i) => `<div class="card"><a href="/s${i}">Story headline number ${i}</a><span>2h ago</span></div>`).join('');
+    const html = Array.from(
+      { length: 6 },
+      (_, i) =>
+        `<div class="card"><a href="/s${i}">Story headline number ${i}</a><span>2h ago</span></div>`,
+    ).join('');
     expect(repeatedCards(box(html))).toBe(6);
   });
 
   it('blocks titled by a heading are cards', () => {
-    const html = Array.from({ length: 5 }, (_, i) => `<article class="tile"><h3>Title ${i}</h3><p>A short summary of item ${i} that runs on for a little while.</p></article>`).join('');
+    const html = Array.from(
+      { length: 5 },
+      (_, i) =>
+        `<article class="tile"><h3>Title ${i}</h3><p>A short summary of item ${i} that runs on for a little while.</p></article>`,
+    ).join('');
     expect(repeatedCards(box(html))).toBe(5);
   });
 });

@@ -8,15 +8,34 @@
 // First screen (1280×720): the strip, then the page's title (top ≤ 140 px), one orientation line in the page's words,
 // then the task (first field, first row or the buy button) above the dock. One filled button on screen at most: the
 // dock's.
-import type { FitProfile, FitSpec, PageOutline } from '@webable/core';
+import type { FitProfile, FitSpec, PageOutline } from '@webable/engine';
 import { Fragment, type JSX } from 'preact';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'preact/hooks';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import type { EngineApi } from '../../contracts';
 import { calmChromeCss } from '../base.css';
 import { focusOriginal, proxyClick, proxyKey } from '../proxy';
-import { calmMetrics, structureParams, themeModeFor, tokensFor, tokensToStyle } from '../tokens';
+import {
+  calmMetrics,
+  structureParams,
+  themeModeFor,
+  tokensFor,
+  tokensToStyle,
+} from '../tokens';
 import { Blocks } from './Blocks';
-import { ChatRow, ErrorCard, NoticeCard, PortalLinks, ProgressCard, SuccessPanel } from './Cards';
+import {
+  ChatRow,
+  ErrorCard,
+  NoticeCard,
+  PortalLinks,
+  ProgressCard,
+  SuccessPanel,
+} from './Cards';
 import { Disclosure } from './Disclosure';
 import { Calm, type CalmCtx, isResultsUrl } from './context';
 import { Dock } from './Dock';
@@ -25,10 +44,25 @@ import { planGroups } from './grouping';
 import * as I from './icons';
 import { IndexView } from './Index';
 import { ArticleHeader, LeadBand } from './Lead';
-import { calmSheetCss, tickNow, useCalmStyles, useDomVersion, useEngineState, useReducedMotion } from './live';
+import {
+  calmSheetCss,
+  tickNow,
+  useCalmStyles,
+  useDomVersion,
+  useEngineState,
+  useReducedMotion,
+} from './live';
 import { pageMarks, readTimeLine } from './markers';
 import { pageMeaning } from './meaning';
-import { type Block, isShown, keyOf, newCtx, pagePopups, readBlocks, textOf } from './model';
+import {
+  type Block,
+  isShown,
+  keyOf,
+  newCtx,
+  pagePopups,
+  readBlocks,
+  textOf,
+} from './model';
 import { useOutcome } from './outcome';
 import { type CalmPlan, buildPlan } from './plan';
 import { PurposeView } from './Purpose';
@@ -40,21 +74,14 @@ import { Strip, SubStrip } from './Strip';
 
 /** Text size on the simplified page: the panel's steps (state.calm.textStep), 15% each, 0.85× to 1.6×. */
 function scaleFor(step: number | undefined): number {
-  return Math.round(Math.min(1.6, Math.max(0.85, 1 + 0.15 * (step ?? 0))) * 100) / 100;
+  return (
+    Math.round(Math.min(1.6, Math.max(0.85, 1 + 0.15 * (step ?? 0))) * 100) /
+    100
+  );
 }
 
-const specIds = new WeakMap<object, number>();
-let specN = 0;
-function specKey(s: object): number {
-  let k = specIds.get(s);
-  if (!k) {
-    k = ++specN;
-    specIds.set(s, k);
-  }
-  return k;
-}
-
-const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+const FOCUSABLE =
+  'a[href],button:not([disabled]),input:not([disabled]):not([type=hidden]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
 /** The site's menus and link bars: one "Site menu" at the end, folded. */
 function isMenu(p: CalmPlan['main'][number]): boolean {
@@ -69,13 +96,16 @@ function useChromeRules(rootRef: { current: HTMLElement | null }): void {
     const inner = node.getRootNode();
     const host = inner instanceof ShadowRoot ? inner.host : null;
     const outer = host?.getRootNode();
-    if (!(outer instanceof ShadowRoot) || !('adoptedStyleSheets' in outer)) return;
+    if (!(outer instanceof ShadowRoot) || !('adoptedStyleSheets' in outer))
+      return;
     try {
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(calmChromeCss);
       outer.adoptedStyleSheets = [...outer.adoptedStyleSheets, sheet];
       return () => {
-        outer.adoptedStyleSheets = outer.adoptedStyleSheets.filter((s) => s !== sheet);
+        outer.adoptedStyleSheets = outer.adoptedStyleSheets.filter(
+          (s) => s !== sheet,
+        );
       };
     } catch {
       return undefined;
@@ -83,7 +113,12 @@ function useChromeRules(rootRef: { current: HTMLElement | null }): void {
   }, [rootRef]);
 }
 
-export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOutline; fit: FitProfile }): JSX.Element {
+export function CalmView(props: {
+  api: EngineApi;
+  spec: FitSpec;
+  outline: PageOutline;
+  fit: FitProfile;
+}): JSX.Element {
   const { api, spec, outline, fit } = props;
   const state = useEngineState(api);
   // The Calm host is CSS-zoomed by 1 ÷ page zoom (App), so the view lays out as at 100%: its lengths need no division.
@@ -104,16 +139,37 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
   const params = structureParams(level);
   const mode = themeModeFor(fit);
   const reduceMotion = sysReduce || !!fit?.attention?.motion?.on;
-  const tokens = useMemo(() => tokensFor(fit, mode, { zoom, density: spec.density, scale, surface: 'calm' }), [fit, mode, zoom, spec.density, scale]);
-  const m = calmMetrics(fit, { zoom, density: spec.density, scale, surface: 'calm' });
+  const tokens = useMemo(
+    () =>
+      tokensFor(fit, mode, {
+        zoom,
+        density: spec.density,
+        scale,
+        surface: 'calm',
+      }),
+    [fit, mode, zoom, spec.density, scale],
+  );
+  const m = calmMetrics(fit, {
+    zoom,
+    density: spec.density,
+    scale,
+    surface: 'calm',
+  });
   const style = useMemo(() => tokensToStyle(tokens), [tokens]);
 
   // Round 7: what this page is for (Jev's page model v2 and the content read on this device), so the view leads with it.
   const meaning = useMemo(() => {
     try {
-      return pageMeaning({ outline, understanding: state.understanding, elementFor: (id) => api.elementFor(id) });
+      return pageMeaning({
+        outline,
+        understanding: state.understanding,
+        elementFor: (id) => api.elementFor(id),
+      });
     } catch (e) {
-      console.warn('[WebAble] Calm view could not read what this page is for', e);
+      console.warn(
+        '[WebAble] Calm view could not read what this page is for',
+        e,
+      );
       return null;
     }
   }, [api, outline, state.understanding]);
@@ -122,23 +178,45 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
   const plan = useMemo<CalmPlan | null>(() => {
     try {
       return buildPlan({
-        spec, outline, elementFor: (id) => api.elementFor(id), decisions: state.decisions ?? [], listFirst: params.listFirst,
-        stepMax: params.stepMax, groupSize: params.groupSize, meaning,
+        spec,
+        outline,
+        elementFor: (id) => api.elementFor(id),
+        decisions: state.decisions ?? [],
+        listFirst: params.listFirst,
+        stepMax: params.stepMax,
+        groupSize: params.groupSize,
+        meaning,
       });
     } catch (e) {
       console.warn('[WebAble] Calm view could not read this page', e);
       return null;
     }
     // `version` re-reads the live page after it changes; so does a paragraph rewritten (or switched back) for the person.
-  }, [api, spec, outline, state.decisions, version, rwVersion, params.listFirst, params.stepMax, params.groupSize, meaning]);
+  }, [
+    api,
+    spec,
+    outline,
+    state.decisions,
+    version,
+    rwVersion,
+    params.listFirst,
+    params.stepMax,
+    params.groupSize,
+    meaning,
+  ]);
 
   // Round 8 markers: Jev's live badges and paid content, and "N min read" on an article that does not say it.
-  const marks = useMemo(() => pageMarks(state.understanding, (id) => api.elementFor(id)), [api, state.understanding]);
+  const marks = useMemo(
+    () => pageMarks(state.understanding, (id) => api.elementFor(id)),
+    [api, state.understanding],
+  );
   const isArticle = plan?.kind === 'article' && !!plan.article;
   const readLine = useMemo(() => {
     if (!isArticle) return null;
     try {
-      return readTimeLine(document, state.understanding, (id) => api.elementFor(id));
+      return readTimeLine(document, state.understanding, (id) =>
+        api.elementFor(id),
+      );
     } catch {
       return null;
     }
@@ -147,7 +225,11 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
   // Round 10: the running text of the page's reading parts in groups, asked for once per plan (the engine dedupes);
   // each group settles into its components as they arrive (Grouped.tsx). Never on a page with password or payment
   // fields (those keep the in-place fixes), a form or a results page.
-  const noGroups = !!state.digest?.hasSensitiveFields || spec.page_type === 'search_results' || spec.page_type === 'form' || isResultsUrl();
+  const noGroups =
+    !!state.digest?.hasSensitiveFields ||
+    spec.page_type === 'search_results' ||
+    spec.page_type === 'form' ||
+    isResultsUrl();
   const grouped = useMemo(() => {
     try {
       return planGroups(noGroups ? null : plan);
@@ -161,18 +243,24 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
     try {
       api.compose(grouped.groups);
     } catch (e) {
-      console.warn('[WebAble] Simplified page could not ask for the page laid out', e);
+      console.warn(
+        '[WebAble] Simplified page could not ask for the page laid out',
+        e,
+      );
     }
   }, [api, grouped]);
   const groupOrder = useMemo(() => grouped.groups.map((g) => g.id), [grouped]);
   const settleRef = useRef<SettleCtl | null>(null);
-  if (!settleRef.current) settleRef.current = createSettle(() => rootRef.current);
+  if (!settleRef.current)
+    settleRef.current = createSettle(() => rootRef.current);
   const settle = settleRef.current;
   useEffect(() => () => settle.dispose(), [settle]);
   const composeVersion = state.compose?.version ?? 0;
 
-  // A different layout (Jev's pick arrived) starts the form again at its first step.
-  useEffect(() => setStep(0), [spec]);
+  // Local content refreshes keep open disclosures and form progress. Only a
+  // different layout source or a changed step sequence starts the form again.
+  const stepsKey = JSON.stringify(spec.form_steps);
+  useEffect(() => setStep(0), [state.calm.source, stepsKey]);
   const nSteps = plan?.form?.steps?.length ?? 0;
   useEffect(() => {
     if (nSteps && step > nSteps - 1) setStep(nSteps - 1);
@@ -199,17 +287,27 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
     const found: Element[] = [];
     const mo = new MutationObserver((recs) => {
       for (const r of recs) {
-        const nodes = r.type === 'childList' ? Array.from(r.addedNodes) : [r.target];
+        const nodes =
+          r.type === 'childList' ? Array.from(r.addedNodes) : [r.target];
         for (const n of nodes) {
-          const e = n.nodeType === Node.ELEMENT_NODE ? (n as Element) : n.parentElement;
-          if (!e || e.closest('webable-ui') || found.some((f) => f.contains(e))) continue;
-          for (let i = found.length - 1; i >= 0; i--) if (e.contains(found[i]!)) found.splice(i, 1);
+          const e =
+            n.nodeType === Node.ELEMENT_NODE ? (n as Element) : n.parentElement;
+          if (!e || e.closest('webable-ui') || found.some((f) => f.contains(e)))
+            continue;
+          for (let i = found.length - 1; i >= 0; i--)
+            if (e.contains(found[i]!)) found.splice(i, 1);
           found.push(e);
         }
       }
       setResultRoots(found.slice());
     });
-    mo.observe(document.body ?? document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ['hidden'] });
+    mo.observe(document.body ?? document.documentElement, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ['hidden'],
+    });
     watch.current = mo;
     window.setTimeout(() => {
       if (watch.current === mo) {
@@ -242,11 +340,15 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
       const steps = plan?.form?.steps;
       const idx = steps ? stepOf(steps, target) : -1;
       if (steps && idx >= 0) setStep(idx);
-      const field = target.matches('input,select,textarea') ? target : target.parentElement?.querySelector('input,select,textarea') ?? null;
+      const field = target.matches('input,select,textarea')
+        ? target
+        : (target.parentElement?.querySelector('input,select,textarea') ??
+          null);
       window.setTimeout(() => {
         const root = rootRef.current;
         const k = field ? keyOf(field) : '';
-        const mirror = (k && root?.querySelector<HTMLElement>(`[data-k="${k}"]`)) || null;
+        const mirror =
+          (k && root?.querySelector<HTMLElement>(`[data-k="${k}"]`)) || null;
         mirror?.focus();
         mirror?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }, 120);
@@ -298,7 +400,29 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
     }),
     // `composeVersion`: a group changed (ready, kept or failed), so the parts that draw it re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [api, params.splitSentences, params.groupSize, reduceMotion, watchPopups, watchResult, arm, step, goStep, drawerCall, jumpToField, outcome, plan?.kind, m.textCol, results, marks, state.compose, composeVersion, grouped, groupOrder, settle],
+    [
+      api,
+      params.splitSentences,
+      params.groupSize,
+      reduceMotion,
+      watchPopups,
+      watchResult,
+      arm,
+      step,
+      goStep,
+      drawerCall,
+      jumpToField,
+      outcome,
+      plan?.kind,
+      m.textCol,
+      results,
+      marks,
+      state.compose,
+      composeVersion,
+      grouped,
+      groupOrder,
+      settle,
+    ],
   );
 
   // New page content outside every placed part (a toast, a confirmation appended to the body) shows in a result card;
@@ -306,8 +430,13 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
   const result = useMemo<Block[] | null>(() => {
     if (!plan || !resultRoots.length) return null;
     const roots = resultRoots.filter((r) => {
-      if (!r.isConnected || plan.roots.some((p) => p === r || p.contains(r))) return false;
-      if (outcome && (outcome.el === r || outcome.el.contains(r) || r.contains(outcome.el))) return false;
+      if (!r.isConnected || plan.roots.some((p) => p === r || p.contains(r)))
+        return false;
+      if (
+        outcome &&
+        (outcome.el === r || outcome.el.contains(r) || r.contains(outcome.el))
+      )
+        return false;
       const t = textOf(r);
       return t.length > 0 && t.length < 600 && isShown(r);
     });
@@ -315,12 +444,21 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
     return blocks.length ? blocks : null;
   }, [plan, resultRoots, version, outcome]);
   useEffect(() => {
-    if (result) resultRef.current?.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+    if (result)
+      resultRef.current?.scrollIntoView({
+        block: 'center',
+        behavior: reduceMotion ? 'auto' : 'smooth',
+      });
   }, [!!result]);
 
   const popupBlocks = useMemo<Block[] | null>(() => {
     if (!popup || !popup.isConnected || !isShown(popup)) return null;
-    if (plan?.popups.some((c) => c.el === popup || c.el.contains(popup) || popup.contains(c.el))) return null;
+    if (
+      plan?.popups.some(
+        (c) => c.el === popup || c.el.contains(popup) || popup.contains(c.el),
+      )
+    )
+      return null;
     const b = readBlocks(popup, newCtx());
     return b.length ? b : null;
   }, [popup, version, plan]);
@@ -337,8 +475,12 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
       return;
     }
     const urgent = (p: Element): boolean =>
-      p.matches('[role=alertdialog]') || !!p.querySelector('[role=alert]') ||
-      (p.matches('[aria-modal=true],[role=dialog]') && /\b(session|time ?out|expir\w*|signed out|warning|error)\b/i.test(textOf(p)));
+      p.matches('[role=alertdialog]') ||
+      !!p.querySelector('[role=alert]') ||
+      (p.matches('[aria-modal=true],[role=dialog]') &&
+        /\b(session|time ?out|expir\w*|signed out|warning|error)\b/i.test(
+          textOf(p),
+        ));
     const fresh = now.filter((p) => !seenPopups.current!.has(p) && urgent(p));
     now.forEach((p) => seenPopups.current!.add(p));
     if (fresh.length && !popup) setPopup(fresh[fresh.length - 1]!);
@@ -359,7 +501,12 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
     settle.markInteracted();
     if (interacted.current) return;
     interacted.current = true;
-    rootRef.current?.dispatchEvent(new CustomEvent('webable:calm-interact', { bubbles: true, composed: true }));
+    rootRef.current?.dispatchEvent(
+      new CustomEvent('webable:calm-interact', {
+        bubbles: true,
+        composed: true,
+      }),
+    );
   };
   const onScroll = (e: Event): void => {
     const el = e.currentTarget as HTMLElement;
@@ -380,9 +527,12 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
       return;
     }
     if (e.key !== 'Tab') return;
-    const root = rootRef.current?.getRootNode() as ShadowRoot | Document | undefined;
+    const root = rootRef.current?.getRootNode() as
+      ShadowRoot | Document | undefined;
     if (!root) return;
-    const all = Array.from(root.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((el) => el.getClientRects().length > 0);
+    const all = Array.from(
+      root.querySelectorAll<HTMLElement>(FOCUSABLE),
+    ).filter((el) => el.getClientRects().length > 0);
     if (!all.length) return;
     const active = (root as ShadowRoot).activeElement ?? document.activeElement;
     const i = all.indexOf(active as HTMLElement);
@@ -397,12 +547,24 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
 
   /* ---------- render ---------- */
 
-  const empty = !plan || (!plan.main.length && !plan.hoisted.length && !plan.drawer.length && !plan.lead);
+  const empty =
+    !plan ||
+    (!plan.main.length &&
+      !plan.hoisted.length &&
+      !plan.drawer.length &&
+      !plan.lead);
   const success = outcome?.kind === 'success' ? outcome : null;
   const error = outcome?.kind === 'error' ? outcome : null;
   const form = plan?.form ?? null;
   // The task's band: the form, else the primary part, else the first open part.
-  const taskIdx = plan ? Math.max(0, plan.main.findIndex((p) => (form ? p.key === form.sectionKey : p.isPrimary))) : 0;
+  const taskIdx = plan
+    ? Math.max(
+        0,
+        plan.main.findIndex((p) =>
+          form ? p.key === form.sectionKey : p.isPrimary,
+        ),
+      )
+    : 0;
   const searchFirst = spec.task === 'search' || spec.task === 'navigate';
   const afterTask = plan ? (
     <>
@@ -452,11 +614,19 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
       <Calm.Provider value={ctx}>
         <Strip api={api} plan={plan} />
         <main ref={mainRef} class="wa-page" tabIndex={-1}>
-          <div class={`wa-col${reduceMotion ? '' : ' wa-fade'}`} key={specKey(spec)} data-kind={plan?.kind}>
+          <div
+            class={`wa-col${reduceMotion ? '' : ' wa-fade'}`}
+            key={state.calm.source ?? 'heuristic'}
+            data-kind={plan?.kind}
+          >
             {empty || !plan ? (
               <div class="wa-empty wa-stack" style={{ alignItems: 'center' }}>
                 <p>WebAble could not simplify this page.</p>
-                <button type="button" class="wa-btn wa-btn--tonal" onClick={() => api.closeCalm()}>
+                <button
+                  type="button"
+                  class="wa-btn wa-btn--tonal"
+                  onClick={() => api.closeCalm()}
+                >
                   Original page
                 </button>
               </div>
@@ -469,17 +639,41 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
                 ))}
                 {success && <SuccessPanel outcome={success} help={plan.help} />}
                 {plan.kind === 'article' && plan.article && !success ? (
-                  <ArticleHeader lead={plan.lead} art={plan.article} readLine={readLine} listen={plan.listen} />
+                  <ArticleHeader
+                    lead={plan.lead}
+                    art={plan.article}
+                    readLine={readLine}
+                    listen={plan.listen}
+                  />
                 ) : (
-                  plan.lead && !success && !plan.meaning?.hideLead && <LeadBand lead={plan.lead} small={plan.kind === 'index'} />
+                  plan.lead &&
+                  !success &&
+                  !plan.meaning?.hideLead && (
+                    <LeadBand lead={plan.lead} small={plan.kind === 'index'} />
+                  )
                 )}
                 {/* Round 7: what the page exists to show comes right after its title (a recipe card carries its own title;
                     the page's intro follows it). */}
-                {plan.meaning && !success && <PurposeView meaning={plan.meaning} leadTitle={plan.lead?.title ?? null} listFirst={params.listFirst} />}
-                {plan.meaning?.hideLead && plan.lead && !success && (plan.lead.orient || plan.lead.pinned || plan.lead.about.length > 0) && (
-                  <LeadBand lead={{ ...plan.lead, title: null, eyebrow: null }} />
+                {plan.meaning && plan.kind !== 'index' && !success && (
+                  <PurposeView
+                    meaning={plan.meaning}
+                    leadTitle={plan.lead?.title ?? null}
+                    listFirst={params.listFirst}
+                  />
                 )}
-                {searchFirst && plan.kind !== 'index' && <SubStrip plan={plan} />}
+                {plan.meaning?.hideLead &&
+                  plan.lead &&
+                  !success &&
+                  (plan.lead.orient ||
+                    plan.lead.pinned ||
+                    plan.lead.about.length > 0) && (
+                    <LeadBand
+                      lead={{ ...plan.lead, title: null, eyebrow: null }}
+                    />
+                  )}
+                {searchFirst && plan.kind !== 'index' && (
+                  <SubStrip plan={plan} />
+                )}
                 {result && (
                   <div class="wa-band wa-band--tight" ref={resultRef}>
                     <div class="wa-result wa-fade" role="status">
@@ -496,11 +690,25 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
                 {plan.kind === 'index' && plan.index ? (
                   <>
                     <IndexView index={plan.index} />
+                    {plan.meaning && (
+                      <Disclosure title="More from this page">
+                        <PurposeView
+                          meaning={plan.meaning}
+                          leadTitle={null}
+                          listFirst={params.listFirst}
+                        />
+                      </Disclosure>
+                    )}
                     {/* The page's own top-bar links (Sign in, Search) after the stories, not between the title and the lead. */}
                     {searchFirst && <SubStrip plan={plan} />}
                     {afterTask}
                     {plan.main
-                      .filter((p) => (p.sec.role === 'help' || p.sec.role === 'navigation') && !isMenu(p))
+                      .filter(
+                        (p) =>
+                          (p.sec.role === 'help' ||
+                            p.sec.role === 'navigation') &&
+                          !isMenu(p),
+                      )
                       .map((p) => (
                         <SectionView key={p.key} p={p} form={null} />
                       ))}
@@ -510,17 +718,23 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
                     <PortalLinks portal={plan.portal} />
                     {afterTask}
                     <div class="wa-band wa-band--tight">
-                      <Disclosure title={`All links (${plan.portal.total})`} sub="Everything else in the page’s own order">
-                        {plan.main.filter((p) => !isMenu(p)).map((p) => (
-                          <SectionView key={p.key} p={p} form={null} />
-                        ))}
+                      <Disclosure
+                        title={`All links (${plan.portal.total})`}
+                        sub="Everything else in the page’s own order"
+                      >
+                        {plan.main
+                          .filter((p) => !isMenu(p))
+                          .map((p) => (
+                            <SectionView key={p.key} p={p} form={null} />
+                          ))}
                       </Disclosure>
                     </div>
                   </>
                 ) : (
                   plan.main.map((p, i) => {
                     if (isMenu(p)) return null;
-                    if (success && form && p.key === form.sectionKey) return null;
+                    if (success && form && p.key === form.sectionKey)
+                      return null;
                     return (
                       <Fragment key={p.key}>
                         <SectionView p={p} form={form} first={i === taskIdx} />
@@ -529,7 +743,9 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
                     );
                   })
                 )}
-                {(!plan.main.length || (success && taskIdx >= 0)) && !success && afterTask}
+                {(!plan.main.length || (success && taskIdx >= 0)) &&
+                  !success &&
+                  afterTask}
                 {plan.chat && <ChatRow el={plan.chat} />}
                 {plan.main.filter(isMenu).map((p) => (
                   <SectionView key={p.key} p={p} form={null} />
@@ -538,8 +754,14 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
                 <Drawer plan={plan} />
                 <SiteLinks plan={plan} />
                 <footer class="wa-foot">
-                  <span>Words and controls come from this page. Arranged by WebAble.</span>
-                  <button type="button" class="wa-btn wa-btn--quiet" onClick={() => api.closeCalm()}>
+                  <span>
+                    Words and controls come from this page. Arranged by WebAble.
+                  </span>
+                  <button
+                    type="button"
+                    class="wa-btn wa-btn--quiet"
+                    onClick={() => api.closeCalm()}
+                  >
                     Original page
                   </button>
                 </footer>
@@ -552,7 +774,12 @@ export function CalmView(props: { api: EngineApi; spec: FitSpec; outline: PageOu
           <div class="wa-popup" role="dialog" aria-label="From the page">
             <div class="wa-popup__head">
               <span class="wa-eyebrow">From the page</span>
-              <button type="button" class="wa-btn wa-btn--quiet" onClick={closePopup} aria-label="Close this">
+              <button
+                type="button"
+                class="wa-btn wa-btn--quiet"
+                onClick={closePopup}
+                aria-label="Close this"
+              >
                 <I.Close />
               </button>
             </div>

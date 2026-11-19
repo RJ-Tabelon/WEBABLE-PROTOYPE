@@ -2,12 +2,25 @@
 // you like things explained. Nothing else: everything about a page lives in the WebAble button on that page.
 import { render } from 'preact';
 import { useEffect, useState } from 'preact/hooks';
-import type { Settings } from '@webable/core';
+import type { Settings } from '@webable/engine';
 import { Logo } from '../../src/ui/Logo';
-import { activeTab, mergeSettings, readSettings, siteLabel, writeSettings, type ActiveTab } from './data';
+import {
+  activeTab,
+  mergeSettings,
+  readSettings,
+  siteLabel,
+  writeSettings,
+  type ActiveTab,
+} from './data';
 import './popup.css';
 
-function Switch(props: { checked: boolean; label: string; tone: 'accent' | 'ink'; disabled?: boolean; onChange: (v: boolean) => void }) {
+function Switch(props: {
+  checked: boolean;
+  label: string;
+  tone: 'accent' | 'ink';
+  disabled?: boolean;
+  onChange: (v: boolean) => void;
+}) {
   return (
     <button
       class="sw"
@@ -30,8 +43,12 @@ function Popup() {
   useEffect(() => {
     void readSettings().then(setSettings);
     void activeTab().then(setTab);
-    const onChange = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
-      if (area === 'local' && changes.settings) setSettings(mergeSettings(changes.settings.newValue));
+    const onChange = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string,
+    ) => {
+      if (area === 'local' && changes.settings)
+        setSettings(mergeSettings(changes.settings.newValue));
     };
     try {
       chrome.storage.onChanged.addListener(onChange);
@@ -67,7 +84,9 @@ function Popup() {
 
   const openFitting = async (hash: '#settings' | '#ai') => {
     try {
-      await chrome.tabs.create({ url: chrome.runtime.getURL(`/fitting.html${hash}`) });
+      await chrome.tabs.create({
+        url: chrome.runtime.getURL(`/fitting.html${hash}`),
+      });
     } finally {
       window.close();
     }
@@ -80,7 +99,13 @@ function Popup() {
           <Logo />
         </span>
         <h1>WebAble</h1>
-        <Switch checked={on} tone="accent" label="WebAble" disabled={!settings} onChange={(v) => update({ enabled: v })} />
+        <Switch
+          checked={on}
+          tone="accent"
+          label="WebAble"
+          disabled={!settings}
+          onChange={(v) => update({ enabled: v })}
+        />
       </header>
 
       <section class="card" aria-label="This site">
@@ -91,18 +116,30 @@ function Popup() {
               <span class="row-label" id="pause-label">
                 Pause on this site
               </span>
-              <Switch checked={paused} tone="ink" label="Pause on this site" disabled={!settings || !on} onChange={togglePause} />
+              <Switch
+                checked={paused}
+                tone="ink"
+                label="Pause on this site"
+                disabled={!settings || !on}
+                onChange={togglePause}
+              />
             </div>
           </>
         ) : (
-          <p class="site-none">WebAble works on websites. Open one to see it.</p>
+          <p class="site-none">
+            WebAble works on websites. Open one to see it.
+          </p>
         )}
       </section>
 
       <button class="btn" onClick={() => void openFitting('#settings')}>
         Your settings
       </button>
-      <button class="btn" onClick={() => void openFitting('#ai')} data-open="ai">
+      <button
+        class="btn"
+        onClick={() => void openFitting('#ai')}
+        data-open="ai"
+      >
         How you like things explained
       </button>
 

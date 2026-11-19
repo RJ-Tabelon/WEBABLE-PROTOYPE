@@ -1,7 +1,7 @@
 // Owner: D (round 9). What the Jev Lens says about the paragraphs WebAble read for this person: the words on each
 // paragraph's tag, the sheet's summary line, and where the tags sit (pure, so it is tested without a page).
 // The only place these probabilities are shown; the word is always "Jev's probability".
-import type { RewordKind } from '@webable/core';
+import type { RewordKind } from '@webable/engine';
 import type { EngineState, RewordItem } from '../../contracts';
 import { overlaps, type Rect } from './place';
 import { fmtP } from './words';
@@ -44,13 +44,16 @@ export interface ParaFace {
 export function paraFace(it: RewordItem): ParaFace {
   const num = fmtP(it.need);
   const kind = it.pick ? KIND_WORDS[it.pick] : null;
-  const why = it.reason ? REASON_WORDS[it.reason] ?? '' : '';
+  const why = it.reason ? (REASON_WORDS[it.reason] ?? '') : '';
   let tone: ParaTone = 'kept';
   let did = 'kept';
   if (kind && it.state === 'rewritten') [tone, did] = ['new', 'rewritten'];
-  else if (kind && it.state === 'waiting') [tone, did] = ['waiting', 'being rewritten'];
-  else if (kind && it.state === 'failed') [tone, did] = ['checked', 'checked: kept the original'];
-  else if (kind && it.state === 'original') [tone, did] = ['original', "rewritten; showing the page's words"];
+  else if (kind && it.state === 'waiting')
+    [tone, did] = ['waiting', 'being rewritten'];
+  else if (kind && it.state === 'failed')
+    [tone, did] = ['checked', 'checked: kept the original'];
+  else if (kind && it.state === 'original')
+    [tone, did] = ['original', "rewritten; showing the page's words"];
   const sub = kind ? `${kind} · ${did}` : did;
   const shown = tone === 'checked' ? why : '';
   return {
@@ -63,26 +66,44 @@ export function paraFace(it: RewordItem): ParaFace {
   };
 }
 
-export interface ParaCounts { read: number; picked: number; rewritten: number; waiting: number; failed: number }
+export interface ParaCounts {
+  read: number;
+  picked: number;
+  rewritten: number;
+  waiting: number;
+  failed: number;
+}
 
 export function paraCounts(items: RewordItem[]): ParaCounts {
   return {
     read: items.length,
     picked: items.filter((i) => i.pick !== null).length,
-    rewritten: items.filter((i) => i.state === 'rewritten' || i.state === 'original').length,
+    rewritten: items.filter(
+      (i) => i.state === 'rewritten' || i.state === 'original',
+    ).length,
     waiting: items.filter((i) => i.state === 'waiting').length,
     failed: items.filter((i) => i.state === 'failed').length,
   };
 }
 
 /** "Jev read 14 for you, picked 5, 5 rewritten, all checked"; null when WebAble is not reading paragraphs here. */
-export function paraSummary(r: EngineState['reword'] | undefined): string | null {
+export function paraSummary(
+  r: EngineState['reword'] | undefined,
+): string | null {
   if (!r || r.status === 'off') return null;
   const c = paraCounts(r.items ?? []);
-  if (r.status === 'error' && c.read === 0) return "Couldn't read the paragraphs for you right now";
-  if (c.read === 0) return r.status === 'scoring' ? 'Jev is reading the paragraphs for you…' : null;
+  if (r.status === 'error' && c.read === 0)
+    return "Couldn't read the paragraphs for you right now";
+  if (c.read === 0)
+    return r.status === 'scoring'
+      ? 'Jev is reading the paragraphs for you…'
+      : null;
   if (c.picked === 0) return `Jev read ${c.read} for you; none needed changing`;
-  const parts = [`Jev read ${c.read} for you`, `picked ${c.picked}`, `${c.rewritten} rewritten`];
+  const parts = [
+    `Jev read ${c.read} for you`,
+    `picked ${c.picked}`,
+    `${c.rewritten} rewritten`,
+  ];
   if (c.waiting) parts.push(`${c.waiting} being written`);
   if (c.failed) parts.push(`${c.failed} kept the page's words after the check`);
   else if (!c.waiting && c.rewritten) parts.push('all checked');
@@ -113,7 +134,9 @@ export function placeParaTags(
     }
     let tag: Rect = { x, y, w: size.w, h: size.h };
     for (let n = 0; n < 40; n++) {
-      const hit = [...placed, ...avoid].find((o) => overlaps(tag, { x: o.x - 2, y: o.y - 2, w: o.w + 4, h: o.h + 4 }));
+      const hit = [...placed, ...avoid].find((o) =>
+        overlaps(tag, { x: o.x - 2, y: o.y - 2, w: o.w + 4, h: o.h + 4 }),
+      );
       if (!hit) break;
       tag = { ...tag, y: hit.y + hit.h + 4 };
     }

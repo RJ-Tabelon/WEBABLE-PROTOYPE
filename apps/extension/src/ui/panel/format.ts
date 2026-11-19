@@ -1,5 +1,5 @@
 // Owner: D2. Number formatting and Jev totals (the Jev view uses these; the sheet never shows them).
-import type { JevMetrics, Role } from '@webable/core';
+import type { JevMetrics, Role } from '@webable/engine';
 import type { EngineState } from '../../contracts';
 
 export function clamp(v: number, lo: number, hi: number): number {
@@ -71,7 +71,10 @@ export const ROLE_LABEL: Record<Role, string> = {
 
 export function roleLabel(role: Role | string | null | undefined): string {
   if (!role) return 'other';
-  return (ROLE_LABEL as Record<string, string>)[role] ?? String(role).replace(/_/g, ' ');
+  return (
+    (ROLE_LABEL as Record<string, string>)[role] ??
+    String(role).replace(/_/g, ' ')
+  );
 }
 
 /**
@@ -104,7 +107,12 @@ export interface JevTotals {
   /** Wall time of this view's cached read, when the server reported it separately from the first read. */
   viewMs: number | null;
   /** Every Jev call since this page loaded, the page read included. */
-  sinceLoad: { decisions: number; calls: number; costUsd: number; inputTokens: number };
+  sinceLoad: {
+    decisions: number;
+    calls: number;
+    costUsd: number;
+    inputTokens: number;
+  };
 }
 
 function num(v: unknown): number {
@@ -130,7 +138,10 @@ export function jevTotals(s: EngineState): JevTotals {
   const cached = Boolean(u?.cached);
   const own = u?.metrics ?? null;
   // A cached view reports the first live read as its headline; this view's own read cost nothing.
-  const fr = cached && u?.firstRead && typeof u.firstRead === 'object' ? u.firstRead : null;
+  const fr =
+    cached && u?.firstRead && typeof u.firstRead === 'object'
+      ? u.firstRead
+      : null;
   const head = fr ?? own;
   const sinceLoad = { decisions: 0, calls: 0, costUsd: 0, inputTokens: 0 };
   for (const m of jevMetricsList(s)) {
@@ -146,7 +157,12 @@ export function jevTotals(s: EngineState): JevTotals {
     costUsd: num(head?.costUsd),
     inputTokens: num(head?.inputTokens),
     headlineMs: head ? num(head.wallMs) : null,
-    serverMs: head && typeof head.serverMs === 'number' && Number.isFinite(head.serverMs) ? head.serverMs : null,
+    serverMs:
+      head &&
+      typeof head.serverMs === 'number' &&
+      Number.isFinite(head.serverMs)
+        ? head.serverMs
+        : null,
     model: head?.model || own?.model || 'jev-1.14.0',
     cached,
     firstRead: fr,
@@ -164,7 +180,10 @@ export function fmtPageRead(t: JevTotals): string {
 /** "from cache · first read 619 ms, $0.0034 · this view $0", or null for a live read. */
 export function fmtCacheNote(t: JevTotals): string | null {
   if (!t.cached) return null;
-  const first = t.firstRead || t.headlineMs != null ? `first read ${fmtMs(t.headlineMs)}, ${fmtCost(t.costUsd)}` : 'first read earlier';
+  const first =
+    t.firstRead || t.headlineMs != null
+      ? `first read ${fmtMs(t.headlineMs)}, ${fmtCost(t.costUsd)}`
+      : 'first read earlier';
   return `from cache · ${first} · this view ${fmtCost(t.viewUsd)}`;
 }
 

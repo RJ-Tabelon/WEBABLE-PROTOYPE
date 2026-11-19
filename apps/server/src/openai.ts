@@ -5,18 +5,58 @@
 // When OpenAI says the account has no credits (or rejects the key), every call is skipped for AI_BLOCK_MS and a
 // one-token probe checks again when the block ends (ai.ts), so the product picks AI up again on its own.
 import OpenAI from 'openai';
-import { COMPOSE_MODEL, DEEP_LAYOUT_MODEL, EXPLAIN_MODEL, LAYOUT_MODEL, READER_MODEL, REWORD_MODEL } from '@webable/core';
-import type { ComposeGroupIn, ReaderProfile, RewordKind, RewordOut, RewordPage } from '@webable/core';
-import { aiBlockedUntil, aiState, aiStatus, classifyOpenAiFailure, markAiBlocked, markAiWorking } from './ai';
 import {
-  AI_PROBE_MODEL, DEEP_CACHE_TTL_MS, DEEP_ENABLED, DEEP_TIMEOUT_MS, LAYOUT_WAVE_MS, LLM_TIMEOUT_MS,
-  COMPOSE_TIMEOUT_MS, OPENAI_SERVICE_TIER, READER_TIMEOUT_MS, REWORD_TIMEOUT_MS, openAiKey,
+  COMPOSE_MODEL,
+  DEEP_LAYOUT_MODEL,
+  EXPLAIN_MODEL,
+  LAYOUT_MODEL,
+  READER_MODEL,
+  REWORD_MODEL,
+} from '@webable/engine';
+import type {
+  ComposeGroupIn,
+  ReaderProfile,
+  RewordKind,
+  RewordOut,
+  RewordPage,
+} from '@webable/engine';
+import {
+  aiBlockedUntil,
+  aiState,
+  aiStatus,
+  classifyOpenAiFailure,
+  markAiBlocked,
+  markAiWorking,
+} from './ai';
+import {
+  AI_PROBE_MODEL,
+  DEEP_CACHE_TTL_MS,
+  DEEP_ENABLED,
+  DEEP_TIMEOUT_MS,
+  LAYOUT_WAVE_MS,
+  LLM_TIMEOUT_MS,
+  COMPOSE_TIMEOUT_MS,
+  OPENAI_SERVICE_TIER,
+  READER_TIMEOUT_MS,
+  REWORD_TIMEOUT_MS,
+  openAiKey,
 } from './config';
 import { TtlLru } from './lru';
 import {
-  LAYOUT_INSTRUCTIONS, READER_INSTRUCTIONS, READER_POINT_KINDS, READER_SCHEMA,
-  REWORD_INSTRUCTIONS, REWORD_SCHEMA, layoutInput, rewordInput, type ReaderOutput, type Stance,
-  COMPOSE_INSTRUCTIONS, COMPOSE_SCHEMA, composeInput, type ComposeOutput,
+  LAYOUT_INSTRUCTIONS,
+  READER_INSTRUCTIONS,
+  READER_POINT_KINDS,
+  READER_SCHEMA,
+  REWORD_INSTRUCTIONS,
+  REWORD_SCHEMA,
+  layoutInput,
+  rewordInput,
+  type ReaderOutput,
+  type Stance,
+  COMPOSE_INSTRUCTIONS,
+  COMPOSE_SCHEMA,
+  composeInput,
+  type ComposeOutput,
 } from './prompts';
 import { recordOpenAiCall, recordOpenAiError } from './stats';
 import { errorMessage, log, round } from './util';
@@ -43,7 +83,11 @@ let client: OpenAI | null = null;
 function getClient(): OpenAI | null {
   const key = openAiKey();
   if (!key) return null;
-  client ??= new OpenAI({ apiKey: key, maxRetries: 0, timeout: LLM_TIMEOUT_MS });
+  client ??= new OpenAI({
+    apiKey: key,
+    maxRetries: 0,
+    timeout: LLM_TIMEOUT_MS,
+  });
   return client;
 }
 
@@ -71,13 +115,28 @@ function scheduleRetry(minMs = 1_000): void {
 }
 
 /** A provider failure that means "no credits" or "key rejected" blocks AI; returns the reason, or null. */
-function noteFailure(e: unknown, tag: string): 'no_credits' | 'key_rejected' | null {
+function noteFailure(
+  e: unknown,
+  tag: string,
+): 'no_credits' | 'key_rejected' | null {
   if (!(e instanceof OpenAI.APIError)) return null;
-  const reason = classifyOpenAiFailure({ status: e.status ?? null, code: e.code ?? null, type: e.type ?? null, message: e.message });
+  const reason = classifyOpenAiFailure({
+    status: e.status ?? null,
+    code: e.code ?? null,
+    type: e.type ?? null,
+    message: e.message,
+  });
   if (!reason) return null;
   const changed = markAiBlocked(reason);
   const s = aiState();
-  if (changed) log('ai off', { reason, tag, status: e.status ?? null, code: e.code ?? null, retryAt: s.retryAt });
+  if (changed)
+    log('ai off', {
+      reason,
+      tag,
+      status: e.status ?? null,
+      code: e.code ?? null,
+      retryAt: s.retryAt,
+    });
   else log('ai still off', { reason, tag, retryAt: s.retryAt });
   scheduleRetry();
   return reason;
@@ -91,27 +150,50 @@ function noteSuccess(tag: string): void {
  * The smallest billable call (16 output tokens on the cheapest model, about $0.00001): tells "no credits" from
  * "on". Never throws. Transient failures (network, a plain rate limit) leave the status as it is.
  */
-export async function probeAi(why: string): Promise<ReturnType<typeof aiStatus>> {
+export async function probeAi(
+  why: string,
+): Promise<ReturnType<typeof aiStatus>> {
   const c = getClient();
   if (!c) return aiStatus();
   const t0 = performance.now();
   try {
     const resp = await c.responses.create(
-      { model: AI_PROBE_MODEL, input: 'Reply with the word ok.', max_output_tokens: 16, store: false },
+      {
+        model: AI_PROBE_MODEL,
+        input: 'Reply with the word ok.',
+        max_output_tokens: 16,
+        store: false,
+      },
       { timeout: 8_000, maxRetries: 0 },
     );
     const u = resp.usage;
-    const costUsd = costOf(AI_PROBE_MODEL, resp.service_tier ?? null, u?.input_tokens ?? 0, u?.input_tokens_details?.cached_tokens ?? 0, u?.output_tokens ?? 0);
+    const costUsd = costOf(
+      AI_PROBE_MODEL,
+      resp.service_tier ?? null,
+      u?.input_tokens ?? 0,
+      u?.input_tokens_details?.cached_tokens ?? 0,
+      u?.output_tokens ?? 0,
+    );
     recordOpenAiCall({
-      model: AI_PROBE_MODEL, inputTokens: u?.input_tokens ?? 0, cachedTokens: u?.input_tokens_details?.cached_tokens ?? 0,
-      outputTokens: u?.output_tokens ?? 0, costUsd, ms: round(performance.now() - t0),
+      model: AI_PROBE_MODEL,
+      inputTokens: u?.input_tokens ?? 0,
+      cachedTokens: u?.input_tokens_details?.cached_tokens ?? 0,
+      outputTokens: u?.output_tokens ?? 0,
+      costUsd,
+      ms: round(performance.now() - t0),
     });
     noteSuccess(`probe/${why}`);
     log('ai probe', { why, status: 'on', ms: round(performance.now() - t0) });
   } catch (e) {
     const reason = noteFailure(e, `probe/${why}`);
     const status = e instanceof OpenAI.APIError ? e.status : undefined;
-    if (!reason) log('ai probe', { why, status: 'unchanged', reason: status ? `http_${status}` : 'network', ms: round(performance.now() - t0) });
+    if (!reason)
+      log('ai probe', {
+        why,
+        status: 'unchanged',
+        reason: status ? `http_${status}` : 'network',
+        ms: round(performance.now() - t0),
+      });
     // Still blocked and the check itself failed (network): look again in a minute, not in a loop.
     if (!reason && aiBlockedUntil() > 0) scheduleRetry(60_000);
   }
@@ -129,7 +211,6 @@ export function startAiWatch(): () => void {
     retryTimer = null;
   };
 }
-
 
 export interface LlmOk<T> {
   ok: true;
@@ -152,14 +233,28 @@ export interface LlmFail {
 export type LlmResult<T> = LlmOk<T> | LlmFail;
 
 /** LlmFail errors that mean the account is unusable right now (no call was made, or OpenAI refused the account). */
-export const UNAVAILABLE_ERRORS: ReadonlySet<string> = new Set(['no_key', 'budget', 'no_credits', 'key_rejected', 'unavailable']);
+export const UNAVAILABLE_ERRORS: ReadonlySet<string> = new Set([
+  'no_key',
+  'budget',
+  'no_credits',
+  'key_rejected',
+  'unavailable',
+]);
 
-function costOf(model: string, tier: string | null, input: number, cached: number, output: number): number {
+function costOf(
+  model: string,
+  tier: string | null,
+  input: number,
+  cached: number,
+  output: number,
+): number {
   const p = PRICE[model] ?? [5, 0.5, 30];
   // The served tier comes back as 'priority' or 'fast' depending on the model; both are the Fast tier.
   const fast = tier === 'priority' || tier === 'fast';
   const mult = fast ? (model === 'gpt-5.5' ? 2.5 : 2) : 1;
-  return (mult * ((input - cached) * p[0] + cached * p[1] + output * p[2])) / 1e6;
+  return (
+    (mult * ((input - cached) * p[0] + cached * p[1] + output * p[2])) / 1e6
+  );
 }
 
 interface JsonCall {
@@ -179,11 +274,18 @@ interface JsonCall {
 /** One strict-JSON Responses call. Never throws: failures come back as { ok: false }. */
 export async function respondJson(p: JsonCall): Promise<LlmResult<unknown>> {
   const c = getClient();
-  if (!c) return { ok: false, model: p.model, ms: 0, costUsd: 0, error: 'no_key' };
+  if (!c)
+    return { ok: false, model: p.model, ms: 0, costUsd: 0, error: 'no_key' };
   const avail = aiState();
   if (avail.status !== 'on') {
     // No credits, key rejected or our spend cap: no call until the block ends (then it is tried again).
-    return { ok: false, model: p.model, ms: 0, costUsd: 0, error: avail.reason ?? 'unavailable' };
+    return {
+      ok: false,
+      model: p.model,
+      ms: 0,
+      costUsd: 0,
+      error: avail.reason ?? 'unavailable',
+    };
   }
   let effort: 'none' | 'low' = p.effort ?? EFFORT[p.model] ?? 'none';
   const t0 = performance.now();
@@ -194,12 +296,21 @@ export async function respondJson(p: JsonCall): Promise<LlmResult<unknown>> {
           model: p.model,
           instructions: p.instructions,
           input: p.input,
-          text: { format: { type: 'json_schema', name: p.schemaName, strict: true, schema: p.schema } },
+          text: {
+            format: {
+              type: 'json_schema',
+              name: p.schemaName,
+              strict: true,
+              schema: p.schema,
+            },
+          },
           reasoning: { effort },
           max_output_tokens: p.maxOutputTokens,
           store: false,
           prompt_cache_key: p.cacheKey,
-          ...(OPENAI_SERVICE_TIER === 'priority' ? { service_tier: 'priority' as const } : {}),
+          ...(OPENAI_SERVICE_TIER === 'priority'
+            ? { service_tier: 'priority' as const }
+            : {}),
         },
         { timeout: p.timeoutMs, maxRetries: 0 },
       );
@@ -210,19 +321,56 @@ export async function respondJson(p: JsonCall): Promise<LlmResult<unknown>> {
       const output = u?.output_tokens ?? 0;
       const tier = resp.service_tier ?? null;
       const costUsd = costOf(p.model, tier, input, cached, output);
-      recordOpenAiCall({ model: p.model, inputTokens: input, cachedTokens: cached, outputTokens: output, costUsd, ms });
-      log('openai', { tag: p.tag, model: p.model, ms, in: input, cached, out: output, tier, usd: costUsd.toFixed(5), status: resp.status });
+      recordOpenAiCall({
+        model: p.model,
+        inputTokens: input,
+        cachedTokens: cached,
+        outputTokens: output,
+        costUsd,
+        ms,
+      });
+      log('openai', {
+        tag: p.tag,
+        model: p.model,
+        ms,
+        in: input,
+        cached,
+        out: output,
+        tier,
+        usd: costUsd.toFixed(5),
+        status: resp.status,
+      });
       noteSuccess(p.tag);
 
-      const refused = resp.output.some((o) => o.type === 'message' && o.content.some((part) => part.type === 'refusal'));
-      if (refused) return { ok: false, model: p.model, ms, costUsd, error: 'refusal' };
+      const refused = resp.output.some(
+        (o) =>
+          o.type === 'message' &&
+          o.content.some((part) => part.type === 'refusal'),
+      );
+      if (refused)
+        return { ok: false, model: p.model, ms, costUsd, error: 'refusal' };
       if (resp.status === 'incomplete') {
-        return { ok: false, model: p.model, ms, costUsd, error: `incomplete:${resp.incomplete_details?.reason ?? 'unknown'}` };
+        return {
+          ok: false,
+          model: p.model,
+          ms,
+          costUsd,
+          error: `incomplete:${resp.incomplete_details?.reason ?? 'unknown'}`,
+        };
       }
       const text = resp.output_text;
-      if (!text) return { ok: false, model: p.model, ms, costUsd, error: 'empty' };
+      if (!text)
+        return { ok: false, model: p.model, ms, costUsd, error: 'empty' };
       try {
-        return { ok: true, model: p.model, data: JSON.parse(text) as unknown, ms, costUsd, usage: { input, cached, output }, tier };
+        return {
+          ok: true,
+          model: p.model,
+          data: JSON.parse(text) as unknown,
+          ms,
+          costUsd,
+          usage: { input, cached, output },
+          tier,
+        };
       } catch {
         return { ok: false, model: p.model, ms, costUsd, error: 'bad_json' };
       }
@@ -230,7 +378,12 @@ export async function respondJson(p: JsonCall): Promise<LlmResult<unknown>> {
       const ms = round(performance.now() - t0);
       const status = e instanceof OpenAI.APIError ? e.status : undefined;
       const msg = errorMessage(e);
-      if (attempt === 0 && status === 400 && effort === 'none' && /reasoning|effort/i.test(msg)) {
+      if (
+        attempt === 0 &&
+        status === 400 &&
+        effort === 'none' &&
+        /reasoning|effort/i.test(msg)
+      ) {
         effort = 'low';
         continue;
       }
@@ -238,28 +391,50 @@ export async function respondJson(p: JsonCall): Promise<LlmResult<unknown>> {
       // A dropped connection (a reused socket the other side had closed, a reset) fails before any work was billed:
       // try once more on a fresh connection, as the Jev client does.
       if (attempt === 0 && !timedOut && isConnectionDrop(e)) {
-        log('openai retry', { tag: p.tag, model: p.model, why: connectionDetail(e), ms });
+        log('openai retry', {
+          tag: p.tag,
+          model: p.model,
+          why: connectionDetail(e),
+          ms,
+        });
         continue;
       }
       recordOpenAiError();
       const blocked = noteFailure(e, p.tag);
-      if (blocked) return { ok: false, model: p.model, ms, costUsd: 0, error: blocked };
+      if (blocked)
+        return { ok: false, model: p.model, ms, costUsd: 0, error: blocked };
       const kind = timedOut ? 'timeout' : status ? `http_${status}` : 'network';
       // A 400 explains a request-shape problem (schema, parameter); it never echoes the prompt, so keep a short
       // excerpt. A network failure logs its error class and socket code only.
-      const detail = status === 400 ? msg.replace(/\s+/g, ' ').slice(0, 200) : !status ? connectionDetail(e) : undefined;
+      const detail =
+        status === 400
+          ? msg.replace(/\s+/g, ' ').slice(0, 200)
+          : !status
+            ? connectionDetail(e)
+            : undefined;
       log('openai error', { tag: p.tag, model: p.model, kind, ms, detail });
       return { ok: false, model: p.model, ms, costUsd: 0, error: kind };
     }
   }
-  return { ok: false, model: p.model, ms: round(performance.now() - t0), costUsd: 0, error: 'unreachable' };
+  return {
+    ok: false,
+    model: p.model,
+    ms: round(performance.now() - t0),
+    costUsd: 0,
+    error: 'unreachable',
+  };
 }
 
 /** A connection that failed or dropped before an answer (not a timeout, not an HTTP status). */
 export function isConnectionDrop(e: unknown): boolean {
   if (e instanceof OpenAI.APIConnectionTimeoutError) return false;
   if (e instanceof OpenAI.APIConnectionError) return true;
-  return e instanceof TypeError && /fetch failed|terminated|socket|ECONNRESET|EPIPE/i.test(`${e.message} ${String((e as { cause?: unknown }).cause ?? '')}`);
+  return (
+    e instanceof TypeError &&
+    /fetch failed|terminated|socket|ECONNRESET|EPIPE/i.test(
+      `${e.message} ${String((e as { cause?: unknown }).cause ?? '')}`,
+    )
+  );
 }
 
 /** Error class and socket codes only (never a request or response body). */
@@ -267,9 +442,17 @@ export function connectionDetail(e: unknown): string {
   const parts: string[] = [];
   let cur: unknown = e;
   for (let i = 0; i < 4 && cur && typeof cur === 'object'; i++) {
-    const x = cur as { name?: unknown; code?: unknown; constructor?: { name?: string } };
+    const x = cur as {
+      name?: unknown;
+      code?: unknown;
+      constructor?: { name?: string };
+    };
     const name = typeof x.name === 'string' ? x.name : x.constructor?.name;
-    parts.push([name, typeof x.code === 'string' ? x.code : null].filter(Boolean).join(':'));
+    parts.push(
+      [name, typeof x.code === 'string' ? x.code : null]
+        .filter(Boolean)
+        .join(':'),
+    );
     cur = (cur as { cause?: unknown }).cause;
   }
   return parts.filter(Boolean).join('<').slice(0, 120) || 'unknown';
@@ -350,8 +533,14 @@ export function getDeepLayout(key: string): DeepEntry | undefined {
 }
 
 /** Start the deep layout for this outline once; not awaited. Returns true when a job started. */
-export function startDeepLayout(key: string, fitText: string, outlineText: string, schema: Record<string, unknown>): boolean {
-  if (!deepEnabled() || deepRunning.has(key) || deepCache.has(key)) return false;
+export function startDeepLayout(
+  key: string,
+  fitText: string,
+  outlineText: string,
+  schema: Record<string, unknown>,
+): boolean {
+  if (!deepEnabled() || deepRunning.has(key) || deepCache.has(key))
+    return false;
   deepRunning.add(key);
   void respondJson({
     model: DEEP_LAYOUT_MODEL,
@@ -365,7 +554,13 @@ export function startDeepLayout(key: string, fitText: string, outlineText: strin
     tag: 'layout/deep',
   })
     .then((r) => {
-      if (r.ok) deepCache.set(key, { data: r.data, ms: r.ms, costUsd: r.costUsd, model: r.model });
+      if (r.ok)
+        deepCache.set(key, {
+          data: r.data,
+          ms: r.ms,
+          costUsd: r.costUsd,
+          model: r.model,
+        });
     })
     .finally(() => deepRunning.delete(key));
   return true;
@@ -380,12 +575,30 @@ function asReaderOutput(data: unknown): ReaderOutput | null {
   const d = data as Record<string, unknown>;
   if (!Array.isArray(d.points)) return null;
   const points = d.points
-    .filter((p): p is { kind: string; says: string; evidence: string } =>
-      !!p && typeof p === 'object' && typeof (p as { says?: unknown }).says === 'string' && typeof (p as { evidence?: unknown }).evidence === 'string' && typeof (p as { kind?: unknown }).kind === 'string')
-    .filter((p) => (READER_POINT_KINDS as readonly string[]).includes(p.kind) && p.says.trim() !== '')
-    .map((p) => ({ kind: p.kind as ReaderOutput['points'][number]['kind'], says: p.says.trim(), evidence: p.evidence.trim() }));
+    .filter(
+      (p): p is { kind: string; says: string; evidence: string } =>
+        !!p &&
+        typeof p === 'object' &&
+        typeof (p as { says?: unknown }).says === 'string' &&
+        typeof (p as { evidence?: unknown }).evidence === 'string' &&
+        typeof (p as { kind?: unknown }).kind === 'string',
+    )
+    .filter(
+      (p) =>
+        (READER_POINT_KINDS as readonly string[]).includes(p.kind) &&
+        p.says.trim() !== '',
+    )
+    .map((p) => ({
+      kind: p.kind as ReaderOutput['points'][number]['kind'],
+      says: p.says.trim(),
+      evidence: p.evidence.trim(),
+    }));
   if (points.length === 0) return null;
-  const pick = <T extends string>(v: unknown, allowed: readonly T[], fallback: T): T => (allowed.includes(v as T) ? (v as T) : fallback);
+  const pick = <T extends string>(
+    v: unknown,
+    allowed: readonly T[],
+    fallback: T,
+  ): T => (allowed.includes(v as T) ? (v as T) : fallback);
   return {
     points,
     level: pick(d.level, ['plain', 'everyday', 'expert'] as const, 'everyday'),
@@ -393,12 +606,15 @@ function asReaderOutput(data: unknown): ReaderOutput | null {
     shape: pick(d.shape, ['steps', 'bullets', 'prose'] as const, 'prose'),
     answer_first: d.answer_first === true,
     headline: typeof d.headline === 'string' ? d.headline.trim() : '',
-    source_guess: typeof d.source_guess === 'string' ? d.source_guess : 'your AI',
+    source_guess:
+      typeof d.source_guess === 'string' ? d.source_guess : 'your AI',
   };
 }
 
 /** READER_MODEL breaks the AI answer into points; EXPLAIN_MODEL is the fallback. The model sees only the answer. */
-export async function readerFromAnswer(answer: string): Promise<LlmResult<ReaderOutput>> {
+export async function readerFromAnswer(
+  answer: string,
+): Promise<LlmResult<ReaderOutput>> {
   let spent = 0;
   let last: LlmFail | null = null;
   for (const model of [READER_MODEL, EXPLAIN_MODEL]) {
@@ -423,20 +639,35 @@ export async function readerFromAnswer(answer: string): Promise<LlmResult<Reader
       if (UNAVAILABLE_ERRORS.has(r.error)) break;
     }
   }
-  return last ?? { ok: false, model: READER_MODEL, ms: 0, costUsd: spent, error: 'unknown' };
+  return (
+    last ?? {
+      ok: false,
+      model: READER_MODEL,
+      ms: 0,
+      costUsd: spent,
+      error: 'unknown',
+    }
+  );
 }
 
 function asRewordOut(data: unknown): RewordOut | null {
   if (!data || typeof data !== 'object') return null;
   const d = data as Record<string, unknown>;
   if (typeof d.lead !== 'string') return null;
-  const items = Array.isArray(d.items) ? d.items.filter((x): x is string => typeof x === 'string') : [];
+  const items = Array.isArray(d.items)
+    ? d.items.filter((x): x is string => typeof x === 'string')
+    : [];
   return { lead: d.lead, items, ordered: d.ordered === true };
 }
 
 /** REWORD_MODEL rewrites one paragraph in the given way. `retry` names what was wrong with the last try; `links` the words at each marker. */
 export async function rewordParagraph(
-  brief: string, level: ReaderProfile['level'], page: RewordPage, kind: RewordKind, text: string, retry?: string,
+  brief: string,
+  level: ReaderProfile['level'],
+  page: RewordPage,
+  kind: RewordKind,
+  text: string,
+  retry?: string,
   links?: Record<string, string> | null,
 ): Promise<LlmResult<RewordOut>> {
   const r = await respondJson({
@@ -454,12 +685,25 @@ export async function rewordParagraph(
   });
   if (!r.ok) return r;
   const out = asRewordOut(r.data);
-  return out ? { ...r, data: out } : { ok: false, model: r.model, ms: r.ms, costUsd: r.costUsd, error: 'bad_shape' };
+  return out
+    ? { ...r, data: out }
+    : {
+        ok: false,
+        model: r.model,
+        ms: r.ms,
+        costUsd: r.costUsd,
+        error: 'bad_shape',
+      };
 }
 
 /** COMPOSE_MODEL lays out one group as blocks (data only). `retry` names what was wrong with the last try. */
 export async function composeGroup(
-  brief: string, leaning: string, level: ReaderProfile['level'], page: RewordPage, group: ComposeGroupIn, retry?: string,
+  brief: string,
+  leaning: string,
+  level: ReaderProfile['level'],
+  page: RewordPage,
+  group: ComposeGroupIn,
+  retry?: string,
 ): Promise<LlmResult<ComposeOutput>> {
   const r = await respondJson({
     model: COMPOSE_MODEL,
@@ -476,6 +720,16 @@ export async function composeGroup(
   });
   if (!r.ok) return r;
   const d = r.data as Record<string, unknown> | null;
-  if (!d || typeof d !== 'object' || !Array.isArray(d.blocks)) return { ok: false, model: r.model, ms: r.ms, costUsd: r.costUsd, error: 'bad_shape' };
-  return { ...r, data: { keep_page_text: d.keep_page_text === true, blocks: d.blocks } };
+  if (!d || typeof d !== 'object' || !Array.isArray(d.blocks))
+    return {
+      ok: false,
+      model: r.model,
+      ms: r.ms,
+      costUsd: r.costUsd,
+      error: 'bad_shape',
+    };
+  return {
+    ...r,
+    data: { keep_page_text: d.keep_page_text === true, blocks: d.blocks },
+  };
 }

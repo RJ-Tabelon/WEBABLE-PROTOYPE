@@ -27,15 +27,17 @@ export function Segmented<T extends string | number>(props: {
     onChange(o.value);
     refs.current[j]?.focus();
   };
-  const onKey = (i: number) => (e: KeyboardEvent): void => {
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      move(i + 1);
-    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-      e.preventDefault();
-      move(i - 1);
-    }
-  };
+  const onKey =
+    (i: number) =>
+    (e: KeyboardEvent): void => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        move(i + 1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        move(i - 1);
+      }
+    };
   return (
     <div
       class={`seg${wide ? ' seg-wide' : ''}`}
@@ -65,10 +67,21 @@ export function Segmented<T extends string | number>(props: {
   );
 }
 
-export function Switch(props: { checked: boolean; label: string; onChange(on: boolean): void }): JSX.Element {
+export function Switch(props: {
+  checked: boolean;
+  label: string;
+  onChange(on: boolean): void;
+}): JSX.Element {
   const { checked, label, onChange } = props;
   return (
-    <button type="button" role="switch" class="sw" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} />
+    <button
+      type="button"
+      role="switch"
+      class="sw"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+    />
   );
 }
 
@@ -82,10 +95,22 @@ export function Stepper(props: {
   const { canDown, canUp, downLabel, upLabel, onStep } = props;
   return (
     <div class="step">
-      <button type="button" class="step-btn" aria-label={downLabel} disabled={!canDown} onClick={() => onStep(-1)}>
+      <button
+        type="button"
+        class="step-btn"
+        aria-label={downLabel}
+        disabled={!canDown}
+        onClick={() => onStep(-1)}
+      >
         <MinusIcon />
       </button>
-      <button type="button" class="step-btn" aria-label={upLabel} disabled={!canUp} onClick={() => onStep(1)}>
+      <button
+        type="button"
+        class="step-btn"
+        aria-label={upLabel}
+        disabled={!canUp}
+        onClick={() => onStep(1)}
+      >
         <PlusIcon />
       </button>
     </div>

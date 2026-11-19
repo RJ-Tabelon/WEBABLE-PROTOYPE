@@ -1,0 +1,62 @@
+.gatorhack-onboarding {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  overflow: auto;
+  background: #fff;
+  color: #252525;
+  font:
+    18px / 1.5 -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+}
+
+.gatorhack-onboarding__frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+  color-scheme: light;
+}
+
+.gatorhack-onboarding__notice {
+  max-width: 640px;
+  margin: 10vh auto;
+  padding: 24px;
+}
+
+.gatorhack-onboarding__notice h1 {
+  font-size: clamp(28px, 4vw, 40px);
+  line-height: 1.2;
+}
+
+.gatorhack-onboarding__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+  margin-block: 24px;
+}
+
+.gatorhack-onboarding button {
+  min-height: 48px;
+  padding: 10px 20px;
+  border: 1px solid #8c8c8c;
+  border-radius: 12px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.gatorhack-onboarding__loading,
+.gatorhack-onboarding__problem {
+  position: absolute;
+  inset: 24px 24px auto;
+  padding: 20px;
+  border: 1px solid #ddd;
+  border-radius: 16px;
+  background: #fff;
+}

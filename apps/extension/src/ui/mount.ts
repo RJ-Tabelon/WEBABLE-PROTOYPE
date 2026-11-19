@@ -50,7 +50,11 @@ function sheet(css: string): CSSStyleSheet | null {
   }
 }
 
-function adopt(root: ShadowRoot, sheets: Array<CSSStyleSheet | null>, fallbackCss: string): void {
+function adopt(
+  root: ShadowRoot,
+  sheets: Array<CSSStyleSheet | null>,
+  fallbackCss: string,
+): void {
   const ok = sheets.filter((s): s is CSSStyleSheet => s !== null);
   if (ok.length === sheets.length) {
     try {
@@ -101,7 +105,9 @@ export function mountUi(api: EngineApi): () => void {
     if (key === themeKey || !tokensSheet) return;
     themeKey = key;
     try {
-      tokensSheet.replaceSync(tokensToCss(tokensFor(st.fit, mode, { zoom: 1 }), ':host'));
+      tokensSheet.replaceSync(
+        tokensToCss(tokensFor(st.fit, mode, { zoom: 1 }), ':host'),
+      );
     } catch {
       /* D1 tokens not ready: our chrome uses its own fallbacks */
     }
@@ -143,7 +149,8 @@ export function mountUi(api: EngineApi): () => void {
 
   document.documentElement.append(host);
 
-  const supportsPopover = typeof (layer as { showPopover?: unknown }).showPopover === 'function';
+  const supportsPopover =
+    typeof (layer as { showPopover?: unknown }).showPopover === 'function';
   const show = () => {
     if (!supportsPopover) {
       layer.classList.add('wa-nopopover');
@@ -165,8 +172,10 @@ export function mountUi(api: EngineApi): () => void {
   const markCalm = () => {
     const isOpen = api.getState().calm.open;
     const open = isOpen ? 'open' : 'closed';
-    if (host.getAttribute('data-calm') !== open) host.setAttribute('data-calm', open);
-    if (calmHost.getAttribute('data-calm') !== open) calmHost.setAttribute('data-calm', open);
+    if (host.getAttribute('data-calm') !== open)
+      host.setAttribute('data-calm', open);
+    if (calmHost.getAttribute('data-calm') !== open)
+      calmHost.setAttribute('data-calm', open);
     host.toggleAttribute('data-calm-open', isOpen);
   };
   markCalm();
@@ -175,7 +184,10 @@ export function mountUi(api: EngineApi): () => void {
     markCalm();
   });
   const calmObserver = new MutationObserver(() => {
-    calmHost.classList.toggle('has-content', calmHost.classList.contains('is-open') && calmMount.childElementCount > 0);
+    calmHost.classList.toggle(
+      'has-content',
+      calmHost.classList.contains('is-open') && calmMount.childElementCount > 0,
+    );
   });
   calmObserver.observe(calmMount, { childList: true });
 
@@ -219,7 +231,8 @@ export function mountUi(api: EngineApi): () => void {
     render(null, appRoot);
     for (const type of KEY_EVENTS) host.removeEventListener(type, stopKeys);
     try {
-      if (supportsPopover && layer.matches(':popover-open')) layer.hidePopover();
+      if (supportsPopover && layer.matches(':popover-open'))
+        layer.hidePopover();
     } catch {
       /* ignore */
     }

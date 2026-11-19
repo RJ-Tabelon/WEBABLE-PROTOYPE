@@ -10,9 +10,22 @@ const line = {
   'stroke-linejoin': 'round',
 } as const;
 
-function Svg({ size = 28, children }: { size?: number; children: JSX.Element | JSX.Element[] }): JSX.Element {
+function Svg({
+  size = 28,
+  children,
+}: {
+  size?: number;
+  children: JSX.Element | JSX.Element[];
+}): JSX.Element {
   return (
-    <svg width={size} height={size} viewBox="0 0 28 28" aria-hidden="true" focusable="false" {...line}>
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 28 28"
+      aria-hidden="true"
+      focusable="false"
+      {...line}
+    >
       {children}
     </svg>
   );
@@ -44,7 +57,11 @@ export function StruggleIcon({ id }: { id: StruggleId }): JSX.Element {
       return (
         <Svg>
           <rect x="3.5" y="6" width="21" height="11" rx="5.5" />
-          <path d="M14.5 13.5l6.2 2.4-2.7 1.1 2.6 3.4-1.5 1.1-2.6-3.4-1.6 2.5Z" fill="currentColor" stroke-width="1.25" />
+          <path
+            d="M14.5 13.5l6.2 2.4-2.7 1.1 2.6 3.4-1.5 1.1-2.6-3.4-1.6 2.5Z"
+            fill="currentColor"
+            stroke-width="1.25"
+          />
         </Svg>
       );
     case 'slips':
@@ -79,7 +96,15 @@ export function StruggleIcon({ id }: { id: StruggleId }): JSX.Element {
 /** The accent check before "WebAble fixes this:". */
 export function CheckIcon(): JSX.Element {
   return (
-    <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false" {...line} stroke-width={2.25}>
+    <svg
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      focusable="false"
+      {...line}
+      stroke-width={2.25}
+    >
       <circle cx="12" cy="12" r="10" fill="currentColor" stroke="none" />
       <path d="M7.5 12.3l3 3 6-6.3" stroke="#fff" />
     </svg>

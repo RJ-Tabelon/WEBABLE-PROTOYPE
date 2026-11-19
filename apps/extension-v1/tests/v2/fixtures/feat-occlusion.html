@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pinned boxes that cover nothing, and some that do</title>
+    <!--
+      Eval M1: occlusion counted every fixed or sticky box in view. Here:
+        - a sticky top bar (1280x48, stuck at top: 0): it covers what scrolls under it;
+        - a sticky contents column beside the text (Wikipedia's TOC);
+        - a fixed rail beside main (YouTube's guide);
+        - a tall fixed channel header in its own layout space (main is padded
+          for it, nothing lies under it until it scrolls away);
+        - a transparent fixed layer the pointer passes through (Meta's toast host).
+    -->
+    <style>
+      body {
+        margin: 0;
+        font:
+          16px/1.5 Arial,
+          sans-serif;
+      }
+      .bar {
+        position: sticky;
+        top: 0;
+        height: 48px;
+        background: #fff;
+        border-bottom: 1px solid #ddd;
+        z-index: 5;
+      }
+      .rail {
+        position: fixed;
+        left: 0;
+        top: 48px;
+        bottom: 0;
+        width: 72px;
+        background: #f4f4f4;
+      }
+      .channel {
+        position: fixed;
+        left: 72px;
+        right: 0;
+        top: 48px;
+        height: 340px;
+        background: #eef;
+        z-index: 2;
+      }
+      .toasts {
+        position: fixed;
+        left: 0;
+        right: 0;
+        top: 120px;
+        bottom: 0;
+        pointer-events: none;
+        z-index: 9;
+      }
+      .layout {
+        display: flex;
+        margin-left: 72px;
+      }
+      main {
+        flex: 1;
+        padding: 340px 24px 24px;
+      }
+      .toc {
+        position: sticky;
+        top: 64px;
+        align-self: flex-start;
+        width: 200px;
+        height: 400px;
+        margin: 340px 0 0 0;
+        background: #fafafa;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <a href="/">Home</a> <a href="/videos">Videos</a>
+    </header>
+    <nav class="rail" aria-label="Guide"><a href="/a">A</a></nav>
+    <div class="channel"><h2>Channel</h2></div>
+    <div class="toasts"></div>
+    <div class="layout">
+      <main>
+        <h1>Videos</h1>
+        <p>
+          One paragraph of running text that sits under the channel header only
+          once the page scrolls, and the header then scrolls away with it.
+        </p>
+        <p>
+          Another paragraph of running text so the column holds something to
+          cover.
+        </p>
+        <p>
+          A third paragraph keeps going for a while so there is text all the way
+          down the first screen and well past it.
+        </p>
+      </main>
+      <aside class="toc" aria-label="Contents"><a href="#a">Contents</a></aside>
+    </div>
+  </body>
+</html>

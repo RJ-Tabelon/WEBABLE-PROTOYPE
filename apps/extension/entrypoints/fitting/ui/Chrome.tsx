@@ -8,8 +8,21 @@ import { Logo } from '../../../src/ui/Logo';
 export function CheckIcon(props: { size?: number }): JSX.Element {
   const s = props.size ?? 16;
   return (
-    <svg width={s} height={s} viewBox="0 0 16 16" aria-hidden="true" class="fl-check">
-      <path d="M3.5 8.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+    <svg
+      width={s}
+      height={s}
+      viewBox="0 0 16 16"
+      aria-hidden="true"
+      class="fl-check"
+    >
+      <path
+        d="M3.5 8.5l3 3 6-7"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
     </svg>
   );
 }
@@ -40,12 +53,27 @@ export function TopBar(props: {
             {props.parts.map((p, i) => {
               const done = props.done.has(p.id);
               const current = !done && p.id === props.current;
-              const state = done ? 'is-done' : current ? 'is-current' : 'is-next';
+              const state = done
+                ? 'is-done'
+                : current
+                  ? 'is-current'
+                  : 'is-next';
               return (
                 <>
-                  {i > 0 ? <li class={`fl-rule ${done || current ? 'is-past' : ''}`} aria-hidden="true" /> : null}
-                  <li class={`fl-seg ${state}`} aria-current={current ? 'step' : undefined}>
-                    <span class={`fl-seg-mark ${current && props.ticking ? 'is-ticking' : ''}`} aria-hidden="true">
+                  {i > 0 ? (
+                    <li
+                      class={`fl-rule ${done || current ? 'is-past' : ''}`}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <li
+                    class={`fl-seg ${state}`}
+                    aria-current={current ? 'step' : undefined}
+                  >
+                    <span
+                      class={`fl-seg-mark ${current && props.ticking ? 'is-ticking' : ''}`}
+                      aria-hidden="true"
+                    >
                       <span class="fl-seg-dot" />
                       <CheckIcon size={16} />
                     </span>
@@ -62,7 +90,12 @@ export function TopBar(props: {
       )}
       <div class="fl-top-end">
         {props.onSkip ? (
-          <button type="button" class="btn-text fl-skip" onClick={props.onSkip} data-answer="skip-all">
+          <button
+            type="button"
+            class="btn-text fl-skip"
+            onClick={props.onSkip}
+            data-answer="skip-all"
+          >
             Skip for now
           </button>
         ) : null}

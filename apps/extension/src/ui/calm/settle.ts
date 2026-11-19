@@ -9,17 +9,29 @@ export const ORDER_WAIT_MS = 1200;
 /** Scrolling has stopped once no scroll event came for this long. */
 export const SCROLL_END_MS = 140;
 
-export interface Box { top: number; bottom: number }
+export interface Box {
+  top: number;
+  bottom: number;
+}
 
 /** Pure rule: may a ready group switch to its layout now? `box` null: not laid out (nothing on screen moves). */
-export function maySwitch(o: { sinceOpenMs: number; interacted: boolean; box: Box | null; view: Box }): boolean {
+export function maySwitch(o: {
+  sinceOpenMs: number;
+  interacted: boolean;
+  box: Box | null;
+  view: Box;
+}): boolean {
   if (!o.interacted && o.sinceOpenMs <= SETTLE_GRACE_MS) return true;
   if (!o.box || o.box.bottom - o.box.top <= 0) return true;
   return o.box.bottom <= o.view.top || o.box.top >= o.view.bottom;
 }
 
 /** Pure rule: in the first moments, a group waits for an earlier group that is still being laid out (for a while). */
-export function waitsForEarlier(o: { inGrace: boolean; earlierWaiting: boolean; readyForMs: number }): boolean {
+export function waitsForEarlier(o: {
+  inGrace: boolean;
+  earlierWaiting: boolean;
+  readyForMs: number;
+}): boolean {
   return o.inGrace && o.earlierWaiting && o.readyForMs < ORDER_WAIT_MS;
 }
 
@@ -43,7 +55,10 @@ export interface SettleCtl {
   dispose(): void;
 }
 
-export function createSettle(scroller: () => HTMLElement | null, now: () => number = () => performance.now()): SettleCtl {
+export function createSettle(
+  scroller: () => HTMLElement | null,
+  now: () => number = () => performance.now(),
+): SettleCtl {
   const waiters = new Set<() => void>();
   let timer = 0;
   const run = (): void => {
@@ -56,7 +71,8 @@ export function createSettle(scroller: () => HTMLElement | null, now: () => numb
     user: new Set(),
     settled: new Set(),
     scroller,
-    inGrace: (t = now()) => !ctl.interacted && t - ctl.openedAt <= SETTLE_GRACE_MS,
+    inGrace: (t = now()) =>
+      !ctl.interacted && t - ctl.openedAt <= SETTLE_GRACE_MS,
     markInteracted: () => {
       ctl.interacted = true;
     },

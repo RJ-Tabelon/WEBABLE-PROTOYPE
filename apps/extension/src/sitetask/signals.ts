@@ -2,7 +2,8 @@
 // Read a few times during a task, never on every frame.
 
 /** Class or id tokens that mark an ad box: "ad", "ads", "top-ad", "ad-slot", "adslot", "advertisement", "sponsored"… */
-const AD_TOKEN = /^(ads?|advert\w*|sponsor\w*|dfp\w*)$|^ads?[-_]|[-_]ads?([-_]|$)|adslot|adunit|ad-unit|advert|sponsor|taboola|outbrain|gpt-ad|google_ads|dfp-ad/i;
+const AD_TOKEN =
+  /^(ads?|advert\w*|sponsor\w*|dfp\w*)$|^ads?[-_]|[-_]ads?([-_]|$)|adslot|adunit|ad-unit|advert|sponsor|taboola|outbrain|gpt-ad|google_ads|dfp-ad/i;
 
 const AD_SELECTOR = [
   'iframe[id^="google_ads_iframe"]',
@@ -22,7 +23,17 @@ const AD_SELECTOR = [
   '[aria-label="advertisement" i]',
 ].join(',');
 
-const AD_LABELS = new Set(['ad', 'ads', 'advertisement', 'sponsored', 'sponsored content', 'paid content', 'paid post', 'promoted', 'paid partner content']);
+const AD_LABELS = new Set([
+  'ad',
+  'ads',
+  'advertisement',
+  'sponsored',
+  'sponsored content',
+  'paid content',
+  'paid post',
+  'promoted',
+  'paid partner content',
+]);
 
 /** True when a class list or id reads as an ad box. */
 export function looksLikeAd(classOrId: string): boolean {
@@ -41,17 +52,28 @@ function boxBigEnough(el: Element, min: number): boolean {
  * Ads and sponsored boxes on the page: ad iframes, ad containers (by common id and class patterns) and
  * "Advertisement" / "Sponsored" labels, each box counted once (boxes inside a counted box don't count again).
  */
-export function countAds(doc: Document, skip?: (el: Element) => boolean): number {
+export function countAds(
+  doc: Document,
+  skip?: (el: Element) => boolean,
+): number {
   const found: Element[] = [];
   const add = (el: Element) => {
     if (skip?.(el)) return;
     found.push(el);
   };
   try {
-    for (const el of Array.from(doc.querySelectorAll(AD_SELECTOR))) if (boxBigEnough(el, 30)) add(el);
-    for (const el of Array.from(doc.querySelectorAll('[class*="ad" i], [id*="ad" i], [class*="sponsor" i], [class*="taboola" i], [class*="outbrain" i]'))) {
+    for (const el of Array.from(doc.querySelectorAll(AD_SELECTOR)))
+      if (boxBigEnough(el, 30)) add(el);
+    for (const el of Array.from(
+      doc.querySelectorAll(
+        '[class*="ad" i], [id*="ad" i], [class*="sponsor" i], [class*="taboola" i], [class*="outbrain" i]',
+      ),
+    )) {
       if (el === doc.body || el === doc.documentElement) continue;
-      const cls = typeof el.className === 'string' ? el.className : el.getAttribute('class') ?? '';
+      const cls =
+        typeof el.className === 'string'
+          ? el.className
+          : (el.getAttribute('class') ?? '');
       if (!looksLikeAd(cls) && !looksLikeAd(el.id)) continue;
       if (boxBigEnough(el, 30)) add(el);
     }
@@ -60,7 +82,8 @@ export function countAds(doc: Document, skip?: (el: Element) => boolean): number
   }
   const boxes = new Set(found);
   const inCounted = (el: Element): boolean => {
-    for (let p = el.parentElement; p; p = p.parentElement) if (boxes.has(p)) return true;
+    for (let p = el.parentElement; p; p = p.parentElement)
+      if (boxes.has(p)) return true;
     return false;
   };
   let n = 0;
@@ -71,7 +94,11 @@ export function countAds(doc: Document, skip?: (el: Element) => boolean): number
   if (body) {
     const walker = doc.createTreeWalker(body, NodeFilter.SHOW_TEXT);
     let seen = 0;
-    for (let node = walker.nextNode(); node && seen < 60000; node = walker.nextNode(), seen++) {
+    for (
+      let node = walker.nextNode();
+      node && seen < 60000;
+      node = walker.nextNode(), seen++
+    ) {
       const text = node.nodeValue;
       if (!text || text.length > 40) continue;
       const t = text.replace(/\s+/g, ' ').trim().toLowerCase();
@@ -79,7 +106,13 @@ export function countAds(doc: Document, skip?: (el: Element) => boolean): number
       const el = node.parentElement;
       if (!el || skip?.(el) || boxes.has(el) || inCounted(el)) continue;
       const tag = el.tagName;
-      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'TEMPLATE') continue;
+      if (
+        tag === 'SCRIPT' ||
+        tag === 'STYLE' ||
+        tag === 'NOSCRIPT' ||
+        tag === 'TEMPLATE'
+      )
+        continue;
       n++;
     }
   }
@@ -91,7 +124,8 @@ function inView(el: Element, minSide: number): boolean {
   if (r.width < minSide || r.height < minSide) return false;
   const vw = window.innerWidth || document.documentElement.clientWidth;
   const vh = window.innerHeight || document.documentElement.clientHeight;
-  if (r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw) return false;
+  if (r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw)
+    return false;
   const cs = getComputedStyle(el);
   return cs.visibility !== 'hidden' && Number(cs.opacity || '1') > 0.1;
 }
@@ -130,14 +164,23 @@ export class MotionWatch {
 
   private video(): boolean {
     for (const v of Array.from(document.querySelectorAll('video'))) {
-      if (!v.paused && !v.ended && v.readyState >= 2 && !this.skip(v) && inView(v, 40)) return true;
+      if (
+        !v.paused &&
+        !v.ended &&
+        v.readyState >= 2 &&
+        !this.skip(v) &&
+        inView(v, 40)
+      )
+        return true;
     }
     return false;
   }
 
   private animation(): boolean {
     if (typeof document.getAnimations !== 'function') return false;
-    const CssAnim = (globalThis as { CSSAnimation?: abstract new (...a: never[]) => Animation }).CSSAnimation;
+    const CssAnim = (
+      globalThis as { CSSAnimation?: abstract new (...a: never[]) => Animation }
+    ).CSSAnimation;
     for (const a of document.getAnimations()) {
       if (a.playState !== 'running') continue;
       if (CssAnim && !(a instanceof CssAnim)) continue;
@@ -145,7 +188,8 @@ export class MotionWatch {
       const target = effect?.target;
       if (!target || this.skip(target)) continue;
       const timing = effect.getComputedTiming();
-      const end = typeof timing.endTime === 'number' ? timing.endTime : Infinity;
+      const end =
+        typeof timing.endTime === 'number' ? timing.endTime : Infinity;
       const at = typeof timing.localTime === 'number' ? timing.localTime : 0;
       // Long or looping animations only: a one-off fade as a menu opens isn't "moving things".
       if (end !== Infinity && end - at < 1000) continue;
@@ -158,7 +202,10 @@ export class MotionWatch {
     let moved = false;
     const quiet = now - this.lastInputAt > 2000;
     const seen = new Set<Element>();
-    const list = Array.from(document.querySelectorAll(CAROUSEL_SELECTOR)).slice(0, 40);
+    const list = Array.from(document.querySelectorAll(CAROUSEL_SELECTOR)).slice(
+      0,
+      40,
+    );
     for (const el of list) {
       if (this.skip(el) || !inView(el, 60)) continue;
       const parts = [el, el.firstElementChild].filter((x): x is Element => !!x);
@@ -171,7 +218,8 @@ export class MotionWatch {
         this.last.set(p, snap);
       }
     }
-    for (const k of Array.from(this.last.keys())) if (!seen.has(k)) this.last.delete(k);
+    for (const k of Array.from(this.last.keys()))
+      if (!seen.has(k)) this.last.delete(k);
     return moved;
   }
 }

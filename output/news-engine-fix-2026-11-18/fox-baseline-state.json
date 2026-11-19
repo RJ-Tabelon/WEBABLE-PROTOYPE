@@ -1,0 +1,6360 @@
+{
+  "phase": "calm",
+  "calm": {
+    "open": true,
+    "loading": false,
+    "spec": {
+      "page_type": "other",
+      "task": "other",
+      "strip": [
+        "n44",
+        "n899",
+        "n705",
+        "n706",
+        "n780",
+        "n898"
+      ],
+      "sections": [
+        {
+          "heading_ref": "n238",
+          "label": "Media",
+          "role": "primary",
+          "nodes": [
+            "n64",
+            "n67",
+            "n71",
+            "n76",
+            "n80",
+            "n81",
+            "n83",
+            "n88",
+            "n99",
+            "n104",
+            "n111",
+            "n116",
+            "n121",
+            "n126",
+            "n166",
+            "n238",
+            "n240",
+            "n244",
+            "n248",
+            "n252",
+            "n256",
+            "n260",
+            "n264",
+            "n268",
+            "n274",
+            "n276",
+            "n280",
+            "n286",
+            "n291",
+            "n295",
+            "n300",
+            "n306",
+            "n310",
+            "n316",
+            "n322",
+            "n326",
+            "n331",
+            "n336",
+            "n341",
+            "n345",
+            "n350",
+            "n355",
+            "n359",
+            "n364",
+            "n369",
+            "n372",
+            "n377",
+            "n382",
+            "n387",
+            "n392",
+            "n398",
+            "n402",
+            "n405",
+            "n410",
+            "n413",
+            "n417",
+            "n422",
+            "n737",
+            "n812"
+          ],
+          "layout": "as_is",
+          "emphasis": "lead",
+          "state": "open",
+          "why": "main_task",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Details",
+          "role": "supporting",
+          "nodes": [
+            "n63",
+            "n704"
+          ],
+          "layout": "as_is",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "main_task",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Help",
+          "role": "help",
+          "nodes": [
+            "n1211",
+            "n1300",
+            "n1302"
+          ],
+          "layout": "row_list",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "protected",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n498",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n497"
+          ],
+          "layout": "as_is",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n558",
+          "label": "Your details",
+          "role": "supporting",
+          "nodes": [
+            "n557"
+          ],
+          "layout": "as_is",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Navigation",
+          "role": "navigation",
+          "nodes": [
+            "n2",
+            "n22",
+            "n26",
+            "n45",
+            "n46",
+            "n57",
+            "n59",
+            "n968",
+            "n980",
+            "n998",
+            "n1018",
+            "n1021",
+            "n1026",
+            "n1036",
+            "n1064",
+            "n1078",
+            "n1116",
+            "n1134",
+            "n1152",
+            "n1188",
+            "n1207",
+            "n1210",
+            "n1224",
+            "n1246"
+          ],
+          "layout": "chip_bar",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "navigation",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n513",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n512"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n573",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n572"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n618",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n617"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n633",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n632"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n873",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n873",
+            "n877",
+            "n879",
+            "n883",
+            "n887"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "open",
+          "why": "protected",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n937",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n936"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "open",
+          "why": "protected",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "More on this page",
+          "role": "other",
+          "nodes": [
+            "n129",
+            "n1315",
+            "n1317",
+            "n435",
+            "n443",
+            "n1318",
+            "n482",
+            "n527",
+            "n542",
+            "n587",
+            "n602",
+            "n647",
+            "n662",
+            "n677",
+            "n693",
+            "n696",
+            "n698",
+            "n701",
+            "n707",
+            "n722",
+            "n752",
+            "n768",
+            "n771",
+            "n773",
+            "n776",
+            "n779",
+            "n782",
+            "n797",
+            "n827",
+            "n842",
+            "n857",
+            "n892",
+            "n895",
+            "n897",
+            "n900",
+            "n903",
+            "n906",
+            "n921",
+            "n951",
+            "n1098",
+            "n1266",
+            "n1299",
+            "n1301",
+            "n1314"
+          ],
+          "layout": "row_list",
+          "emphasis": "quiet",
+          "state": "end_drawer",
+          "why": "not_needed_for_task",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Sponsored",
+          "role": "ads",
+          "nodes": [
+            "n778"
+          ],
+          "layout": "card_grid",
+          "emphasis": "quiet",
+          "state": "end_drawer",
+          "why": "advertising",
+          "show_first": 0
+        }
+      ],
+      "primary_action": null,
+      "form_steps": [],
+      "density": "airy"
+    },
+    "source": "heuristic",
+    "aiReady": false,
+    "redesign": null,
+    "visual": null,
+    "auto": false,
+    "originalPinned": false,
+    "textStep": 0
+  },
+  "understanding": {
+    "elements": [
+      {
+        "id": "n22",
+        "role": "navigation",
+        "roleP": 0.91,
+        "roleProbs": {
+          "main_content": 0.08,
+          "navigation": 0.91
+        },
+        "task": 0.71,
+        "main": 0,
+        "help": 0.02,
+        "fine": "site_logo",
+        "fineP": 0.91,
+        "importance": 2.11
+      },
+      {
+        "id": "n57",
+        "role": "other",
+        "roleP": 0.32,
+        "roleProbs": {
+          "other": 0.32,
+          "help_contact": 0.07,
+          "form_field": 0.04,
+          "action_button": 0.09,
+          "navigation": 0.24,
+          "account_utility": 0.17
+        },
+        "task": 0.36,
+        "main": 0,
+        "help": 0.01,
+        "fine": "site_nav",
+        "fineP": 0.24,
+        "importance": 1.36
+      },
+      {
+        "id": "n64",
+        "role": "main_content",
+        "roleP": 0.59,
+        "roleProbs": {
+          "main_content": 0.59,
+          "advertising": 0.03,
+          "recommendations": 0.32
+        },
+        "task": 0.47,
+        "main": 0.05,
+        "help": 0.03,
+        "fine": "result_item",
+        "fineP": 0.46,
+        "importance": 2.62
+      },
+      {
+        "id": "n67",
+        "role": "main_content",
+        "roleP": 0.83,
+        "roleProbs": {
+          "main_content": 0.83,
+          "recommendations": 0.16
+        },
+        "task": 0.69,
+        "main": 0.05,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.55,
+        "importance": 3.7
+      },
+      {
+        "id": "n68",
+        "role": "advertising",
+        "roleP": 0.29,
+        "roleProbs": {
+          "main_content": 0.18,
+          "action_button": 0.08,
+          "navigation": 0.11,
+          "advertising": 0.29,
+          "recommendations": 0.07,
+          "other": 0.11,
+          "account_utility": 0.12
+        },
+        "task": 0.26,
+        "main": 0.13,
+        "help": 0.02,
+        "fine": "upsell_promo",
+        "fineP": 0.25,
+        "importance": 1.57,
+        "liveP": 0.6
+      },
+      {
+        "id": "n71",
+        "role": "main_content",
+        "roleP": 0.67,
+        "roleProbs": {
+          "main_content": 0.67,
+          "recommendations": 0.32
+        },
+        "task": 0.52,
+        "main": 0.04,
+        "help": 0.02,
+        "fine": "result_item",
+        "fineP": 0.51,
+        "importance": 3.51
+      },
+      {
+        "id": "n74",
+        "role": "advertising",
+        "roleP": 0.29,
+        "roleProbs": {
+          "main_content": 0.27,
+          "action_button": 0.08,
+          "navigation": 0.03,
+          "advertising": 0.29,
+          "recommendations": 0.08,
+          "other": 0.12,
+          "account_utility": 0.07
+        },
+        "task": 0.33,
+        "main": 0.17,
+        "help": 0.02,
+        "fine": "upsell_promo",
+        "fineP": 0.25,
+        "importance": 2.07,
+        "liveP": 0.65
+      },
+      {
+        "id": "n76",
+        "role": "main_content",
+        "roleP": 0.88,
+        "roleProbs": {
+          "main_content": 0.88,
+          "recommendations": 0.12
+        },
+        "task": 0.63,
+        "main": 0.05,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.59,
+        "importance": 3.73
+      },
+      {
+        "id": "n80",
+        "role": "main_content",
+        "roleP": 0.89,
+        "roleProbs": {
+          "main_content": 0.89,
+          "recommendations": 0.11
+        },
+        "task": 0.67,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.58,
+        "importance": 3.47
+      },
+      {
+        "id": "n81",
+        "role": "main_content",
+        "roleP": 0.28,
+        "roleProbs": {
+          "main_content": 0.28,
+          "action_button": 0.08,
+          "navigation": 0.03,
+          "advertising": 0.26,
+          "recommendations": 0.07,
+          "other": 0.16,
+          "account_utility": 0.08
+        },
+        "task": 0.31,
+        "main": 0.17,
+        "help": 0.02,
+        "fine": "upsell_promo",
+        "fineP": 0.22,
+        "importance": 1.94,
+        "liveP": 0.62
+      },
+      {
+        "id": "n83",
+        "role": "main_content",
+        "roleP": 0.87,
+        "roleProbs": {
+          "main_content": 0.87,
+          "recommendations": 0.13
+        },
+        "task": 0.63,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.53,
+        "importance": 3.7
+      },
+      {
+        "id": "n88",
+        "role": "main_content",
+        "roleP": 0.66,
+        "roleProbs": {
+          "main_content": 0.66,
+          "recommendations": 0.34
+        },
+        "task": 0.58,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.47,
+        "importance": 3.45
+      },
+      {
+        "id": "n91",
+        "role": "recommendations",
+        "roleP": 0.99,
+        "roleProbs": {
+          "recommendations": 0.99
+        },
+        "task": 0.2,
+        "main": 0,
+        "help": 0.01,
+        "fine": "related_links",
+        "fineP": 0.88,
+        "importance": 1.8
+      },
+      {
+        "id": "n93",
+        "role": "recommendations",
+        "roleP": 0.76,
+        "roleProbs": {
+          "main_content": 0.21,
+          "recommendations": 0.76
+        },
+        "task": 0.25,
+        "main": 0,
+        "help": 0.01,
+        "fine": "related_links",
+        "fineP": 0.42,
+        "importance": 2.02
+      },
+      {
+        "id": "n94",
+        "role": "main_content",
+        "roleP": 0.59,
+        "roleProbs": {
+          "main_content": 0.59,
+          "recommendations": 0.37
+        },
+        "task": 0.41,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.44,
+        "importance": 2.92
+      },
+      {
+        "id": "n95",
+        "role": "recommendations",
+        "roleP": 0.77,
+        "roleProbs": {
+          "main_content": 0.22,
+          "recommendations": 0.77
+        },
+        "task": 0.23,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.42,
+        "importance": 2.03
+      },
+      {
+        "id": "n96",
+        "role": "main_content",
+        "roleP": 0.65,
+        "roleProbs": {
+          "main_content": 0.65,
+          "recommendations": 0.33
+        },
+        "task": 0.42,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.4,
+        "importance": 3.07
+      },
+      {
+        "id": "n99",
+        "role": "main_content",
+        "roleP": 0.82,
+        "roleProbs": {
+          "main_content": 0.82,
+          "recommendations": 0.18
+        },
+        "task": 0.64,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.52,
+        "importance": 3.64
+      },
+      {
+        "id": "n104",
+        "role": "main_content",
+        "roleP": 0.82,
+        "roleProbs": {
+          "main_content": 0.82,
+          "recommendations": 0.18
+        },
+        "task": 0.65,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.57,
+        "importance": 3.62
+      },
+      {
+        "id": "n111",
+        "role": "main_content",
+        "roleP": 0.66,
+        "roleProbs": {
+          "main_content": 0.66,
+          "recommendations": 0.34
+        },
+        "task": 0.46,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.54,
+        "importance": 3.03
+      },
+      {
+        "id": "n112",
+        "role": "recommendations",
+        "roleP": 0.8,
+        "roleProbs": {
+          "main_content": 0.15,
+          "recommendations": 0.8
+        },
+        "task": 0.19,
+        "main": 0,
+        "help": 0.02,
+        "fine": "related_links",
+        "fineP": 0.4,
+        "importance": 1.38
+      },
+      {
+        "id": "n113",
+        "role": "recommendations",
+        "roleP": 0.62,
+        "roleProbs": {
+          "main_content": 0.35,
+          "recommendations": 0.62
+        },
+        "task": 0.36,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.62,
+        "importance": 2.2
+      },
+      {
+        "id": "n116",
+        "role": "main_content",
+        "roleP": 0.74,
+        "roleProbs": {
+          "main_content": 0.74,
+          "recommendations": 0.26
+        },
+        "task": 0.69,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.53,
+        "importance": 3.43
+      },
+      {
+        "id": "n121",
+        "role": "main_content",
+        "roleP": 0.86,
+        "roleProbs": {
+          "main_content": 0.86,
+          "recommendations": 0.14
+        },
+        "task": 0.61,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.63,
+        "importance": 3.48
+      },
+      {
+        "id": "n126",
+        "role": "main_content",
+        "roleP": 0.53,
+        "roleProbs": {
+          "main_content": 0.53,
+          "navigation": 0.05,
+          "advertising": 0.06,
+          "recommendations": 0.22
+        },
+        "task": 0.13,
+        "main": 0,
+        "help": 0.03,
+        "fine": "schedule_item",
+        "fineP": 0.48,
+        "importance": 1.36,
+        "liveP": 0.61
+      },
+      {
+        "id": "n243",
+        "role": "recommendations",
+        "roleP": 0.91,
+        "roleProbs": {
+          "main_content": 0.08,
+          "recommendations": 0.91
+        },
+        "task": 0.56,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.79,
+        "importance": 3.04
+      },
+      {
+        "id": "n432",
+        "role": "advertising",
+        "roleP": 0.95,
+        "roleProbs": {
+          "advertising": 0.95,
+          "recommendations": 0.05
+        },
+        "task": 0.09,
+        "main": 0,
+        "help": 0.01,
+        "fine": "advertising",
+        "fineP": 0.63,
+        "importance": 0.07,
+        "paidAsStoryP": 0.98
+      },
+      {
+        "id": "n445",
+        "role": "recommendations",
+        "roleP": 0.94,
+        "roleProbs": {
+          "recommendations": 0.94
+        },
+        "task": 0.59,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.9,
+        "importance": 2.63
+      },
+      {
+        "id": "n460",
+        "role": "advertising",
+        "roleP": 0.95,
+        "roleProbs": {
+          "advertising": 0.95,
+          "recommendations": 0.05
+        },
+        "task": 0.09,
+        "main": 0,
+        "help": 0.01,
+        "fine": "advertising",
+        "fineP": 0.55,
+        "importance": 0.08,
+        "paidAsStoryP": 0.97
+      },
+      {
+        "id": "n463",
+        "role": "recommendations",
+        "roleP": 0.58,
+        "roleProbs": {
+          "main_content": 0.18,
+          "advertising": 0.17,
+          "recommendations": 0.58,
+          "other": 0.05
+        },
+        "task": 0.15,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.58,
+        "importance": 0.29,
+        "paidAsStoryP": 0.76
+      },
+      {
+        "id": "n466",
+        "role": "recommendations",
+        "roleP": 0.53,
+        "roleProbs": {
+          "main_content": 0.13,
+          "advertising": 0.25,
+          "recommendations": 0.53,
+          "other": 0.08
+        },
+        "task": 0.12,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.53,
+        "importance": 0.3,
+        "paidAsStoryP": 0.73
+      },
+      {
+        "id": "n475",
+        "role": "advertising",
+        "roleP": 0.72,
+        "roleProbs": {
+          "main_content": 0.07,
+          "advertising": 0.72,
+          "recommendations": 0.12,
+          "other": 0.07
+        },
+        "task": 0.09,
+        "main": 0,
+        "help": 0.04,
+        "fine": "advertising",
+        "fineP": 0.53,
+        "importance": 0.1,
+        "paidAsStoryP": 0.55
+      },
+      {
+        "id": "n478",
+        "role": "recommendations",
+        "roleP": 0.77,
+        "roleProbs": {
+          "main_content": 0.11,
+          "advertising": 0.07,
+          "recommendations": 0.77,
+          "other": 0.04
+        },
+        "task": 0.14,
+        "main": 0,
+        "help": 0.13,
+        "fine": "teaser_other_content",
+        "fineP": 0.77,
+        "importance": 0.36,
+        "paidAsStoryP": 0.69
+      },
+      {
+        "id": "n705",
+        "role": "main_content",
+        "roleP": 0.73,
+        "roleProbs": {
+          "main_content": 0.73,
+          "recommendations": 0.26
+        },
+        "task": 0.5,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.56,
+        "importance": 3.24
+      },
+      {
+        "id": "n706",
+        "role": "recommendations",
+        "roleP": 0.53,
+        "roleProbs": {
+          "main_content": 0.43,
+          "recommendations": 0.53
+        },
+        "task": 0.41,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.53,
+        "importance": 2.5
+      },
+      {
+        "id": "n778",
+        "role": "advertising",
+        "roleP": 0.88,
+        "roleProbs": {
+          "advertising": 0.88,
+          "recommendations": 0.04,
+          "other": 0.03
+        },
+        "task": 0.07,
+        "main": 0.02,
+        "help": 0.02,
+        "fine": "advertising",
+        "fineP": 0.82,
+        "importance": 0.06,
+        "paidAsStoryP": 0.26
+      },
+      {
+        "id": "n780",
+        "role": "recommendations",
+        "roleP": 0.62,
+        "roleProbs": {
+          "main_content": 0.06,
+          "advertising": 0.25,
+          "recommendations": 0.62
+        },
+        "task": 0.14,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.62,
+        "importance": 0.57,
+        "paidAsStoryP": 0.7
+      },
+      {
+        "id": "n878",
+        "role": "recommendations",
+        "roleP": 0.58,
+        "roleProbs": {
+          "main_content": 0.32,
+          "advertising": 0.07,
+          "recommendations": 0.58
+        },
+        "task": 0.38,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.58,
+        "importance": 1.63
+      },
+      {
+        "id": "n1098",
+        "role": "navigation",
+        "roleP": 0.93,
+        "roleProbs": {
+          "navigation": 0.93,
+          "advertising": 0.03
+        },
+        "task": 0.09,
+        "main": 0,
+        "help": 0.03,
+        "fine": "site_nav",
+        "fineP": 0.89,
+        "importance": 0.75
+      },
+      {
+        "id": "n1314",
+        "role": "advertising",
+        "roleP": 0.54,
+        "roleProbs": {
+          "main_content": 0.3,
+          "advertising": 0.54,
+          "other": 0.14
+        },
+        "task": 0.07,
+        "main": 0,
+        "help": 0.02,
+        "fine": "advertising",
+        "fineP": 0.54,
+        "importance": 0.11
+      },
+      {
+        "id": "n62",
+        "role": "recommendations",
+        "roleP": 0.91,
+        "roleProbs": {
+          "main_content": 0.03,
+          "recommendations": 0.91,
+          "other": 0.03
+        },
+        "task": 0.69,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.88,
+        "importance": 3.3
+      },
+      {
+        "id": "n1315",
+        "role": "recommendations",
+        "roleP": 0.86,
+        "roleProbs": {
+          "main_content": 0.12,
+          "recommendations": 0.86
+        },
+        "task": 0.7,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.83,
+        "importance": 3.56,
+        "liveP": 0.2
+      },
+      {
+        "id": "n237",
+        "role": "recommendations",
+        "roleP": 0.86,
+        "roleProbs": {
+          "main_content": 0.13,
+          "recommendations": 0.86
+        },
+        "task": 0.7,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.76,
+        "importance": 3.07
+      },
+      {
+        "id": "n1316",
+        "role": "recommendations",
+        "roleP": 0.93,
+        "roleProbs": {
+          "main_content": 0.07,
+          "recommendations": 0.93
+        },
+        "task": 0.74,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.89,
+        "importance": 3.41
+      },
+      {
+        "id": "n1317",
+        "role": "recommendations",
+        "roleP": 0.87,
+        "roleProbs": {
+          "main_content": 0.11,
+          "recommendations": 0.87
+        },
+        "task": 0.45,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.8,
+        "importance": 2.09
+      },
+      {
+        "id": "n435",
+        "role": "recommendations",
+        "roleP": 0.98,
+        "roleProbs": {
+          "recommendations": 0.98
+        },
+        "task": 0.13,
+        "main": 0,
+        "help": 0.03,
+        "fine": "teaser_other_content",
+        "fineP": 0.98,
+        "importance": 0.75
+      },
+      {
+        "id": "n443",
+        "role": "recommendations",
+        "roleP": 0.92,
+        "roleProbs": {
+          "main_content": 0.05,
+          "recommendations": 0.92
+        },
+        "task": 0.73,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.88,
+        "importance": 2.94
+      },
+      {
+        "id": "n1318",
+        "role": "advertising",
+        "roleP": 0.85,
+        "roleProbs": {
+          "advertising": 0.85,
+          "recommendations": 0.14
+        },
+        "task": 0.09,
+        "main": 0,
+        "help": 0.02,
+        "fine": "sponsored",
+        "fineP": 0.7,
+        "importance": 0.24,
+        "paidAsStoryP": 0.95
+      },
+      {
+        "id": "n1319",
+        "role": "recommendations",
+        "roleP": 0.85,
+        "roleProbs": {
+          "main_content": 0.1,
+          "advertising": 0.04,
+          "recommendations": 0.85
+        },
+        "task": 0.44,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.82,
+        "importance": 2.14
+      }
+    ],
+    "mainPick": {
+      "id": "none",
+      "p": 0.86,
+      "probs": {
+        "n64": 0,
+        "n67": 0.08,
+        "n68": 0.02,
+        "n71": 0,
+        "n74": 0.03,
+        "n76": 0,
+        "n80": 0,
+        "n81": 0.01,
+        "n83": 0,
+        "n88": 0,
+        "n94": 0,
+        "n96": 0,
+        "n99": 0,
+        "n104": 0,
+        "n111": 0,
+        "n113": 0,
+        "n116": 0,
+        "n121": 0,
+        "n705": 0,
+        "n706": 0,
+        "n778": 0,
+        "n780": 0,
+        "n878": 0,
+        "none": 0.86
+      }
+    },
+    "metrics": {
+      "model": "jev-1.14.0",
+      "calls": 7,
+      "questions": 237,
+      "inputTokens": 123826,
+      "wallMs": 535,
+      "serverMs": 175,
+      "costUsd": 0.005200692000000001
+    },
+    "cached": false,
+    "purpose": {
+      "kind": "news_index",
+      "p": 0.63,
+      "probs": {
+        "record_stats": 0,
+        "scoreboard": 0,
+        "schedule": 0,
+        "standings": 0,
+        "roster": 0,
+        "article": 0,
+        "news_index": 0.63,
+        "recipe": 0,
+        "product": 0,
+        "search_results": 0,
+        "form_task": 0,
+        "checkout": 0,
+        "sign_in": 0,
+        "account_dashboard": 0,
+        "bill_statement": 0,
+        "appointment": 0,
+        "status_lookup": 0,
+        "info_guide": 0,
+        "faq": 0,
+        "directory_listing": 0,
+        "location_hours": 0,
+        "calendar_dates": 0,
+        "comparison": 0,
+        "video": 0,
+        "gallery": 0,
+        "home_portal": 0.37,
+        "course_lesson": 0,
+        "course_overview": 0,
+        "live_blog": 0,
+        "product_listing": 0,
+        "game_detail": 0,
+        "other": 0
+      }
+    },
+    "mainRegion": {
+      "id": "n62",
+      "p": 0.5,
+      "probs": {
+        "n62": 0.615,
+        "n1315": 0.22,
+        "n237": 0.025,
+        "n1316": 0.035,
+        "n1317": 0.005,
+        "n435": 0,
+        "n443": 0.035,
+        "n1318": 0,
+        "n1319": 0.005,
+        "none": 0.06
+      }
+    }
+  },
+  "outline": {
+    "v": "outline.1",
+    "nodes": [
+      {
+        "id": "n1",
+        "kind": "region",
+        "label": "",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n2",
+        "kind": "list",
+        "label": "",
+        "parent": "n1",
+        "landmark": "navigation",
+        "shape": "list x 9",
+        "zone": "header_band"
+      },
+      {
+        "id": "n3",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n4",
+        "kind": "text",
+        "label": "",
+        "parent": "n3",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n5",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n6",
+        "kind": "link",
+        "label": "· News",
+        "parent": "n5",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n7",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n8",
+        "kind": "link",
+        "label": "· Business",
+        "parent": "n7",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n9",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n10",
+        "kind": "link",
+        "label": "·",
+        "parent": "n9",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n11",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n12",
+        "kind": "link",
+        "label": "· News Audio",
+        "parent": "n11",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n13",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n14",
+        "kind": "link",
+        "label": "· Weather",
+        "parent": "n13",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n15",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n16",
+        "kind": "link",
+        "label": "·",
+        "parent": "n15",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n17",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n18",
+        "kind": "link",
+        "label": "·",
+        "parent": "n17",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n19",
+        "kind": "text",
+        "label": "",
+        "parent": "n2",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n20",
+        "kind": "link",
+        "label": "Books",
+        "parent": "n19",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n21",
+        "kind": "region",
+        "label": "· News",
+        "landmark": "banner",
+        "zone": "header_band"
+      },
+      {
+        "id": "n22",
+        "kind": "heading",
+        "label": "· News",
+        "parent": "n21",
+        "landmark": "banner",
+        "level": 1,
+        "zone": "header_band"
+      },
+      {
+        "id": "n23",
+        "kind": "link",
+        "label": "· News Go to homepage",
+        "parent": "n22",
+        "landmark": "banner",
+        "zone": "header_band"
+      },
+      {
+        "id": "n24",
+        "kind": "region",
+        "label": "",
+        "parent": "n21",
+        "landmark": "banner",
+        "zone": "header_band"
+      },
+      {
+        "id": "n25",
+        "kind": "region",
+        "label": "",
+        "parent": "n24",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n26",
+        "kind": "list",
+        "label": "",
+        "parent": "n25",
+        "landmark": "navigation",
+        "shape": "list x 13",
+        "zone": "header_band"
+      },
+      {
+        "id": "n27",
+        "kind": "link",
+        "label": "My News",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n28",
+        "kind": "link",
+        "label": "·",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n29",
+        "kind": "link",
+        "label": "·",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n30",
+        "kind": "link",
+        "label": "World",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n31",
+        "kind": "text",
+        "label": "",
+        "parent": "n26",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n32",
+        "kind": "link",
+        "label": "·",
+        "parent": "n31",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n33",
+        "kind": "link",
+        "label": "Media",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n34",
+        "kind": "link",
+        "label": "·",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n35",
+        "kind": "link",
+        "label": "·",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n36",
+        "kind": "link",
+        "label": "Lifestyle",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n37",
+        "kind": "link",
+        "label": "Health",
+        "parent": "n26",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n38",
+        "kind": "text",
+        "label": "",
+        "parent": "n26",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n39",
+        "kind": "link",
+        "label": "Video",
+        "parent": "n38",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n40",
+        "kind": "text",
+        "label": "",
+        "parent": "n26",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n41",
+        "kind": "link",
+        "label": "·",
+        "parent": "n40",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n42",
+        "kind": "text",
+        "label": "",
+        "parent": "n26",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n43",
+        "kind": "link",
+        "label": "More",
+        "parent": "n42",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n44",
+        "kind": "link",
+        "label": "Log In",
+        "parent": "n24",
+        "landmark": "banner",
+        "zone": "header_band"
+      },
+      {
+        "id": "n45",
+        "kind": "link",
+        "label": "Watch Live",
+        "parent": "n24",
+        "landmark": "banner",
+        "zone": "header_band"
+      },
+      {
+        "id": "n46",
+        "kind": "region",
+        "label": "",
+        "parent": "n21",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n47",
+        "kind": "text",
+        "label": "",
+        "parent": "n46",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n48",
+        "kind": "list",
+        "label": "",
+        "parent": "n46",
+        "landmark": "navigation",
+        "shape": "list x 4",
+        "zone": "header_band"
+      },
+      {
+        "id": "n49",
+        "kind": "text",
+        "label": "",
+        "parent": "n48",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n50",
+        "kind": "link",
+        "label": "· [number]",
+        "parent": "n49",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n51",
+        "kind": "text",
+        "label": "",
+        "parent": "n48",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n52",
+        "kind": "link",
+        "label": "· WITH ·",
+        "parent": "n51",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n53",
+        "kind": "text",
+        "label": "",
+        "parent": "n48",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n54",
+        "kind": "link",
+        "label": "· OUTAGES",
+        "parent": "n53",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n55",
+        "kind": "text",
+        "label": "",
+        "parent": "n48",
+        "landmark": "navigation",
+        "shape": "text(40)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n56",
+        "kind": "link",
+        "label": "·",
+        "parent": "n55",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n57",
+        "kind": "link",
+        "label": "[number] [number] ·",
+        "parent": "n21",
+        "landmark": "banner",
+        "data": {
+          "kind": "logo",
+          "src": "https://static.foxnews.com/static/orion/styles/img/fox-weather/s/icons/weather/12.svg",
+          "label": "Fox News"
+        },
+        "zone": "header_band"
+      },
+      {
+        "id": "n58",
+        "kind": "region",
+        "label": "",
+        "parent": "n21",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n59",
+        "kind": "list",
+        "label": "",
+        "parent": "n58",
+        "landmark": "navigation",
+        "shape": "list x 3",
+        "zone": "header_band"
+      },
+      {
+        "id": "n60",
+        "kind": "text",
+        "label": "",
+        "parent": "n59",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "header_band"
+      },
+      {
+        "id": "n61",
+        "kind": "link",
+        "label": "· [number] [percent]",
+        "parent": "n60",
+        "landmark": "navigation",
+        "zone": "header_band"
+      },
+      {
+        "id": "n62",
+        "kind": "region",
+        "label": "· as details of · after ·",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n63",
+        "kind": "region",
+        "label": "· as details of · after ·",
+        "parent": "n62",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n64",
+        "kind": "link",
+        "label": "THE ·",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n65",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n66",
+        "kind": "heading",
+        "label": "· as details of · after ·",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n67",
+        "kind": "link",
+        "label": "· as details of · after ·",
+        "parent": "n66",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n68",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n69",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(20)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n70",
+        "kind": "heading",
+        "label": "· on Social Security for · report finds",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n71",
+        "kind": "link",
+        "label": "· on Social Security for · report finds",
+        "parent": "n70",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n72",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n73",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n74",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n75",
+        "kind": "heading",
+        "label": "· on · called out as he nears",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n76",
+        "kind": "link",
+        "label": "· on · called out as he nears",
+        "parent": "n75",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n77",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n78",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n79",
+        "kind": "region",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n80",
+        "kind": "link",
+        "label": "· off · after ·",
+        "parent": "n79",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n81",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n82",
+        "kind": "heading",
+        "label": "· over · on their ·",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n83",
+        "kind": "link",
+        "label": "· over · on their ·",
+        "parent": "n82",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n84",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n85",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n86",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n87",
+        "kind": "heading",
+        "label": "· of ·",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n88",
+        "kind": "link",
+        "label": "· of ·",
+        "parent": "n87",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n89",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n90",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n91",
+        "kind": "region",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n92",
+        "kind": "list",
+        "label": "",
+        "parent": "n91",
+        "landmark": "main",
+        "shape": "list x 2",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n93",
+        "kind": "region",
+        "label": "",
+        "parent": "n92",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n94",
+        "kind": "link",
+        "label": "· GRANT · holds · cards to play",
+        "parent": "n93",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n95",
+        "kind": "region",
+        "label": "",
+        "parent": "n92",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n96",
+        "kind": "link",
+        "label": "· walks into · one · at ·",
+        "parent": "n95",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n97",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n98",
+        "kind": "heading",
+        "label": "· locals deliver · on · tax ·",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n99",
+        "kind": "link",
+        "label": "· locals deliver · on · tax ·",
+        "parent": "n98",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n100",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(20)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n101",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n102",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n103",
+        "kind": "heading",
+        "label": "Student at [price] · followed into · by",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n104",
+        "kind": "link",
+        "label": "Student at [price] · followed into · by",
+        "parent": "n103",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n105",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n106",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n107",
+        "kind": "region",
+        "label": "· ready for what could be next after",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n108",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n107",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n109",
+        "kind": "text",
+        "label": "",
+        "parent": "n107",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n110",
+        "kind": "heading",
+        "label": "· ready for what could be next after",
+        "parent": "n107",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n111",
+        "kind": "link",
+        "label": "· ready for what could be next after",
+        "parent": "n110",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n112",
+        "kind": "region",
+        "label": "",
+        "parent": "n107",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n113",
+        "kind": "link",
+        "label": "· reports service issues · of · Auto",
+        "parent": "n112",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n114",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n115",
+        "kind": "heading",
+        "label": "· claims · added · charge to her",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n116",
+        "kind": "link",
+        "label": "· claims · added · charge to her",
+        "parent": "n115",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n117",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n118",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n119",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n63",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n120",
+        "kind": "heading",
+        "label": "· groups · as · unit",
+        "parent": "n63",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n121",
+        "kind": "link",
+        "label": "· groups · as · unit",
+        "parent": "n120",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n122",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n123",
+        "kind": "text",
+        "label": "",
+        "parent": "n63",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n124",
+        "kind": "region",
+        "label": "",
+        "parent": "n62",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n125",
+        "kind": "region",
+        "label": "",
+        "parent": "n124",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n126",
+        "kind": "region",
+        "label": "",
+        "parent": "n125",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n127",
+        "kind": "link",
+        "label": "ON · NOW",
+        "parent": "n126",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n128",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n126",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n129",
+        "kind": "list",
+        "label": "",
+        "parent": "n125",
+        "landmark": "complementary",
+        "shape": "list x 6",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n130",
+        "kind": "region",
+        "label": "",
+        "parent": "n129",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n131",
+        "kind": "link",
+        "label": "· News [rating] Watch Free for [number] Days",
+        "parent": "n130",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n132",
+        "kind": "text",
+        "label": "",
+        "parent": "n129",
+        "landmark": "complementary",
+        "shape": "text(40)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n133",
+        "kind": "link",
+        "label": "· Pay TV Login Required",
+        "parent": "n132",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n134",
+        "kind": "text",
+        "label": "",
+        "parent": "n129",
+        "landmark": "complementary",
+        "shape": "text(40)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n135",
+        "kind": "link",
+        "label": "· Subscription Required",
+        "parent": "n134",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n136",
+        "kind": "text",
+        "label": "",
+        "parent": "n129",
+        "landmark": "complementary",
+        "shape": "text(40)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n137",
+        "kind": "link",
+        "label": "· Weather Free to Watch",
+        "parent": "n136",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n138",
+        "kind": "text",
+        "label": "",
+        "parent": "n129",
+        "landmark": "complementary",
+        "shape": "text(40)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n139",
+        "kind": "link",
+        "label": "The · Show Free to ·",
+        "parent": "n138",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n140",
+        "kind": "text",
+        "label": "",
+        "parent": "n129",
+        "landmark": "complementary",
+        "shape": "text(40)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n141",
+        "kind": "link",
+        "label": "· Free to Watch",
+        "parent": "n140",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n142",
+        "kind": "region",
+        "label": "US · to · across · as ·",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n143",
+        "kind": "region",
+        "label": "US · to · across · as ·",
+        "parent": "n142",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n1315",
+        "kind": "region",
+        "label": "US · to · across · as ·",
+        "parent": "n143",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n144",
+        "kind": "list",
+        "label": "",
+        "parent": "n1315",
+        "landmark": "main",
+        "shape": "cards x 6",
+        "zone": "center_column"
+      },
+      {
+        "id": "n145",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n146",
+        "kind": "heading",
+        "label": "US · to · across · as ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n147",
+        "kind": "link",
+        "label": "US · to · across · as ·",
+        "parent": "n146",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n148",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n149",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n150",
+        "kind": "heading",
+        "label": "· new · delivers · message after ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n151",
+        "kind": "link",
+        "label": "· new · delivers · message after ·",
+        "parent": "n150",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n152",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n153",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n154",
+        "kind": "region",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n155",
+        "kind": "link",
+        "label": "· US ·",
+        "parent": "n154",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n156",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n157",
+        "kind": "heading",
+        "label": "· first · as · deadline ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n158",
+        "kind": "link",
+        "label": "· first · as · deadline ·",
+        "parent": "n157",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n159",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n160",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n161",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n162",
+        "kind": "heading",
+        "label": "New · prices · [price] · as ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n163",
+        "kind": "link",
+        "label": "New · prices · [price] · as ·",
+        "parent": "n162",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n164",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n165",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n166",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(20)",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n167",
+        "kind": "heading",
+        "label": "· OFF What's the · of · with",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n168",
+        "kind": "link",
+        "label": "· OFF What's the · of · with",
+        "parent": "n167",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n169",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n170",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n171",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n172",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n173",
+        "kind": "heading",
+        "label": "New details in · could · as ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n174",
+        "kind": "link",
+        "label": "New details in · could · as ·",
+        "parent": "n173",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n175",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n176",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n177",
+        "kind": "heading",
+        "label": "The · are so · uniting the country",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n178",
+        "kind": "link",
+        "label": "The · are so · uniting the country",
+        "parent": "n177",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n179",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n180",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n181",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n182",
+        "kind": "heading",
+        "label": "· State · over · if ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n183",
+        "kind": "link",
+        "label": "· State · over · if ·",
+        "parent": "n182",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n184",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n185",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n186",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n187",
+        "kind": "heading",
+        "label": "· by · to make history as next",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n188",
+        "kind": "link",
+        "label": "· by · to make history as next",
+        "parent": "n187",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n189",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n190",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n191",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n192",
+        "kind": "heading",
+        "label": "· may offer a · of future ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n193",
+        "kind": "link",
+        "label": "· may offer a · of future ·",
+        "parent": "n192",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n194",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n195",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n196",
+        "kind": "heading",
+        "label": "· rule as hidden travel ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n197",
+        "kind": "link",
+        "label": "· rule as hidden travel ·",
+        "parent": "n196",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n198",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n199",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n200",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n201",
+        "kind": "heading",
+        "label": "· [price] food · has shoppers · for",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n202",
+        "kind": "link",
+        "label": "· [price] food · has shoppers · for",
+        "parent": "n201",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n203",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n204",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n205",
+        "kind": "region",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n206",
+        "kind": "link",
+        "label": "WATCH · want · back on food ·",
+        "parent": "n205",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n207",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n208",
+        "kind": "heading",
+        "label": "The best · Friday · deals · and",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n209",
+        "kind": "link",
+        "label": "The best · Friday · deals · and",
+        "parent": "n208",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n210",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n211",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n212",
+        "kind": "heading",
+        "label": "· on US · in · after ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n213",
+        "kind": "link",
+        "label": "· on US · in · after ·",
+        "parent": "n212",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n214",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n215",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n216",
+        "kind": "region",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n217",
+        "kind": "link",
+        "label": "· to the · after · [number] ·",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n218",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n219",
+        "kind": "heading",
+        "label": "· Brand could be · from contacting ·",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n220",
+        "kind": "link",
+        "label": "· Brand could be · from contacting ·",
+        "parent": "n219",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n221",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n222",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n223",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n224",
+        "kind": "heading",
+        "label": "· of · who · makes · before",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n225",
+        "kind": "link",
+        "label": "· of · who · makes · before",
+        "parent": "n224",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n226",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n227",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n228",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n229",
+        "kind": "heading",
+        "label": "· work after · video game · to",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n230",
+        "kind": "link",
+        "label": "· work after · video game · to",
+        "parent": "n229",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n231",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n232",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "center_column"
+      },
+      {
+        "id": "n233",
+        "kind": "link",
+        "label": "Watch · News Live",
+        "parent": "n144",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n234",
+        "kind": "heading",
+        "label": "· early · Friday deals Save up to",
+        "parent": "n144",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n235",
+        "kind": "link",
+        "label": "· early · Friday deals Save up to",
+        "parent": "n234",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n236",
+        "kind": "text",
+        "label": "",
+        "parent": "n144",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n237",
+        "kind": "region",
+        "label": "· Videos",
+        "parent": "n143",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n238",
+        "kind": "heading",
+        "label": "· Videos",
+        "parent": "n237",
+        "landmark": "main",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n239",
+        "kind": "region",
+        "label": "· for · confirmations before · take over",
+        "parent": "n237",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n240",
+        "kind": "region",
+        "label": "",
+        "parent": "n239",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n241",
+        "kind": "link",
+        "label": "Video",
+        "parent": "n240",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n242",
+        "kind": "region",
+        "label": "· for · confirmations before · take over",
+        "parent": "n239",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n243",
+        "kind": "list",
+        "label": "",
+        "parent": "n242",
+        "landmark": "main",
+        "shape": "cards x 10",
+        "zone": "center_column"
+      },
+      {
+        "id": "n244",
+        "kind": "region",
+        "label": "· for · confirmations before · take over",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n246",
+        "kind": "heading",
+        "label": "· for · confirmations before · take over",
+        "parent": "n244",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n248",
+        "kind": "region",
+        "label": "· are using · to launch · against",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n250",
+        "kind": "heading",
+        "label": "· are using · to launch · against",
+        "parent": "n248",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n252",
+        "kind": "region",
+        "label": "· will be the most · of the",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n254",
+        "kind": "heading",
+        "label": "· will be the most · of the",
+        "parent": "n252",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n256",
+        "kind": "region",
+        "label": "Holiday · for · costs across the ·",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n258",
+        "kind": "heading",
+        "label": "Holiday · for · costs across the ·",
+        "parent": "n256",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n260",
+        "kind": "region",
+        "label": "· provided methods locations for · grid ·",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n262",
+        "kind": "heading",
+        "label": "· provided methods locations for · grid ·",
+        "parent": "n260",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n264",
+        "kind": "region",
+        "label": "· speaks out after · back · for",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n266",
+        "kind": "heading",
+        "label": "· speaks out after · back · for",
+        "parent": "n264",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n268",
+        "kind": "region",
+        "label": "· to · to · for · next",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n270",
+        "kind": "heading",
+        "label": "· to · to · for · next",
+        "parent": "n268",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n272",
+        "kind": "region",
+        "label": "· as incoming · support for ·",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n274",
+        "kind": "heading",
+        "label": "· as incoming · support for ·",
+        "parent": "n272",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n275",
+        "kind": "link",
+        "label": "· as incoming · support for ·",
+        "parent": "n274",
+        "landmark": "main",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n276",
+        "kind": "region",
+        "label": "He lived as a · after moving to",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n278",
+        "kind": "heading",
+        "label": "He lived as a · after moving to",
+        "parent": "n276",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n280",
+        "kind": "region",
+        "label": "· using the First · as cover to",
+        "parent": "n243",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n282",
+        "kind": "heading",
+        "label": "· using the First · as cover to",
+        "parent": "n280",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n1316",
+        "kind": "region",
+        "label": "· IN · News to · off ·",
+        "parent": "n143",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n284",
+        "kind": "list",
+        "label": "",
+        "parent": "n1316",
+        "landmark": "main",
+        "shape": "cards x 10",
+        "zone": "center_column"
+      },
+      {
+        "id": "n286",
+        "kind": "heading",
+        "label": "· IN · News to · off ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n291",
+        "kind": "heading",
+        "label": "· Test · on · and ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n295",
+        "kind": "heading",
+        "label": "· [price] · in · grant questions",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n296",
+        "kind": "link",
+        "label": "· [price] · in · grant questions",
+        "parent": "n295",
+        "landmark": "main",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n300",
+        "kind": "heading",
+        "label": "· calls · against · a ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n306",
+        "kind": "heading",
+        "label": "· over [price] plus · naming deal and",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n310",
+        "kind": "heading",
+        "label": "Recent US outages may have · more than",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n316",
+        "kind": "heading",
+        "label": "· would be · of · in years",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n322",
+        "kind": "heading",
+        "label": "· may have · out of · after",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n326",
+        "kind": "heading",
+        "label": "US · in key locations to keep a",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n331",
+        "kind": "heading",
+        "label": "· the · one · would ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n336",
+        "kind": "heading",
+        "label": "· speaks out on public response to ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n341",
+        "kind": "heading",
+        "label": "· rental sites now have live chat agents",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n342",
+        "kind": "link",
+        "label": "· rental sites now have live chat agents",
+        "parent": "n341",
+        "landmark": "main",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n345",
+        "kind": "heading",
+        "label": "· has · in · at ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n350",
+        "kind": "heading",
+        "label": "· off · after · event",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n355",
+        "kind": "heading",
+        "label": "· the show on · Awards ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n359",
+        "kind": "heading",
+        "label": "City wants · security ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n364",
+        "kind": "heading",
+        "label": "· News · story on · business ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n369",
+        "kind": "heading",
+        "label": "[number] · from · in the US that",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n372",
+        "kind": "heading",
+        "label": "· why he still ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n377",
+        "kind": "heading",
+        "label": "· of the day",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n382",
+        "kind": "heading",
+        "label": "· Brand's · from · bars · urgent",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n387",
+        "kind": "heading",
+        "label": "· what · at [number] report",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n392",
+        "kind": "heading",
+        "label": "· from Sunday night as · makes first",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n398",
+        "kind": "heading",
+        "label": "· future · by ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n402",
+        "kind": "heading",
+        "label": "· industry ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n405",
+        "kind": "heading",
+        "label": "· [number] tax changes What · need to",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n410",
+        "kind": "heading",
+        "label": "Buy Tickets to the [number] · Awards on",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n413",
+        "kind": "heading",
+        "label": "· which · is · her · on",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n417",
+        "kind": "heading",
+        "label": "· recorded · clicking as · as ·",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n422",
+        "kind": "heading",
+        "label": "PLAY NOW · Search · Icon Match [number]",
+        "parent": "n284",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n1317",
+        "kind": "region",
+        "label": "· a · of · it LIVE [date]",
+        "parent": "n143",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n425",
+        "kind": "heading",
+        "label": "· a · of · it LIVE [date]",
+        "parent": "n1317",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n428",
+        "kind": "heading",
+        "label": "Need a · gift Shop · News ·",
+        "parent": "n1317",
+        "landmark": "main",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n431",
+        "kind": "region",
+        "label": "",
+        "parent": "n1317",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n432",
+        "kind": "region",
+        "label": "",
+        "parent": "n431",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n435",
+        "kind": "region",
+        "label": "·",
+        "parent": "n142",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n436",
+        "kind": "region",
+        "label": "·",
+        "parent": "n435",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n437",
+        "kind": "link",
+        "label": "·",
+        "parent": "n436",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n438",
+        "kind": "link",
+        "label": "WATCH NOW",
+        "parent": "n436",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n439",
+        "kind": "link",
+        "label": "· is back with · new dating show",
+        "parent": "n436",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n440",
+        "kind": "link",
+        "label": "WATCH NOW",
+        "parent": "n436",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n441",
+        "kind": "heading",
+        "label": "· is back with · new dating show",
+        "parent": "n436",
+        "landmark": "complementary",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n442",
+        "kind": "link",
+        "label": "· is back with · new dating show",
+        "parent": "n441",
+        "landmark": "complementary",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n443",
+        "kind": "region",
+        "label": "Features ·",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n444",
+        "kind": "heading",
+        "label": "Features ·",
+        "parent": "n443",
+        "landmark": "main",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n445",
+        "kind": "list",
+        "label": "",
+        "parent": "n443",
+        "landmark": "main",
+        "shape": "cards x 6",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n446",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n448",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n450",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n452",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n454",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n456",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n458",
+        "kind": "region",
+        "label": "",
+        "parent": "n445",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n1318",
+        "kind": "region",
+        "label": "Sponsored Stories",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n460",
+        "kind": "region",
+        "label": "Sponsored Stories",
+        "parent": "n1318",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n462",
+        "kind": "heading",
+        "label": "Sponsored Stories",
+        "parent": "n460",
+        "level": 3,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n463",
+        "kind": "region",
+        "label": "",
+        "parent": "n460",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n466",
+        "kind": "region",
+        "label": "",
+        "parent": "n460",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n469",
+        "kind": "region",
+        "label": "",
+        "parent": "n460",
+        "zone": "center_column"
+      },
+      {
+        "id": "n472",
+        "kind": "region",
+        "label": "",
+        "parent": "n460",
+        "zone": "center_column"
+      },
+      {
+        "id": "n475",
+        "kind": "region",
+        "label": "",
+        "parent": "n460",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n478",
+        "kind": "region",
+        "label": "",
+        "parent": "n460",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n1319",
+        "kind": "region",
+        "label": "·",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n481",
+        "kind": "list",
+        "label": "",
+        "shape": "cards x 8",
+        "parent": "n1319",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n482",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n483",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n482",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n486",
+        "kind": "heading",
+        "label": "· [price] plus · naming deal · in",
+        "parent": "n482",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n488",
+        "kind": "heading",
+        "label": "· is done at · No shot he",
+        "parent": "n482",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n491",
+        "kind": "heading",
+        "label": "· from · in first · of ·",
+        "parent": "n482",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n494",
+        "kind": "heading",
+        "label": "The · has united · gets a ·",
+        "parent": "n482",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n497",
+        "kind": "region",
+        "label": "Digital Originals",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n498",
+        "kind": "heading",
+        "label": "Digital Originals",
+        "parent": "n497",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n501",
+        "kind": "heading",
+        "label": "· school · into · and · as",
+        "parent": "n497",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n503",
+        "kind": "heading",
+        "label": "· for not · business · for ·",
+        "parent": "n497",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n506",
+        "kind": "heading",
+        "label": "· stores · government against its own citizens",
+        "parent": "n497",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n509",
+        "kind": "heading",
+        "label": "· up the ·",
+        "parent": "n497",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n512",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n513",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n512",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n516",
+        "kind": "heading",
+        "label": "· to · of Education",
+        "parent": "n512",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n518",
+        "kind": "heading",
+        "label": "· set for · with · as ·",
+        "parent": "n512",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n521",
+        "kind": "heading",
+        "label": "· learning how to · targeting ·",
+        "parent": "n512",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n524",
+        "kind": "heading",
+        "label": "· funding from · over ·",
+        "parent": "n512",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n527",
+        "kind": "region",
+        "label": "· News ·",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n528",
+        "kind": "heading",
+        "label": "· News ·",
+        "parent": "n527",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n531",
+        "kind": "heading",
+        "label": "· still · [price] · in one night",
+        "parent": "n527",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n533",
+        "kind": "heading",
+        "label": "· have · to · the · and",
+        "parent": "n527",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n536",
+        "kind": "heading",
+        "label": "· students · is · after ·",
+        "parent": "n527",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n539",
+        "kind": "heading",
+        "label": "· a · with · to · in",
+        "parent": "n527",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n542",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n543",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n542",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n546",
+        "kind": "heading",
+        "label": "· of · over · on · as",
+        "parent": "n542",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n548",
+        "kind": "heading",
+        "label": "· of · in · as · in",
+        "parent": "n542",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n551",
+        "kind": "heading",
+        "label": "· off · from · who · no",
+        "parent": "n542",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n554",
+        "kind": "heading",
+        "label": "· is · the · radio",
+        "parent": "n542",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n557",
+        "kind": "region",
+        "label": "Personal ·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n558",
+        "kind": "heading",
+        "label": "Personal ·",
+        "parent": "n557",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n561",
+        "kind": "heading",
+        "label": "· is · the · radio",
+        "parent": "n557",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n563",
+        "kind": "heading",
+        "label": "· second home tax · [price] · of",
+        "parent": "n557",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n566",
+        "kind": "heading",
+        "label": "· by The · of the Press ·",
+        "parent": "n557",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n569",
+        "kind": "heading",
+        "label": "· calls · on · ruling he ·",
+        "parent": "n557",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n572",
+        "kind": "region",
+        "label": "World",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n573",
+        "kind": "heading",
+        "label": "World",
+        "parent": "n572",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n576",
+        "kind": "heading",
+        "label": "US · to · across · as ·",
+        "parent": "n572",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n578",
+        "kind": "heading",
+        "label": "· of ·",
+        "parent": "n572",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n581",
+        "kind": "heading",
+        "label": "· [number] on [number] · with · as",
+        "parent": "n572",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n584",
+        "kind": "heading",
+        "label": "· one of the · in · of",
+        "parent": "n572",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n587",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n588",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n587",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n591",
+        "kind": "heading",
+        "label": "· holds the · cards to play against",
+        "parent": "n587",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n593",
+        "kind": "heading",
+        "label": "· is · the · radio",
+        "parent": "n587",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n596",
+        "kind": "heading",
+        "label": "· cannot · and · goals with a",
+        "parent": "n587",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n599",
+        "kind": "heading",
+        "label": "· outage offers a · in how to",
+        "parent": "n587",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n602",
+        "kind": "region",
+        "label": "Health",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n603",
+        "kind": "heading",
+        "label": "Health",
+        "parent": "n602",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n606",
+        "kind": "heading",
+        "label": "· could · decline · Clinic ·",
+        "parent": "n602",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n608",
+        "kind": "heading",
+        "label": "New · rules take · after · reports",
+        "parent": "n602",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n611",
+        "kind": "heading",
+        "label": "· after US · status for first time",
+        "parent": "n602",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n614",
+        "kind": "heading",
+        "label": "· as · make ·",
+        "parent": "n602",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n617",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n618",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n617",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n621",
+        "kind": "heading",
+        "label": "· takes · his · to new ·",
+        "parent": "n617",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n623",
+        "kind": "heading",
+        "label": "· wants · it · be ·",
+        "parent": "n617",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n626",
+        "kind": "heading",
+        "label": "· wants her in · until · after",
+        "parent": "n617",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n629",
+        "kind": "heading",
+        "label": "· after · unit",
+        "parent": "n617",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n632",
+        "kind": "region",
+        "label": "· Together",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n633",
+        "kind": "heading",
+        "label": "· Together",
+        "parent": "n632",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n636",
+        "kind": "heading",
+        "label": "Our · is a · to · and",
+        "parent": "n632",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n638",
+        "kind": "heading",
+        "label": "Friend remembers · who helped · News ·",
+        "parent": "n632",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n641",
+        "kind": "heading",
+        "label": "· Across · ends its · [rating] ·",
+        "parent": "n632",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n644",
+        "kind": "heading",
+        "label": "· across · the · of the [rating]",
+        "parent": "n632",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n647",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n648",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n647",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n651",
+        "kind": "heading",
+        "label": "US · to · across · as ·",
+        "parent": "n647",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n653",
+        "kind": "heading",
+        "label": "[number] · US government · their · near",
+        "parent": "n647",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n656",
+        "kind": "heading",
+        "label": "· promises free · to every high school",
+        "parent": "n647",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n659",
+        "kind": "heading",
+        "label": "· targets US · in · after US",
+        "parent": "n647",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n662",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n663",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n662",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n666",
+        "kind": "heading",
+        "label": "· Brand could be · from contacting ·",
+        "parent": "n662",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n668",
+        "kind": "heading",
+        "label": "· to · with ·",
+        "parent": "n662",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n671",
+        "kind": "heading",
+        "label": "The · people are · dating apps ·",
+        "parent": "n662",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n674",
+        "kind": "heading",
+        "label": "· in · mini · in · [number]",
+        "parent": "n662",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n677",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n678",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n677",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n681",
+        "kind": "heading",
+        "label": "[number] · For Top ·",
+        "parent": "n677",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n683",
+        "kind": "heading",
+        "label": "Who Are · To Replace ·",
+        "parent": "n677",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n686",
+        "kind": "heading",
+        "label": "· At No [number] Is · Big ·",
+        "parent": "n677",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n689",
+        "kind": "heading",
+        "label": "· As · Goal Sends · Out On",
+        "parent": "n677",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n692",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n693",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n692",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n696",
+        "kind": "heading",
+        "label": "Students at [price] · to · off ·",
+        "parent": "n692",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n698",
+        "kind": "heading",
+        "label": "· State · by · in ·",
+        "parent": "n692",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n701",
+        "kind": "heading",
+        "label": "· of · US · company",
+        "parent": "n692",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n704",
+        "kind": "heading",
+        "label": "· and · use video game to help",
+        "parent": "n692",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n705",
+        "kind": "link",
+        "label": "· and · use video game to help",
+        "parent": "n704",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n706",
+        "kind": "link",
+        "label": "· and · use video game to help",
+        "parent": "n692",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n707",
+        "kind": "region",
+        "label": "Family",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n708",
+        "kind": "heading",
+        "label": "Family",
+        "parent": "n707",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n711",
+        "kind": "heading",
+        "label": "· of · over hidden · kids gets",
+        "parent": "n707",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n713",
+        "kind": "heading",
+        "label": "· once served up · TV · to",
+        "parent": "n707",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n716",
+        "kind": "heading",
+        "label": "· state repeat · of · at family’s",
+        "parent": "n707",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n719",
+        "kind": "heading",
+        "label": "Family · by · until [number] · a",
+        "parent": "n707",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n722",
+        "kind": "region",
+        "label": "Personal ·",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n723",
+        "kind": "heading",
+        "label": "Personal ·",
+        "parent": "n722",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n726",
+        "kind": "heading",
+        "label": "New vehicle · as record prices and high",
+        "parent": "n722",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n728",
+        "kind": "heading",
+        "label": "· [number] · rules that could · savings",
+        "parent": "n722",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n731",
+        "kind": "heading",
+        "label": "Financial · slide as online · outages reported",
+        "parent": "n722",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n734",
+        "kind": "heading",
+        "label": "As US credit card · [price] · are",
+        "parent": "n722",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n737",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n738",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n737",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n740",
+        "kind": "link",
+        "label": "· vacation rental sites use live chat to",
+        "parent": "n737",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n741",
+        "kind": "heading",
+        "label": "· vacation rental sites use live chat to",
+        "parent": "n737",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n742",
+        "kind": "link",
+        "label": "· vacation rental sites use live chat to",
+        "parent": "n741",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n743",
+        "kind": "heading",
+        "label": "· data centers could · more · than",
+        "parent": "n737",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n746",
+        "kind": "heading",
+        "label": "What to know about · which can ·",
+        "parent": "n737",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n749",
+        "kind": "heading",
+        "label": "States · devices in ·",
+        "parent": "n737",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n752",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n753",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n752",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n756",
+        "kind": "heading",
+        "label": "· to · with ·",
+        "parent": "n752",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n758",
+        "kind": "heading",
+        "label": "· is the new · Can he ·",
+        "parent": "n752",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n761",
+        "kind": "heading",
+        "label": "· recommends · as next ·",
+        "parent": "n752",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n764",
+        "kind": "heading",
+        "label": "· the top · in · of ·",
+        "parent": "n752",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n767",
+        "kind": "region",
+        "label": "Business",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n768",
+        "kind": "heading",
+        "label": "Business",
+        "parent": "n767",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n771",
+        "kind": "heading",
+        "label": "New vehicle · as record prices and high",
+        "parent": "n767",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n773",
+        "kind": "heading",
+        "label": "· got this as company looks to future",
+        "parent": "n767",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n776",
+        "kind": "heading",
+        "label": "· US ·",
+        "parent": "n767",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n778",
+        "kind": "link",
+        "label": "· logo displayed on a phone screen and",
+        "parent": "n767",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n779",
+        "kind": "heading",
+        "label": "Target price · help · post · sales",
+        "parent": "n767",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n780",
+        "kind": "link",
+        "label": "Target price · help · post · sales",
+        "parent": "n779",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n782",
+        "kind": "region",
+        "label": "· Values",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n783",
+        "kind": "heading",
+        "label": "· Values",
+        "parent": "n782",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n786",
+        "kind": "heading",
+        "label": "· on · his · in · details",
+        "parent": "n782",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n788",
+        "kind": "heading",
+        "label": "State Department presses · to · as ·",
+        "parent": "n782",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n791",
+        "kind": "heading",
+        "label": "· visit with · shows he's still ·",
+        "parent": "n782",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n794",
+        "kind": "heading",
+        "label": "· first · a ·",
+        "parent": "n782",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n797",
+        "kind": "region",
+        "label": "Autos",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n798",
+        "kind": "heading",
+        "label": "Autos",
+        "parent": "n797",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n801",
+        "kind": "heading",
+        "label": "· [number] · talks about · [number] ·",
+        "parent": "n797",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n803",
+        "kind": "heading",
+        "label": "States · devices in ·",
+        "parent": "n797",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n806",
+        "kind": "heading",
+        "label": "· could · wallets and · out to",
+        "parent": "n797",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n809",
+        "kind": "heading",
+        "label": "Add this [price] · to your · emergency",
+        "parent": "n797",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n812",
+        "kind": "region",
+        "label": "Travel ·",
+        "parent": "n481",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n813",
+        "kind": "heading",
+        "label": "Travel ·",
+        "parent": "n812",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n815",
+        "kind": "link",
+        "label": "· vacation rental sites use live chat to",
+        "parent": "n812",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n816",
+        "kind": "heading",
+        "label": "· vacation rental sites use live chat to",
+        "parent": "n812",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n817",
+        "kind": "link",
+        "label": "· vacation rental sites use live chat to",
+        "parent": "n816",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n818",
+        "kind": "heading",
+        "label": "Best · in and around · of ·",
+        "parent": "n812",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n821",
+        "kind": "heading",
+        "label": "US · in key locations to keep a",
+        "parent": "n812",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n824",
+        "kind": "heading",
+        "label": "· ship · with · on ·",
+        "parent": "n812",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n827",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n828",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n827",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n831",
+        "kind": "heading",
+        "label": "· new · with · and audio ·",
+        "parent": "n827",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n833",
+        "kind": "heading",
+        "label": "· he · on · after · time",
+        "parent": "n827",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n836",
+        "kind": "heading",
+        "label": "· tour · in ·",
+        "parent": "n827",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n839",
+        "kind": "heading",
+        "label": "· drops · of · on · calling",
+        "parent": "n827",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n842",
+        "kind": "region",
+        "label": "Food ·",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n843",
+        "kind": "heading",
+        "label": "Food ·",
+        "parent": "n842",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n846",
+        "kind": "heading",
+        "label": "· shoppers want · [price] food · back",
+        "parent": "n842",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n848",
+        "kind": "heading",
+        "label": "· added · [percent] tip to [price] bill",
+        "parent": "n842",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n851",
+        "kind": "heading",
+        "label": "· returns to its · [number] years after",
+        "parent": "n842",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n854",
+        "kind": "heading",
+        "label": "· [number] to [number] · of · a",
+        "parent": "n842",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n857",
+        "kind": "region",
+        "label": "· Weather",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n858",
+        "kind": "heading",
+        "label": "· Weather",
+        "parent": "n857",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n861",
+        "kind": "heading",
+        "label": "· as · bring · to · State",
+        "parent": "n857",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n863",
+        "kind": "heading",
+        "label": "· with · of · for [number] ·",
+        "parent": "n857",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n866",
+        "kind": "heading",
+        "label": "· Center · for · this weekend",
+        "parent": "n857",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n869",
+        "kind": "heading",
+        "label": "· set to · for · of ·",
+        "parent": "n857",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n872",
+        "kind": "region",
+        "label": "Full ·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n873",
+        "kind": "heading",
+        "label": "Full ·",
+        "parent": "n872",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n875",
+        "kind": "region",
+        "label": "· As · Questions · Me ·",
+        "parent": "n872",
+        "zone": "center_column"
+      },
+      {
+        "id": "n877",
+        "kind": "heading",
+        "label": "· As · Questions · Me ·",
+        "parent": "n875",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n878",
+        "kind": "link",
+        "label": "· As · Questions · Me ·",
+        "parent": "n877",
+        "zone": "center_column",
+        "protected": true
+      },
+      {
+        "id": "n879",
+        "kind": "region",
+        "label": "· Tuesday [date]",
+        "parent": "n872",
+        "zone": "center_column"
+      },
+      {
+        "id": "n880",
+        "kind": "heading",
+        "label": "· Tuesday [date]",
+        "parent": "n879",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n883",
+        "kind": "region",
+        "label": "· The · Who Locked Up · The",
+        "parent": "n872",
+        "zone": "center_column"
+      },
+      {
+        "id": "n884",
+        "kind": "heading",
+        "label": "· The · Who Locked Up · The",
+        "parent": "n883",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n887",
+        "kind": "region",
+        "label": "· For · is ·",
+        "parent": "n872",
+        "zone": "center_column"
+      },
+      {
+        "id": "n888",
+        "kind": "heading",
+        "label": "· For · is ·",
+        "parent": "n887",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n891",
+        "kind": "region",
+        "label": "Latest ·",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n892",
+        "kind": "heading",
+        "label": "Latest ·",
+        "parent": "n891",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n895",
+        "kind": "heading",
+        "label": "· in · after ·",
+        "parent": "n891",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n897",
+        "kind": "heading",
+        "label": "[number] operators questioned · call was · audio",
+        "parent": "n891",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n898",
+        "kind": "link",
+        "label": "[number] operators questioned · call was · audio",
+        "parent": "n897",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n899",
+        "kind": "link",
+        "label": "[number] operators questioned · call was · audio",
+        "parent": "n891",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n900",
+        "kind": "heading",
+        "label": "· to · in ·",
+        "parent": "n891",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n903",
+        "kind": "heading",
+        "label": "WATCH · as · on · in ·",
+        "parent": "n891",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n906",
+        "kind": "region",
+        "label": "Media",
+        "parent": "n481",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n907",
+        "kind": "heading",
+        "label": "Media",
+        "parent": "n906",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n910",
+        "kind": "heading",
+        "label": "· dismisses · as a · as ·",
+        "parent": "n906",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n912",
+        "kind": "heading",
+        "label": "· of · over · on · as",
+        "parent": "n906",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n915",
+        "kind": "heading",
+        "label": "· pressed about his · and · futures",
+        "parent": "n906",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n918",
+        "kind": "heading",
+        "label": "· off on · move · and ·",
+        "parent": "n906",
+        "level": 3,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n921",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n922",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n921",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n925",
+        "kind": "heading",
+        "label": "· others to · or leave",
+        "parent": "n921",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n927",
+        "kind": "heading",
+        "label": "· school students providers and · to hide",
+        "parent": "n921",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n930",
+        "kind": "heading",
+        "label": "The · left is · its · and",
+        "parent": "n921",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n933",
+        "kind": "heading",
+        "label": "· one · to · the · and",
+        "parent": "n921",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n936",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "center_column"
+      },
+      {
+        "id": "n937",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n936",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n940",
+        "kind": "heading",
+        "label": "· officials for · to end · with",
+        "parent": "n936",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n942",
+        "kind": "heading",
+        "label": "· of · US · company",
+        "parent": "n936",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n945",
+        "kind": "heading",
+        "label": "· The · captured in · after ·",
+        "parent": "n936",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n948",
+        "kind": "heading",
+        "label": "· parents about student safety · [number] ·",
+        "parent": "n936",
+        "level": 3,
+        "zone": "center_column"
+      },
+      {
+        "id": "n951",
+        "kind": "region",
+        "label": "·",
+        "parent": "n481",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n952",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n951",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n955",
+        "kind": "heading",
+        "label": "· future · on · as · have",
+        "parent": "n951",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n957",
+        "kind": "heading",
+        "label": "· link has · to step · on",
+        "parent": "n951",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n960",
+        "kind": "heading",
+        "label": "· to keep · down after · suggests",
+        "parent": "n951",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n963",
+        "kind": "heading",
+        "label": "· had to fill in the · after",
+        "parent": "n951",
+        "level": 3,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n966",
+        "kind": "region",
+        "label": "·",
+        "landmark": "contentinfo",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n967",
+        "kind": "list",
+        "label": "",
+        "parent": "n966",
+        "landmark": "contentinfo",
+        "shape": "cards x 17",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n968",
+        "kind": "region",
+        "label": "·",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n969",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n968",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n971",
+        "kind": "list",
+        "label": "",
+        "parent": "n968",
+        "landmark": "navigation",
+        "shape": "list x 4",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n980",
+        "kind": "region",
+        "label": "·",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n981",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n980",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n983",
+        "kind": "list",
+        "label": "",
+        "parent": "n980",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n998",
+        "kind": "region",
+        "label": "World",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n999",
+        "kind": "heading",
+        "label": "World",
+        "parent": "n998",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1001",
+        "kind": "list",
+        "label": "",
+        "parent": "n998",
+        "landmark": "navigation",
+        "shape": "list x 8",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1018",
+        "kind": "region",
+        "label": "·",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1019",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n1018",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1021",
+        "kind": "region",
+        "label": "Media",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1022",
+        "kind": "heading",
+        "label": "Media",
+        "parent": "n1021",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1026",
+        "kind": "region",
+        "label": "·",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1027",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n1026",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1029",
+        "kind": "list",
+        "label": "",
+        "parent": "n1026",
+        "landmark": "navigation",
+        "shape": "list x 3",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1036",
+        "kind": "region",
+        "label": "·",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1037",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n1036",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1039",
+        "kind": "list",
+        "label": "",
+        "parent": "n1036",
+        "landmark": "navigation",
+        "shape": "list x 12",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1064",
+        "kind": "region",
+        "label": "Lifestyle",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1065",
+        "kind": "heading",
+        "label": "Lifestyle",
+        "parent": "n1064",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1067",
+        "kind": "list",
+        "label": "",
+        "parent": "n1064",
+        "landmark": "navigation",
+        "shape": "list x 5",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1078",
+        "kind": "region",
+        "label": "Health",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1079",
+        "kind": "heading",
+        "label": "Health",
+        "parent": "n1078",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1081",
+        "kind": "list",
+        "label": "",
+        "parent": "n1078",
+        "landmark": "navigation",
+        "shape": "list x 8",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1098",
+        "kind": "region",
+        "label": "Deals",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1099",
+        "kind": "heading",
+        "label": "Deals",
+        "parent": "n1098",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1101",
+        "kind": "list",
+        "label": "",
+        "parent": "n1098",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1116",
+        "kind": "region",
+        "label": "· Business",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1117",
+        "kind": "heading",
+        "label": "· Business",
+        "parent": "n1116",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1119",
+        "kind": "list",
+        "label": "",
+        "parent": "n1116",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1134",
+        "kind": "region",
+        "label": "·",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1135",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n1134",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1137",
+        "kind": "list",
+        "label": "",
+        "parent": "n1134",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1152",
+        "kind": "region",
+        "label": "Games",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1153",
+        "kind": "heading",
+        "label": "Games",
+        "parent": "n1152",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1155",
+        "kind": "list",
+        "label": "",
+        "parent": "n1152",
+        "landmark": "navigation",
+        "shape": "list x 16",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1188",
+        "kind": "region",
+        "label": "Watch Live",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1189",
+        "kind": "heading",
+        "label": "Watch Live",
+        "parent": "n1188",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1191",
+        "kind": "list",
+        "label": "",
+        "parent": "n1188",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1206",
+        "kind": "region",
+        "label": "About",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1207",
+        "kind": "heading",
+        "label": "About",
+        "parent": "n1206",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1209",
+        "kind": "list",
+        "label": "",
+        "parent": "n1206",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1210",
+        "kind": "text",
+        "label": "",
+        "parent": "n1209",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n1211",
+        "kind": "link",
+        "label": "About Contact Us",
+        "parent": "n1210",
+        "landmark": "navigation",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n1224",
+        "kind": "region",
+        "label": "Apps Products",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1225",
+        "kind": "heading",
+        "label": "Apps Products",
+        "parent": "n1224",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1227",
+        "kind": "list",
+        "label": "",
+        "parent": "n1224",
+        "landmark": "navigation",
+        "shape": "list x 9",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1246",
+        "kind": "region",
+        "label": "Watch Live · on · One",
+        "parent": "n967",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1247",
+        "kind": "heading",
+        "label": "Watch Live · on · One",
+        "parent": "n1246",
+        "landmark": "navigation",
+        "level": 2,
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1249",
+        "kind": "list",
+        "label": "",
+        "parent": "n1246",
+        "landmark": "navigation",
+        "shape": "list x 8",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1266",
+        "kind": "list",
+        "label": "",
+        "parent": "n966",
+        "landmark": "contentinfo",
+        "shape": "list x 11",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1290",
+        "kind": "list",
+        "label": "",
+        "parent": "n966",
+        "landmark": "contentinfo",
+        "shape": "list x 9",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n1299",
+        "kind": "text",
+        "label": "",
+        "parent": "n1290",
+        "landmark": "contentinfo",
+        "shape": "text(10)",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n1300",
+        "kind": "link",
+        "label": "Help",
+        "parent": "n1299",
+        "landmark": "contentinfo",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n1301",
+        "kind": "text",
+        "label": "",
+        "parent": "n1290",
+        "landmark": "contentinfo",
+        "shape": "text(10)",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n1302",
+        "kind": "link",
+        "label": "Contact Us",
+        "parent": "n1301",
+        "landmark": "contentinfo",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n1314",
+        "kind": "region",
+        "label": "",
+        "zone": "left_rail"
+      }
+    ],
+    "pageTypeHint": "listing page"
+  },
+  "ledger": [
+    {
+      "at": 2977,
+      "source": "fit",
+      "title": "Read the page: 600 items in 127 ms",
+      "detail": "40 of them go to Jev as structure only (role, size, position, redacted labels; no page text).",
+      "action": "kept"
+    },
+    {
+      "at": 3010,
+      "source": "fit",
+      "title": "Kept this page at its own size",
+      "detail": "Body text here measures 24 px (main links); your size is 22 px. That is already at least your size.",
+      "action": "kept"
+    },
+    {
+      "at": 4315,
+      "source": "fit",
+      "title": "Darkened 127 faint text items to at least 7:1 contrast",
+      "detail": "Only text below your contrast floor changed, and each colour kept its hue.",
+      "action": "applied",
+      "opId": "contrast-2"
+    },
+    {
+      "at": 4315,
+      "source": "fit",
+      "title": "Made 72 buttons and links easier to hit (56 px hit area)",
+      "detail": "Buttons look the same; their clickable area is larger. 133 links inside sentences were left as they are.",
+      "action": "applied",
+      "opId": "targets-3"
+    },
+    {
+      "at": 4315,
+      "source": "fit",
+      "title": "Steady clicks: a small slip while clicking still counts",
+      "detail": "If the pointer moves a little (up to 11 px within 320 ms) during a click, the click still goes to the button you pressed.",
+      "action": "applied",
+      "opId": "steady_clicks-4"
+    },
+    {
+      "at": 4315,
+      "source": "fit",
+      "title": "Animations and transitions jump straight to their end",
+      "detail": "Animations and transitions jump to their end state.",
+      "action": "applied",
+      "opId": "motion-5"
+    },
+    {
+      "at": 4315,
+      "source": "fit",
+      "title": "Keyboard focus shows a clear ring",
+      "action": "applied",
+      "opId": "focus_ring-6"
+    },
+    {
+      "at": 4315,
+      "source": "check",
+      "title": "Reversed the heavier text: it made text overlap in the header",
+      "detail": "Text in the header is drawn over other text (n267 and n298, 9 px²)",
+      "action": "reversed",
+      "opId": "weight-1"
+    },
+    {
+      "at": 4315,
+      "source": "check",
+      "title": "Kept 4 click areas at the original size where a larger one would not reach",
+      "action": "skipped"
+    },
+    {
+      "at": 4593,
+      "source": "check",
+      "title": "Kept 2 headings at the site's own size where a larger one did not fit",
+      "detail": "Text in the header is drawn over other text (n267 and n296, 2522 px²)",
+      "action": "skipped",
+      "opId": "heading_scale-7"
+    },
+    {
+      "at": 4593,
+      "source": "check",
+      "title": "Reversed the larger headings: it made text overlap in the header",
+      "detail": "Text in the header is drawn over other text (n279 and n311, 1799 px²)",
+      "action": "reversed",
+      "opId": "heading_scale-7"
+    },
+    {
+      "at": 5153,
+      "source": "jev",
+      "title": "Jev read this page: 237 decisions in 0.54 s ($0.0052)",
+      "detail": "jev-1.14.0 · 7 calls · server 175 ms · 123,826 tokens",
+      "action": "kept"
+    },
+    {
+      "at": 5155,
+      "source": "jev",
+      "title": "Protected 36 more items the task needs (fields, buttons, menus)",
+      "action": "protected"
+    },
+    {
+      "at": 5230,
+      "source": "jev",
+      "title": "Dimmed the ad “PROMOTED 'One-in-a-million' bright yellow fish discovered…” (advertising 1.00)",
+      "detail": "Faded, not hidden: it comes back when you point at it or move to it with the keyboard.",
+      "p": 1,
+      "action": "applied",
+      "opId": "dim-8"
+    },
+    {
+      "at": 5230,
+      "source": "jev",
+      "title": "Dimmed the ad “Sponsored Stories Best Small SUV For…” (advertising 1.00)",
+      "detail": "Faded, not hidden: it comes back when you point at it or move to it with the keyboard.",
+      "p": 1,
+      "action": "applied",
+      "opId": "dim-9"
+    },
+    {
+      "at": 5230,
+      "source": "jev",
+      "title": "Dimmed the promotion button “Nvidia logo displayed on a phone…” (advertising 0.92)",
+      "detail": "Faded, not hidden: it comes back when you point at it or move to it with the keyboard.",
+      "p": 0.92,
+      "action": "applied",
+      "opId": "dim-10"
+    },
+    {
+      "at": 5248,
+      "source": "check",
+      "title": "Checked that Calm view keeps what this page is for: it leads with the page’s own order",
+      "detail": "This page is a news page (0.63). Leads with the main information 0.85; something main missing 0.05. Checked on this device: Jev’s meaning check was not available.",
+      "p": 0.85,
+      "action": "kept"
+    },
+    {
+      "at": 5250,
+      "source": "layout",
+      "title": "This is a page for reading, so WebAble opened its simpler version",
+      "detail": "Page: a news page (0.63); main content 0.50. 14 ads, teasers and other distractions cover 41% of the page.",
+      "action": "applied"
+    },
+    {
+      "at": 5258,
+      "source": "layout",
+      "title": "This is a page for reading, so WebAble opened its simpler version",
+      "detail": "Every item on the page is in this view (100% placed). Every control still drives the original page.",
+      "action": "applied"
+    },
+    {
+      "at": 5258,
+      "source": "layout",
+      "title": "AI layouts are off in settings, so this is the simple layout",
+      "action": "skipped"
+    },
+    {
+      "at": 11071,
+      "source": "person",
+      "title": "Showing the original page; WebAble will keep foxnews.com as it is",
+      "action": "kept"
+    },
+    {
+      "at": 36461,
+      "source": "person",
+      "title": "Opened Calm view, leading with the page’s own order",
+      "detail": "Every item on the page is in this view (100% placed). Every control still drives the original page.",
+      "action": "applied"
+    },
+    {
+      "at": 36461,
+      "source": "layout",
+      "title": "AI layouts are off in settings, so this is the simple layout",
+      "action": "skipped"
+    }
+  ]
+}

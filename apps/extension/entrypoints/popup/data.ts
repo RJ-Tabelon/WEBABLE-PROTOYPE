@@ -1,6 +1,6 @@
 // Owner: P, F. Popup data: settings in chrome.storage.local and the active tab's site. The popup is an extension
 // page, so it reads storage directly and writes through the background (which tells open tabs).
-import { DEFAULT_SETTINGS, type Settings } from '@webable/core';
+import { DEFAULT_SETTINGS, type Settings } from '@webable/engine';
 import { askExt } from '../../src/engine/bus';
 
 export interface ActiveTab {
@@ -14,8 +14,13 @@ export function mergeSettings(v: unknown): Settings {
   return {
     ...DEFAULT_SETTINGS,
     ...s,
-    pausedOrigins: Array.isArray(s.pausedOrigins) ? s.pausedOrigins.filter((x): x is string => typeof x === 'string') : [],
-    serverOrigin: typeof s.serverOrigin === 'string' && s.serverOrigin ? s.serverOrigin : DEFAULT_SETTINGS.serverOrigin,
+    pausedOrigins: Array.isArray(s.pausedOrigins)
+      ? s.pausedOrigins.filter((x): x is string => typeof x === 'string')
+      : [],
+    serverOrigin:
+      typeof s.serverOrigin === 'string' && s.serverOrigin
+        ? s.serverOrigin
+        : DEFAULT_SETTINGS.serverOrigin,
   };
 }
 
@@ -29,7 +34,10 @@ export async function readSettings(): Promise<Settings> {
 }
 
 /** Through the background first (it may tell open tabs); straight to storage if the worker is not answering. */
-export async function writeSettings(next: Settings, patch: Partial<Settings>): Promise<void> {
+export async function writeSettings(
+  next: Settings,
+  patch: Partial<Settings>,
+): Promise<void> {
   try {
     await askExt<unknown>({ type: 'setSettings', patch }, 3000);
     return;
@@ -41,7 +49,10 @@ export async function writeSettings(next: Settings, patch: Partial<Settings>): P
 
 export async function activeTab(): Promise<ActiveTab> {
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
     const url = tab?.url ?? '';
     let origin: string | null = null;
     try {

@@ -1,0 +1,6448 @@
+{
+  "phase": "calm",
+  "calm": {
+    "open": true,
+    "loading": false,
+    "spec": {
+      "page_type": "other",
+      "task": "other",
+      "strip": [
+        "n22",
+        "n271"
+      ],
+      "sections": [
+        {
+          "heading_ref": null,
+          "label": "Overview",
+          "role": "primary",
+          "nodes": [
+            "n746",
+            "n163",
+            "n370"
+          ],
+          "layout": "as_is",
+          "emphasis": "lead",
+          "state": "open",
+          "why": "main_task",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Details",
+          "role": "supporting",
+          "nodes": [
+            "n34",
+            "n35"
+          ],
+          "layout": "as_is",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "main_task",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n747",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n747",
+            "n748",
+            "n31",
+            "n38",
+            "n39",
+            "n42"
+          ],
+          "layout": "as_is",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n245",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n245",
+            "n249",
+            "n252",
+            "n253",
+            "n255",
+            "n257",
+            "n259",
+            "n260"
+          ],
+          "layout": "as_is",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Help",
+          "role": "help",
+          "nodes": [
+            "n703"
+          ],
+          "layout": "row_list",
+          "emphasis": "normal",
+          "state": "open",
+          "why": "protected",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Navigation",
+          "role": "navigation",
+          "nodes": [
+            "n5",
+            "n6",
+            "n7",
+            "n8",
+            "n9",
+            "n10",
+            "n11",
+            "n12",
+            "n13",
+            "n14",
+            "n15",
+            "n738",
+            "n739",
+            "n740",
+            "n741",
+            "n742",
+            "n743",
+            "n744",
+            "n745",
+            "n17",
+            "n20",
+            "n429",
+            "n690"
+          ],
+          "layout": "chip_bar",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "navigation",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n264",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n263",
+            "n266",
+            "n270",
+            "n272",
+            "n275",
+            "n278",
+            "n281",
+            "n284",
+            "n287",
+            "n290",
+            "n293",
+            "n296",
+            "n299",
+            "n302",
+            "n305",
+            "n308",
+            "n311",
+            "n314",
+            "n317",
+            "n320",
+            "n323",
+            "n326",
+            "n329",
+            "n332",
+            "n335",
+            "n338",
+            "n348"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n366",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n366"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n381",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n381"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": "n406",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n406",
+            "n407",
+            "n409"
+          ],
+          "layout": "row_list",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "long_list",
+          "show_first": 4
+        },
+        {
+          "heading_ref": "n422",
+          "label": "Details",
+          "role": "reference",
+          "nodes": [
+            "n422",
+            "n423"
+          ],
+          "layout": "as_is",
+          "emphasis": "quiet",
+          "state": "collapsed",
+          "why": "reference_info",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Offers",
+          "role": "promo",
+          "nodes": [
+            "n383"
+          ],
+          "layout": "card_grid",
+          "emphasis": "quiet",
+          "state": "end_drawer",
+          "why": "promotion",
+          "show_first": 4
+        },
+        {
+          "heading_ref": null,
+          "label": "More on this page",
+          "role": "other",
+          "nodes": [
+            "n3",
+            "n29",
+            "n32",
+            "n37",
+            "n45",
+            "n53",
+            "n67",
+            "n72",
+            "n83",
+            "n91",
+            "n92",
+            "n100",
+            "n101",
+            "n114",
+            "n754",
+            "n140",
+            "n142",
+            "n755",
+            "n756",
+            "n146",
+            "n156",
+            "n176",
+            "n177",
+            "n199",
+            "n202",
+            "n204",
+            "n207",
+            "n210",
+            "n730",
+            "n733",
+            "n343",
+            "n345",
+            "n735",
+            "n736",
+            "n367",
+            "n368",
+            "n425",
+            "n693",
+            "n717"
+          ],
+          "layout": "row_list",
+          "emphasis": "quiet",
+          "state": "end_drawer",
+          "why": "not_needed_for_task",
+          "show_first": 4
+        },
+        {
+          "heading_ref": null,
+          "label": "Sponsored",
+          "role": "ads",
+          "nodes": [
+            "n133",
+            "n197",
+            "n198",
+            "n213",
+            "n261",
+            "n346",
+            "n347",
+            "n349",
+            "n380"
+          ],
+          "layout": "card_grid",
+          "emphasis": "quiet",
+          "state": "end_drawer",
+          "why": "advertising",
+          "show_first": 0
+        },
+        {
+          "heading_ref": null,
+          "label": "Related items",
+          "role": "related",
+          "nodes": [
+            "n139",
+            "n203"
+          ],
+          "layout": "card_grid",
+          "emphasis": "quiet",
+          "state": "end_drawer",
+          "why": "not_needed_for_task",
+          "show_first": 0
+        }
+      ],
+      "primary_action": null,
+      "form_steps": [],
+      "density": "airy"
+    },
+    "source": "heuristic",
+    "aiReady": false,
+    "redesign": null,
+    "visual": null,
+    "auto": false,
+    "originalPinned": false,
+    "textStep": 0
+  },
+  "understanding": {
+    "elements": [
+      {
+        "id": "n2",
+        "role": "navigation",
+        "roleP": 0.62,
+        "roleProbs": {
+          "main_content": 0.03,
+          "navigation": 0.62,
+          "consent_notice": 0.19,
+          "popup_overlay": 0.1,
+          "account_utility": 0.03,
+          "other": 0.03
+        },
+        "task": 0.23,
+        "main": 0,
+        "help": 0.13,
+        "fine": "site_nav",
+        "fineP": 0.57,
+        "importance": 1.05
+      },
+      {
+        "id": "n6",
+        "role": "navigation",
+        "roleP": 0.98,
+        "roleProbs": {
+          "navigation": 0.98
+        },
+        "task": 0.24,
+        "main": 0,
+        "help": 0.01,
+        "fine": "site_logo",
+        "fineP": 0.98,
+        "importance": 1.08
+      },
+      {
+        "id": "n27",
+        "role": "main_content",
+        "roleP": 0.57,
+        "roleProbs": {
+          "main_content": 0.57,
+          "advertising": 0.03,
+          "recommendations": 0.33
+        },
+        "task": 0.65,
+        "main": 0,
+        "help": 0.04,
+        "fine": "result_item",
+        "fineP": 0.46,
+        "importance": 2.89
+      },
+      {
+        "id": "n29",
+        "role": "recommendations",
+        "roleP": 0.74,
+        "roleProbs": {
+          "main_content": 0.11,
+          "navigation": 0.03,
+          "recommendations": 0.74
+        },
+        "task": 0.46,
+        "main": 0.06,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.39,
+        "importance": 2.25
+      },
+      {
+        "id": "n31",
+        "role": "main_content",
+        "roleP": 0.47,
+        "roleProbs": {
+          "main_content": 0.47,
+          "recommendations": 0.47
+        },
+        "task": 0.78,
+        "main": 0.09,
+        "help": 0.02,
+        "fine": "result_item",
+        "fineP": 0.31,
+        "importance": 3.57,
+        "liveP": 0.87
+      },
+      {
+        "id": "n32",
+        "role": "recommendations",
+        "roleP": 0.57,
+        "roleProbs": {
+          "main_content": 0.3,
+          "recommendations": 0.57,
+          "other": 0.04
+        },
+        "task": 0.51,
+        "main": 0.09,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.42,
+        "importance": 2.74,
+        "liveP": 0.83
+      },
+      {
+        "id": "n34",
+        "role": "recommendations",
+        "roleP": 0.74,
+        "roleProbs": {
+          "main_content": 0.2,
+          "recommendations": 0.74
+        },
+        "task": 0.67,
+        "main": 0.05,
+        "help": 0.02,
+        "fine": "carousel",
+        "fineP": 0.43,
+        "importance": 3.26
+      },
+      {
+        "id": "n35",
+        "role": "recommendations",
+        "roleP": 0.69,
+        "roleProbs": {
+          "main_content": 0.3,
+          "recommendations": 0.69
+        },
+        "task": 0.66,
+        "main": 0.05,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.4,
+        "importance": 3.49
+      },
+      {
+        "id": "n37",
+        "role": "recommendations",
+        "roleP": 0.77,
+        "roleProbs": {
+          "recommendations": 0.77,
+          "main_content": 0.04,
+          "advertising": 0.16
+        },
+        "task": 0.14,
+        "main": 0.04,
+        "help": 0.04,
+        "fine": "teaser_other_content",
+        "fineP": 0.38,
+        "importance": 0.26
+      },
+      {
+        "id": "n132",
+        "role": "advertising",
+        "roleP": 0.92,
+        "roleProbs": {
+          "advertising": 0.92,
+          "account_utility": 0.03,
+          "other": 0.03
+        },
+        "task": 0.1,
+        "main": 0.03,
+        "help": 0.02,
+        "fine": "app_install_banner",
+        "fineP": 0.88,
+        "importance": 0.11
+      },
+      {
+        "id": "n133",
+        "role": "advertising",
+        "roleP": 0.97,
+        "roleProbs": {
+          "advertising": 0.97
+        },
+        "task": 0.06,
+        "main": 0,
+        "help": 0.24,
+        "fine": "advertising",
+        "fineP": 0.97,
+        "importance": 0.08
+      },
+      {
+        "id": "n139",
+        "role": "recommendations",
+        "roleP": 0.62,
+        "roleProbs": {
+          "main_content": 0.33,
+          "recommendations": 0.62
+        },
+        "task": 0.55,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.62,
+        "importance": 2.79,
+        "liveP": 0.04
+      },
+      {
+        "id": "n157",
+        "role": "recommendations",
+        "roleP": 0.59,
+        "roleProbs": {
+          "main_content": 0.13,
+          "action_button": 0.04,
+          "navigation": 0.22,
+          "recommendations": 0.59
+        },
+        "task": 0.86,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "carousel",
+        "fineP": 0.59,
+        "importance": 2.45
+      },
+      {
+        "id": "n158",
+        "role": "recommendations",
+        "roleP": 0.75,
+        "roleProbs": {
+          "action_button": 0.04,
+          "main_content": 0.06,
+          "navigation": 0.13,
+          "recommendations": 0.75
+        },
+        "task": 0.85,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "carousel",
+        "fineP": 0.75,
+        "importance": 2.47
+      },
+      {
+        "id": "n159",
+        "role": "recommendations",
+        "roleP": 0.65,
+        "roleProbs": {
+          "main_content": 0.12,
+          "action_button": 0.04,
+          "navigation": 0.19,
+          "recommendations": 0.65
+        },
+        "task": 0.86,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "carousel",
+        "fineP": 0.65,
+        "importance": 2.43
+      },
+      {
+        "id": "n163",
+        "role": "main_content",
+        "roleP": 0.7,
+        "roleProbs": {
+          "main_content": 0.7,
+          "action_button": 0.19,
+          "other": 0.06
+        },
+        "task": 0.78,
+        "main": 0.04,
+        "help": 0.02,
+        "fine": "video_player",
+        "fineP": 0.7,
+        "importance": 2.47
+      },
+      {
+        "id": "n166",
+        "role": "recommendations",
+        "roleP": 0.93,
+        "roleProbs": {
+          "main_content": 0.06,
+          "recommendations": 0.93
+        },
+        "task": 0.82,
+        "main": 0,
+        "help": 0.03,
+        "fine": "teaser_other_content",
+        "fineP": 0.93,
+        "importance": 3.6
+      },
+      {
+        "id": "n197",
+        "role": "advertising",
+        "roleP": 0.98,
+        "roleProbs": {
+          "advertising": 0.98
+        },
+        "task": 0.05,
+        "main": 0,
+        "help": 0.24,
+        "fine": "advertising",
+        "fineP": 0.98,
+        "importance": 0.05
+      },
+      {
+        "id": "n198",
+        "role": "advertising",
+        "roleP": 0.98,
+        "roleProbs": {
+          "advertising": 0.98
+        },
+        "task": 0.06,
+        "main": 0,
+        "help": 0.2,
+        "fine": "advertising",
+        "fineP": 0.98,
+        "importance": 0.04
+      },
+      {
+        "id": "n203",
+        "role": "recommendations",
+        "roleP": 0.82,
+        "roleProbs": {
+          "recommendations": 0.82,
+          "main_content": 0.08,
+          "advertising": 0.04
+        },
+        "task": 0.3,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.76,
+        "importance": 0.59
+      },
+      {
+        "id": "n212",
+        "role": "recommendations",
+        "roleP": 0.98,
+        "roleProbs": {
+          "recommendations": 0.98
+        },
+        "task": 0.38,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.98,
+        "importance": 1.77
+      },
+      {
+        "id": "n213",
+        "role": "advertising",
+        "roleP": 0.97,
+        "roleProbs": {
+          "advertising": 0.97
+        },
+        "task": 0.06,
+        "main": 0,
+        "help": 0.23,
+        "fine": "advertising",
+        "fineP": 0.97,
+        "importance": 0.09
+      },
+      {
+        "id": "n252",
+        "role": "main_content",
+        "roleP": 0.61,
+        "roleProbs": {
+          "main_content": 0.61,
+          "recommendations": 0.39
+        },
+        "task": 0.73,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "result_item",
+        "fineP": 0.42,
+        "importance": 3.31
+      },
+      {
+        "id": "n261",
+        "role": "advertising",
+        "roleP": 0.97,
+        "roleProbs": {
+          "advertising": 0.97
+        },
+        "task": 0.06,
+        "main": 0,
+        "help": 0.18,
+        "fine": "advertising",
+        "fineP": 0.97,
+        "importance": 0.06
+      },
+      {
+        "id": "n346",
+        "role": "advertising",
+        "roleP": 0.99,
+        "roleProbs": {
+          "advertising": 0.99
+        },
+        "task": 0.05,
+        "main": 0,
+        "help": 0.21,
+        "fine": "advertising",
+        "fineP": 0.99,
+        "importance": 0.04
+      },
+      {
+        "id": "n347",
+        "role": "advertising",
+        "roleP": 0.98,
+        "roleProbs": {
+          "advertising": 0.98
+        },
+        "task": 0.06,
+        "main": 0,
+        "help": 0.2,
+        "fine": "advertising",
+        "fineP": 0.95,
+        "importance": 0.07
+      },
+      {
+        "id": "n349",
+        "role": "advertising",
+        "roleP": 0.99,
+        "roleProbs": {
+          "advertising": 0.99
+        },
+        "task": 0.07,
+        "main": 0,
+        "help": 0.2,
+        "fine": "advertising",
+        "fineP": 0.96,
+        "importance": 0.11
+      },
+      {
+        "id": "n367",
+        "role": "recommendations",
+        "roleP": 0.66,
+        "roleProbs": {
+          "action_button": 0.09,
+          "advertising": 0.14,
+          "recommendations": 0.66,
+          "other": 0.06
+        },
+        "task": 0.17,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.45,
+        "importance": 0.52
+      },
+      {
+        "id": "n370",
+        "role": "main_content",
+        "roleP": 0.84,
+        "roleProbs": {
+          "main_content": 0.84,
+          "recommendations": 0.06,
+          "other": 0.07
+        },
+        "task": 0.53,
+        "main": 0.04,
+        "help": 0.02,
+        "fine": "caption",
+        "fineP": 0.54,
+        "importance": 2.35
+      },
+      {
+        "id": "n371",
+        "role": "recommendations",
+        "roleP": 0.79,
+        "roleProbs": {
+          "main_content": 0.1,
+          "advertising": 0.04,
+          "recommendations": 0.79,
+          "other": 0.04
+        },
+        "task": 0.32,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.73,
+        "importance": 1.2,
+        "paidAsStoryP": 0.61
+      },
+      {
+        "id": "n373",
+        "role": "recommendations",
+        "roleP": 0.71,
+        "roleProbs": {
+          "main_content": 0.17,
+          "advertising": 0.08,
+          "recommendations": 0.71,
+          "other": 0.03
+        },
+        "task": 0.4,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.67,
+        "importance": 1.95
+      },
+      {
+        "id": "n375",
+        "role": "recommendations",
+        "roleP": 0.73,
+        "roleProbs": {
+          "main_content": 0.15,
+          "recommendations": 0.73,
+          "other": 0.07
+        },
+        "task": 0.34,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.64,
+        "importance": 1.33
+      },
+      {
+        "id": "n377",
+        "role": "recommendations",
+        "roleP": 0.6,
+        "roleProbs": {
+          "main_content": 0.32,
+          "recommendations": 0.6,
+          "other": 0.03
+        },
+        "task": 0.64,
+        "main": 0.03,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.57,
+        "importance": 2.79,
+        "paidAsStoryP": 0.55
+      },
+      {
+        "id": "n379",
+        "role": "recommendations",
+        "roleP": 0.55,
+        "roleProbs": {
+          "main_content": 0.39,
+          "recommendations": 0.55,
+          "other": 0.03
+        },
+        "task": 0.63,
+        "main": 0.04,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.55,
+        "importance": 2.88,
+        "paidAsStoryP": 0.58
+      },
+      {
+        "id": "n380",
+        "role": "advertising",
+        "roleP": 0.98,
+        "roleProbs": {
+          "advertising": 0.98
+        },
+        "task": 0.05,
+        "main": 0,
+        "help": 0.21,
+        "fine": "advertising",
+        "fineP": 0.98,
+        "importance": 0.04
+      },
+      {
+        "id": "n383",
+        "role": "advertising",
+        "roleP": 0.59,
+        "roleProbs": {
+          "popup_overlay": 0.03,
+          "advertising": 0.59,
+          "recommendations": 0.32
+        },
+        "task": 0.16,
+        "main": 0,
+        "help": 0.02,
+        "fine": "newsletter_signup",
+        "fineP": 0.54,
+        "importance": 0.21
+      },
+      {
+        "id": "n384",
+        "role": "advertising",
+        "roleP": 0.73,
+        "roleProbs": {
+          "advertising": 0.73,
+          "recommendations": 0.2
+        },
+        "task": 0.14,
+        "main": 0,
+        "help": 0.02,
+        "fine": "newsletter_signup",
+        "fineP": 0.7,
+        "importance": 0.21
+      },
+      {
+        "id": "n703",
+        "role": "legal_footer",
+        "roleP": 0.89,
+        "roleProbs": {
+          "navigation": 0.11,
+          "legal_footer": 0.89
+        },
+        "task": 0.09,
+        "main": 0,
+        "help": 0.84,
+        "fine": "legal_footer",
+        "fineP": 0.89,
+        "importance": 1.08
+      },
+      {
+        "id": "n717",
+        "role": "popup_overlay",
+        "roleP": 0.71,
+        "roleProbs": {
+          "consent_notice": 0.25,
+          "popup_overlay": 0.71,
+          "legal_footer": 0.04
+        },
+        "task": 0.12,
+        "main": 0,
+        "help": 0.04,
+        "fine": "popup",
+        "fineP": 0.71,
+        "importance": 0.33
+      },
+      {
+        "id": "n718",
+        "role": "popup_overlay",
+        "roleP": 0.9,
+        "roleProbs": {
+          "consent_notice": 0.08,
+          "popup_overlay": 0.9
+        },
+        "task": 0.12,
+        "main": 0,
+        "help": 0.04,
+        "fine": "popup",
+        "fineP": 0.9,
+        "importance": 0.68
+      },
+      {
+        "id": "n726",
+        "role": "recommendations",
+        "roleP": 0.9,
+        "roleProbs": {
+          "recommendations": 0.9
+        },
+        "task": 0.71,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.76,
+        "importance": 3.11,
+        "liveP": 0.6
+      },
+      {
+        "id": "n727",
+        "role": "recommendations",
+        "roleP": 0.89,
+        "roleProbs": {
+          "main_content": 0.07,
+          "recommendations": 0.89
+        },
+        "task": 0.86,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.84,
+        "importance": 3.84
+      },
+      {
+        "id": "n728",
+        "role": "recommendations",
+        "roleP": 0.93,
+        "roleProbs": {
+          "main_content": 0.03,
+          "recommendations": 0.93
+        },
+        "task": 0.77,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.87,
+        "importance": 3.39
+      },
+      {
+        "id": "n729",
+        "role": "recommendations",
+        "roleP": 0.98,
+        "roleProbs": {
+          "recommendations": 0.98
+        },
+        "task": 0.78,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.98,
+        "importance": 3.58
+      },
+      {
+        "id": "n730",
+        "role": "recommendations",
+        "roleP": 0.96,
+        "roleProbs": {
+          "recommendations": 0.96
+        },
+        "task": 0.71,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.96,
+        "importance": 3.06
+      },
+      {
+        "id": "n731",
+        "role": "recommendations",
+        "roleP": 0.94,
+        "roleProbs": {
+          "recommendations": 0.94
+        },
+        "task": 0.72,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.94,
+        "importance": 3.23
+      },
+      {
+        "id": "n732",
+        "role": "recommendations",
+        "roleP": 0.95,
+        "roleProbs": {
+          "main_content": 0.05,
+          "recommendations": 0.95
+        },
+        "task": 0.79,
+        "main": 0,
+        "help": 0.01,
+        "fine": "teaser_other_content",
+        "fineP": 0.86,
+        "importance": 3.15,
+        "liveP": 0.1
+      },
+      {
+        "id": "n733",
+        "role": "recommendations",
+        "roleP": 0.87,
+        "roleProbs": {
+          "navigation": 0.03,
+          "recommendations": 0.87,
+          "other": 0.03
+        },
+        "task": 0.42,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.84,
+        "importance": 2.23
+      },
+      {
+        "id": "n734",
+        "role": "recommendations",
+        "roleP": 0.64,
+        "roleProbs": {
+          "navigation": 0.2,
+          "recommendations": 0.64,
+          "other": 0.09
+        },
+        "task": 0.61,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.64,
+        "importance": 2.99
+      },
+      {
+        "id": "n735",
+        "role": "recommendations",
+        "roleP": 0.73,
+        "roleProbs": {
+          "recommendations": 0.73,
+          "main_content": 0.06,
+          "advertising": 0.06,
+          "other": 0.06
+        },
+        "task": 0.37,
+        "main": 0,
+        "help": 0.03,
+        "fine": "product_card",
+        "fineP": 0.35,
+        "importance": 1.25
+      },
+      {
+        "id": "n736",
+        "role": "recommendations",
+        "roleP": 0.94,
+        "roleProbs": {
+          "recommendations": 0.94
+        },
+        "task": 0.64,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.82,
+        "importance": 2.55
+      },
+      {
+        "id": "n737",
+        "role": "recommendations",
+        "roleP": 0.88,
+        "roleProbs": {
+          "advertising": 0.08,
+          "recommendations": 0.88
+        },
+        "task": 0.5,
+        "main": 0,
+        "help": 0.02,
+        "fine": "teaser_other_content",
+        "fineP": 0.84,
+        "importance": 1.54
+      },
+      {
+        "id": "n3",
+        "role": "advertising",
+        "roleP": 0.98,
+        "roleProbs": {
+          "advertising": 0.98
+        },
+        "task": 0.06,
+        "main": 0,
+        "help": 0.18,
+        "fine": "advertising",
+        "fineP": 0.95,
+        "importance": 0.07
+      },
+      {
+        "id": "n749",
+        "role": "help_contact",
+        "roleP": 0.93,
+        "roleProbs": {
+          "help_contact": 0.93
+        },
+        "task": 0.08,
+        "main": 0.03,
+        "help": 0.89,
+        "fine": "help_link",
+        "fineP": 0.65,
+        "importance": 1.75
+      }
+    ],
+    "mainPick": {
+      "id": "none",
+      "p": 0.92,
+      "probs": {
+        "n29": 0,
+        "n31": 0.04,
+        "n32": 0.02,
+        "n34": 0,
+        "n35": 0.01,
+        "n37": 0,
+        "n132": 0,
+        "n139": 0,
+        "n157": 0,
+        "n158": 0,
+        "n159": 0,
+        "n163": 0,
+        "n203": 0,
+        "n252": 0.01,
+        "n367": 0,
+        "n370": 0,
+        "n371": 0,
+        "n373": 0,
+        "n375": 0,
+        "n377": 0,
+        "n379": 0,
+        "none": 0.92
+      }
+    },
+    "metrics": {
+      "model": "jev-1.14.0",
+      "calls": 10,
+      "questions": 251,
+      "inputTokens": 136959,
+      "wallMs": 1251,
+      "serverMs": 283,
+      "costUsd": 0.005752278000000001
+    },
+    "cached": false,
+    "purpose": {
+      "kind": "news_index",
+      "p": 0.61,
+      "probs": {
+        "record_stats": 0,
+        "scoreboard": 0,
+        "schedule": 0,
+        "standings": 0,
+        "roster": 0,
+        "article": 0,
+        "news_index": 0.61,
+        "recipe": 0,
+        "product": 0,
+        "search_results": 0,
+        "form_task": 0,
+        "checkout": 0,
+        "sign_in": 0,
+        "account_dashboard": 0,
+        "bill_statement": 0,
+        "appointment": 0,
+        "status_lookup": 0,
+        "info_guide": 0,
+        "faq": 0,
+        "directory_listing": 0,
+        "location_hours": 0,
+        "calendar_dates": 0,
+        "comparison": 0,
+        "video": 0,
+        "gallery": 0,
+        "home_portal": 0.39,
+        "course_lesson": 0,
+        "course_overview": 0,
+        "live_blog": 0,
+        "product_listing": 0,
+        "game_detail": 0,
+        "other": 0
+      }
+    },
+    "mainRegion": {
+      "id": "n727",
+      "p": 0.66,
+      "probs": {
+        "n726": 0.215,
+        "n727": 0.74,
+        "n728": 0.01,
+        "n729": 0.01,
+        "n730": 0.005,
+        "n731": 0,
+        "n732": 0,
+        "n733": 0,
+        "n734": 0,
+        "n735": 0,
+        "n736": 0,
+        "n737": 0,
+        "none": 0.02
+      }
+    }
+  },
+  "outline": {
+    "v": "outline.1",
+    "nodes": [
+      {
+        "id": "n1",
+        "kind": "region",
+        "label": "· values your feedback",
+        "landmark": "banner",
+        "zone": "header_band"
+      },
+      {
+        "id": "n3",
+        "kind": "region",
+        "label": "",
+        "parent": "n1",
+        "landmark": "banner",
+        "zone": "header_band",
+        "protected": true
+      },
+      {
+        "id": "n4",
+        "kind": "region",
+        "label": "",
+        "parent": "n1",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n5",
+        "kind": "button",
+        "label": "Open Menu Icon",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n6",
+        "kind": "link",
+        "label": "· logo",
+        "parent": "n4",
+        "landmark": "navigation",
+        "data": {
+          "kind": "logo",
+          "src": "data:image/svg+xml;charset=utf-8,%3Csvg%20class%3D%22brand-logo__icon%22%20width%3D%2246%22%20height%3D%2222%22%20viewBox%3D%220%200%2046%2022%22%20fill%3D%22none%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20color%3D%22rgb(0%2C%200%2C%200)%22%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M6.10447%2011.0001C6.10447%208.531%208.10642%206.52954%2010.5752%206.52954H13.9675V3.99665H10.5476C6.68578%203.99665%203.5437%207.13824%203.5437%2011.0003C3.5437%2014.8619%206.68578%2018.0039%2010.5476%2018.0039L17.1326%2018.0037C17.5009%2018.0037%2017.797%2017.6415%2017.797%2017.3414V4.36936C17.797%203.65427%2018.2455%203.05144%2018.9127%202.86949C19.482%202.71444%2020.2803%202.87169%2020.8136%203.77851C20.8386%203.82033%2022.4563%206.60902%2024.922%2010.8592C26.8569%2014.1962%2028.8589%2017.6469%2028.8951%2017.7083C29.102%2018.0599%2029.3861%2018.2262%2029.6561%2018.1529C29.8261%2018.1067%2030.0254%2017.9421%2030.0254%2017.6303V4.36936C30.0256%203.65329%2030.4725%203.05021%2031.1372%202.869C31.7028%202.71517%2032.4971%202.87291%2033.0303%203.77851C33.054%203.81813%2034.4842%206.28449%2036.8376%2010.3412C38.9187%2013.9289%2041.0706%2017.6391%2041.1112%2017.708C41.3184%2018.0599%2041.603%2018.2262%2041.8725%2018.1529C42.0425%2018.1067%2042.2418%2017.9421%2042.2418%2017.6305V0.450564H39.703V10.679C39.703%2010.679%2035.4619%203.3723%2035.267%203.04141C32.5744%20-1.53207%2027.4866%200.358121%2027.4866%204.29526V10.679C27.4866%2010.679%2023.2455%203.3723%2023.0506%203.04141C20.358%20-1.53207%2015.2705%200.358121%2015.2702%204.29526V14.7582C15.2715%2015.1387%2014.9853%2015.4703%2014.5689%2015.4708H10.5752C8.10642%2015.4708%206.10447%2013.4691%206.10447%2011.0001Z%22%2F%3E%3Cpath%20fill-rule%3D%22evenodd%22%20clip-rule%3D%22evenodd%22%20d%3D%22M43.2542%200.450562V17.6305C43.2542%2018.3456%2042.8057%2018.9487%2042.1385%2019.1306C42.0158%2019.1639%2041.8825%2019.183%2041.7433%2019.183C41.2371%2019.183%2040.6563%2018.9328%2040.2373%2018.2216C40.2148%2018.1834%2038.5294%2015.2776%2035.961%2010.8494C34.1077%207.65523%2032.1919%204.35248%2032.1564%204.29208C31.9495%203.94089%2031.6683%203.7741%2031.4027%203.84649C31.2347%203.89247%2031.0378%204.05706%2031.0378%204.3696V17.6305C31.0378%2018.3458%2030.5893%2018.9487%2029.9219%2019.1306C29.3526%2019.2854%2028.5546%2019.1284%2028.0209%2018.2216C27.9994%2018.1849%2026.4323%2015.484%2024.0449%2011.3674C22.0449%207.92033%2019.9772%204.35542%2019.94%204.29208C19.7326%203.94016%2019.448%203.77361%2019.1787%203.84698C19.0085%203.89345%2018.8099%204.05803%2018.8099%204.36936L18.8094%2017.3414C18.8094%2018.2341%2018.0256%2019.0169%2017.132%2019.0169H10.547C6.12642%2019.0169%202.5302%2015.4207%202.5302%2011.0003C2.5302%206.57967%206.12642%202.9832%2010.547%202.9832H13.9669V0.450562H10.5497C4.72339%200.450562%200%205.17371%200%2011.0003C0%2016.8264%204.72339%2021.5495%2010.5497%2021.5495H17.1988C19.726%2021.5513%2021.3514%2020.0702%2021.3487%2017.3385V11.3214C21.3487%2011.3214%2025.5893%2018.6278%2025.7845%2018.9587C28.477%2023.5322%2033.5651%2021.642%2033.5651%2017.7048V11.3214C33.5651%2011.3214%2037.8062%2018.6278%2038.0006%2018.9587C40.693%2023.5322%2045.781%2021.642%2045.7815%2017.7048V0.450562H43.2542Z%22%2F%3E%3C%2Fsvg%3E",
+          "label": "CNN"
+        },
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n7",
+        "kind": "link",
+        "label": "US",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n8",
+        "kind": "link",
+        "label": "World",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n9",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n10",
+        "kind": "link",
+        "label": "Business",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n11",
+        "kind": "link",
+        "label": "Health",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n12",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n13",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n14",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n15",
+        "kind": "link",
+        "label": "Travel",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n738",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n739",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n740",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n741",
+        "kind": "link",
+        "label": "Weather",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n742",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n743",
+        "kind": "link",
+        "label": "·",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n744",
+        "kind": "link",
+        "label": "Games",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n745",
+        "kind": "link",
+        "label": "· Friday Deals",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n17",
+        "kind": "link",
+        "label": "Watch",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n20",
+        "kind": "link",
+        "label": "Subscribe Button",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n21",
+        "kind": "region",
+        "label": "User Account Nav",
+        "parent": "n4",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n22",
+        "kind": "link",
+        "label": "User Account Log In Button",
+        "parent": "n21",
+        "landmark": "navigation",
+        "zone": "overlay_top"
+      },
+      {
+        "id": "n23",
+        "kind": "region",
+        "label": "·",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n726",
+        "kind": "region",
+        "label": "·",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n24",
+        "kind": "region",
+        "label": "·",
+        "parent": "n726",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n25",
+        "kind": "list",
+        "label": "",
+        "parent": "n24",
+        "landmark": "main",
+        "shape": "list x 6",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n26",
+        "kind": "region",
+        "label": "·",
+        "parent": "n25",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n27",
+        "kind": "region",
+        "label": "·",
+        "parent": "n26",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n746",
+        "kind": "media",
+        "label": "",
+        "parent": "n27",
+        "landmark": "main",
+        "shape": "video",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n747",
+        "kind": "heading",
+        "label": "· System Not Supported",
+        "parent": "n27",
+        "landmark": "main",
+        "level": 2,
+        "zone": "left_rail"
+      },
+      {
+        "id": "n748",
+        "kind": "text",
+        "label": "",
+        "parent": "n27",
+        "landmark": "main",
+        "shape": "paragraph text(300)",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n749",
+        "kind": "link",
+        "label": "contact our Help Center",
+        "parent": "n748",
+        "landmark": "main",
+        "zone": "left_rail",
+        "protected": true
+      },
+      {
+        "id": "n29",
+        "kind": "link",
+        "label": "· up on today's ·",
+        "parent": "n26",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n30",
+        "kind": "region",
+        "label": "",
+        "parent": "n25",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n31",
+        "kind": "link",
+        "label": "Live Live",
+        "parent": "n30",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n32",
+        "kind": "link",
+        "label": "Live · Live [rating]",
+        "parent": "n30",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n33",
+        "kind": "region",
+        "label": "",
+        "parent": "n25",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n34",
+        "kind": "link",
+        "label": "New New",
+        "parent": "n33",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n35",
+        "kind": "link",
+        "label": "New Why · is driving a · of",
+        "parent": "n33",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n36",
+        "kind": "region",
+        "label": "",
+        "parent": "n25",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n37",
+        "kind": "link",
+        "label": "For ·",
+        "parent": "n36",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n38",
+        "kind": "link",
+        "label": "For · A What · after a ·",
+        "parent": "n36",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n39",
+        "kind": "region",
+        "label": "",
+        "parent": "n25",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n40",
+        "kind": "link",
+        "label": "New New",
+        "parent": "n39",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n41",
+        "kind": "link",
+        "label": "New The · deals holding up the ·",
+        "parent": "n39",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n42",
+        "kind": "region",
+        "label": "",
+        "parent": "n25",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n43",
+        "kind": "link",
+        "label": "Video Video",
+        "parent": "n42",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n44",
+        "kind": "link",
+        "label": "Video · the · against ·",
+        "parent": "n42",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n727",
+        "kind": "region",
+        "label": "·",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n45",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n46",
+        "kind": "list",
+        "label": "",
+        "parent": "n45",
+        "landmark": "main",
+        "shape": "list x 3",
+        "zone": "center_column"
+      },
+      {
+        "id": "n750",
+        "kind": "region",
+        "label": "",
+        "parent": "n46",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n47",
+        "kind": "link",
+        "label": "· Images ·",
+        "parent": "n750",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n48",
+        "kind": "link",
+        "label": "· as he · of · restoring a",
+        "parent": "n750",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n49",
+        "kind": "region",
+        "label": "",
+        "parent": "n46",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n50",
+        "kind": "link",
+        "label": "Video See · questioned in · [time] At",
+        "parent": "n49",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n51",
+        "kind": "region",
+        "label": "",
+        "parent": "n46",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n52",
+        "kind": "link",
+        "label": "Video · to · game and response to",
+        "parent": "n51",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n53",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n54",
+        "kind": "list",
+        "label": "",
+        "parent": "n53",
+        "landmark": "main",
+        "shape": "list x 4",
+        "zone": "center_column"
+      },
+      {
+        "id": "n55",
+        "kind": "region",
+        "label": "",
+        "parent": "n54",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n56",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n55",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n57",
+        "kind": "link",
+        "label": "· The · team’s messaging · on ·",
+        "parent": "n55",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n58",
+        "kind": "region",
+        "label": "",
+        "parent": "n54",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n59",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n58",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n60",
+        "kind": "link",
+        "label": "· What’s · all these outages The ·",
+        "parent": "n58",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n61",
+        "kind": "region",
+        "label": "",
+        "parent": "n54",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n62",
+        "kind": "link",
+        "label": "For ·",
+        "parent": "n61",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n63",
+        "kind": "link",
+        "label": "For · for a [number] · outage Now",
+        "parent": "n61",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n64",
+        "kind": "region",
+        "label": "",
+        "parent": "n54",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n65",
+        "kind": "link",
+        "label": "·",
+        "parent": "n64",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n66",
+        "kind": "link",
+        "label": "· response to · outages shows how out",
+        "parent": "n64",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n67",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n751",
+        "kind": "list",
+        "label": "",
+        "parent": "n67",
+        "landmark": "main",
+        "shape": "list x 2",
+        "zone": "center_column"
+      },
+      {
+        "id": "n752",
+        "kind": "region",
+        "label": "",
+        "parent": "n751",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n68",
+        "kind": "link",
+        "label": "· Images File",
+        "parent": "n752",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n69",
+        "kind": "link",
+        "label": "· from · He is now all but",
+        "parent": "n752",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n70",
+        "kind": "region",
+        "label": "",
+        "parent": "n751",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n71",
+        "kind": "link",
+        "label": "Video · he will · for · after",
+        "parent": "n70",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n72",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n73",
+        "kind": "list",
+        "label": "",
+        "parent": "n72",
+        "landmark": "main",
+        "shape": "list x 3",
+        "zone": "center_column"
+      },
+      {
+        "id": "n74",
+        "kind": "region",
+        "label": "",
+        "parent": "n73",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n75",
+        "kind": "link",
+        "label": "For · Mark · Images File",
+        "parent": "n74",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n76",
+        "kind": "link",
+        "label": "For · is preparing for another · This",
+        "parent": "n74",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n77",
+        "kind": "region",
+        "label": "",
+        "parent": "n73",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n78",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n77",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n79",
+        "kind": "link",
+        "label": "· send letters to · of · officials",
+        "parent": "n77",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n80",
+        "kind": "region",
+        "label": "",
+        "parent": "n73",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n81",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n80",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n82",
+        "kind": "link",
+        "label": "· in · giving · [number] seats",
+        "parent": "n80",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n83",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n84",
+        "kind": "list",
+        "label": "",
+        "parent": "n83",
+        "landmark": "main",
+        "shape": "list x 3",
+        "zone": "center_column"
+      },
+      {
+        "id": "n753",
+        "kind": "region",
+        "label": "",
+        "parent": "n84",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n85",
+        "kind": "link",
+        "label": "· For ·",
+        "parent": "n753",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n86",
+        "kind": "link",
+        "label": "· For · A · with · he",
+        "parent": "n753",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n87",
+        "kind": "region",
+        "label": "",
+        "parent": "n84",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n88",
+        "kind": "link",
+        "label": "Live Updates [number] min · receives · from",
+        "parent": "n87",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n89",
+        "kind": "region",
+        "label": "",
+        "parent": "n84",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n90",
+        "kind": "link",
+        "label": "Video See the · [time] · has been",
+        "parent": "n89",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n91",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n727",
+        "landmark": "main",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n92",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n93",
+        "kind": "list",
+        "label": "",
+        "parent": "n92",
+        "landmark": "main",
+        "shape": "list x 3",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n94",
+        "kind": "region",
+        "label": "",
+        "parent": "n93",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n95",
+        "kind": "link",
+        "label": "[number] · because · choose ·",
+        "parent": "n94",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n96",
+        "kind": "region",
+        "label": "",
+        "parent": "n93",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n97",
+        "kind": "link",
+        "label": "[number] min · from a · that could",
+        "parent": "n96",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n98",
+        "kind": "region",
+        "label": "",
+        "parent": "n93",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n99",
+        "kind": "link",
+        "label": "[number] min · a · partner · as",
+        "parent": "n98",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n100",
+        "kind": "heading",
+        "label": "Across Our ·",
+        "parent": "n727",
+        "landmark": "main",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n101",
+        "kind": "list",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "shape": "list x 4",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n102",
+        "kind": "region",
+        "label": "",
+        "parent": "n101",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n103",
+        "kind": "link",
+        "label": "Health · Images",
+        "parent": "n102",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n104",
+        "kind": "link",
+        "label": "Health Why · a · about the ·",
+        "parent": "n102",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n105",
+        "kind": "region",
+        "label": "",
+        "parent": "n101",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n106",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n105",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n107",
+        "kind": "link",
+        "label": "· For this · the · is over",
+        "parent": "n105",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n108",
+        "kind": "region",
+        "label": "",
+        "parent": "n101",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n109",
+        "kind": "link",
+        "label": "· by ·",
+        "parent": "n108",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n110",
+        "kind": "link",
+        "label": "· New · of · includes · and",
+        "parent": "n108",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n111",
+        "kind": "region",
+        "label": "",
+        "parent": "n101",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n112",
+        "kind": "link",
+        "label": "·",
+        "parent": "n111",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n113",
+        "kind": "link",
+        "label": "· the · last chapter of an ·",
+        "parent": "n111",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n114",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n115",
+        "kind": "link",
+        "label": "See the full · on · Weather",
+        "parent": "n114",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n116",
+        "kind": "region",
+        "label": "",
+        "parent": "n114",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n117",
+        "kind": "text",
+        "label": "",
+        "parent": "n116",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n118",
+        "kind": "text",
+        "label": "",
+        "parent": "n116",
+        "landmark": "main",
+        "shape": "text(20)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n119",
+        "kind": "region",
+        "label": "",
+        "parent": "n116",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n120",
+        "kind": "text",
+        "label": "",
+        "parent": "n119",
+        "landmark": "main",
+        "shape": "count",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n121",
+        "kind": "region",
+        "label": "",
+        "parent": "n119",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n122",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n123",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n124",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n125",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n126",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n127",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n128",
+        "kind": "text",
+        "label": "",
+        "parent": "n121",
+        "landmark": "main",
+        "shape": "text(10)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n129",
+        "kind": "image",
+        "label": "·",
+        "parent": "n119",
+        "landmark": "main",
+        "shape": "image",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n130",
+        "kind": "region",
+        "label": "",
+        "parent": "n114",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n131",
+        "kind": "text",
+        "label": "",
+        "parent": "n130",
+        "landmark": "main",
+        "shape": "text(40)",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n132",
+        "kind": "link",
+        "label": "Download app",
+        "parent": "n130",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n133",
+        "kind": "region",
+        "label": "",
+        "parent": "n727",
+        "landmark": "main",
+        "zone": "full_width_mid",
+        "protected": true
+      },
+      {
+        "id": "n728",
+        "kind": "region",
+        "label": "·",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n134",
+        "kind": "region",
+        "label": "",
+        "parent": "n728",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n135",
+        "kind": "list",
+        "label": "",
+        "parent": "n134",
+        "landmark": "main",
+        "shape": "list x 4",
+        "zone": "center_column"
+      },
+      {
+        "id": "n754",
+        "kind": "region",
+        "label": "",
+        "parent": "n135",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n136",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n754",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n137",
+        "kind": "link",
+        "label": "· Street · marks a new chapter for",
+        "parent": "n754",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n138",
+        "kind": "region",
+        "label": "",
+        "parent": "n135",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n139",
+        "kind": "link",
+        "label": "Video Who · the [number] [time] · an",
+        "parent": "n138",
+        "landmark": "main",
+        "zone": "left_rail",
+        "protected": true
+      },
+      {
+        "id": "n140",
+        "kind": "region",
+        "label": "",
+        "parent": "n135",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n141",
+        "kind": "link",
+        "label": "Your guide to the people who · at",
+        "parent": "n140",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n142",
+        "kind": "region",
+        "label": "",
+        "parent": "n135",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n143",
+        "kind": "link",
+        "label": "Why · is · with · founding ·",
+        "parent": "n142",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n755",
+        "kind": "link",
+        "label": "· [number] to control the ·",
+        "parent": "n728",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n756",
+        "kind": "link",
+        "label": "· [number] to control the ·",
+        "parent": "n728",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n729",
+        "kind": "region",
+        "label": "More Top Stories",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n146",
+        "kind": "region",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n147",
+        "kind": "list",
+        "label": "",
+        "parent": "n146",
+        "landmark": "main",
+        "shape": "list x 4",
+        "zone": "center_column"
+      },
+      {
+        "id": "n757",
+        "kind": "region",
+        "label": "",
+        "parent": "n147",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n148",
+        "kind": "link",
+        "label": "·",
+        "parent": "n757",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n149",
+        "kind": "link",
+        "label": "· Auto the · return in [number] ·",
+        "parent": "n757",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n150",
+        "kind": "region",
+        "label": "",
+        "parent": "n147",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n151",
+        "kind": "link",
+        "label": "Was · Auto · the [number] year wait",
+        "parent": "n150",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n152",
+        "kind": "region",
+        "label": "",
+        "parent": "n147",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n153",
+        "kind": "link",
+        "label": "Video · [time] · Games · Auto ·",
+        "parent": "n152",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n154",
+        "kind": "region",
+        "label": "",
+        "parent": "n147",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n155",
+        "kind": "link",
+        "label": "How · Auto · is · lives The",
+        "parent": "n154",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n156",
+        "kind": "region",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n758",
+        "kind": "region",
+        "label": "",
+        "parent": "n156",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n157",
+        "kind": "button",
+        "label": "Go to slide [number]",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n158",
+        "kind": "button",
+        "label": "Go to slide [number]",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n159",
+        "kind": "button",
+        "label": "Go to slide [number]",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n160",
+        "kind": "button",
+        "label": "Go to slide [number]",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n161",
+        "kind": "button",
+        "label": "Go to slide [number]",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n162",
+        "kind": "button",
+        "label": "Go to slide [number]",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n163",
+        "kind": "button",
+        "label": "Pause",
+        "parent": "n758",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n166",
+        "kind": "list",
+        "label": "",
+        "parent": "n156",
+        "landmark": "main",
+        "shape": "cards x 4",
+        "zone": "center_column"
+      },
+      {
+        "id": "n167",
+        "kind": "region",
+        "label": "",
+        "parent": "n166",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n168",
+        "kind": "link",
+        "label": "·",
+        "parent": "n167",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n169",
+        "kind": "link",
+        "label": "The · from · reaches · in ·",
+        "parent": "n167",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n759",
+        "kind": "button",
+        "label": "Prev",
+        "parent": "n166",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n760",
+        "kind": "button",
+        "label": "Next",
+        "parent": "n166",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n176",
+        "kind": "heading",
+        "label": "More Top Stories",
+        "parent": "n729",
+        "landmark": "main",
+        "level": 2,
+        "zone": "center_column"
+      },
+      {
+        "id": "n177",
+        "kind": "region",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n178",
+        "kind": "list",
+        "label": "",
+        "parent": "n177",
+        "landmark": "main",
+        "shape": "list x 6",
+        "zone": "center_column"
+      },
+      {
+        "id": "n179",
+        "kind": "region",
+        "label": "",
+        "parent": "n178",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n180",
+        "kind": "link",
+        "label": "· [number] · US ·",
+        "parent": "n179",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n181",
+        "kind": "link",
+        "label": "· at [number] remembered for saving [number] ·",
+        "parent": "n179",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n182",
+        "kind": "region",
+        "label": "",
+        "parent": "n178",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n183",
+        "kind": "link",
+        "label": "·",
+        "parent": "n182",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n184",
+        "kind": "link",
+        "label": "· on · and · charges in ·",
+        "parent": "n182",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n185",
+        "kind": "region",
+        "label": "",
+        "parent": "n178",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n186",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n185",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n187",
+        "kind": "link",
+        "label": "· drops · pick · and · with",
+        "parent": "n185",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n188",
+        "kind": "region",
+        "label": "",
+        "parent": "n178",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n189",
+        "kind": "link",
+        "label": "· Images",
+        "parent": "n188",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n190",
+        "kind": "link",
+        "label": "· from · first · report after ·",
+        "parent": "n188",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n191",
+        "kind": "region",
+        "label": "",
+        "parent": "n178",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n192",
+        "kind": "link",
+        "label": "·",
+        "parent": "n191",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n193",
+        "kind": "link",
+        "label": "· to · against · charged in ·",
+        "parent": "n191",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n194",
+        "kind": "region",
+        "label": "",
+        "parent": "n178",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n195",
+        "kind": "link",
+        "label": "·",
+        "parent": "n194",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n196",
+        "kind": "link",
+        "label": "· after US · launch site",
+        "parent": "n194",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n197",
+        "kind": "region",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n198",
+        "kind": "region",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n199",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n729",
+        "landmark": "main",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n200",
+        "kind": "list",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "shape": "list x 3",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n201",
+        "kind": "region",
+        "label": "",
+        "parent": "n200",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n202",
+        "kind": "link",
+        "label": "·",
+        "parent": "n201",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n203",
+        "kind": "link",
+        "label": "· in your home is · We found",
+        "parent": "n201",
+        "landmark": "main",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n204",
+        "kind": "region",
+        "label": "",
+        "parent": "n200",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n205",
+        "kind": "link",
+        "label": "·",
+        "parent": "n204",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n206",
+        "kind": "link",
+        "label": "Away’s · sale of the year is live",
+        "parent": "n204",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n207",
+        "kind": "region",
+        "label": "",
+        "parent": "n200",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n208",
+        "kind": "link",
+        "label": "·",
+        "parent": "n207",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n209",
+        "kind": "link",
+        "label": "· care · and editors agree These are",
+        "parent": "n207",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n210",
+        "kind": "region",
+        "label": "For ·",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n211",
+        "kind": "heading",
+        "label": "For ·",
+        "parent": "n210",
+        "landmark": "main",
+        "level": 2,
+        "zone": "right_rail"
+      },
+      {
+        "id": "n212",
+        "kind": "list",
+        "label": "",
+        "parent": "n210",
+        "landmark": "main",
+        "shape": "cards x 29",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n213",
+        "kind": "region",
+        "label": "",
+        "parent": "n729",
+        "landmark": "main",
+        "zone": "full_width_mid",
+        "protected": true
+      },
+      {
+        "id": "n730",
+        "kind": "region",
+        "label": "",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n215",
+        "kind": "text",
+        "label": "",
+        "parent": "n730",
+        "landmark": "main",
+        "shape": "paragraph text(100)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n216",
+        "kind": "list",
+        "label": "",
+        "parent": "n730",
+        "landmark": "main",
+        "shape": "list x 6",
+        "zone": "center_column"
+      },
+      {
+        "id": "n217",
+        "kind": "region",
+        "label": "",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n218",
+        "kind": "link",
+        "label": "·",
+        "parent": "n217",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n219",
+        "kind": "link",
+        "label": "· of ·",
+        "parent": "n217",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n220",
+        "kind": "region",
+        "label": "",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n221",
+        "kind": "link",
+        "label": "·",
+        "parent": "n220",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n222",
+        "kind": "link",
+        "label": "· data centers",
+        "parent": "n220",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n223",
+        "kind": "region",
+        "label": "",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n224",
+        "kind": "link",
+        "label": "·",
+        "parent": "n223",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n225",
+        "kind": "link",
+        "label": "·",
+        "parent": "n223",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n226",
+        "kind": "region",
+        "label": "",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n227",
+        "kind": "link",
+        "label": "·",
+        "parent": "n226",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n228",
+        "kind": "link",
+        "label": "· box",
+        "parent": "n226",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n229",
+        "kind": "region",
+        "label": "",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n230",
+        "kind": "link",
+        "label": "·",
+        "parent": "n229",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n231",
+        "kind": "link",
+        "label": "·",
+        "parent": "n229",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n232",
+        "kind": "region",
+        "label": "",
+        "parent": "n216",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n233",
+        "kind": "link",
+        "label": "·",
+        "parent": "n232",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n234",
+        "kind": "link",
+        "label": "·",
+        "parent": "n232",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n235",
+        "kind": "list",
+        "label": "",
+        "parent": "n730",
+        "landmark": "main",
+        "shape": "list x 3",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n236",
+        "kind": "region",
+        "label": "",
+        "parent": "n235",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n237",
+        "kind": "link",
+        "label": "·",
+        "parent": "n236",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n238",
+        "kind": "link",
+        "label": "· from a ·",
+        "parent": "n236",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n239",
+        "kind": "region",
+        "label": "",
+        "parent": "n235",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n240",
+        "kind": "link",
+        "label": "·",
+        "parent": "n239",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n241",
+        "kind": "link",
+        "label": "How · smaller · can change lives",
+        "parent": "n239",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n242",
+        "kind": "region",
+        "label": "",
+        "parent": "n235",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n243",
+        "kind": "link",
+        "label": "·",
+        "parent": "n242",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n244",
+        "kind": "link",
+        "label": "· and ·",
+        "parent": "n242",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n731",
+        "kind": "region",
+        "label": "·",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n245",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n731",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n246",
+        "kind": "link",
+        "label": "·",
+        "parent": "n245",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n247",
+        "kind": "region",
+        "label": "",
+        "parent": "n731",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n248",
+        "kind": "list",
+        "label": "",
+        "parent": "n247",
+        "landmark": "main",
+        "shape": "list x 5",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n249",
+        "kind": "region",
+        "label": "",
+        "parent": "n248",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n250",
+        "kind": "link",
+        "label": "· for · the · in [number] He",
+        "parent": "n249",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n251",
+        "kind": "region",
+        "label": "",
+        "parent": "n248",
+        "landmark": "main",
+        "zone": "left_rail",
+        "protected": true
+      },
+      {
+        "id": "n252",
+        "kind": "link",
+        "label": "· a · name can help · back",
+        "parent": "n251",
+        "landmark": "main",
+        "zone": "left_rail",
+        "protected": true
+      },
+      {
+        "id": "n253",
+        "kind": "region",
+        "label": "",
+        "parent": "n248",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n254",
+        "kind": "link",
+        "label": "The · wants more money to fix the",
+        "parent": "n253",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n255",
+        "kind": "region",
+        "label": "",
+        "parent": "n248",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n256",
+        "kind": "link",
+        "label": "· his · to · maps How much",
+        "parent": "n255",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n257",
+        "kind": "region",
+        "label": "",
+        "parent": "n248",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n258",
+        "kind": "link",
+        "label": "In · to plan a future after ·",
+        "parent": "n257",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n259",
+        "kind": "region",
+        "label": "",
+        "parent": "n731",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n260",
+        "kind": "region",
+        "label": "",
+        "parent": "n731",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n261",
+        "kind": "region",
+        "label": "",
+        "parent": "n731",
+        "landmark": "main",
+        "zone": "full_width_mid",
+        "protected": true
+      },
+      {
+        "id": "n732",
+        "kind": "region",
+        "label": "· Shorts",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n262",
+        "kind": "region",
+        "label": "· Shorts",
+        "parent": "n732",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n263",
+        "kind": "region",
+        "label": "· Shorts",
+        "parent": "n262",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n264",
+        "kind": "heading",
+        "label": "· Shorts",
+        "parent": "n263",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n265",
+        "kind": "list",
+        "label": "",
+        "parent": "n262",
+        "landmark": "main",
+        "shape": "list x 25",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n266",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n267",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n266",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n268",
+        "kind": "link",
+        "label": "Video · outages not due to · or",
+        "parent": "n266",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n269",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n270",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n269",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n271",
+        "kind": "link",
+        "label": "Video · people ask for food [time]",
+        "parent": "n269",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n272",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n273",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n272",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n274",
+        "kind": "link",
+        "label": "Video · leaves vehicles · in · [time]",
+        "parent": "n272",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n275",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n276",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n275",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n277",
+        "kind": "link",
+        "label": "Video · to game response to · outage",
+        "parent": "n275",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n278",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n279",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n278",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n280",
+        "kind": "link",
+        "label": "Video · [time]",
+        "parent": "n278",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n281",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n282",
+        "kind": "link",
+        "label": "Video [time] · Images",
+        "parent": "n281",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n283",
+        "kind": "link",
+        "label": "Video · a · [time]",
+        "parent": "n281",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n284",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n285",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n284",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n286",
+        "kind": "link",
+        "label": "Video · boxing · [time]",
+        "parent": "n284",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n287",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n288",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n287",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n289",
+        "kind": "link",
+        "label": "Video · he will · for · after",
+        "parent": "n287",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n290",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n291",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n290",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n292",
+        "kind": "link",
+        "label": "Video · official declines to name any ·",
+        "parent": "n290",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n293",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n294",
+        "kind": "link",
+        "label": "Video [time] · Games",
+        "parent": "n293",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n295",
+        "kind": "link",
+        "label": "Video · Auto · has · clearing their",
+        "parent": "n293",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n296",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n297",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n296",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n298",
+        "kind": "link",
+        "label": "Video · not · in · [time]",
+        "parent": "n296",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n299",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n300",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n299",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n301",
+        "kind": "link",
+        "label": "Video Field Proof We Tested [number] · in",
+        "parent": "n299",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n302",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n303",
+        "kind": "link",
+        "label": "Video [time] social media via ·",
+        "parent": "n302",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n304",
+        "kind": "link",
+        "label": "Video · after · [time]",
+        "parent": "n302",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n305",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n306",
+        "kind": "link",
+        "label": "Video [time] · File",
+        "parent": "n305",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n307",
+        "kind": "link",
+        "label": "Video · the · part of · in",
+        "parent": "n305",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n308",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n309",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n308",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n310",
+        "kind": "link",
+        "label": "Video · around · [time]",
+        "parent": "n308",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n311",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n312",
+        "kind": "link",
+        "label": "Video [time] · Images File",
+        "parent": "n311",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n313",
+        "kind": "link",
+        "label": "Video · sent to · [time]",
+        "parent": "n311",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n314",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n315",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n314",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n316",
+        "kind": "link",
+        "label": "Video Over a · of · parts of",
+        "parent": "n314",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n317",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n318",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n317",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n319",
+        "kind": "link",
+        "label": "Video · child safety under · in ·",
+        "parent": "n317",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n320",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n321",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n320",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n322",
+        "kind": "link",
+        "label": "Video · of · from · [time]",
+        "parent": "n320",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n323",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n324",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n323",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n325",
+        "kind": "link",
+        "label": "Video · and · of · talks [time]",
+        "parent": "n323",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n326",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n327",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n326",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n328",
+        "kind": "link",
+        "label": "Video · the · of · [time]",
+        "parent": "n326",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n329",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n330",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n329",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n331",
+        "kind": "link",
+        "label": "Video · speaks to · about · as",
+        "parent": "n329",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n332",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n333",
+        "kind": "link",
+        "label": "Video [time] · TV",
+        "parent": "n332",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n334",
+        "kind": "link",
+        "label": "Video · to · by · [time]",
+        "parent": "n332",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n335",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n336",
+        "kind": "link",
+        "label": "Video [time] · TV",
+        "parent": "n335",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n337",
+        "kind": "link",
+        "label": "Video · shows off · at · new",
+        "parent": "n335",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n338",
+        "kind": "region",
+        "label": "",
+        "parent": "n265",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n339",
+        "kind": "link",
+        "label": "Video [time] ·",
+        "parent": "n338",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n340",
+        "kind": "link",
+        "label": "Video · It was so · was ·",
+        "parent": "n338",
+        "landmark": "main",
+        "zone": "right_rail"
+      },
+      {
+        "id": "n733",
+        "kind": "region",
+        "label": "·",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n341",
+        "kind": "heading",
+        "label": "·",
+        "parent": "n733",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n342",
+        "kind": "link",
+        "label": "·",
+        "parent": "n341",
+        "landmark": "main",
+        "zone": "left_rail"
+      },
+      {
+        "id": "n734",
+        "kind": "region",
+        "label": "Business",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n343",
+        "kind": "heading",
+        "label": "Business",
+        "parent": "n734",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n344",
+        "kind": "link",
+        "label": "Business",
+        "parent": "n343",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n345",
+        "kind": "region",
+        "label": "",
+        "parent": "n734",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n346",
+        "kind": "region",
+        "label": "",
+        "parent": "n734",
+        "landmark": "main",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n347",
+        "kind": "region",
+        "label": "",
+        "parent": "n734",
+        "landmark": "main",
+        "zone": "full_width_mid",
+        "protected": true
+      },
+      {
+        "id": "n348",
+        "kind": "region",
+        "label": "",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n349",
+        "kind": "region",
+        "label": "",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid",
+        "protected": true
+      },
+      {
+        "id": "n735",
+        "kind": "region",
+        "label": "",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n350",
+        "kind": "link",
+        "label": "· New Business",
+        "parent": "n735",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n736",
+        "kind": "region",
+        "label": "· Now",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n351",
+        "kind": "heading",
+        "label": "· Now",
+        "parent": "n736",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n352",
+        "kind": "region",
+        "label": "",
+        "parent": "n736",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n353",
+        "kind": "list",
+        "label": "",
+        "parent": "n352",
+        "landmark": "main",
+        "shape": "list x 4",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n354",
+        "kind": "region",
+        "label": "",
+        "parent": "n353",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n355",
+        "kind": "link",
+        "label": "·",
+        "parent": "n354",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n356",
+        "kind": "link",
+        "label": "A near · a ·",
+        "parent": "n354",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n357",
+        "kind": "region",
+        "label": "",
+        "parent": "n353",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n358",
+        "kind": "link",
+        "label": "·",
+        "parent": "n357",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n359",
+        "kind": "link",
+        "label": "· and ·",
+        "parent": "n357",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n360",
+        "kind": "region",
+        "label": "",
+        "parent": "n353",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n361",
+        "kind": "link",
+        "label": "·",
+        "parent": "n360",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n362",
+        "kind": "link",
+        "label": "How a family · into a ·",
+        "parent": "n360",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n363",
+        "kind": "region",
+        "label": "",
+        "parent": "n353",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n364",
+        "kind": "link",
+        "label": "·",
+        "parent": "n363",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n365",
+        "kind": "link",
+        "label": "· and his · panel · down the",
+        "parent": "n363",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n366",
+        "kind": "heading",
+        "label": "Paid Content",
+        "parent": "n23",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n737",
+        "kind": "region",
+        "label": "· Report",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n367",
+        "kind": "link",
+        "label": "· Report Show all",
+        "parent": "n737",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n368",
+        "kind": "list",
+        "label": "",
+        "parent": "n737",
+        "landmark": "main",
+        "shape": "list x 5",
+        "zone": "center_column"
+      },
+      {
+        "id": "n369",
+        "kind": "region",
+        "label": "",
+        "parent": "n368",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n370",
+        "kind": "link",
+        "label": "· Images · via · Images",
+        "parent": "n369",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n371",
+        "kind": "link",
+        "label": "[number] best · of all time",
+        "parent": "n369",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n372",
+        "kind": "region",
+        "label": "",
+        "parent": "n368",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n373",
+        "kind": "link",
+        "label": "Every · team’s ·",
+        "parent": "n372",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n374",
+        "kind": "text",
+        "label": "",
+        "parent": "n368",
+        "landmark": "main",
+        "shape": "text(80)",
+        "zone": "center_column"
+      },
+      {
+        "id": "n375",
+        "kind": "link",
+        "label": "· system ·",
+        "parent": "n374",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n376",
+        "kind": "region",
+        "label": "",
+        "parent": "n368",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n377",
+        "kind": "link",
+        "label": "· with · on different team",
+        "parent": "n376",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n378",
+        "kind": "region",
+        "label": "",
+        "parent": "n368",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n379",
+        "kind": "link",
+        "label": "· [number] · in ·",
+        "parent": "n378",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n380",
+        "kind": "region",
+        "label": "",
+        "parent": "n737",
+        "landmark": "main",
+        "zone": "right_rail",
+        "protected": true
+      },
+      {
+        "id": "n381",
+        "kind": "heading",
+        "label": "More from ·",
+        "parent": "n23",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n382",
+        "kind": "region",
+        "label": "Sign up for our newsletters",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n383",
+        "kind": "region",
+        "label": "Sign up for our newsletters",
+        "parent": "n382",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n384",
+        "kind": "region",
+        "label": "Sign up for our newsletters",
+        "parent": "n383",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n385",
+        "kind": "heading",
+        "label": "Sign up for our newsletters",
+        "parent": "n384",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n386",
+        "kind": "region",
+        "label": "",
+        "parent": "n383",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n387",
+        "kind": "list",
+        "label": "",
+        "parent": "n386",
+        "landmark": "main",
+        "shape": "list x 6",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n388",
+        "kind": "region",
+        "label": "",
+        "parent": "n387",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n389",
+        "kind": "link",
+        "label": "·",
+        "parent": "n388",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n390",
+        "kind": "link",
+        "label": "· AM",
+        "parent": "n388",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n391",
+        "kind": "region",
+        "label": "",
+        "parent": "n387",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n392",
+        "kind": "link",
+        "label": "· Newsletter Product team",
+        "parent": "n391",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n393",
+        "kind": "link",
+        "label": "Breaking News",
+        "parent": "n391",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n394",
+        "kind": "region",
+        "label": "",
+        "parent": "n387",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n395",
+        "kind": "link",
+        "label": "· Newsletter Product",
+        "parent": "n394",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n396",
+        "kind": "link",
+        "label": "What ·",
+        "parent": "n394",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n397",
+        "kind": "region",
+        "label": "",
+        "parent": "n387",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n398",
+        "kind": "link",
+        "label": "·",
+        "parent": "n397",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n399",
+        "kind": "link",
+        "label": "· Weather",
+        "parent": "n397",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n400",
+        "kind": "region",
+        "label": "",
+        "parent": "n387",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n401",
+        "kind": "link",
+        "label": "·",
+        "parent": "n400",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n402",
+        "kind": "link",
+        "label": "Big ·",
+        "parent": "n400",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n403",
+        "kind": "region",
+        "label": "",
+        "parent": "n387",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n404",
+        "kind": "link",
+        "label": "·",
+        "parent": "n403",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n405",
+        "kind": "link",
+        "label": "·",
+        "parent": "n403",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n406",
+        "kind": "heading",
+        "label": "Paid Partner Content",
+        "parent": "n23",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n407",
+        "kind": "link",
+        "label": "· Games · Show all",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n408",
+        "kind": "region",
+        "label": "",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n409",
+        "kind": "list",
+        "label": "",
+        "parent": "n408",
+        "landmark": "main",
+        "shape": "list x 4",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n410",
+        "kind": "region",
+        "label": "",
+        "parent": "n409",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n411",
+        "kind": "link",
+        "label": "·",
+        "parent": "n410",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n412",
+        "kind": "link",
+        "label": "· A · that will · your ·",
+        "parent": "n410",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n413",
+        "kind": "region",
+        "label": "",
+        "parent": "n409",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n414",
+        "kind": "link",
+        "label": "Where On ·",
+        "parent": "n413",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n415",
+        "kind": "link",
+        "label": "Where On · your way around the ·",
+        "parent": "n413",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n416",
+        "kind": "region",
+        "label": "",
+        "parent": "n409",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n417",
+        "kind": "link",
+        "label": "Today's ·",
+        "parent": "n416",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n418",
+        "kind": "link",
+        "label": "Today's · No · or · required",
+        "parent": "n416",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n419",
+        "kind": "region",
+        "label": "",
+        "parent": "n409",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n420",
+        "kind": "link",
+        "label": "Photo ·",
+        "parent": "n419",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n421",
+        "kind": "link",
+        "label": "Photo · the · together in this ·",
+        "parent": "n419",
+        "landmark": "main",
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n422",
+        "kind": "heading",
+        "label": "In · you · it",
+        "parent": "n23",
+        "landmark": "main",
+        "level": 2,
+        "zone": "full_width_mid"
+      },
+      {
+        "id": "n423",
+        "kind": "region",
+        "label": "",
+        "parent": "n23",
+        "landmark": "main",
+        "zone": "center_column"
+      },
+      {
+        "id": "n424",
+        "kind": "region",
+        "label": "Download the · app",
+        "landmark": "contentinfo",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n425",
+        "kind": "region",
+        "label": "",
+        "parent": "n424",
+        "landmark": "search",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n426",
+        "kind": "field",
+        "label": "Search",
+        "parent": "n425",
+        "landmark": "search",
+        "shape": "field text, autocomplete off",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n427",
+        "kind": "button",
+        "label": "Submit",
+        "parent": "n425",
+        "landmark": "search",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n428",
+        "kind": "region",
+        "label": "",
+        "parent": "n424",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n429",
+        "kind": "list",
+        "label": "",
+        "parent": "n428",
+        "landmark": "navigation",
+        "shape": "list x 22",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n430",
+        "kind": "link",
+        "label": "US",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n431",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 5",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n432",
+        "kind": "text",
+        "label": "",
+        "parent": "n431",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n433",
+        "kind": "link",
+        "label": "US ·",
+        "parent": "n432",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n434",
+        "kind": "text",
+        "label": "",
+        "parent": "n431",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n435",
+        "kind": "link",
+        "label": "US ·",
+        "parent": "n434",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n436",
+        "kind": "text",
+        "label": "",
+        "parent": "n431",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n437",
+        "kind": "link",
+        "label": "US Education",
+        "parent": "n436",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n438",
+        "kind": "text",
+        "label": "",
+        "parent": "n431",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n439",
+        "kind": "link",
+        "label": "US ·",
+        "parent": "n438",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n440",
+        "kind": "text",
+        "label": "",
+        "parent": "n431",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n441",
+        "kind": "link",
+        "label": "US · Identity",
+        "parent": "n440",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n442",
+        "kind": "link",
+        "label": "World",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n443",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 9",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n444",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n445",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n444",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n446",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n447",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n446",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n448",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n449",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n448",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n450",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n451",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n450",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n452",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n453",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n452",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n454",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n455",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n454",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n456",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n457",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n456",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n458",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n459",
+        "kind": "link",
+        "label": "World ·",
+        "parent": "n458",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n460",
+        "kind": "text",
+        "label": "",
+        "parent": "n443",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n461",
+        "kind": "link",
+        "label": "World United ·",
+        "parent": "n460",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n462",
+        "kind": "link",
+        "label": "·",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n463",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 6",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n464",
+        "kind": "text",
+        "label": "",
+        "parent": "n463",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n465",
+        "kind": "link",
+        "label": "· [number]",
+        "parent": "n464",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n466",
+        "kind": "text",
+        "label": "",
+        "parent": "n463",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n467",
+        "kind": "link",
+        "label": "·",
+        "parent": "n466",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n468",
+        "kind": "text",
+        "label": "",
+        "parent": "n463",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n469",
+        "kind": "link",
+        "label": "· First",
+        "parent": "n468",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n470",
+        "kind": "text",
+        "label": "",
+        "parent": "n463",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n471",
+        "kind": "link",
+        "label": "·",
+        "parent": "n470",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n472",
+        "kind": "text",
+        "label": "",
+        "parent": "n463",
+        "landmark": "navigation",
+        "shape": "text(40)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n473",
+        "kind": "link",
+        "label": "·",
+        "parent": "n472",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n474",
+        "kind": "text",
+        "label": "",
+        "parent": "n463",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n475",
+        "kind": "link",
+        "label": "· Files",
+        "parent": "n474",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n476",
+        "kind": "link",
+        "label": "Business",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n477",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 4",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n478",
+        "kind": "text",
+        "label": "",
+        "parent": "n477",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n479",
+        "kind": "link",
+        "label": "Business ·",
+        "parent": "n478",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n480",
+        "kind": "text",
+        "label": "",
+        "parent": "n477",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n481",
+        "kind": "link",
+        "label": "Business Media",
+        "parent": "n480",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n482",
+        "kind": "text",
+        "label": "",
+        "parent": "n477",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n483",
+        "kind": "link",
+        "label": "Business ·",
+        "parent": "n482",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n484",
+        "kind": "text",
+        "label": "",
+        "parent": "n477",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n485",
+        "kind": "link",
+        "label": "Business Videos",
+        "parent": "n484",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n486",
+        "kind": "link",
+        "label": "Markets",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n487",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 4",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n488",
+        "kind": "text",
+        "label": "",
+        "parent": "n487",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n489",
+        "kind": "link",
+        "label": "Markets ·",
+        "parent": "n488",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n490",
+        "kind": "text",
+        "label": "",
+        "parent": "n487",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n491",
+        "kind": "link",
+        "label": "Markets ·",
+        "parent": "n490",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n492",
+        "kind": "text",
+        "label": "",
+        "parent": "n487",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n493",
+        "kind": "link",
+        "label": "Markets ·",
+        "parent": "n492",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n494",
+        "kind": "text",
+        "label": "",
+        "parent": "n487",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n495",
+        "kind": "link",
+        "label": "Markets ·",
+        "parent": "n494",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n496",
+        "kind": "link",
+        "label": "Health",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n497",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 6",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n498",
+        "kind": "text",
+        "label": "",
+        "parent": "n497",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n499",
+        "kind": "link",
+        "label": "Health · But Better",
+        "parent": "n498",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n500",
+        "kind": "text",
+        "label": "",
+        "parent": "n497",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n501",
+        "kind": "link",
+        "label": "Health ·",
+        "parent": "n500",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n502",
+        "kind": "text",
+        "label": "",
+        "parent": "n497",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n503",
+        "kind": "link",
+        "label": "Health Food",
+        "parent": "n502",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n504",
+        "kind": "text",
+        "label": "",
+        "parent": "n497",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n505",
+        "kind": "link",
+        "label": "Health ·",
+        "parent": "n504",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n506",
+        "kind": "text",
+        "label": "",
+        "parent": "n497",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n507",
+        "kind": "link",
+        "label": "Health ·",
+        "parent": "n506",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n508",
+        "kind": "text",
+        "label": "",
+        "parent": "n497",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n509",
+        "kind": "link",
+        "label": "Health ·",
+        "parent": "n508",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n510",
+        "kind": "link",
+        "label": "·",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n511",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 12",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n512",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n513",
+        "kind": "link",
+        "label": "· Electronics",
+        "parent": "n512",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n514",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n515",
+        "kind": "link",
+        "label": "·",
+        "parent": "n514",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n516",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n517",
+        "kind": "link",
+        "label": "·",
+        "parent": "n516",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n518",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n519",
+        "kind": "link",
+        "label": "· Health ·",
+        "parent": "n518",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n520",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n521",
+        "kind": "link",
+        "label": "· Home",
+        "parent": "n520",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n522",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n523",
+        "kind": "link",
+        "label": "· Reviews",
+        "parent": "n522",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n524",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n525",
+        "kind": "link",
+        "label": "· Deals",
+        "parent": "n524",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n526",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n527",
+        "kind": "link",
+        "label": "· Money",
+        "parent": "n526",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n528",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n529",
+        "kind": "link",
+        "label": "· Gifts",
+        "parent": "n528",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n530",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n531",
+        "kind": "link",
+        "label": "· Travel",
+        "parent": "n530",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n532",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n533",
+        "kind": "link",
+        "label": "·",
+        "parent": "n532",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n534",
+        "kind": "text",
+        "label": "",
+        "parent": "n511",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n535",
+        "kind": "link",
+        "label": "·",
+        "parent": "n534",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n536",
+        "kind": "link",
+        "label": "·",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n537",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 3",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n538",
+        "kind": "text",
+        "label": "",
+        "parent": "n537",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n539",
+        "kind": "link",
+        "label": "·",
+        "parent": "n538",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n540",
+        "kind": "text",
+        "label": "",
+        "parent": "n537",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n541",
+        "kind": "link",
+        "label": "·",
+        "parent": "n540",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n542",
+        "kind": "text",
+        "label": "",
+        "parent": "n537",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n543",
+        "kind": "link",
+        "label": "·",
+        "parent": "n542",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n544",
+        "kind": "link",
+        "label": "·",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n545",
+        "kind": "text",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n546",
+        "kind": "link",
+        "label": "·",
+        "parent": "n545",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n547",
+        "kind": "link",
+        "label": "·",
+        "parent": "n429",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n548",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 7",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n549",
+        "kind": "text",
+        "label": "",
+        "parent": "n548",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n550",
+        "kind": "link",
+        "label": "·",
+        "parent": "n549",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n551",
+        "kind": "text",
+        "label": "",
+        "parent": "n548",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n552",
+        "kind": "link",
+        "label": "· Design",
+        "parent": "n551",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n553",
+        "kind": "text",
+        "label": "",
+        "parent": "n548",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n554",
+        "kind": "link",
+        "label": "·",
+        "parent": "n553",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n555",
+        "kind": "text",
+        "label": "",
+        "parent": "n548",
+        "landmark": "navigation",
+        "shape": "text(20)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n556",
+        "kind": "link",
+        "label": "·",
+        "parent": "n555",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n557",
+        "kind": "text",
+        "label": "",
+        "parent": "n548",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n558",
+        "kind": "link",
+        "label": "·",
+        "parent": "n557",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n559",
+        "kind": "text",
+        "label": "",
+        "parent": "n548",
+        "landmark": "navigation",
+        "shape": "text(10)",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n564",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 5",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n576",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 11",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n600",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 3",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n608",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 2",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n614",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 2",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n622",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 8",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n640",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 6",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n654",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 6",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n669",
+        "kind": "list",
+        "label": "",
+        "parent": "n429",
+        "landmark": "navigation",
+        "shape": "list x 8",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n690",
+        "kind": "region",
+        "label": "User Account Nav",
+        "parent": "n424",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n693",
+        "kind": "list",
+        "label": "",
+        "parent": "n424",
+        "landmark": "contentinfo",
+        "shape": "list x 6",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n703",
+        "kind": "region",
+        "label": "",
+        "parent": "n424",
+        "landmark": "navigation",
+        "zone": "footer_band"
+      },
+      {
+        "id": "n714",
+        "kind": "link",
+        "label": "Help Center",
+        "parent": "n703",
+        "landmark": "navigation",
+        "zone": "footer_band",
+        "protected": true
+      },
+      {
+        "id": "n717",
+        "kind": "region",
+        "label": "Legal Terms and Privacy",
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n718",
+        "kind": "region",
+        "label": "Legal Terms and Privacy",
+        "parent": "n717",
+        "landmark": "dialog",
+        "zone": "overlay_center",
+        "protected": true
+      },
+      {
+        "id": "n719",
+        "kind": "image",
+        "label": "· Logo",
+        "parent": "n718",
+        "landmark": "dialog",
+        "shape": "image",
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n720",
+        "kind": "heading",
+        "label": "Legal Terms and Privacy",
+        "parent": "n718",
+        "landmark": "dialog",
+        "level": 2,
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n721",
+        "kind": "text",
+        "label": "",
+        "parent": "n718",
+        "landmark": "dialog",
+        "shape": "paragraph text(300)",
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n722",
+        "kind": "link",
+        "label": "Terms of Use",
+        "parent": "n721",
+        "landmark": "dialog",
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n723",
+        "kind": "link",
+        "label": "Privacy Policy",
+        "parent": "n721",
+        "landmark": "dialog",
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n724",
+        "kind": "link",
+        "label": "US State ·",
+        "parent": "n721",
+        "landmark": "dialog",
+        "zone": "overlay_center"
+      },
+      {
+        "id": "n725",
+        "kind": "button",
+        "label": "Agree",
+        "parent": "n718",
+        "landmark": "dialog",
+        "zone": "overlay_center"
+      }
+    ],
+    "pageTypeHint": "listing page"
+  },
+  "ledger": [
+    {
+      "at": 582,
+      "source": "fit",
+      "title": "Read the page: 600 items in 96 ms",
+      "detail": "40 of them go to Jev as structure only (role, size, position, redacted labels; no page text).",
+      "action": "kept"
+    },
+    {
+      "at": 1634,
+      "source": "check",
+      "title": "Kept this page at full width: the narrower page made the page scroll sideways",
+      "detail": "Text in the main content is squeezed to about 22 letters a line by the page column (v90, was 41) WebAble changed the size once and stopped; the column stays off on this site (Narrower in the WebAble panel tries it again).",
+      "action": "reversed"
+    },
+    {
+      "at": 1634,
+      "source": "fit",
+      "title": "Zoomed this page to 150% (was 100%)",
+      "detail": "Body text is 21 px here (your size is 22 px). Zoom grows text, headings, buttons and images together, so the page keeps its own proportions. Body text was measured at 14 px (main text).",
+      "action": "applied",
+      "opId": "page_zoom-1"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Thin text is a little heavier (at least 500)",
+      "action": "applied",
+      "opId": "weight-3"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Darkened 48 faint text items to at least 7:1 contrast",
+      "detail": "Only text below your contrast floor changed, and each colour kept its hue.",
+      "action": "applied",
+      "opId": "contrast-4"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Made 83 buttons and links easier to hit (56 px hit area)",
+      "detail": "Buttons look the same; their clickable area is larger. 111 links inside sentences were left as they are.",
+      "action": "applied",
+      "opId": "targets-5"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Steady clicks: a small slip while clicking still counts",
+      "detail": "If the pointer moves a little (up to 11 px within 320 ms) during a click, the click still goes to the button you pressed.",
+      "action": "applied",
+      "opId": "steady_clicks-6"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Animations and transitions jump straight to their end",
+      "detail": "2 animations finished or paused, 3 muted videos paused.",
+      "action": "applied",
+      "opId": "motion-7"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Keyboard focus shows a clear ring",
+      "action": "applied",
+      "opId": "focus_ring-8"
+    },
+    {
+      "at": 1729,
+      "source": "fit",
+      "title": "Let the top bar scroll away (it covered 26% of the screen)",
+      "action": "applied",
+      "opId": "unpin_sticky-9"
+    },
+    {
+      "at": 1729,
+      "source": "check",
+      "title": "Kept 11 click areas at the original size where a larger one would not reach",
+      "action": "skipped"
+    },
+    {
+      "at": 1757,
+      "source": "fit",
+      "title": "Made 8 headings larger so they stand out from the text",
+      "detail": "Page titles are at least 1.75×, section headings 1.4× and smaller headings 1.2× the size of body text, in semibold. Headings that already stood out were left as they are.",
+      "action": "applied",
+      "opId": "heading_scale-10"
+    },
+    {
+      "at": 2081,
+      "source": "jev",
+      "title": "A popup covers this page; WebAble left it as it is",
+      "detail": "Jev found no button that only closes it (none 0.98)",
+      "action": "kept"
+    },
+    {
+      "at": 2256,
+      "source": "jev",
+      "title": "Jev read this page: 241 decisions in 0.47 s ($0.0054)",
+      "detail": "jev-1.14.0 · 7 calls · server 208 ms · 128,774 tokens",
+      "action": "kept"
+    },
+    {
+      "at": 2257,
+      "source": "jev",
+      "title": "Kept “Terms of Use Privacy Policy Manage…” in view (help 0.84)",
+      "detail": "help 0.84; navigation 0.11",
+      "p": 0.84,
+      "action": "protected"
+    },
+    {
+      "at": 2257,
+      "source": "jev",
+      "title": "Left the cookie notice for you to answer",
+      "detail": "WebAble never answers consent notices or removes them.",
+      "p": 0.08,
+      "action": "protected"
+    },
+    {
+      "at": 2257,
+      "source": "jev",
+      "title": "Protected 25 more items the task needs (fields, buttons, menus)",
+      "action": "protected"
+    },
+    {
+      "at": 2283,
+      "source": "jev",
+      "title": "Dimmed the moving promo banner “Sign up for our newsletters” (advertising 0.94)",
+      "detail": "Faded, not hidden: it comes back when you point at it or move to it with the keyboard.",
+      "p": 0.94,
+      "action": "applied",
+      "opId": "dim-11"
+    },
+    {
+      "at": 2283,
+      "source": "jev",
+      "title": "Dimmed the recommendations “• For Subscribers CNN” (recommendations 0.93)",
+      "detail": "Faded, not hidden: it comes back when you point at it or move to it with the keyboard.",
+      "p": 0.93,
+      "action": "applied",
+      "opId": "dim-12"
+    },
+    {
+      "at": 2283,
+      "source": "jev",
+      "title": "Dimmed the promotion button “Download app” (advertising 0.92)",
+      "detail": "Faded, not hidden: it comes back when you point at it or move to it with the keyboard.",
+      "p": 0.92,
+      "action": "applied",
+      "opId": "dim-13"
+    },
+    {
+      "at": 2306,
+      "source": "check",
+      "title": "Checked that Calm view keeps what this page is for: it leads with the page’s own order",
+      "detail": "This page is a news page (0.61). Leads with the main information 0.85; something main missing 0.05. Checked on this device: Jev’s meaning check was not available.",
+      "p": 0.85,
+      "action": "kept"
+    },
+    {
+      "at": 2307,
+      "source": "layout",
+      "title": "This is a page for reading, so WebAble opened its simpler version",
+      "detail": "Page: a news page (0.61); main content 0.66. 28 ads, teasers and other distractions cover 100% of the page.",
+      "action": "applied"
+    },
+    {
+      "at": 2316,
+      "source": "layout",
+      "title": "This is a page for reading, so WebAble opened its simpler version",
+      "detail": "Every item on the page is in this view (100% placed). Every control still drives the original page.",
+      "action": "applied"
+    },
+    {
+      "at": 2316,
+      "source": "layout",
+      "title": "AI layouts are off in settings, so this is the simple layout",
+      "action": "skipped"
+    },
+    {
+      "at": 3929,
+      "source": "jev",
+      "title": "Jev read 2 new items on the page (0.78 s)",
+      "detail": "10 more decisions",
+      "action": "kept"
+    },
+    {
+      "at": 3929,
+      "source": "jev",
+      "title": "Kept “contact our Help Center.” in view (help 0.93)",
+      "detail": "help 0.89; help 0.93",
+      "p": 0.93,
+      "action": "protected"
+    },
+    {
+      "at": 8759,
+      "source": "fit",
+      "title": "The moving banner keeps changing on its own; Calm view folds it away",
+      "detail": "Its own script moves it, and it has no pause button WebAble could press.",
+      "action": "skipped",
+      "opId": "motion-7"
+    },
+    {
+      "at": 9704,
+      "source": "person",
+      "title": "Showing the original page; WebAble will keep cnn.com as it is",
+      "action": "kept"
+    },
+    {
+      "at": 35161,
+      "source": "person",
+      "title": "Opened Calm view, leading with the page’s own order",
+      "detail": "Every item on the page is in this view (100% placed). Every control still drives the original page.",
+      "action": "applied"
+    },
+    {
+      "at": 35161,
+      "source": "layout",
+      "title": "AI layouts are off in settings, so this is the simple layout",
+      "action": "skipped"
+    }
+  ]
+}

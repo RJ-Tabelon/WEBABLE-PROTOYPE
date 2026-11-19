@@ -21,7 +21,10 @@ const WORDISH = /[a-z0-9_-]/;
  * True when `href` contains one of the needles, case-insensitive. A needle that ends in a letter or digit must end
  * there in the href too, so "/wiki/University_of_Florida" does not match "/wiki/University_of_Florida_Health".
  */
-export function hrefMatches(href: string | null | undefined, needles: string[] | undefined): boolean {
+export function hrefMatches(
+  href: string | null | undefined,
+  needles: string[] | undefined,
+): boolean {
   if (!href || !needles || needles.length === 0) return false;
   const h = href.toLowerCase();
   for (const raw of needles) {
@@ -46,7 +49,11 @@ export function textMatches(el: Element, texts: string[] | undefined): boolean {
   if (!texts || texts.length === 0) return false;
   const want = new Set(texts.map(normText).filter(Boolean));
   if (want.size === 0) return false;
-  const own = [el.textContent, el.getAttribute('aria-label'), el.getAttribute('title')];
+  const own = [
+    el.textContent,
+    el.getAttribute('aria-label'),
+    el.getAttribute('title'),
+  ];
   if (el instanceof HTMLInputElement) own.push(el.value);
   return own.some((c) => c != null && want.has(normText(c)));
 }
@@ -59,41 +66,66 @@ function parentAcrossShadow(el: Element): Element | null {
 
 /** The nearest clickable at or above `el`, crossing open shadow roots. */
 export function findClickable(el: Element | null): Element | null {
-  for (let n: Element | null = el, i = 0; n && i < 40; n = parentAcrossShadow(n), i++) {
+  for (
+    let n: Element | null = el, i = 0;
+    n && i < 40;
+    n = parentAcrossShadow(n), i++
+  ) {
     if (n.matches(CLICKABLE)) return n;
   }
   return null;
 }
 
 /** The nearest link (anchor or area with an href) at or above `el`, crossing open shadow roots. */
-export function findLink(el: Element | null): HTMLAnchorElement | HTMLAreaElement | null {
-  for (let n: Element | null = el, i = 0; n && i < 40; n = parentAcrossShadow(n), i++) {
-    if ((n instanceof HTMLAnchorElement || n instanceof HTMLAreaElement) && n.hasAttribute('href')) return n;
+export function findLink(
+  el: Element | null,
+): HTMLAnchorElement | HTMLAreaElement | null {
+  for (
+    let n: Element | null = el, i = 0;
+    n && i < 40;
+    n = parentAcrossShadow(n), i++
+  ) {
+    if (
+      (n instanceof HTMLAnchorElement || n instanceof HTMLAreaElement) &&
+      n.hasAttribute('href')
+    )
+      return n;
   }
   return null;
 }
 
 function linkHref(el: Element): string | null {
-  if (el instanceof HTMLAnchorElement || el instanceof HTMLAreaElement) return el.href || el.getAttribute('href');
+  if (el instanceof HTMLAnchorElement || el instanceof HTMLAreaElement)
+    return el.href || el.getAttribute('href');
   return null;
 }
 
 /** Does this clickable element itself match the target (its link, its text)? */
 export function clickableMatches(el: Element, target: TargetSpec): boolean {
-  return hrefMatches(linkHref(el), target.hrefIncludes) || textMatches(el, target.text);
+  return (
+    hrefMatches(linkHref(el), target.hrefIncludes) ||
+    textMatches(el, target.text)
+  );
 }
 
 /**
  * Does a click on `el` count as finding the target? The click must be on (or inside) something clickable, and that
  * clickable, or an element between it and the click, must match by link or by text.
  */
-export function clickMatchesTarget(el: Element | null, target: TargetSpec): boolean {
+export function clickMatchesTarget(
+  el: Element | null,
+  target: TargetSpec,
+): boolean {
   if (!el) return false;
   const clickable = findClickable(el);
   const link = findLink(el);
   const stop = clickable ?? link;
   if (!stop) return false;
-  for (let n: Element | null = el, i = 0; n && i < 40; n = parentAcrossShadow(n), i++) {
+  for (
+    let n: Element | null = el, i = 0;
+    n && i < 40;
+    n = parentAcrossShadow(n), i++
+  ) {
     if (clickableMatches(n, target)) return true;
     if (n === stop) break;
   }
@@ -122,16 +154,31 @@ export function isShown(el: Element): boolean {
   const r = el.getBoundingClientRect();
   if (r.width < 2 || r.height < 2) return false;
   const cs = getComputedStyle(el);
-  return cs.visibility !== 'hidden' && cs.display !== 'none' && Number(cs.opacity || '1') > 0.05;
+  return (
+    cs.visibility !== 'hidden' &&
+    cs.display !== 'none' &&
+    Number(cs.opacity || '1') > 0.05
+  );
 }
 
 /** A click at (x, y) outside every box but within `pad` of at least one. */
-export function isNearMiss(x: number, y: number, boxes: Box[], pad = NEAR_PAD): boolean {
+export function isNearMiss(
+  x: number,
+  y: number,
+  boxes: Box[],
+  pad = NEAR_PAD,
+): boolean {
   let near = false;
   for (const b of boxes) {
     const inside = x >= b.left && x <= b.right && y >= b.top && y <= b.bottom;
     if (inside) return false;
-    if (x >= b.left - pad && x <= b.right + pad && y >= b.top - pad && y <= b.bottom + pad) near = true;
+    if (
+      x >= b.left - pad &&
+      x <= b.right + pad &&
+      y >= b.top - pad &&
+      y <= b.bottom + pad
+    )
+      near = true;
   }
   return near;
 }

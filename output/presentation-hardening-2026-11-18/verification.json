@@ -1,0 +1,42 @@
+{
+  "api": "blocked",
+  "evidence": [
+    {
+      "width": 1440,
+      "paragraphs": 18,
+      "referenceLinks": 18,
+      "photos": 1,
+      "overflow": 0,
+      "liveUpdate": true,
+      "sourceAction": true,
+      "navigation": true,
+      "spaNavigation": true,
+      "stableReadingSurface": true,
+      "editedAndRemovedText": true
+    },
+    {
+      "width": 390,
+      "paragraphs": 18,
+      "referenceLinks": 18,
+      "photos": 1,
+      "overflow": 0,
+      "liveUpdate": true,
+      "sourceAction": true,
+      "navigation": true,
+      "spaNavigation": true,
+      "stableReadingSurface": true,
+      "editedAndRemovedText": true
+    },
+    {
+      "mediaIndex": {
+        "linkedStories": 12,
+        "visiblePhotos": 12,
+        "types": [
+          "img",
+          "CSS background",
+          "video poster"
+        ]
+      }
+    }
+  ]
+}

@@ -2,7 +2,11 @@
 // loading reads 'reader' from chrome.storage.local directly, like the fit. Outside the extension (development
 // preview) the saved reader lives in localStorage, and importing fails in plain words.
 
-import { AI_ANSWER_MAX_CHARS, AI_ANSWER_MIN_CHARS, type ReaderProfile } from '@webable/core';
+import {
+  AI_ANSWER_MAX_CHARS,
+  AI_ANSWER_MIN_CHARS,
+  type ReaderProfile,
+} from '@webable/engine';
 import { ask, BusError } from '../../../src/engine/bus';
 
 export type AiSource = 'ChatGPT' | 'Claude';
@@ -26,7 +30,12 @@ function storage(): typeof chrome.storage.local | null {
 }
 
 export function isReader(x: unknown): x is ReaderProfile {
-  return !!x && typeof x === 'object' && (x as ReaderProfile).v === 'reader.1' && Array.isArray((x as ReaderProfile).points);
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    (x as ReaderProfile).v === 'reader.1' &&
+    Array.isArray((x as ReaderProfile).points)
+  );
 }
 
 export async function loadReader(): Promise<ReaderProfile | null> {
@@ -34,7 +43,9 @@ export async function loadReader(): Promise<ReaderProfile | null> {
     const s = storage();
     if (s) {
       const got = (await s.get(READER_KEY)) as Record<string, unknown>;
-      return isReader(got[READER_KEY]) ? (got[READER_KEY] as ReaderProfile) : null;
+      return isReader(got[READER_KEY])
+        ? (got[READER_KEY] as ReaderProfile)
+        : null;
     }
     const raw = localStorage.getItem(DEV_READER_KEY);
     const r: unknown = raw ? JSON.parse(raw) : null;
@@ -45,9 +56,14 @@ export async function loadReader(): Promise<ReaderProfile | null> {
 }
 
 /** Through the background first (it tells open tabs); straight to storage if the worker is not answering. */
-export async function saveReader(reader: ReaderProfile | null): Promise<ReaderProfile | null> {
+export async function saveReader(
+  reader: ReaderProfile | null,
+): Promise<ReaderProfile | null> {
   try {
-    const back = await ask<ReaderProfile | null>({ type: 'setReader', reader }, 4000);
+    const back = await ask<ReaderProfile | null>(
+      { type: 'setReader', reader },
+      4000,
+    );
     return isReader(back) ? back : reader;
   } catch {
     /* fall through */
@@ -57,7 +73,8 @@ export async function saveReader(reader: ReaderProfile | null): Promise<ReaderPr
     if (s) {
       if (reader) await s.set({ [READER_KEY]: reader });
       else await s.remove(READER_KEY);
-    } else if (reader) localStorage.setItem(DEV_READER_KEY, JSON.stringify(reader));
+    } else if (reader)
+      localStorage.setItem(DEV_READER_KEY, JSON.stringify(reader));
     else localStorage.removeItem(DEV_READER_KEY);
   } catch {
     /* nothing more to try */
@@ -76,7 +93,12 @@ export function longEnough(text: string): boolean {
 
 export function problemOf(err: unknown): ImportProblem {
   if (err instanceof BusError) {
-    if (err.code === 'refused' || err.status === 422 || /short|too few|not enough/i.test(err.message)) return 'short';
+    if (
+      err.code === 'refused' ||
+      err.status === 422 ||
+      /short|too few|not enough/i.test(err.message)
+    )
+      return 'short';
   }
   return 'unavailable';
 }
@@ -94,12 +116,21 @@ export class ImportError extends Error {
  * Sends the answer to be read. The background saves what comes back as 'reader', so the caller restores the previous
  * one if the person backs out before saving. Throws an ImportError.
  */
-export async function importReader(text: string, source: string | null): Promise<ReaderProfile> {
+export async function importReader(
+  text: string,
+  source: string | null,
+): Promise<ReaderProfile> {
   const body = answerText(text);
   if (body.length < AI_ANSWER_MIN_CHARS) throw new ImportError('short');
   let reader: ReaderProfile;
   try {
-    reader = await ask<ReaderProfile>({ type: 'readerImport', req: source ? { text: body, source } : { text: body } }, IMPORT_TIMEOUT_MS);
+    reader = await ask<ReaderProfile>(
+      {
+        type: 'readerImport',
+        req: source ? { text: body, source } : { text: body },
+      },
+      IMPORT_TIMEOUT_MS,
+    );
   } catch (err) {
     throw new ImportError(problemOf(err));
   }
@@ -124,7 +155,9 @@ export interface ReaderHook {
   clear(): Promise<void>;
 }
 
-export function readerHook(onChange: (reader: ReaderProfile | null) => void): ReaderHook {
+export function readerHook(
+  onChange: (reader: ReaderProfile | null) => void,
+): ReaderHook {
   return {
     load: async (text, source) => {
       const saved = await saveReader(await importReader(text, source ?? null));
