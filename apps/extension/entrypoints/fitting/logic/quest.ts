@@ -24,10 +24,15 @@ export function grayStimulus(gray: number): GrayStimulus {
   return { gray, weber, x: Math.log10(weber), ratio: 1.05 / (L + 0.05) };
 }
 
-export const STIMULI: GrayStimulus[] = Array.from({ length: 254 - 89 + 1 }, (_, i) => grayStimulus(89 + i));
+export const STIMULI: GrayStimulus[] = Array.from(
+  { length: 254 - 89 + 1 },
+  (_, i) => grayStimulus(89 + i),
+);
 
 function pCorrect(x: number, alpha: number): number {
-  return GAMMA + (1 - GAMMA - LAMBDA) * (1 - Math.exp(-(10 ** (BETA * (x - alpha)))));
+  return (
+    GAMMA + (1 - GAMMA - LAMBDA) * (1 - Math.exp(-(10 ** (BETA * (x - alpha)))))
+  );
 }
 
 function entropy(p: number[]): number {
@@ -49,10 +54,14 @@ export class FaintQuest {
   private ceiling = 0;
   private finished = false;
 
-  constructor(largePrint: boolean, private readonly maxQuest = 6) {
+  constructor(
+    largePrint: boolean,
+    private readonly maxQuest = 6,
+  ) {
     const mu = largePrint ? -1.1 : -1.4;
     const sd = largePrint ? 0.6 : 0.5;
-    for (let a = -2.3; a <= -0.1 + 1e-9; a += 0.02) this.alphas.push(Math.round(a * 100) / 100);
+    for (let a = -2.3; a <= -0.1 + 1e-9; a += 0.02)
+      this.alphas.push(Math.round(a * 100) / 100);
     this.post = this.alphas.map((a) => Math.exp(-0.5 * ((a - mu) / sd) ** 2));
     this.normalize();
   }
@@ -62,7 +71,9 @@ export class FaintQuest {
   }
 
   progress(): number {
-    return this.finished ? 1 : Math.min(0.95, this.trials.length / (this.maxQuest + 1));
+    return this.finished
+      ? 1
+      : Math.min(0.95, this.trials.length / (this.maxQuest + 1));
   }
 
   private normalize(): void {
@@ -76,23 +87,33 @@ export class FaintQuest {
 
   sd(): number {
     const m = this.mean();
-    return Math.sqrt(this.alphas.reduce((acc, a, i) => acc + (a - m) ** 2 * (this.post[i] ?? 0), 0));
+    return Math.sqrt(
+      this.alphas.reduce(
+        (acc, a, i) => acc + (a - m) ** 2 * (this.post[i] ?? 0),
+        0,
+      ),
+    );
   }
 
   /** The next gray level to show, or null when finished. Trial 1 is the easy one at W = 0.5. */
   next(): GrayStimulus | null {
     if (this.finished) return null;
     if (this.trials.length === 0) {
-      return STIMULI.reduce((best, s) => (Math.abs(s.weber - 0.5) < Math.abs(best.weber - 0.5) ? s : best));
+      return STIMULI.reduce((best, s) =>
+        Math.abs(s.weber - 0.5) < Math.abs(best.weber - 0.5) ? s : best,
+      );
     }
     let best: GrayStimulus | null = null;
     let bestH = Infinity;
     for (const s of STIMULI) {
       let pc = 0;
       const pcs = this.alphas.map((a) => pCorrect(s.x, a));
-      for (let i = 0; i < pcs.length; i++) pc += (this.post[i] ?? 0) * (pcs[i] ?? 0);
+      for (let i = 0; i < pcs.length; i++)
+        pc += (this.post[i] ?? 0) * (pcs[i] ?? 0);
       const postC = this.post.map((p, i) => (p * (pcs[i] ?? 0)) / (pc || 1));
-      const postI = this.post.map((p, i) => (p * (1 - (pcs[i] ?? 0))) / (1 - pc || 1));
+      const postI = this.post.map(
+        (p, i) => (p * (1 - (pcs[i] ?? 0))) / (1 - pc || 1),
+      );
       const h = pc * entropy(postC) + (1 - pc) * entropy(postI);
       if (h < bestH) {
         bestH = h;
@@ -113,7 +134,11 @@ export class FaintQuest {
     this.normalize();
     if (!first) this.questTrials += 1;
     if (correct && stim.weber <= 0.02) this.ceiling += 1;
-    if (this.questTrials >= this.maxQuest || this.ceiling >= 3 || (this.questTrials >= 3 && this.sd() < 0.12)) {
+    if (
+      this.questTrials >= this.maxQuest ||
+      this.ceiling >= 3 ||
+      (this.questTrials >= 3 && this.sd() < 0.12)
+    ) {
       this.finished = true;
     }
   }

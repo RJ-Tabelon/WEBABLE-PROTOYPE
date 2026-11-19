@@ -1,7 +1,7 @@
 // What the person struggled with, in their own numbers, for the results page (docs/design/ONBOARDING.md, round 8c).
 // Built once at the end of the onboarding from the raw tasks and the real-site results, saved next to the settings,
 // and shown only after everything is done. Plain counts and ratios; never pixels.
-import type { FittingRaw } from '@webable/core';
+import type { FittingRaw } from '@webable/engine';
 import type { SiteTaskResult } from '../../../src/sitetask/types';
 import { IN_THE_WAY } from './steps';
 
@@ -11,7 +11,12 @@ export interface RunEvidence {
   /** Faint words: true when they could not make out words at the light grey many sites use (about 4.5:1 or lower). */
   faint: { missedCommonGrey: boolean } | null;
   /** Dots: misses on the smaller dots, and presses that slipped off anywhere in the flow. */
-  pointing: { smallMisses: number; smallTotal: number; slips: number; presses: number } | null;
+  pointing: {
+    smallMisses: number;
+    smallTotal: number;
+    slips: number;
+    presses: number;
+  } | null;
   /** Real sites, in the order visited. */
   sites: SiteTaskResult[];
   /** Busiest found time divided by quietest found time; null without one of each. */
@@ -34,14 +39,17 @@ const SEES_LIGHTER = 1.5;
 /** Dots smaller than this (px at 100%) are "the smaller dots"; a walk that never went below it uses its smallest block. */
 export const SMALL_DOT_PX = 44;
 
-const finite = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
+const finite = (x: unknown): x is number =>
+  typeof x === 'number' && Number.isFinite(x);
 const round2 = (x: number): number => Math.round(x * 100) / 100;
 const cant = (t: object): boolean => (t as { cant?: boolean }).cant === true;
 
 function medianOf(xs: readonly number[]): number {
   const s = [...xs].sort((a, b) => a - b);
   const m = s.length >> 1;
-  return s.length % 2 ? (s[m] as number) : ((s[m - 1] as number) + (s[m] as number)) / 2;
+  return s.length % 2
+    ? (s[m] as number)
+    : ((s[m - 1] as number) + (s[m] as number)) / 2;
 }
 
 function safe<T>(fn: () => T, fallback: T): T {
@@ -53,7 +61,12 @@ function safe<T>(fn: () => T, fallback: T): T {
 }
 
 function isSiteResult(x: unknown): x is SiteTaskResult {
-  return !!x && typeof x === 'object' && typeof (x as SiteTaskResult).name === 'string' && typeof (x as SiteTaskResult).busy === 'boolean';
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    typeof (x as SiteTaskResult).name === 'string' &&
+    typeof (x as SiteTaskResult).busy === 'boolean'
+  );
 }
 
 /**
@@ -62,10 +75,14 @@ function isSiteResult(x: unknown): x is SiteTaskResult {
  * counted as too small.
  */
 export function readingEvidence(raw: FittingRaw): RunEvidence['reading'] {
-  const ladder = (raw.reading?.ladder ?? []).filter((t) => finite(t.px) && finite(t.ms));
+  const ladder = (raw.reading?.ladder ?? []).filter(
+    (t) => finite(t.px) && finite(t.ms),
+  );
   if (!ladder.length) return null;
   const tooSmallCount = ladder.filter(cant).length;
-  const read = ladder.filter((t) => t.correct && !cant(t) && t.ms > 0).sort((a, b) => a.px - b.px);
+  const read = ladder
+    .filter((t) => t.correct && !cant(t) && t.ms > 0)
+    .sort((a, b) => a.px - b.px);
   let slowdown: number | null = null;
   if (read.length >= 3) {
     const k = read.length >= 6 ? 3 : read.length >= 4 ? 2 : 1;
@@ -85,8 +102,11 @@ export function readingEvidence(raw: FittingRaw): RunEvidence['reading'] {
 export function faintEvidence(raw: FittingRaw): RunEvidence['faint'] {
   const trials = (raw.reading?.faint ?? []).filter((t) => finite(t.contrast));
   if (!trials.length) return null;
-  const missed = trials.some((t) => !t.correct && t.contrast >= COMMON_GREY_MIN);
-  const seesLighter = trials.filter((t) => t.correct && t.contrast < SEES_LIGHTER).length >= 2;
+  const missed = trials.some(
+    (t) => !t.correct && t.contrast >= COMMON_GREY_MIN,
+  );
+  const seesLighter =
+    trials.filter((t) => t.correct && t.contrast < SEES_LIGHTER).length >= 2;
   return { missedCommonGrey: missed && !seesLighter };
 }
 
@@ -96,16 +116,28 @@ export function faintEvidence(raw: FittingRaw): RunEvidence['faint'] {
  * smallTotal is 0 and smallMisses is the near misses alone. Slips and presses are every press in the flow and on the
  * sites (allPresses).
  */
-export function pointingEvidence(raw: FittingRaw, sites: readonly SiteTaskResult[]): RunEvidence['pointing'] {
-  const blocks = (raw.pointing?.blocks ?? []).filter((b) => finite(b.sizePx) && Array.isArray(b.presses) && b.presses.length);
+export function pointingEvidence(
+  raw: FittingRaw,
+  sites: readonly SiteTaskResult[],
+): RunEvidence['pointing'] {
+  const blocks = (raw.pointing?.blocks ?? []).filter(
+    (b) => finite(b.sizePx) && Array.isArray(b.presses) && b.presses.length,
+  );
   let small = blocks.filter((b) => b.sizePx < SMALL_DOT_PX);
   if (!small.length && blocks.length) {
     const least = Math.min(...blocks.map((b) => b.sizePx));
     small = blocks.filter((b) => b.sizePx === least && least <= SMALL_DOT_PX);
   }
   const dotPresses = small.reduce((n, b) => n + b.presses.length, 0);
-  const dotMisses = small.reduce((n, b) => n + b.presses.filter((p) => !p.hit).length, 0);
-  const nearMisses = sites.reduce((n, s) => n + Math.max(0, Math.round(finite(s.nearMisses) ? s.nearMisses : 0)), 0);
+  const dotMisses = small.reduce(
+    (n, b) => n + b.presses.filter((p) => !p.hit).length,
+    0,
+  );
+  const nearMisses = sites.reduce(
+    (n, s) =>
+      n + Math.max(0, Math.round(finite(s.nearMisses) ? s.nearMisses : 0)),
+    0,
+  );
   const presses = raw.allPresses ?? [];
   if (!blocks.length && !presses.length && !nearMisses) return null;
   return {
@@ -120,28 +152,54 @@ export function pointingEvidence(raw: FittingRaw, sites: readonly SiteTaskResult
  * Busy pages: the found time on the busiest busy site (most ads; the first on a tie) over the found time on the
  * quietest quiet site. Null without a found time on one of each.
  */
-export function busyEvidence(sites: readonly SiteTaskResult[]): RunEvidence['busySlowdown'] {
+export function busyEvidence(
+  sites: readonly SiteTaskResult[],
+): RunEvidence['busySlowdown'] {
   const found = sites.filter((s) => s.found && finite(s.ms) && s.ms > 0);
   const busy = found.filter((s) => s.busy);
   const quiet = found.filter((s) => !s.busy);
   if (!busy.length || !quiet.length) return null;
-  const ads = (s: SiteTaskResult): number => (finite(s.adsSeen) ? s.adsSeen : 0);
+  const ads = (s: SiteTaskResult): number =>
+    finite(s.adsSeen) ? s.adsSeen : 0;
   const busiest = busy.reduce((a, b) => (ads(b) > ads(a) ? b : a));
   const quietest = quiet.reduce((a, b) => (ads(b) < ads(a) ? b : a));
-  return { ratio: round2((busiest.ms as number) / (quietest.ms as number)), busyName: busiest.name, quietName: quietest.name };
+  return {
+    ratio: round2((busiest.ms as number) / (quietest.ms as number)),
+    busyName: busiest.name,
+    quietName: quietest.name,
+  };
 }
 
 /** The chip ids they picked for "Did anything get in your way?" (never the internal stop note). */
 export function gotInWayOf(raw: FittingRaw): string[] {
   const ids = new Set(IN_THE_WAY.map((c) => c.id));
-  return [...new Set((raw.finding?.gotInWay ?? []).filter((c) => typeof c === 'string' && ids.has(c)))];
+  return [
+    ...new Set(
+      (raw.finding?.gotInWay ?? []).filter(
+        (c) => typeof c === 'string' && ids.has(c),
+      ),
+    ),
+  ];
 }
 
 /** Implemented by the flow (round 8c). Must never throw; missing parts come back null or empty. */
-export function buildEvidence(raw: FittingRaw, sites: SiteTaskResult[]): RunEvidence {
-  const list = safe(() => (Array.isArray(sites) ? sites.filter(isSiteResult) : []), [] as SiteTaskResult[]);
+export function buildEvidence(
+  raw: FittingRaw,
+  sites: SiteTaskResult[],
+): RunEvidence {
+  const list = safe(
+    () => (Array.isArray(sites) ? sites.filter(isSiteResult) : []),
+    [] as SiteTaskResult[],
+  );
   if (!raw || typeof raw !== 'object') {
-    return { reading: null, faint: null, pointing: null, sites: list, busySlowdown: busyEvidence(list), gotInWay: [] };
+    return {
+      reading: null,
+      faint: null,
+      pointing: null,
+      sites: list,
+      busySlowdown: busyEvidence(list),
+      gotInWay: [],
+    };
   }
   return {
     reading: safe(() => readingEvidence(raw), null),

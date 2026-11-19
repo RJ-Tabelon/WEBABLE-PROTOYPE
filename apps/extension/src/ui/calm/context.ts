@@ -52,9 +52,19 @@ export interface CalmCtx {
 /** A results page by its address (the layout may not say so): a search engine's, or a site's own /search?q=… page. */
 export function isResultsUrl(u: URL | Location = location): boolean {
   const host = u.hostname.replace(/^www\./, '');
-  const engine = /^(google\.[a-z.]+|bing\.com|duckduckgo\.com|search\.yahoo\.com|search\.brave\.com|ecosia\.org)$/i.test(host);
-  if (engine) return /^\/(search|html|web)?\/?$/i.test(u.pathname) && /[?&](q|p)=/.test(u.search);
-  return /(^|\/)search(\/|$)/i.test(u.pathname) && /[?&](q|query|search|term|keywords?)=[^&]/i.test(u.search);
+  const engine =
+    /^(google\.[a-z.]+|bing\.com|duckduckgo\.com|search\.yahoo\.com|search\.brave\.com|ecosia\.org)$/i.test(
+      host,
+    );
+  if (engine)
+    return (
+      /^\/(search|html|web)?\/?$/i.test(u.pathname) &&
+      /[?&](q|p)=/.test(u.search)
+    );
+  return (
+    /(^|\/)search(\/|$)/i.test(u.pathname) &&
+    /[?&](q|query|search|term|keywords?)=[^&]/i.test(u.search)
+  );
 }
 
 export const Calm = createContext<CalmCtx | null>(null);
@@ -65,7 +75,8 @@ export function useCalm(): CalmCtx {
   return c;
 }
 
-const IRREVERSIBLE = /\b(buy|pay|purchase|place (?:your |my )?order|order now|confirm|send|delete|remove|submit|book now|transfer|donate|check ?out|sign up|subscribe)\b/i;
+const IRREVERSIBLE =
+  /\b(buy|pay|purchase|place (?:your |my )?order|order now|confirm|send|delete|remove|submit|book now|transfer|donate|check ?out|sign up|subscribe)\b/i;
 
 /** Actions that cannot be taken back ask for a second press (research-engineering §11.1). */
 export function isIrreversible(label: string): boolean {

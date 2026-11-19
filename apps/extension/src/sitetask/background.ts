@@ -94,7 +94,10 @@ export class SiteTaskRunner {
     const s = this.state;
     if (!s || s.arrived) return;
     const index = s.index;
-    const wait = Math.max(0, s.loadStartedAt + LOAD_TIMEOUT_MS - this.host.now());
+    const wait = Math.max(
+      0,
+      s.loadStartedAt + LOAD_TIMEOUT_MS - this.host.now(),
+    );
     this.timer = this.host.setTimer(() => {
       this.timer = null;
       void this.serial(() => this.timedOut(index));
@@ -135,16 +138,24 @@ export class SiteTaskRunner {
     }
   }
 
-  private async finish(how: { closeTask: boolean; focus: boolean }): Promise<void> {
+  private async finish(how: {
+    closeTask: boolean;
+    focus: boolean;
+  }): Promise<void> {
     const s = this.state;
     if (!s) return;
     this.disarm();
-    const results = s.tasks.map((t) => s.results.find((r) => r.id === t.id) ?? skippedResult(t));
+    const results = s.tasks.map(
+      (t) => s.results.find((r) => r.id === t.id) ?? skippedResult(t),
+    );
     this.state = null;
     await this.persist();
-    if (how.closeTask) await this.host.closeTab(s.taskTabId).catch(() => undefined);
+    if (how.closeTask)
+      await this.host.closeTab(s.taskTabId).catch(() => undefined);
     if (how.focus && s.fittingTabId !== null) {
-      await this.host.focusTab(s.fittingTabId, s.fittingWindowId).catch(() => undefined);
+      await this.host
+        .focusTab(s.fittingTabId, s.fittingWindowId)
+        .catch(() => undefined);
     }
     await this.host.publishFinished(results).catch(() => undefined);
   }
@@ -229,7 +240,10 @@ export class SiteTaskRunner {
       const s = await this.ensure();
       if (!s || tabId !== s.taskTabId) return;
       const task = s.tasks[s.index];
-      const id = raw && typeof raw === 'object' ? (raw as { id?: unknown }).id : undefined;
+      const id =
+        raw && typeof raw === 'object'
+          ? (raw as { id?: unknown }).id
+          : undefined;
       if (!task || id !== task.id) return; // late or stale report
       s.results.push(cleanResult(task, raw));
       await this.advance();
@@ -240,8 +254,10 @@ export class SiteTaskRunner {
     return this.serial(async () => {
       const s = await this.ensure();
       if (!s) return;
-      if (tabId === s.taskTabId) await this.finish({ closeTask: false, focus: true });
-      else if (tabId === s.fittingTabId) await this.finish({ closeTask: true, focus: false });
+      if (tabId === s.taskTabId)
+        await this.finish({ closeTask: false, focus: true });
+      else if (tabId === s.fittingTabId)
+        await this.finish({ closeTask: true, focus: false });
     });
   }
 }
@@ -262,7 +278,9 @@ function chromeHost(): SiteTaskHost {
       await chrome.storage.session.remove(FINISHED_KEY);
     },
     async publishFinished(results) {
-      await chrome.storage.session.set({ [FINISHED_KEY]: { results, at: Date.now() } }).catch(() => undefined);
+      await chrome.storage.session
+        .set({ [FINISHED_KEY]: { results, at: Date.now() } })
+        .catch(() => undefined);
       const msg: SiteTaskMessage = { siteTask: 'finished', results };
       await chrome.runtime.sendMessage(msg).catch(() => undefined);
     },
@@ -287,7 +305,10 @@ function chromeHost(): SiteTaskHost {
     },
     async focusTab(tabId, windowId) {
       await chrome.tabs.update(tabId, { active: true });
-      if (windowId !== null) await chrome.windows.update(windowId, { focused: true }).catch(() => undefined);
+      if (windowId !== null)
+        await chrome.windows
+          .update(windowId, { focused: true })
+          .catch(() => undefined);
     },
     setTimer: (fn, ms) => setTimeout(fn, ms),
     clearTimer: (h) => clearTimeout(h as ReturnType<typeof setTimeout>),
@@ -314,7 +335,11 @@ export function registerSiteTasks(): void {
           return false;
         }
         const tab = sender.tab;
-        const opener: Opener = { tabId: tab?.id ?? null, windowId: tab?.windowId ?? null, index: tab?.index ?? null };
+        const opener: Opener = {
+          tabId: tab?.id ?? null,
+          windowId: tab?.windowId ?? null,
+          index: tab?.index ?? null,
+        };
         runner.start(msg.tasks, opener).then(
           (ok) => sendResponse({ ok }),
           () => sendResponse({ ok: false }),

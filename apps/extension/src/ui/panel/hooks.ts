@@ -1,6 +1,6 @@
 // Owner: D2. Small hooks shared by the in-page chrome.
 import { useEffect, useRef, useState } from 'preact/hooks';
-import type { FitProfile } from '@webable/core';
+import type { FitProfile } from '@webable/engine';
 import type { EngineApi, EngineState } from '../../contracts';
 import { clamp } from './format';
 
@@ -63,19 +63,42 @@ export interface ChromeSizing {
  * Size the chrome from the fit only. The page zoom is divided out exactly (no floors), so the pill, panel, offers,
  * toasts and chips are the same size on screen at 100%, 150% or 250%.
  */
-export function chromeSizing(fit: FitProfile | null, pageZoom: number): ChromeSizing {
+export function chromeSizing(
+  fit: FitProfile | null,
+  pageZoom: number,
+): ChromeSizing {
   const body = fit ? (fit.text?.override ?? fit.text?.bodyPx ?? 16) : 16;
-  const effective = clamp(Math.round((Number.isFinite(body) ? body : 16) * 0.78), 15, 20);
+  const effective = clamp(
+    Math.round((Number.isFinite(body) ? body : 16) * 0.78),
+    15,
+    20,
+  );
   const scale = effective / 15;
   const z = Number.isFinite(pageZoom) && pageZoom > 0 ? pageZoom : 1;
   const min = fit?.targets?.minPx;
-  const targetScreen = Math.max(44, typeof min === 'number' && Number.isFinite(min) ? Math.min(min, 96) : 44);
+  const targetScreen = Math.max(
+    44,
+    typeof min === 'number' && Number.isFinite(min) ? Math.min(min, 96) : 44,
+  );
   const zoom = scale / z;
-  return { scale, pageZoom: z, zoom, u: zoom, fontPx: effective / z, targetPx: targetScreen / z, target: targetScreen / scale };
+  return {
+    scale,
+    pageZoom: z,
+    zoom,
+    u: zoom,
+    fontPx: effective / z,
+    targetPx: targetScreen / z,
+    target: targetScreen / scale,
+  };
 }
 
 /** Tween a number toward its target for the live counter. */
-export function useTweened(target: number, ms: number, reduce: boolean, start?: number): number {
+export function useTweened(
+  target: number,
+  ms: number,
+  reduce: boolean,
+  start?: number,
+): number {
   const first = reduce || start === undefined ? target : start;
   const [value, setValue] = useState(first);
   const from = useRef(first);
@@ -120,7 +143,11 @@ export type PillSide = 'right' | 'left';
 /** macOS shows the Option and Shift symbols; other systems spell the keys out. */
 export function isMac(): boolean {
   try {
-    const p = (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ?? navigator.platform ?? '';
+    const p =
+      (navigator as Navigator & { userAgentData?: { platform?: string } })
+        .userAgentData?.platform ??
+      navigator.platform ??
+      '';
     return /mac/i.test(p);
   } catch {
     return false;

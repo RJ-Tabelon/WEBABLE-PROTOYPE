@@ -6,7 +6,15 @@
 // lets go on something else), scrolling in screen heights, whether something moved in view, and how many ads showed.
 // A found click shows "Found it" for 700 ms, then the result goes to the worker, which loads the next site.
 import { mountCard, type TaskCard } from './card';
-import { clickMatchesTarget, findClickable, findLink, findTargets, isNearMiss, isShown, type Box } from './match';
+import {
+  clickMatchesTarget,
+  findClickable,
+  findLink,
+  findTargets,
+  isNearMiss,
+  isShown,
+  type Box,
+} from './match';
 import { FOUND_HOLD_MS, RUN_KEY, type WhoamiReply } from './shared';
 import { countAds, MotionWatch } from './signals';
 import type { SiteTaskMessage, SiteTaskResult, SiteTaskSpec } from './types';
@@ -36,7 +44,13 @@ function asWhoami(v: unknown): WhoamiReply | null {
   const r = v as { task: unknown; index?: unknown; total?: unknown };
   if (r.task === null) return { task: null };
   const t = r.task as Partial<SiteTaskSpec> | undefined;
-  if (!t || typeof t.id !== 'string' || typeof t.prompt !== 'string' || !t.target) return null;
+  if (
+    !t ||
+    typeof t.id !== 'string' ||
+    typeof t.prompt !== 'string' ||
+    !t.target
+  )
+    return null;
   const index = typeof r.index === 'number' ? r.index : 0;
   const total = typeof r.total === 'number' ? r.total : 1;
   return { task: t as SiteTaskSpec, index, total };
@@ -73,7 +87,10 @@ export async function askWhoami(timeoutMs = 700): Promise<WhoamiReply | null> {
 }
 
 /** Does following this link leave the page? Same-page #jumps and javascript: links act like buttons, so they work. */
-export function linkNavigates(link: HTMLAnchorElement | HTMLAreaElement, here: string): boolean {
+export function linkNavigates(
+  link: HTMLAnchorElement | HTMLAreaElement,
+  here: string,
+): boolean {
   const raw = (link.getAttribute('href') ?? '').trim();
   if (!raw) return false;
   if (/^javascript:/i.test(raw)) return false;
@@ -86,7 +103,10 @@ export function linkNavigates(link: HTMLAnchorElement | HTMLAreaElement, here: s
   }
   const cur = new URL(here);
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return true; // mailto:, tel:, other apps
-  const same = url.origin === cur.origin && url.pathname === cur.pathname && url.search === cur.search;
+  const same =
+    url.origin === cur.origin &&
+    url.pathname === cur.pathname &&
+    url.search === cur.search;
   return !(same && (url.hash !== '' || raw.startsWith('#')));
 }
 
@@ -100,19 +120,28 @@ function deepTarget(e: Event): Element | null {
 
 /** What a press is "on": the clickable it's inside, or the element itself. */
 function pressUnit(el: Element | null): Element | null {
-  return el ? findClickable(el) ?? el : null;
+  return el ? (findClickable(el) ?? el) : null;
 }
 
 function idle(timeoutMs: number): Promise<void> {
   return new Promise((resolve) => {
-    const ric = (globalThis as { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
+    const ric = (
+      globalThis as {
+        requestIdleCallback?: (
+          cb: () => void,
+          o?: { timeout: number },
+        ) => number;
+      }
+    ).requestIdleCallback;
     if (typeof ric === 'function') ric(() => resolve(), { timeout: timeoutMs });
     else setTimeout(resolve, 200);
   });
 }
 
 function afterPaint(): Promise<void> {
-  return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
 }
 
 export interface TaskInfo {
@@ -122,7 +151,10 @@ export interface TaskInfo {
 }
 
 /** Runs the task on this page. Returns a stop function (removes the card and every listener). */
-export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => void {
+export function runTaskMode(
+  info: TaskInfo,
+  send: Send = defaultSend,
+): () => void {
   const { task } = info;
   let phase: 'waiting' | 'running' | 'done' = 'waiting';
   let stopped = false;
@@ -140,12 +172,19 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
     adsSeen: 0,
   };
 
-  const isOurs = (e: Event): boolean => !!card && typeof e.composedPath === 'function' && e.composedPath().includes(card.host);
-  const isOurEl = (el: Element): boolean => !!card && (el === card.host || card.host.contains(el));
+  const isOurs = (e: Event): boolean =>
+    !!card &&
+    typeof e.composedPath === 'function' &&
+    e.composedPath().includes(card.host);
+  const isOurEl = (el: Element): boolean =>
+    !!card && (el === card.host || card.host.contains(el));
   const motion = new MotionWatch(isOurEl);
 
   /* ---------------- presses and slips ---------------- */
-  const downs = new Map<number, { unit: Element | null; x: number; y: number; dragged: boolean }>();
+  const downs = new Map<
+    number,
+    { unit: Element | null; x: number; y: number; dragged: boolean }
+  >();
   // A press that starts on our card and lets go on the page ends in a click on their common ancestor: not the page's.
   let lastDownOurs = false;
   const onPointerDown = (e: PointerEvent) => {
@@ -154,7 +193,12 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
     motion.noteInput(performance.now());
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     if (phase === 'running') m.presses++;
-    downs.set(e.pointerId, { unit: pressUnit(deepTarget(e)), x: e.clientX, y: e.clientY, dragged: false });
+    downs.set(e.pointerId, {
+      unit: pressUnit(deepTarget(e)),
+      x: e.clientX,
+      y: e.clientY,
+      dragged: false,
+    });
   };
   const onPointerUp = (e: PointerEvent) => {
     const d = downs.get(e.pointerId);
@@ -193,7 +237,8 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
     if (isOurs(e)) return;
     const el = deepTarget(e);
     const link = findLink(el);
-    const isTarget = phase === 'running' && e.isTrusted && clickMatchesTarget(el, task.target);
+    const isTarget =
+      phase === 'running' && e.isTrusted && clickMatchesTarget(el, task.target);
     if (isTarget || (link && linkNavigates(link, location.href))) {
       // Link clicks never navigate while the task is on; the found click does nothing else either.
       e.preventDefault();
@@ -231,7 +276,11 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
   const onScroll = (e: Event) => {
     const t = e.target;
     let delta = 0;
-    if (t === document || t === document.documentElement || t === document.body) {
+    if (
+      t === document ||
+      t === document.documentElement ||
+      t === document.body
+    ) {
       const y = window.scrollY;
       delta = Math.abs(y - lastWinY);
       lastWinY = y;
@@ -254,7 +303,10 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
   window.addEventListener('dragstart', onDragStart, opts);
   window.addEventListener('wheel', onInput, { capture: true, passive: true });
   window.addEventListener('keydown', onInput, opts);
-  document.addEventListener('scroll', onScroll, { capture: true, passive: true });
+  document.addEventListener('scroll', onScroll, {
+    capture: true,
+    passive: true,
+  });
 
   /* ---------------- ticks: motion, ads, keeping the card up ---------------- */
   let ticker: ReturnType<typeof setInterval> | null = null;
@@ -279,7 +331,8 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
   const finalLook = () => {
     try {
       if (!m.motionSeen && motion.check(performance.now())) m.motionSeen = true;
-      if (adChecks.length) m.adsSeen = Math.max(m.adsSeen, countAds(document, isOurEl));
+      if (adChecks.length)
+        m.adsSeen = Math.max(m.adsSeen, countAds(document, isOurEl));
     } catch {
       /* keep what we have */
     }
@@ -297,7 +350,8 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
     nearMisses: m.nearMisses,
     slips: m.slips,
     presses: m.presses,
-    scrollScreens: Math.round((m.scrolled / Math.max(1, window.innerHeight)) * 10) / 10,
+    scrollScreens:
+      Math.round((m.scrolled / Math.max(1, window.innerHeight)) * 10) / 10,
     motionSeen: m.motionSeen,
     adsSeen: m.adsSeen,
     ...over,
@@ -340,7 +394,12 @@ export function runTaskMode(info: TaskInfo, send: Send = defaultSend): () => voi
   void (async () => {
     await idle(2000);
     if (stopped) return;
-    card = mountCard({ index: info.index, total: info.total, prompt: task.prompt, onSkip: skip });
+    card = mountCard({
+      index: info.index,
+      total: info.total,
+      prompt: task.prompt,
+      onSkip: skip,
+    });
     await afterPaint();
     if (stopped) return;
     shownAt = performance.now();

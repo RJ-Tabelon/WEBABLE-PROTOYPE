@@ -7,20 +7,54 @@
 // Layout runs as read-all-rects → decide (pure place.ts) → write, on answers, on scroll (rAF only while scrolling),
 // and on a slow tick for pages that move by themselves. The overlay never takes the pointer; hover is hit-tested
 // against the cached rects.
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'preact/hooks';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import type { EngineApi, EngineState } from '../../contracts';
-import { fmtCost, fmtCount, fmtMs, fmtTokens, jevTotals } from '../panel/format';
+import {
+  fmtCost,
+  fmtCount,
+  fmtMs,
+  fmtTokens,
+  jevTotals,
+} from '../panel/format';
 import { Card } from './Card';
-import { CLASS_WEIGHT, fineChipFace, fineChipPriority, lensItems, mergedChip, type LensClass, type LensItem } from './display';
+import {
+  CLASS_WEIGHT,
+  fineChipFace,
+  fineChipPriority,
+  lensItems,
+  mergedChip,
+  type LensClass,
+  type LensItem,
+} from './display';
 import { ClassIcon, IChevronRight, IClose, IDiamond, IRule } from './icons';
-import { cellRegions, chipBudget, placeChips, rectsPath, type ChipPlan, type PlaceItem, type Rect } from './place';
+import {
+  cellRegions,
+  chipBudget,
+  placeChips,
+  rectsPath,
+  type ChipPlan,
+  type PlaceItem,
+  type Rect,
+} from './place';
 import { compareRule, plainRule } from './rule';
 import { Paras } from './Paras';
 import { paraSummary } from './paragraphs';
 import { Sheet, type RowStatus, type SheetTab } from './Sheet';
 import { usePageZoom } from '../zoom';
 import type { TodayMeter } from './today';
-import { hasPageRead, mainRegionPick, purposeLine, regionLabel, type FineFamily } from './words';
+import {
+  hasPageRead,
+  mainRegionPick,
+  purposeLine,
+  regionLabel,
+  type FineFamily,
+} from './words';
 
 interface Props {
   api: EngineApi;
@@ -33,7 +67,11 @@ interface Props {
 }
 
 type ChipCls = LensClass | 'rule' | 'page' | FineFamily;
-interface PlannedChip extends ChipPlan { words: string; num: string; icon: ChipCls }
+interface PlannedChip extends ChipPlan {
+  words: string;
+  num: string;
+  icon: ChipCls;
+}
 interface Plan {
   sig: string;
   chips: PlannedChip[];
@@ -48,13 +86,32 @@ interface Plan {
   card: { x: number; y: number } | null;
 }
 
-const EMPTY_PLAN: Plan = { sig: '', chips: [], listed: new Set(), status: new Map(), rects: new Map(), scrim: '', hatch: '', ruleRect: null, regionRect: null, card: null };
-const CHIP_CLASSES = new Set<LensClass>(['main', 'popup', 'folded', 'guarded', 'unsure']);
+const EMPTY_PLAN: Plan = {
+  sig: '',
+  chips: [],
+  listed: new Set(),
+  status: new Map(),
+  rects: new Map(),
+  scrim: '',
+  hatch: '',
+  ruleRect: null,
+  regionRect: null,
+  card: null,
+};
+const CHIP_CLASSES = new Set<LensClass>([
+  'main',
+  'popup',
+  'folded',
+  'guarded',
+  'unsure',
+]);
 const OUTSET = 3;
-const FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
+const FONT =
+  '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const RULE_WEIGHT = 5.5;
 
-const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+const clamp = (v: number, lo: number, hi: number) =>
+  Math.min(hi, Math.max(lo, v));
 const f2 = (p: number) => clamp(p, 0, 1).toFixed(2);
 
 /** A number that counts up (600 ms, ease-out) to its target: from 0 on entry (`key`), from where it was on updates. */
@@ -88,13 +145,20 @@ function useCount(target: number, key: number, reduce: boolean): number {
   return v;
 }
 
-type CheckVis = (o?: { checkVisibilityCSS?: boolean; visibilityProperty?: boolean }) => boolean;
+type CheckVis = (o?: {
+  checkVisibilityCSS?: boolean;
+  visibilityProperty?: boolean;
+}) => boolean;
 
 /** Ancestors that clip their content (overflow other than visible), so carousel slides out of view count as hidden. */
 function clipChain(el: Element): Element[] {
   const out: Element[] = [];
   let p = el.parentElement;
-  for (let i = 0; p && i < 14 && p !== document.body && p !== document.documentElement; i++, p = p.parentElement) {
+  for (
+    let i = 0;
+    p && i < 14 && p !== document.body && p !== document.documentElement;
+    i++, p = p.parentElement
+  ) {
     let cs: CSSStyleDeclaration;
     try {
       cs = getComputedStyle(p);
@@ -116,11 +180,17 @@ function intersect(a: Rect, b: Rect): Rect | null {
 }
 
 const COVER_KINDS: Array<[RegExp, string]> = [
-  [/chat|messag|assistant|livechat|intercom|drift|zendesk/i, 'Covered by a chat panel'],
+  [
+    /chat|messag|assistant|livechat|intercom|drift|zendesk/i,
+    'Covered by a chat panel',
+  ],
   [/cookie|consent|gdpr|privacy|onetrust|cmp/i, 'Covered by the cookie notice'],
   [/newsletter|subscribe|signup|sign-up/i, 'Covered by a sign-up box'],
   [/survey|feedback|qualtrics|medallia/i, 'Covered by a survey'],
-  [/modal|dialog|popup|pop-up|overlay|lightbox|interstitial/i, 'Covered by a popup'],
+  [
+    /modal|dialog|popup|pop-up|overlay|lightbox|interstitial/i,
+    'Covered by a popup',
+  ],
   [/promo|announce|offer|deal/i, 'Covered by a promo bar'],
   [/header|navbar|nav|masthead|toolbar|sticky/i, 'Covered by a sticky header'],
 ];
@@ -136,13 +206,25 @@ const OVERLAY_KIND_NOTE: Record<string, string> = {
 };
 
 export function Lens({ api, s, reduce, bottomReserve }: Props) {
-  const items = useMemo(() => lensItems(s.digest, s.decisions, s.understanding), [s.digest, s.decisions, s.understanding]);
+  const items = useMemo(
+    () => lensItems(s.digest, s.decisions, s.understanding),
+    [s.digest, s.decisions, s.understanding],
+  );
   const itemById = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-  const line = useMemo(() => purposeLine(s.understanding?.purpose), [s.understanding]);
-  const region = useMemo(() => mainRegionPick(s.understanding?.mainRegion), [s.understanding]);
+  const line = useMemo(
+    () => purposeLine(s.understanding?.purpose),
+    [s.understanding],
+  );
+  const region = useMemo(
+    () => mainRegionPick(s.understanding?.mainRegion),
+    [s.understanding],
+  );
   const regionId = region && region.id !== 'none' ? region.id : null;
   const answered = s.decisions.length > 0;
-  const asking = !answered && Boolean(s.digest) && (s.phase === 'reading' || s.phase === 'tailored');
+  const asking =
+    !answered &&
+    Boolean(s.digest) &&
+    (s.phase === 'reading' || s.phase === 'tailored');
   // The same page-zoom reading as the rest of our UI (the engine's, confirmed with the tab's).
   const zoom = usePageZoom(api);
   const bodyPx = s.fit?.text?.override ?? s.fit?.text?.bodyPx ?? 16;
@@ -162,15 +244,50 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
   const fitRef = useRef(0);
 
   const rule = useMemo(() => plainRule(s.digest), [s.digest]);
-  const diff = useMemo(() => (answered ? compareRule(rule, items) : null), [rule, items, answered]);
+  const diff = useMemo(
+    () => (answered ? compareRule(rule, items) : null),
+    [rule, items, answered],
+  );
   const mainItem = items.find((i) => i.cls === 'main') ?? null;
 
   const cardId = pinnedId ?? rowFocus ?? hoverId;
-  const cardItem = cardId ? itemById.get(cardId) ?? null : null;
+  const cardItem = cardId ? (itemById.get(cardId) ?? null) : null;
 
   // Refs the layout pass reads (latest values without re-subscribing listeners).
-  const live = useRef({ items, itemById, ruleOn, rule, rowHot, pinnedId, cardId, scale, zoom, answered, bottomReserve, enter: true, overlays: s.overlays, regionId, regionP: region?.p ?? 0 });
-  live.current = { items, itemById, ruleOn, rule, rowHot, pinnedId, cardId, scale, zoom, answered, bottomReserve, enter: !steady, overlays: s.overlays, regionId, regionP: region?.p ?? 0 };
+  const live = useRef({
+    items,
+    itemById,
+    ruleOn,
+    rule,
+    rowHot,
+    pinnedId,
+    cardId,
+    scale,
+    zoom,
+    answered,
+    bottomReserve,
+    enter: true,
+    overlays: s.overlays,
+    regionId,
+    regionP: region?.p ?? 0,
+  });
+  live.current = {
+    items,
+    itemById,
+    ruleOn,
+    rule,
+    rowHot,
+    pinnedId,
+    cardId,
+    scale,
+    zoom,
+    answered,
+    bottomReserve,
+    enter: !steady,
+    overlays: s.overlays,
+    regionId,
+    regionP: region?.p ?? 0,
+  };
 
   const planRef = useRef<Plan>(EMPTY_PLAN);
   const renderedSig = useRef('');
@@ -221,14 +338,23 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     return w;
   };
 
-  const chipText = (cls: string, ids: string[]): { words: string; num: string } => {
+  const chipText = (
+    cls: string,
+    ids: string[],
+  ): { words: string; num: string } => {
     const L = live.current;
-    if (cls === 'page') return { words: 'What this page is for ·', num: f2(L.regionP) };
+    if (cls === 'page')
+      return { words: 'What this page is for ·', num: f2(L.regionP) };
     if (cls === 'rule') {
       const same = L.items.find((i) => i.cls === 'main')?.id === ids[0];
-      return { words: same ? 'Plain rule: same pick' : 'Plain rule: main action', num: '' };
+      return {
+        words: same ? 'Plain rule: same pick' : 'Plain rule: main action',
+        num: '',
+      };
     }
-    const its = ids.map((id) => L.itemById.get(id)).filter((i): i is LensItem => Boolean(i));
+    const its = ids
+      .map((id) => L.itemById.get(id))
+      .filter((i): i is LensItem => Boolean(i));
     const fine = cls.startsWith('fine:') ? fineChipFace(its) : null;
     if (fine) return fine;
     if (its.length > 1) return mergedChip(its);
@@ -237,7 +363,8 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     return { words: it.chip, num: it.num };
   };
 
-  const chipKey = (cls: string, words: string, num: string, sc: number) => `${cls}|${words}|${num}|${sc.toFixed(4)}`;
+  const chipKey = (cls: string, words: string, num: string, sc: number) =>
+    `${cls}|${words}|${num}|${sc.toFixed(4)}`;
   const chipSize = (cls: string, ids: string[]): { w: number; h: number } => {
     const sc = live.current.scale;
     const big = cls === 'main' || cls === 'page';
@@ -247,7 +374,14 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     const real = measured.current.get(chipKey(cls, words, num, sc));
     if (real) return { w: real, h };
     const icon = big ? 13 : 12;
-    const inner = 8 + icon + 5 + textW(words, 600, fs) + (num ? 5 + textW(num, 700, fs) : 0) + 9 + 6;
+    const inner =
+      8 +
+      icon +
+      5 +
+      textW(words, 600, fs) +
+      (num ? 5 + textW(num, 700, fs) : 0) +
+      9 +
+      6;
     const max = cls === 'page' ? 340 : cls === 'main' ? 260 : 260;
     return { w: Math.ceil(Math.min(inner, max) * sc), h };
   };
@@ -281,7 +415,9 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     write(
       'rule',
       ruleBoxRef.current,
-      rr ? `transform:translate3d(${Math.round(rr.x - 7)}px,${Math.round(rr.y - 7)}px,0);width:${Math.round(rr.w + 14)}px;height:${Math.round(rr.h + 14)}px` : 'display:none',
+      rr
+        ? `transform:translate3d(${Math.round(rr.x - 7)}px,${Math.round(rr.y - 7)}px,0);width:${Math.round(rr.w + 14)}px;height:${Math.round(rr.h + 14)}px`
+        : 'display:none',
     );
     const rg = plan.regionRect;
     const rout = 8;
@@ -292,11 +428,20 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         ? `transform:translate3d(${Math.round(rg.x - rout)}px,${Math.round(rg.y - rout)}px,0);width:${Math.round(rg.w + 2 * rout)}px;height:${Math.round(rg.h + 2 * rout)}px`
         : 'display:none',
     );
-    if (pathRef.current && pathRef.current.getAttribute('d') !== plan.scrim) pathRef.current.setAttribute('d', plan.scrim);
-    write('hatch', hatchRef.current, plan.hatch ? `clip-path:path("${plan.hatch}")` : 'display:none');
+    if (pathRef.current && pathRef.current.getAttribute('d') !== plan.scrim)
+      pathRef.current.setAttribute('d', plan.scrim);
+    write(
+      'hatch',
+      hatchRef.current,
+      plan.hatch ? `clip-path:path("${plan.hatch}")` : 'display:none',
+    );
     plan.chips.forEach((c, rank) => {
       const delay = L.enter ? 200 + Math.min(rank, 16) * 28 : 0;
-      write(`c${c.key}`, chipEls.current.get(c.key), `transform:translate3d(${Math.round(c.x)}px,${Math.round(c.y)}px,0);--cd:${delay}ms`);
+      write(
+        `c${c.key}`,
+        chipEls.current.get(c.key),
+        `transform:translate3d(${Math.round(c.x)}px,${Math.round(c.y)}px,0);--cd:${delay}ms`,
+      );
       const ln = leadEls.current.get(c.key);
       if (ln && c.leader) {
         const k = `${Math.round(c.leader.x1)},${Math.round(c.leader.y1)},${Math.round(c.leader.x2)},${Math.round(c.leader.y2)}`;
@@ -309,7 +454,13 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         }
       }
     });
-    write('card', cardRef.current, plan.card ? `transform:translate3d(${Math.round(plan.card.x)}px,${Math.round(plan.card.y)}px,0)` : 'visibility:hidden');
+    write(
+      'card',
+      cardRef.current,
+      plan.card
+        ? `transform:translate3d(${Math.round(plan.card.x)}px,${Math.round(plan.card.y)}px,0)`
+        : 'visibility:hidden',
+    );
   };
 
   /* ---------------------------------------------------------------- the layout pass */
@@ -327,10 +478,14 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         const b = el.getBoundingClientRect();
         let vis = b.width >= 1 && b.height >= 1;
         if (vis) {
-          const cv = (el as Element & { checkVisibility?: CheckVis }).checkVisibility;
+          const cv = (el as Element & { checkVisibility?: CheckVis })
+            .checkVisibility;
           if (typeof cv === 'function') {
             try {
-              vis = cv.call(el, { checkVisibilityCSS: true, visibilityProperty: true });
+              vis = cv.call(el, {
+                checkVisibilityCSS: true,
+                visibilityProperty: true,
+              });
             } catch {
               /* older engine */
             }
@@ -347,7 +502,12 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
             if (!r) break;
             if (!a.isConnected) continue;
             const ab = a.getBoundingClientRect();
-            r = intersect(r, { x: ab.left, y: ab.top, w: ab.width, h: ab.height });
+            r = intersect(r, {
+              x: ab.left,
+              y: ab.top,
+              w: ab.width,
+              h: ab.height,
+            });
           }
         }
       }
@@ -366,25 +526,47 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         const el = api.elementFor(L.regionId);
         if (el && el.isConnected) {
           const b = el.getBoundingClientRect();
-          if (b.width >= 1 && b.height >= 1) regionRect = { x: b.left, y: b.top, w: b.width, h: b.height };
+          if (b.width >= 1 && b.height >= 1)
+            regionRect = { x: b.left, y: b.top, w: b.width, h: b.height };
         }
       }
-      if (regionRect && (regionRect.y + regionRect.h <= 0 || regionRect.y >= vh || regionRect.x + regionRect.w <= 0 || regionRect.x >= vw)) {
+      if (
+        regionRect &&
+        (regionRect.y + regionRect.h <= 0 ||
+          regionRect.y >= vh ||
+          regionRect.x + regionRect.w <= 0 ||
+          regionRect.x >= vw)
+      ) {
         regionRect = null;
       }
     }
-    const ruleRect: Rect | null = L.ruleOn && L.rule.mainId && status.get(L.rule.mainId) !== 'hidden' ? rects.get(L.rule.mainId) ?? null : null;
+    const ruleRect: Rect | null =
+      L.ruleOn && L.rule.mainId && status.get(L.rule.mainId) !== 'hidden'
+        ? (rects.get(L.rule.mainId) ?? null)
+        : null;
     const chrome: Rect[] = [];
     const host = rootRef.current;
     // The rest of our chrome lives in the zoomed chrome layer (pill, panel, offers, chips, the cookie bar): each part
     // is marked data-wa-chrome. Its rects come back in page CSS px like everything here. Siblings in our own layer
     // count too.
     const scope = host?.getRootNode();
-    const marked = scope && 'querySelectorAll' in scope ? Array.from((scope as ShadowRoot).querySelectorAll('[data-wa-chrome]')) : [];
-    for (const ch of [...marked, ...Array.from(host?.parentElement?.children ?? [])]) {
-      if (ch === host || ch.classList.contains('wa-sr') || ch.contains(host ?? null)) continue;
+    const marked =
+      scope && 'querySelectorAll' in scope
+        ? Array.from((scope as ShadowRoot).querySelectorAll('[data-wa-chrome]'))
+        : [];
+    for (const ch of [
+      ...marked,
+      ...Array.from(host?.parentElement?.children ?? []),
+    ]) {
+      if (
+        ch === host ||
+        ch.classList.contains('wa-sr') ||
+        ch.contains(host ?? null)
+      )
+        continue;
       const b = ch.getBoundingClientRect();
-      if (b.width < 2 || b.height < 2 || b.width * b.height > vw * vh * 0.5) continue;
+      if (b.width < 2 || b.height < 2 || b.width * b.height > vw * vh * 0.5)
+        continue;
       chrome.push({ x: b.left, y: b.top, w: b.width, h: b.height });
     }
     const hb = headRef.current?.getBoundingClientRect();
@@ -408,14 +590,33 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     // Decide.
     const sc = L.scale;
     const reserved: Rect[] = [];
-    if (hb && hb.width > 0) reserved.push({ x: hb.left - 6, y: hb.top - 6, w: hb.width + 12, h: hb.height + 12 });
-    if (sb && sb.width > 0) reserved.push({ x: sb.left - 6, y: sb.top - 6, w: sb.width + 12, h: sb.height + 12 });
+    if (hb && hb.width > 0)
+      reserved.push({
+        x: hb.left - 6,
+        y: hb.top - 6,
+        w: hb.width + 12,
+        h: hb.height + 12,
+      });
+    if (sb && sb.width > 0)
+      reserved.push({
+        x: sb.left - 6,
+        y: sb.top - 6,
+        w: sb.width + 12,
+        h: sb.height + 12,
+      });
     // The rest of our chrome (pill, panel, offers, toasts, overlay chips), wherever the app put it.
-    for (const r of chrome) reserved.push({ x: r.x - 6, y: r.y - 6, w: r.w + 12, h: r.h + 12 });
-    for (const r of paraTags.current) reserved.push({ x: r.x - 4, y: r.y - 4, w: r.w + 8, h: r.h + 8 });
+    for (const r of chrome)
+      reserved.push({ x: r.x - 6, y: r.y - 6, w: r.w + 12, h: r.h + 12 });
+    for (const r of paraTags.current)
+      reserved.push({ x: r.x - 4, y: r.y - 4, w: r.w + 8, h: r.h + 8 });
     if (chrome.length === 0) {
       const pillW = 190 * sc;
-      reserved.push({ x: vw - pillW, y: vh - L.bottomReserve, w: pillW, h: L.bottomReserve });
+      reserved.push({
+        x: vw - pillW,
+        y: vh - L.bottomReserve,
+        w: pillW,
+        h: L.bottomReserve,
+      });
     }
     // The sheet stops above any of our chrome that sits under its column (the pill, an offer card).
     const sheetX0 = vw - Math.min(360 * sc, vw - 20 * sc) - 10 * sc;
@@ -432,10 +633,18 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       rootRef.current.style.setProperty('--lbottom', lb);
     }
     const mainIt = L.items.find((i) => i.cls === 'main');
-    const mainR = mainIt ? rects.get(mainIt.id) ?? null : null;
-    if (mainR) reserved.push({ x: mainR.x - 6, y: mainR.y - 6, w: mainR.w + 12, h: mainR.h + 12 });
+    const mainR = mainIt ? (rects.get(mainIt.id) ?? null) : null;
+    if (mainR)
+      reserved.push({
+        x: mainR.x - 6,
+        y: mainR.y - 6,
+        w: mainR.w + 12,
+        h: mainR.h + 12,
+      });
 
-    const forced = new Set([L.rowHot, L.pinnedId].filter((x): x is string => Boolean(x)));
+    const forced = new Set(
+      [L.rowHot, L.pinnedId].filter((x): x is string => Boolean(x)),
+    );
     const placeItems: PlaceItem[] = [];
     if (L.answered) {
       for (const it of L.items) {
@@ -444,7 +653,11 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         const isForced = forced.has(it.id);
         const tag = it.ev.tag;
         const hint = (it.ev.role_hint || '').toLowerCase();
-        const field = tag === 'input' || tag === 'select' || tag === 'textarea' || /textbox|combobox|searchbox/.test(hint);
+        const field =
+          tag === 'input' ||
+          tag === 'select' ||
+          tag === 'textarea' ||
+          /textbox|combobox|searchbox/.test(hint);
         // A fine role replaces the policy chip. The main region speaks through its own label, not a fine-role chip.
         if (it.fine && it.fineName && it.id !== L.regionId) {
           if (covered.current.has(it.id) && !isForced) continue;
@@ -459,7 +672,8 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
           continue;
         }
         if (!CHIP_CLASSES.has(it.cls) && !isForced) continue;
-        if (covered.current.has(it.id) && it.cls !== 'main' && !isForced) continue;
+        if (covered.current.has(it.id) && it.cls !== 'main' && !isForced)
+          continue;
         placeItems.push({
           id: it.id,
           cls: it.cls,
@@ -470,14 +684,36 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         });
       }
       if (ruleRect && L.rule.mainId && status.get(L.rule.mainId) === 'shown') {
-        placeItems.push({ id: `rule:${L.rule.mainId}`, cls: 'rule', box: { x: ruleRect.x - 4, y: ruleRect.y - 4, w: ruleRect.w + 8, h: ruleRect.h + 8 }, priority: RULE_WEIGHT * 10 });
+        placeItems.push({
+          id: `rule:${L.rule.mainId}`,
+          cls: 'rule',
+          box: {
+            x: ruleRect.x - 4,
+            y: ruleRect.y - 4,
+            w: ruleRect.w + 8,
+            h: ruleRect.h + 8,
+          },
+          priority: RULE_WEIGHT * 10,
+        });
       }
       if (regionRect && L.regionId) {
-        placeItems.push({ id: `page:${L.regionId}`, cls: 'page', box: regionRect, priority: 80, forced: true });
+        placeItems.push({
+          id: `page:${L.regionId}`,
+          cls: 'page',
+          box: regionRect,
+          priority: 80,
+          forced: true,
+        });
       }
     }
-    const stripId = (x: string) => (x.startsWith('rule:') ? x.slice(5) : x.startsWith('page:') ? x.slice(5) : x);
-    const sizeFor = (cls: string, ids: string[]) => chipSize(cls, ids.map(stripId));
+    const stripId = (x: string) =>
+      x.startsWith('rule:')
+        ? x.slice(5)
+        : x.startsWith('page:')
+          ? x.slice(5)
+          : x;
+    const sizeFor = (cls: string, ids: string[]) =>
+      chipSize(cls, ids.map(stripId));
     const res = placeChips(placeItems, {
       vw,
       vh,
@@ -499,7 +735,8 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       return { ...c, ids, words: t.words, num: t.num, icon };
     });
     const nextPrev = new Map<string, { dx: number; dy: number }>();
-    for (const c of chips) nextPrev.set(c.key, { dx: c.x - c.anchor.x, dy: c.y - c.anchor.y });
+    for (const c of chips)
+      nextPrev.set(c.key, { dx: c.x - c.anchor.x, dy: c.y - c.anchor.y });
     prevSlots.current = nextPrev;
 
     // Scrim: holes over everything Jev kept; folded and unsure stay under it. Folded spots also get the hatch.
@@ -514,8 +751,23 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
           .filter((i) => status.get(i.id) === 'shown' && i.cls !== 'pending')
           .map((i) => {
             const r = rects.get(i.id)!;
-            const kind = i.cls === 'folded' ? (covered.current.has(i.id) ? 'dim' : 'hatch') : i.cls === 'unsure' ? 'dim' : 'lit';
-            return { r: { x: r.x - OUTSET, y: r.y - OUTSET, w: r.w + 2 * OUTSET, h: r.h + 2 * OUTSET }, kind };
+            const kind =
+              i.cls === 'folded'
+                ? covered.current.has(i.id)
+                  ? 'dim'
+                  : 'hatch'
+                : i.cls === 'unsure'
+                  ? 'dim'
+                  : 'lit';
+            return {
+              r: {
+                x: r.x - OUTSET,
+                y: r.y - OUTSET,
+                w: r.w + 2 * OUTSET,
+                h: r.h + 2 * OUTSET,
+              },
+              kind,
+            };
           }),
       );
       scrim = `M0 0H${Math.round(vw)}V${Math.round(vh)}H0Z${rectsPath(regions.get('lit') ?? [])}`;
@@ -525,25 +777,39 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     // Card: right of the element, else left, else below, else above; never over the main action or our chrome.
     let card: Plan['card'] = null;
     const cid = L.cardId;
-    const cr = cid && status.get(cid) === 'shown' ? rects.get(cid) ?? null : null;
+    const cr =
+      cid && status.get(cid) === 'shown' ? (rects.get(cid) ?? null) : null;
     if (cr && cw > 0 && ch > 0) {
       // Below our header, left of the sheet, off the main action and off the rest of our chrome.
       const top = hb && hb.width > 0 ? hb.bottom + 8 : 8;
       const right = sb && sb.width > 0 ? sb.left - 8 : vw - 8;
       const avoid: Rect[] = [...chrome];
-      if (mainR && cid !== mainIt?.id) avoid.push({ x: mainR.x - 4, y: mainR.y - 4, w: mainR.w + 8, h: mainR.h + 8 });
+      if (mainR && cid !== mainIt?.id)
+        avoid.push({
+          x: mainR.x - 4,
+          y: mainR.y - 4,
+          w: mainR.w + 8,
+          h: mainR.h + 8,
+        });
       const g = 12;
       const yAlign = clamp(cr.y, top, Math.max(top, vh - ch - 8));
       const xAlign = clamp(cr.x, 8, Math.max(8, right - cw));
       // For each side, try the element's own top first, then slide up or down to clear our chrome.
-      const ys = (y0: number) => [y0, top, ...avoid.map((a) => a.y - ch - 8), ...avoid.map((a) => a.y + a.h + 8), vh - ch - 8];
+      const ys = (y0: number) => [
+        y0,
+        top,
+        ...avoid.map((a) => a.y - ch - 8),
+        ...avoid.map((a) => a.y + a.h + 8),
+        vh - ch - 8,
+      ];
       const cands: Array<[number, number]> = [
         ...ys(yAlign).map((y): [number, number] => [cr.x + cr.w + g, y]),
         ...ys(yAlign).map((y): [number, number] => [cr.x - cw - g, y]),
         [xAlign, cr.y + cr.h + g],
         [xAlign, cr.y - ch - g],
       ];
-      const fits = (x: number, y: number) => x >= 8 && y >= top && x + cw <= right && y + ch <= vh - 8;
+      const fits = (x: number, y: number) =>
+        x >= 8 && y >= top && x + cw <= right && y + ch <= vh - 8;
       const covers = (x: number, y: number) => {
         let area = 0;
         for (const a of avoid) {
@@ -565,17 +831,38 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
           if (a === 0) break;
         }
       }
-      card = { x: clamp(pick[0], 8, Math.max(8, right - cw)), y: clamp(pick[1], top, Math.max(top, vh - ch - 8)) };
+      card = {
+        x: clamp(pick[0], 8, Math.max(8, right - cw)),
+        y: clamp(pick[1], top, Math.max(top, vh - ch - 8)),
+      };
     }
 
     const sig = [
-      chips.map((c) => `${c.key}:${c.cls}:${c.ids.join(',')}:${c.words}:${c.num}:${c.leader ? 1 : 0}`).join('|'),
+      chips
+        .map(
+          (c) =>
+            `${c.key}:${c.cls}:${c.ids.join(',')}:${c.words}:${c.num}:${c.leader ? 1 : 0}`,
+        )
+        .join('|'),
       [...res.listed].sort().join(','),
       [...status.entries()].map(([k, v]) => `${k}${v[0]}`).join(''),
-      [...covered.current.entries()].map(([k, v]) => `${k}${v.length}`).join(''),
+      [...covered.current.entries()]
+        .map(([k, v]) => `${k}${v.length}`)
+        .join(''),
       regionRect ? 'R' : '',
     ].join('#');
-    const plan: Plan = { sig, chips, listed: new Set(res.listed), status, rects, scrim, hatch, ruleRect, regionRect, card };
+    const plan: Plan = {
+      sig,
+      chips,
+      listed: new Set(res.listed),
+      status,
+      rects,
+      scrim,
+      hatch,
+      ruleRect,
+      regionRect,
+      card,
+    };
     planRef.current = plan;
     if (sig !== renderedSig.current) {
       renderedSig.current = sig;
@@ -596,7 +883,11 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       let hit: Element | null = null;
       try {
         hit = document.elementFromPoint(x, y);
-        if (hit && hit.tagName === 'WEBABLE-UI') hit = document.elementsFromPoint(x, y).find((e) => e.tagName !== 'WEBABLE-UI') ?? null;
+        if (hit && hit.tagName === 'WEBABLE-UI')
+          hit =
+            document
+              .elementsFromPoint(x, y)
+              .find((e) => e.tagName !== 'WEBABLE-UI') ?? null;
       } catch {
         hit = null;
       }
@@ -625,18 +916,27 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         hits++;
         coverer = coverer ?? h;
       }
-      if (valid >= 3 && hits >= 3 && coverer) next.set(it.id, coverNote(coverer, L.overlays));
+      if (valid >= 3 && hits >= 3 && coverer)
+        next.set(it.id, coverNote(coverer, L.overlays));
     }
     covered.current = next;
   };
 
-  const coverNote = (hit: Element, overlays: EngineState['overlays']): string => {
+  const coverNote = (
+    hit: Element,
+    overlays: EngineState['overlays'],
+  ): string => {
     for (const o of overlays ?? []) {
       const oe = api.elementFor(o.id);
-      if (oe && oe.contains(hit)) return OVERLAY_KIND_NOTE[o.kind] ?? 'Covered by another layer';
+      if (oe && oe.contains(hit))
+        return OVERLAY_KIND_NOTE[o.kind] ?? 'Covered by another layer';
     }
     let el: Element | null = hit;
-    for (let i = 0; el && i < 12 && el !== document.body; i++, el = el.parentElement) {
+    for (
+      let i = 0;
+      el && i < 12 && el !== document.body;
+      i++, el = el.parentElement
+    ) {
       const words = `${el.id} ${typeof el.className === 'string' ? el.className : ''} ${el.getAttribute('aria-label') ?? ''} ${el.getAttribute('role') ?? ''}`;
       for (const [re, note] of COVER_KINDS) if (re.test(words)) return note;
     }
@@ -662,7 +962,8 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       } catch {
         /* an element vanished mid-frame; the next pass catches up */
       }
-      if (performance.now() - lastMove < 150) raf = requestAnimationFrame(frame);
+      if (performance.now() - lastMove < 150)
+        raf = requestAnimationFrame(frame);
     };
     const onMove = () => {
       lastMove = performance.now();
@@ -723,7 +1024,12 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
         let area = Infinity;
         for (const [id, r] of plan.rects) {
           if (!r || plan.status.get(id) !== 'shown') continue;
-          if (e.clientX >= r.x && e.clientX <= r.x + r.w && e.clientY >= r.y && e.clientY <= r.y + r.h) {
+          if (
+            e.clientX >= r.x &&
+            e.clientX <= r.x + r.w &&
+            e.clientY >= r.y &&
+            e.clientY <= r.y + r.h
+          ) {
             const a = r.w * r.h;
             if (a < area) {
               area = a;
@@ -737,7 +1043,10 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       window.clearTimeout(t);
       t = window.setTimeout(() => setHoverId(cand), cand ? 90 : 220);
     };
-    window.addEventListener('pointermove', onPointer, { capture: true, passive: true });
+    window.addEventListener('pointermove', onPointer, {
+      capture: true,
+      passive: true,
+    });
     return () => {
       window.clearTimeout(t);
       window.removeEventListener('pointermove', onPointer, { capture: true });
@@ -793,7 +1102,17 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       /* ignore */
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ruleOn, rowHot, pinnedId, cardId, sheetOpen, scale, zoom, bottomReserve, tab]);
+  }, [
+    ruleOn,
+    rowHot,
+    pinnedId,
+    cardId,
+    sheetOpen,
+    scale,
+    zoom,
+    bottomReserve,
+    tab,
+  ]);
 
   // After every render, the DOM nodes for the current plan exist: write their geometry, then read the chips'
   // real widths; if the font drew them wider or narrower than estimated, lay out once more with the real sizes.
@@ -825,7 +1144,9 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
 
   const decisionsShown = useCount(t.decisions, enterKey, reduce);
   const plan = planRef.current;
-  const listedCount = [...plan.listed].filter((id) => plan.status.get(id) === 'shown').length;
+  const listedCount = [...plan.listed].filter(
+    (id) => plan.status.get(id) === 'shown',
+  ).length;
   // Header: drop the least important numbers, one step at a time, until the row fits.
   useLayoutEffect(() => {
     const h = headRef.current;
@@ -858,14 +1179,20 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       cached: u.cached,
       metrics: u.metrics,
       firstRead: u.firstRead ?? null,
-      sent: s.digest ? { page: s.digest.page, elements: s.digest.elements } : null,
+      sent: s.digest
+        ? { page: s.digest.page, elements: s.digest.elements }
+        : null,
       answered: {
         elements: u.elements,
         mainPick: u.mainPick,
         ...(u.purpose ? { purpose: u.purpose } : {}),
         ...(u.mainRegion ? { mainRegion: u.mainRegion } : {}),
       },
-      decisions: s.decisions.map((d) => ({ id: d.id, verdict: d.verdict, reasons: d.reasons })),
+      decisions: s.decisions.map((d) => ({
+        id: d.id,
+        verdict: d.verdict,
+        reasons: d.reasons,
+      })),
     };
   }, [s.understanding, s.digest, s.decisions]);
 
@@ -873,7 +1200,11 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     const el = api.elementFor(id);
     if (el && planRef.current.status.get(id) !== 'hidden') {
       try {
-        el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+        el.scrollIntoView({
+          block: 'center',
+          inline: 'nearest',
+          behavior: reduce ? 'auto' : 'smooth',
+        });
       } catch {
         el.scrollIntoView();
       }
@@ -885,17 +1216,32 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
     const el = api.elementFor(id);
     if (!el) return;
     try {
-      el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+      el.scrollIntoView({
+        block: 'center',
+        inline: 'nearest',
+        behavior: reduce ? 'auto' : 'smooth',
+      });
     } catch {
       el.scrollIntoView();
     }
   };
   const paraLine = paraSummary(s.reword);
 
-  const chips = [...plan.chips].sort((a, b) => Number(a.icon === 'page') - Number(b.icon === 'page'));
-  const showCard = Boolean(cardItem && plan.status.get(cardItem.id) === 'shown');
-  const tabShown: SheetTab = tab === 'page' && !hasPageRead(s.understanding) ? 'elements' : tab;
-  const regionName = region ? regionLabel(region.id, new Map(items.map((i) => [i.id, i.label])), s.digest) : '';
+  const chips = [...plan.chips].sort(
+    (a, b) => Number(a.icon === 'page') - Number(b.icon === 'page'),
+  );
+  const showCard = Boolean(
+    cardItem && plan.status.get(cardItem.id) === 'shown',
+  );
+  const tabShown: SheetTab =
+    tab === 'page' && !hasPageRead(s.understanding) ? 'elements' : tab;
+  const regionName = region
+    ? regionLabel(
+        region.id,
+        new Map(items.map((i) => [i.id, i.label])),
+        s.digest,
+      )
+    : '';
 
   return (
     <div
@@ -907,7 +1253,10 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
       data-motion={reduce ? 'reduce' : 'full'}
       data-focus={focusId ? 'on' : undefined}
       data-rule={ruleOn ? 'on' : undefined}
-      style={{ '--lu': `${scale}px`, '--lbottom': lbottom.current || `${Math.round(10 * scale)}px` }}
+      style={{
+        '--lu': `${scale}px`,
+        '--lbottom': lbottom.current || `${Math.round(10 * scale)}px`,
+      }}
     >
       <div class="wa-lpage" aria-hidden="true" key={`e${enterKey}`}>
         {answered && (
@@ -923,18 +1272,26 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
               key={`${it.id}:${it.cls}`}
               class="wa-lbox"
               data-c={it.cls}
-              data-weight={regionId === it.id ? undefined : it.weight ?? undefined}
-              data-rank={it.importance != null ? String(it.importance) : undefined}
+              data-weight={
+                regionId === it.id ? undefined : (it.weight ?? undefined)
+              }
+              data-rank={
+                it.importance != null ? String(it.importance) : undefined
+              }
               data-frame={regionId === it.id ? 'outer' : undefined}
               data-covered={covered.current.has(it.id) ? 'true' : undefined}
-              data-hot={focusId === it.id || cardId === it.id ? 'true' : undefined}
+              data-hot={
+                focusId === it.id || cardId === it.id ? 'true' : undefined
+              }
               ref={(el) => {
                 if (el) boxEls.current.set(it.id, el);
                 else boxEls.current.delete(it.id);
               }}
             />
           ))}
-          {ruleOn && rule.mainId && <div class="wa-lbox wa-lrulebox" data-c="rule" ref={ruleBoxRef} />}
+          {ruleOn && rule.mainId && (
+            <div class="wa-lbox wa-lrulebox" data-c="rule" ref={ruleBoxRef} />
+          )}
         </div>
         <svg class="wa-lleads" width="100%" height="100%">
           {chips
@@ -956,7 +1313,11 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
               key={c.key}
               class="wa-lchip"
               data-c={c.icon}
-              data-hot={c.ids.includes(focusId ?? '') || c.ids.includes(cardId ?? '') ? 'true' : undefined}
+              data-hot={
+                c.ids.includes(focusId ?? '') || c.ids.includes(cardId ?? '')
+                  ? 'true'
+                  : undefined
+              }
               ref={(el) => {
                 if (el) chipEls.current.set(c.key, el);
                 else chipEls.current.delete(c.key);
@@ -1009,7 +1370,8 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
           {line && (
             <>
               <span class="wa-lpurpose" title={line.spoken}>
-                Jev read this as {line.article} <em>{line.name}</em> ({f2(line.p)})
+                Jev read this as {line.article} <em>{line.name}</em> (
+                {f2(line.p)})
               </span>
               <span class="wa-lsep" aria-hidden="true" />
             </>
@@ -1017,7 +1379,13 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
           {answered && t.decisions > 0 ? (
             <span class="wa-lstats">
               <span>
-                <b class="wa-lcount" style={{ minWidth: `${fmtCount(t.decisions).length}ch` }}>{fmtCount(decisionsShown)}</b> decisions
+                <b
+                  class="wa-lcount"
+                  style={{ minWidth: `${fmtCount(t.decisions).length}ch` }}
+                >
+                  {fmtCount(decisionsShown)}
+                </b>{' '}
+                decisions
               </span>
               {t.cached ? (
                 <>
@@ -1041,7 +1409,9 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
                   <i>·</i>
                   <span>
                     <b>{fmtMs(t.headlineMs)}</b>
-                    {t.serverMs != null && <span data-o="2"> (server {fmtMs(t.serverMs)})</span>}
+                    {t.serverMs != null && (
+                      <span data-o="2"> (server {fmtMs(t.serverMs)})</span>
+                    )}
                   </span>
                   {t.inputTokens > 0 && (
                     <>
@@ -1054,7 +1424,9 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
                 </>
               )}
               <i data-o="3">·</i>
-              <span data-o="3" class="wa-lmodel">{t.model}</span>
+              <span data-o="3" class="wa-lmodel">
+                {t.model}
+              </span>
             </span>
           ) : (
             <span class="wa-lstats wa-lpending">
@@ -1077,7 +1449,11 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
                 {items.length}
                 <span data-o="6"> elements</span>
               </span>
-              {listedCount > 0 && <span class="wa-lbadge" data-o="5">+{listedCount} in list</span>}
+              {listedCount > 0 && (
+                <span class="wa-lbadge" data-o="5">
+                  +{listedCount} in list
+                </span>
+              )}
               <IChevronRight size={12} />
             </button>
             <button
@@ -1099,7 +1475,12 @@ export function Lens({ api, s, reduce, bottomReserve }: Props) {
                 vs <span data-o="6">plain </span>rule
               </span>
             </button>
-            <button class="wa-lx" aria-label="Close Jev Lens" title="Close Jev Lens" onClick={() => api.toggleLens(false)}>
+            <button
+              class="wa-lx"
+              aria-label="Close Jev Lens"
+              title="Close Jev Lens"
+              onClick={() => api.toggleLens(false)}
+            >
               <IClose size={15} />
             </button>
           </span>

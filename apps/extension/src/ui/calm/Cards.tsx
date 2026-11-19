@@ -16,10 +16,26 @@ function loneLink(b: Block): ControlBlock | null {
   if (b.b === 'control' && b.role === 'link') return b;
   if (b.b === 'flow') {
     const links = b.parts.filter((p) => p.t === 'link');
-    const words = b.parts.filter((p) => p.t === 'text').map((p) => (p as { text: string }).text).join('').trim();
+    const words = b.parts
+      .filter((p) => p.t === 'text')
+      .map((p) => (p as { text: string }).text)
+      .join('')
+      .trim();
     if (links.length === 1 && !words) {
-      const l = links[0] as Extract<typeof links[number], { t: 'link' }>;
-      return { b: 'control', el: l.el, role: 'link', text: l.text, href: l.href, primary: false, help: l.help, selected: false, popup: false, key: b.key, src: b.src };
+      const l = links[0] as Extract<(typeof links)[number], { t: 'link' }>;
+      return {
+        b: 'control',
+        el: l.el,
+        role: 'link',
+        text: l.text,
+        href: l.href,
+        primary: false,
+        help: l.help,
+        selected: false,
+        popup: false,
+        key: b.key,
+        src: b.src,
+      };
     }
   }
   return null;
@@ -28,7 +44,8 @@ function loneLink(b: Block): ControlBlock | null {
 function NoticeLink({ c }: { c: ControlBlock }): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(c.el);
   };
@@ -43,7 +60,11 @@ function NoticeLink({ c }: { c: ControlBlock }): JSX.Element {
       {body}
     </a>
   ) : (
-    <button type="button" class="wa-notice__link" onClick={() => ctx.click(c.el)}>
+    <button
+      type="button"
+      class="wa-notice__link"
+      onClick={() => ctx.click(c.el)}
+    >
       {body}
     </button>
   );
@@ -97,7 +118,11 @@ export function NoticeCard({ card }: { card: PlanCard }): JSX.Element | null {
     );
   }
   return (
-    <section class={`wa-notice${consent ? ' wa-notice--consent' : ''}`} aria-label={title ?? (consent ? 'Cookies' : 'Notice from the page')} role={card.kind === 'popup' ? 'alertdialog' : undefined}>
+    <section
+      class={`wa-notice${consent ? ' wa-notice--consent' : ''}`}
+      aria-label={title ?? (consent ? 'Cookies' : 'Notice from the page')}
+      role={card.kind === 'popup' ? 'alertdialog' : undefined}
+    >
       <span class="wa-notice__icon" aria-hidden="true">
         {consent ? <I.Shield /> : <I.Alert />}
       </span>
@@ -137,7 +162,11 @@ function ButtonsRow({ buttons }: { buttons: ControlBlock[] }): JSX.Element {
 export function ChatRow({ el }: { el: Element }): JSX.Element {
   const ctx = useCalm();
   const launcher =
-    Array.from(el.querySelectorAll('button,[role=button],a[href]')).find((b) => /chat|assistant|message|help/i.test(`${nameOf(b)} ${b.getAttribute('class') ?? ''}`)) ?? el;
+    Array.from(el.querySelectorAll('button,[role=button],a[href]')).find((b) =>
+      /chat|assistant|message|help/i.test(
+        `${nameOf(b)} ${b.getAttribute('class') ?? ''}`,
+      ),
+    ) ?? el;
   return (
     <section class="wa-band wa-band--tight" aria-label="Chat with the site">
       <div class="wa-rows">
@@ -157,7 +186,11 @@ export function ChatRow({ el }: { el: Element }): JSX.Element {
 }
 
 /** The site's own progress through a multi-page flow, behind "Your application". Only what the page states. */
-export function ProgressCard({ progress }: { progress: NonNullable<CalmPlan['progress']> }): JSX.Element {
+export function ProgressCard({
+  progress,
+}: {
+  progress: NonNullable<CalmPlan['progress']>;
+}): JSX.Element {
   return (
     <section class="wa-band wa-band--tight" aria-label="Your application">
       <Disclosure title="Your application" sub={progress.stepText} quiet>
@@ -170,25 +203,43 @@ export function ProgressCard({ progress }: { progress: NonNullable<CalmPlan['pro
 }
 
 /** After the main action: the page's confirmation, its reference number with Copy, the next steps, then help. */
-export function SuccessPanel({ outcome, help }: { outcome: Outcome; help: Block[] }): JSX.Element {
+export function SuccessPanel({
+  outcome,
+  help,
+}: {
+  outcome: Outcome;
+  help: Block[];
+}): JSX.Element {
   const ref = useRef<HTMLHeadingElement>(null);
   const ctx = useCalm();
   const [copied, setCopied] = useState(false);
   useEffect(() => {
-    ref.current?.scrollIntoView({ block: 'center', behavior: ctx.reduceMotion ? 'auto' : 'smooth' });
+    ref.current?.scrollIntoView({
+      block: 'center',
+      behavior: ctx.reduceMotion ? 'auto' : 'smooth',
+    });
     ref.current?.focus({ preventScroll: true });
   }, [outcome.el]);
   const links = Array.from(outcome.el.querySelectorAll('a[href]')).slice(0, 2);
   const copy = (): void => {
     if (!outcome.ref) return;
     try {
-      void navigator.clipboard?.writeText(outcome.ref).then(() => setCopied(true)).catch(() => undefined);
+      void navigator.clipboard
+        ?.writeText(outcome.ref)
+        .then(() => setCopied(true))
+        .catch(() => undefined);
     } catch {
       /* clipboard not available */
     }
   };
   const linkTexts = new Set(links.map((a) => nameOf(a)));
-  const lines = outcome.lines.filter((l) => !linkTexts.has(l) && (!outcome.ref || !l.includes(outcome.ref) || l.length > outcome.ref.length + 30));
+  const lines = outcome.lines.filter(
+    (l) =>
+      !linkTexts.has(l) &&
+      (!outcome.ref ||
+        !l.includes(outcome.ref) ||
+        l.length > outcome.ref.length + 30),
+  );
   return (
     <section class="wa-band wa-band--first" aria-label="Done">
       <div class="wa-success" role="status">
@@ -215,7 +266,16 @@ export function SuccessPanel({ outcome, help }: { outcome: Outcome; help: Block[
         {links.length > 0 && (
           <div class="wa-actions">
             {links.map((a, i) => (
-              <InlineLink key={i} p={{ t: 'link', el: a, text: nameOf(a), href: (a as HTMLAnchorElement).href || null, help: false }} />
+              <InlineLink
+                key={i}
+                p={{
+                  t: 'link',
+                  el: a,
+                  text: nameOf(a),
+                  href: (a as HTMLAnchorElement).href || null,
+                  help: false,
+                }}
+              />
             ))}
           </div>
         )}
@@ -232,15 +292,28 @@ export function SuccessPanel({ outcome, help }: { outcome: Outcome; help: Block[
 /** The page's own error summary, at the top of the form. Each link goes to the step that holds the field. */
 export function ErrorCard({ outcome }: { outcome: Outcome }): JSX.Element {
   const ctx = useCalm();
-  const items = Array.from(outcome.el.querySelectorAll('a[href]')).map((a) => ({ el: a, text: nameOf(a) })).filter((x) => x.text);
-  const title = outcome.heading && !items.some((i) => i.text === outcome.heading) ? outcome.heading : 'Please check these';
+  const items = Array.from(outcome.el.querySelectorAll('a[href]'))
+    .map((a) => ({ el: a, text: nameOf(a) }))
+    .filter((x) => x.text);
+  const title =
+    outcome.heading && !items.some((i) => i.text === outcome.heading)
+      ? outcome.heading
+      : 'Please check these';
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    ref.current?.scrollIntoView({ block: 'center', behavior: ctx.reduceMotion ? 'auto' : 'smooth' });
+    ref.current?.scrollIntoView({
+      block: 'center',
+      behavior: ctx.reduceMotion ? 'auto' : 'smooth',
+    });
     ref.current?.focus({ preventScroll: true });
   }, [outcome.el]);
   return (
-    <div class="wa-notice wa-notice--error" role="alert" tabIndex={-1} ref={ref}>
+    <div
+      class="wa-notice wa-notice--error"
+      role="alert"
+      tabIndex={-1}
+      ref={ref}
+    >
       <span class="wa-notice__icon" aria-hidden="true">
         <I.Alert />
       </span>
@@ -250,7 +323,11 @@ export function ErrorCard({ outcome }: { outcome: Outcome }): JSX.Element {
           <ul class="wa-errlist">
             {items.map((x, i) => (
               <li key={i}>
-                <button type="button" class="wa-inline-link" onClick={() => ctx.click(x.el)}>
+                <button
+                  type="button"
+                  class="wa-inline-link"
+                  onClick={() => ctx.click(x.el)}
+                >
                   {x.text}
                 </button>
               </li>
@@ -277,7 +354,14 @@ export function PortalLinks({ portal }: { portal: Portal }): JSX.Element {
       <div class="wa-rows wa-portal">
         {portal.rows.map((r) => {
           const press = (e: MouseEvent): void => {
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+            if (
+              e.metaKey ||
+              e.ctrlKey ||
+              e.shiftKey ||
+              e.altKey ||
+              e.button !== 0
+            )
+              return;
             e.preventDefault();
             ctx.click(r.el);
           };
@@ -295,7 +379,12 @@ export function PortalLinks({ portal }: { portal: Portal }): JSX.Element {
               {inner}
             </a>
           ) : (
-            <button key={r.key} type="button" class="wa-row" onClick={() => ctx.click(r.el)}>
+            <button
+              key={r.key}
+              type="button"
+              class="wa-row"
+              onClick={() => ctx.click(r.el)}
+            >
               {inner}
             </button>
           );

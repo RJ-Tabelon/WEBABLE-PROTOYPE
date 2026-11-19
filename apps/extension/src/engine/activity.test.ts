@@ -7,8 +7,18 @@ describe('launcher activity', () => {
     const activity = createActivity((n) => counts.push(n));
     let finish!: () => void;
     let fail!: (e: Error) => void;
-    const a = activity.run(() => new Promise<void>((resolve) => { finish = resolve; }));
-    const b = activity.run(() => new Promise<void>((_resolve, reject) => { fail = reject; }));
+    const a = activity.run(
+      () =>
+        new Promise<void>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const b = activity.run(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          fail = reject;
+        }),
+    );
     const rejected = expect(b).rejects.toThrow('unavailable');
     expect(counts).toEqual([1, 2]);
     finish();
@@ -22,9 +32,18 @@ describe('launcher activity', () => {
   it('clears synchronous failures and excludes background settings reads', async () => {
     const counts: number[] = [];
     const activity = createActivity((n) => counts.push(n));
-    await expect(activity.run(() => { throw new Error('failed'); })).rejects.toThrow('failed');
+    await expect(
+      activity.run(() => {
+        throw new Error('failed');
+      }),
+    ).rejects.toThrow('failed');
     expect(counts).toEqual([1, 0]);
     expect(activity.isContentRequest({ type: 'getSettings' })).toBe(false);
-    expect(activity.isContentRequest({ type: 'compose', req: { page: {} as never, groups: [] } })).toBe(true);
+    expect(
+      activity.isContentRequest({
+        type: 'compose',
+        req: { page: {} as never, groups: [] },
+      }),
+    ).toBe(true);
   });
 });

@@ -13,7 +13,8 @@ import type { IndexPlan, IndexSection } from './plan';
 function usePress(s: CardLinkBlock): (e: MouseEvent) => void {
   const ctx = useCalm();
   return (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; // our own href opens a new tab
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return; // our own href opens a new tab
     e.preventDefault();
     ctx.click(s.el);
   };
@@ -40,7 +41,13 @@ function LeadStory({ s }: { s: CardLinkBlock }): JSX.Element {
       {body}
     </a>
   ) : (
-    <div class="wa-leadstory" role="link" tabIndex={0} onClick={() => ctx.click(s.el)} onKeyDown={(e) => e.key === 'Enter' && ctx.click(s.el)}>
+    <div
+      class="wa-leadstory"
+      role="link"
+      tabIndex={0}
+      onClick={() => ctx.click(s.el)}
+      onKeyDown={(e) => e.key === 'Enter' && ctx.click(s.el)}
+    >
       {body}
     </div>
   );
@@ -74,7 +81,18 @@ export function StoryRow({ s }: { s: CardLinkBlock }): JSX.Element {
       {body}
     </a>
   ) : (
-    <button type="button" class={cls} style={{ textAlign: 'left', border: 0, background: 'transparent', font: 'inherit', cursor: 'pointer' }} onClick={() => ctx.click(s.el)}>
+    <button
+      type="button"
+      class={cls}
+      style={{
+        textAlign: 'left',
+        border: 0,
+        background: 'transparent',
+        font: 'inherit',
+        cursor: 'pointer',
+      }}
+      onClick={() => ctx.click(s.el)}
+    >
       {body}
     </button>
   );
@@ -121,7 +139,11 @@ function IndexSectionView({ sec }: { sec: IndexSection }): JSX.Element {
       <Stories list={sec.first} />
       {more && (
         <div class="wa-isec__more">
-          <Disclosure title={`More in ${sec.title}`} count={sec.rest.length || null} quiet>
+          <Disclosure
+            title={`More in ${sec.title}`}
+            count={sec.rest.length || null}
+            quiet
+          >
             {sec.rest.length > 0 && <Stories list={sec.rest} />}
             {sec.other.length > 0 && <Blocks blocks={sec.other} />}
           </Disclosure>

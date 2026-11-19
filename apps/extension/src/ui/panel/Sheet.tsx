@@ -60,7 +60,9 @@ const ICONS: Record<DidIcon, (p: { size?: number }) => JSX.Element> = {
 /** The page's own paragraph size in CSS px (the first real paragraph in view order), or null. */
 export function measurePageTextPx(): number | null {
   try {
-    const list = document.querySelectorAll('main p, article p, [role="main"] p, p');
+    const list = document.querySelectorAll(
+      'main p, article p, [role="main"] p, p',
+    );
     const n = Math.min(list.length, 120);
     for (let i = 0; i < n; i++) {
       const el = list[i] as HTMLElement;
@@ -94,16 +96,31 @@ interface Props {
   onAdjust?: (what: 'text') => void;
 }
 
-function DidRow({ line, onAct }: { line: DidLine; onAct: (l: DidLine) => void }) {
+function DidRow({
+  line,
+  onAct,
+}: {
+  line: DidLine;
+  onAct: (l: DidLine) => void;
+}) {
   const Icon = ICONS[line.icon];
-  const verb = line.action.kind === 'show' ? (line.action.overlayIds.length > 1 ? 'Show them' : 'Show it') : 'Undo';
+  const verb =
+    line.action.kind === 'show'
+      ? line.action.overlayIds.length > 1
+        ? 'Show them'
+        : 'Show it'
+      : 'Undo';
   return (
     <li class="wa-did">
       <span class="wa-did-ic" aria-hidden="true">
         <Icon size={20} />
       </span>
       <span class="wa-did-t">{line.text}</span>
-      <button class="wa-did-act" aria-label={`${verb}: ${line.text}`} onClick={() => onAct(line)}>
+      <button
+        class="wa-did-act"
+        aria-label={`${verb}: ${line.text}`}
+        onClick={() => onAct(line)}
+      >
         {verb}
       </button>
     </li>
@@ -111,7 +128,13 @@ function DidRow({ line, onAct }: { line: DidLine; onAct: (l: DidLine) => void })
 }
 
 /** Round 9: paragraphs rewritten for this person, with one switch back to the page's own words. */
-function RewordRow({ line, onOriginal }: { line: RewordLine; onOriginal: (on: boolean) => void }) {
+function RewordRow({
+  line,
+  onOriginal,
+}: {
+  line: RewordLine;
+  onOriginal: (on: boolean) => void;
+}) {
   return (
     <li class="wa-did-rw">
       <div class="wa-did">
@@ -123,7 +146,12 @@ function RewordRow({ line, onOriginal }: { line: RewordLine; onOriginal: (on: bo
         </span>
       </div>
       {!line.busy && (
-        <button class="wa-sh-switch wa-did-switch" role="switch" aria-checked={line.showingOriginal} onClick={() => onOriginal(!line.showingOriginal)}>
+        <button
+          class="wa-sh-switch wa-did-switch"
+          role="switch"
+          aria-checked={line.showingOriginal}
+          onClick={() => onOriginal(!line.showingOriginal)}
+        >
           <span>Show the page's own words</span>
           <span class="wa-sh-track" aria-hidden="true" />
         </button>
@@ -132,7 +160,19 @@ function RewordRow({ line, onOriginal }: { line: RewordLine; onOriginal: (on: bo
   );
 }
 
-export function Sheet({ api, s, origin, side, maxHeightPx, pageZoom, gone, onGone, note, onClose, onAdjust }: Props) {
+export function Sheet({
+  api,
+  s,
+  origin,
+  side,
+  maxHeightPx,
+  pageZoom,
+  gone,
+  onGone,
+  note,
+  onClose,
+  onAdjust,
+}: Props) {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const didRef = useRef<HTMLHeadingElement>(null);
   const mode = sheetMode(s, origin);
@@ -155,13 +195,16 @@ export function Sheet({ api, s, origin, side, maxHeightPx, pageZoom, gone, onGon
   const unread = on && pageUnread(s);
   const viewSwitch = on && showViewSwitch(s.calm);
   const simplified = Boolean(s.calm.open || (s.calm.loading && !s.calm.open));
-  const px = on ? shownTextPx(s, pageZoom, s.calm.open ? null : measurePageTextPx()) : null;
+  const px = on
+    ? shownTextPx(s, pageZoom, s.calm.open ? null : measurePageTextPx())
+    : null;
   const size = sizeWord(px);
   // The "Aa" is drawn at the size the page shows (one CSS px is one design pixel in the chrome layer), kept in the row.
   const aaPx = px === null ? null : Math.min(34, Math.max(12, Math.round(px)));
 
   const act = (l: DidLine) => {
-    if (l.action.kind === 'undo') for (const id of l.action.opIds) api.undoOp(id);
+    if (l.action.kind === 'undo')
+      for (const id of l.action.opIds) api.undoOp(id);
     else
       for (const id of l.action.overlayIds) {
         api.restoreOverlay(id);
@@ -211,7 +254,11 @@ export function Sheet({ api, s, origin, side, maxHeightPx, pageZoom, gone, onGon
       <div class="wa-sh-body">
         {viewSwitch && (
           <div class="wa-sh-sec">
-            <div class="wa-seg2" role="group" aria-label="How this page is shown">
+            <div
+              class="wa-seg2"
+              role="group"
+              aria-label="How this page is shown"
+            >
               <button
                 aria-pressed={simplified}
                 onClick={() => {
@@ -238,19 +285,35 @@ export function Sheet({ api, s, origin, side, maxHeightPx, pageZoom, gone, onGon
               <span class="wa-sh-label" id="wa-size-label">
                 Text size
               </span>
-              <div class="wa-stepper" role="group" aria-labelledby="wa-size-label">
-                <button class="wa-step" aria-label="Smaller text" onClick={() => text(-1)}>
+              <div
+                class="wa-stepper"
+                role="group"
+                aria-labelledby="wa-size-label"
+              >
+                <button
+                  class="wa-step"
+                  aria-label="Smaller text"
+                  onClick={() => text(-1)}
+                >
                   <IconMinus size={20} />
                 </button>
                 <output class="wa-step-val" aria-live="polite">
                   {aaPx !== null && (
-                    <span class="wa-step-aa" aria-hidden="true" style={{ fontSize: `${aaPx}px` }}>
+                    <span
+                      class="wa-step-aa"
+                      aria-hidden="true"
+                      style={{ fontSize: `${aaPx}px` }}
+                    >
                       Aa
                     </span>
                   )}
                   <span class="wa-step-word">{size}</span>
                 </output>
-                <button class="wa-step" aria-label="Larger text" onClick={() => text(1)}>
+                <button
+                  class="wa-step"
+                  aria-label="Larger text"
+                  onClick={() => text(1)}
+                >
                   <IconPlus size={20} />
                 </button>
               </div>
@@ -271,20 +334,29 @@ export function Sheet({ api, s, origin, side, maxHeightPx, pageZoom, gone, onGon
             {unread && <p class="wa-sh-quiet">{UNREAD}</p>}
             {lines.length > 0 || rw ? (
               <ul class="wa-did-list">
-                {rw && <RewordRow line={rw} onOriginal={(v) => api.showOriginalWords(v)} />}
+                {rw && (
+                  <RewordRow
+                    line={rw}
+                    onOriginal={(v) => api.showOriginalWords(v)}
+                  />
+                )}
                 {lines.map((l) => (
                   <DidRow key={l.key} line={l} onAct={act} />
                 ))}
               </ul>
             ) : (
-              !unread && <p class="wa-sh-quiet">Nothing needed changing here.</p>
+              !unread && (
+                <p class="wa-sh-quiet">Nothing needed changing here.</p>
+              )
             )}
           </section>
         )}
 
         {mode === 'original' && !paused && (
           <div class="wa-sh-sec">
-            <p class="wa-sh-quiet">Showing this page the way the site made it.</p>
+            <p class="wa-sh-quiet">
+              Showing this page the way the site made it.
+            </p>
             <button class="wa-sh-text" onClick={() => api.showOriginal(false)}>
               Show my changes again
             </button>
@@ -293,14 +365,26 @@ export function Sheet({ api, s, origin, side, maxHeightPx, pageZoom, gone, onGon
 
         {mode === 'off' && (
           <div class="wa-sh-sec">
-            <p class="wa-sh-quiet">WebAble is turned off. Turn it on from the WebAble icon in your browser's toolbar.</p>
+            <p class="wa-sh-quiet">
+              WebAble is turned off. Turn it on from the WebAble icon in your
+              browser's toolbar.
+            </p>
           </div>
         )}
 
         {mode !== 'off' && (
           <div class="wa-sh-sec">
-            {paused && <p class="wa-sh-quiet wa-sh-quiet-top">Pages on this site look the way the site made them.</p>}
-            <button class="wa-sh-switch" role="switch" aria-checked={paused} onClick={togglePause}>
+            {paused && (
+              <p class="wa-sh-quiet wa-sh-quiet-top">
+                Pages on this site look the way the site made them.
+              </p>
+            )}
+            <button
+              class="wa-sh-switch"
+              role="switch"
+              aria-checked={paused}
+              onClick={togglePause}
+            >
               <span>Pause on this site</span>
               <span class="wa-sh-track" aria-hidden="true" />
             </button>

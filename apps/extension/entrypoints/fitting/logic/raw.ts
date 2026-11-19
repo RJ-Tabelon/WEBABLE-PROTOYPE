@@ -2,15 +2,26 @@
 // session's counts and timings in `calibration.warmup`) is saved; per-trial data is dropped when the page closes.
 
 import type {
-  FittingRaw, InputClass, Polarity, ReadTrial, WarmupBlock, WarmupBlockMetrics, WarmupMetrics,
-} from '@webable/core';
+  FittingRaw,
+  InputClass,
+  Polarity,
+  ReadTrial,
+  WarmupBlock,
+  WarmupBlockMetrics,
+  WarmupMetrics,
+} from '@webable/engine';
 import type { SiteTaskResult } from '../../../src/sitetask/types';
 import type { RingPress } from './pointing';
 
 /** Added to gotInWay when the person pressed a "stop the moving parts" control (core reads it as the stop press). */
 export const STOPPED_MOTION = 'pressed stop';
 
-type FindTrial = { clutter: boolean; motion: boolean; ms: number; found: boolean };
+type FindTrial = {
+  clutter: boolean;
+  motion: boolean;
+  ms: number;
+  found: boolean;
+};
 
 /**
  * One Finding trial from one real site (round 8c): `{ clutter: busy, motion: motionSeen, ms, found }`. A site the person
@@ -18,10 +29,19 @@ type FindTrial = { clutter: boolean; motion: boolean; ms: number; found: boolean
  * then skipped, or never found, is a trial that was not found.
  */
 export function siteTrial(r: SiteTaskResult): FindTrial | null {
-  const tried = !r.skipped || (r.presses ?? 0) > 1 || (r.wrongClicks ?? 0) > 0 || (r.scrollScreens ?? 0) >= 0.5;
+  const tried =
+    !r.skipped ||
+    (r.presses ?? 0) > 1 ||
+    (r.wrongClicks ?? 0) > 0 ||
+    (r.scrollScreens ?? 0) >= 0.5;
   if (!tried) return null;
   const found = !!r.found && r.ms != null && Number.isFinite(r.ms) && r.ms > 0;
-  return { clutter: !!r.busy, motion: !!r.motionSeen, ms: Math.round(found ? (r.ms as number) : Math.max(0, r.ms ?? 0)), found };
+  return {
+    clutter: !!r.busy,
+    motion: !!r.motionSeen,
+    ms: Math.round(found ? (r.ms as number) : Math.max(0, r.ms ?? 0)),
+    found,
+  };
 }
 
 interface PressDown {
@@ -78,7 +98,12 @@ export class RawCollector {
   private readonly clocks = new Map<WarmupBlock, BlockClock>();
   private current: WarmupBlock | null = null;
   private down: PressDown | null = null;
-  private lastUp: { x: number; y: number; t: number; el: Element | null } | null = null;
+  private lastUp: {
+    x: number;
+    y: number;
+    t: number;
+    el: Element | null;
+  } | null = null;
 
   /* ---------------- active time (pauses and hidden tabs excluded) ---------------- */
 
@@ -107,7 +132,10 @@ export class RawCollector {
   }
 
   get activeTotalMs(): number {
-    return this.activeMs + (this.runningSince === null ? 0 : performance.now() - this.runningSince);
+    return (
+      this.activeMs +
+      (this.runningSince === null ? 0 : performance.now() - this.runningSince)
+    );
   }
 
   get durationSec(): number {
@@ -119,7 +147,13 @@ export class RawCollector {
   beginBlock(id: WarmupBlock): void {
     this.endCurrent();
     this.current = id;
-    const c: BlockClock = this.clocks.get(id) ?? { status: 'done', activeMs: 0, since: null, actions: 0, trials: 0 };
+    const c: BlockClock = this.clocks.get(id) ?? {
+      status: 'done',
+      activeMs: 0,
+      since: null,
+      actions: 0,
+      trials: 0,
+    };
     c.since = this.runningSince !== null ? performance.now() : null;
     this.clocks.set(id, c);
   }
@@ -134,8 +168,17 @@ export class RawCollector {
   }
 
   /** Close the running block with its outcome. */
-  endBlock(id: WarmupBlock, outcome: { trials: number; stop?: string; skipped?: boolean }): void {
-    const c = this.clocks.get(id) ?? { status: 'done' as const, activeMs: 0, since: null, actions: 0, trials: 0 };
+  endBlock(
+    id: WarmupBlock,
+    outcome: { trials: number; stop?: string; skipped?: boolean },
+  ): void {
+    const c = this.clocks.get(id) ?? {
+      status: 'done' as const,
+      activeMs: 0,
+      since: null,
+      actions: 0,
+      trials: 0,
+    };
     if (this.current === id) this.endCurrent();
     c.trials = outcome.trials;
     c.stop = outcome.skipped ? 'person' : outcome.stop;
@@ -146,7 +189,13 @@ export class RawCollector {
   }
 
   markBlock(id: WarmupBlock, status: 'prefilled' | 'not_run'): void {
-    this.clocks.set(id, { status, activeMs: 0, since: null, actions: 0, trials: 0 });
+    this.clocks.set(id, {
+      status,
+      activeMs: 0,
+      since: null,
+      actions: 0,
+      trials: 0,
+    });
     if (status === 'not_run' || status === 'prefilled') this.skipped.add(id);
   }
 
@@ -165,31 +214,55 @@ export class RawCollector {
 
   /* ---------------- presses anywhere in the warm-up ---------------- */
 
-  private isRepeat(x: number, y: number, t: number, el: Element | null): boolean {
+  private isRepeat(
+    x: number,
+    y: number,
+    t: number,
+    el: Element | null,
+  ): boolean {
     const last = this.lastUp;
     if (!last || t - last.t > 500) return false;
-    return Math.hypot(x - last.x, y - last.y) <= 5 || (el !== null && el === last.el);
+    return (
+      Math.hypot(x - last.x, y - last.y) <= 5 || (el !== null && el === last.el)
+    );
   }
 
   onPointerDown(e: PointerEvent): void {
     if (!e.isPrimary) return;
     const target = e.target instanceof Element ? e.target : null;
     if (target?.closest('[data-ring]')) return; // the ring reports its own presses
-    const el = target?.closest('button, a, [role="button"], [data-press]') ?? null;
-    this.down = { x: e.clientX, y: e.clientY, t: e.timeStamp, el, repeat: this.isRepeat(e.clientX, e.clientY, e.timeStamp, el) };
+    const el =
+      target?.closest('button, a, [role="button"], [data-press]') ?? null;
+    this.down = {
+      x: e.clientX,
+      y: e.clientY,
+      t: e.timeStamp,
+      el,
+      repeat: this.isRepeat(e.clientX, e.clientY, e.timeStamp, el),
+    };
   }
 
   onPointerUp(e: PointerEvent): void {
     const d = this.down;
     if (!d || !e.isPrimary) return;
     this.down = null;
-    const slipped = d.el ? !rectHas(d.el.getBoundingClientRect(), e.clientX, e.clientY) : false;
+    const slipped = d.el
+      ? !rectHas(d.el.getBoundingClientRect(), e.clientX, e.clientY)
+      : false;
     this.presses.push({ slipped, repeat: d.repeat });
     this.lastUp = { x: e.clientX, y: e.clientY, t: e.timeStamp, el: d.el };
   }
 
   /** Ring presses: the ring knows the dot geometry, so it decides slipped itself. */
-  ringPress(downX: number, downY: number, downT: number, upX: number, upY: number, upT: number, slipped: boolean): void {
+  ringPress(
+    downX: number,
+    downY: number,
+    downT: number,
+    upX: number,
+    upY: number,
+    upT: number,
+    slipped: boolean,
+  ): void {
     const repeat = this.isRepeat(downX, downY, downT, null);
     this.presses.push({ slipped, repeat });
     this.lastUp = { x: upX, y: upY, t: upT, el: null };
@@ -210,7 +283,8 @@ export class RawCollector {
       }
       const n = Math.max(0, Math.min(500, Math.round(r.presses ?? 0)));
       const slips = Math.max(0, Math.min(n, Math.round(r.slips ?? 0)));
-      for (let k = 0; k < n; k++) this.presses.push({ slipped: k < slips, repeat: false });
+      for (let k = 0; k < n; k++)
+        this.presses.push({ slipped: k < slips, repeat: false });
     }
     return added;
   }
@@ -260,8 +334,15 @@ export class RawCollector {
   }
 
   toRaw(): FittingRaw {
-    const readingTouched = this.seedPx != null || this.ladder.length > 0 || this.faint.length > 0 || this.stated !== null;
-    const gotInWay = [...(this.stoppedMotion ? [STOPPED_MOTION] : []), ...this.notes];
+    const readingTouched =
+      this.seedPx != null ||
+      this.ladder.length > 0 ||
+      this.faint.length > 0 ||
+      this.stated !== null;
+    const gotInWay = [
+      ...(this.stoppedMotion ? [STOPPED_MOTION] : []),
+      ...this.notes,
+    ];
     const findingTouched = this.done.has('find') || this.done.has('pick');
     return {
       inputClass: this.inputClass,
@@ -272,21 +353,45 @@ export class RawCollector {
             seedPx: this.seedPx,
             ladder: this.ladder.map((t) => ({ ...t })),
             faint: this.faint.map((t) => ({ ...t })),
-            polarity: { lightMs: [...this.lightMs], darkMs: [...this.darkMs], stated: this.stated },
+            polarity: {
+              lightMs: [...this.lightMs],
+              darkMs: [...this.darkMs],
+              stated: this.stated,
+            },
           }
         : null,
       pointing: this.blocks.length
-        ? { blocks: this.blocks.map((b) => ({ sizePx: b.sizePx, presses: b.presses.map((p) => ({ ...p })) })) }
+        ? {
+            blocks: this.blocks.map((b) => ({
+              sizePx: b.sizePx,
+              presses: b.presses.map((p) => ({ ...p })),
+            })),
+          }
         : null,
       finding: findingTouched
-        ? { trials: this.findTrials.map((t) => ({ ...t })), preferredCalm: this.preferredCalm, gotInWay }
+        ? {
+            trials: this.findTrials.map((t) => ({ ...t })),
+            preferredCalm: this.preferredCalm,
+            gotInWay,
+          }
         : null,
       allPresses: this.presses.map((p) => ({ ...p })),
     };
   }
 
-  metrics(opts: { completed: boolean; corrections: WarmupMetrics['corrections']; settingsUsed: string[] }): WarmupMetrics {
-    const order: WarmupBlock[] = ['read', 'faint', 'point', 'find', 'pick', 'confirm'];
+  metrics(opts: {
+    completed: boolean;
+    corrections: WarmupMetrics['corrections'];
+    settingsUsed: string[];
+  }): WarmupMetrics {
+    const order: WarmupBlock[] = [
+      'read',
+      'faint',
+      'point',
+      'find',
+      'pick',
+      'confirm',
+    ];
     const blocks: WarmupBlockMetrics[] = [];
     for (const id of order) {
       const c = this.clocks.get(id);
@@ -294,7 +399,9 @@ export class RawCollector {
       const m: WarmupBlockMetrics = {
         block: id,
         status: c.status,
-        activeMs: Math.round(c.activeMs + (c.since !== null ? performance.now() - c.since : 0)),
+        activeMs: Math.round(
+          c.activeMs + (c.since !== null ? performance.now() - c.since : 0),
+        ),
         actions: c.actions,
         trials: c.trials,
       };

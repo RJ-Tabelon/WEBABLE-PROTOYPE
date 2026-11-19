@@ -1,52 +1,116 @@
-// Round 11: text size on a phone. The one exception to "zoom carries size; CSS carries structure".
+// Text size on every screen: each piece of text on the page gets its own size, worked out from the page's body text
+// and the size the person needs. Page zoom is never used for size. Zoom lays the whole page out at another width, so
+// a site's columns, menus and cards change shape (a desktop site turns into its tablet or phone layout, a phone site
+// scrolls sideways). The text map leaves every box where the site put it and makes the text in it bigger.
 //
-// On a phone, tab zoom makes the page lay out narrower and draws it bigger. Most sites stop getting narrower at about
-// 320 CSS px, so past ~1.1-1.2x the page scrolls sideways and the zoom has to stop short of the person's size. Only
-// there (a narrow screen, and a zoom the page's width capped) the rest of the way is a text map: every text size on
-// the page times the same factor k, the page staying phone-width.
+// Proportions (textRatio). The page's body text is b px and the person needs F = b x k:
+//  - body text becomes F. Text a little larger or smaller than body text keeps its ratio to it;
+//  - headings and display text grow less than body text, the more so the larger they are and the larger k is
+//    (F x (s/b)^e, e from 1 down to 0.5). A 48 px headline does not become 96 px and outgrow its box, but every
+//    heading stays larger than body text and larger than the heading below it. Nothing gets smaller than the site's;
+//  - small text (captions, menus, notes) grows with body text (s x k). Text that would still be under 3/4 of F is
+//    lifted part of the way towards it (never past it, at most 1.3 x k), so it stays smaller than body text;
+//  - the mapping only goes up with size: sizes that differ on the site still differ, in the same order;
+//  - text in a layer that stays on screen over the page (a fixed or sticky header, a player, a bottom bar) grows half
+//    as much: those boxes are built to a set height and cover the page, so their text has the least room.
 //
 // Rules:
-//  - uniform: each element that draws text gets its own computed font-size x k, its px line-height x k ('normal' and
-//    numbers scale by themselves) and its px letter- and word-spacing x k. Every ratio between sizes (headings, body,
-//    captions) stays as the site made it; nothing is pulled up to a target and nothing is set per element by need;
+//  - per element: each element that draws text gets its own computed font-size x its ratio, its px line-height and
+//    its px letter- and word-spacing x the same ratio ('normal' and numbers follow the font by themselves);
 //  - read with the map lifted: sizes are the page's own computed values read while this sheet is disabled, then
 //    pinned as px, so em, % and rem never compound (no child is scaled twice) and re-reading never runs away;
 //  - a constructed sheet plus data-wa-tm tokens: the site's inline styles are never written, except an inline
 //    `!important` size, which only an inline value can beat; that one is put back byte for byte;
 //  - content added or changed later (a MutationObserver), a late stylesheet and a window resize are read again the
-//    same way, so revealed and client-rendered text gets the same k; the engine's own writes are never re-read;
+//    same way, so revealed and client-rendered text gets the same sizes; the engine's own writes are never re-read;
+//  - web components: open shadow roots are walked too and the sheet is adopted into each. Text written in a page
+//    element but shown through a slot takes its size from the slot, so the slot is sized (a sentence never ends up
+//    half grown). Closed shadow roots cannot be reached and keep their own sizes;
 //  - never: WebAble's own UI (and the simplified page inside it), SVG and MathML text, icon-font glyphs, text that is
 //    hidden by design in a box that does not clip it (scaling could show it), and a one-line form control whose fixed
 //    box would cut its scaled text (its text is drawn by the browser inside, where no check can see it).
-// The controller decides when (narrow screen, width-capped zoom), runs the same checks, and takes it off (one smaller
-// fallback, then off) when a check fails.
+// Where bigger text has no room, the controller's checks name the text that broke (cut off, drawn over other text,
+// pushed off the side of the page, a menu label broken onto two lines). The box it sits in (a menu row, a button, a
+// fixed-height card) first grows half as much (keep with KEEP_SHARE), then keeps the site's own text sizes if it
+// still breaks, and the rest of the page keeps the person's size. If the page still fails a check: one smaller k for
+// the whole page, then the site's own sizes.
 
-import type { LedgerEntry } from '@webable/core';
+import type { LedgerEntry } from '@webable/engine';
 import { makeOpRecord, type Op, type SheetLayer } from './tailor';
 
-/** The text map runs only on screens narrower than this (screen px: CSS px x the tab's zoom). */
-export const TEXT_SCALE_NARROW_PX = 600;
-/** Below this factor nothing changes (the zoom presets are ~10-25% apart; a smaller text step is not worth a change). */
+/** Below this factor nothing changes (a smaller text step is not worth a change). */
 export const TEXT_SCALE_MIN = 1.08;
-/** At most twice the page's own sizes on a phone: beyond that single words in headings stop fitting the width. */
+/** At most twice the page's own body size: beyond that single words in headings stop fitting their boxes. */
 export const TEXT_SCALE_MAX = 2;
-/** Extra size trials when the planned zoom made a narrow page scroll sideways (each one is a real resize). */
-export const WIDTH_TRIALS = 2;
+/** Small text that would still be under this share of the person's size is lifted part of the way towards it. */
+export const SMALL_TEXT_FLOOR = 0.75;
+/** How far below that floor small text stays (the square root of its share: 1/2 -> 0.71). */
+const SMALL_TEXT_KNEE = 0.5;
+/** Text in a fixed or sticky layer grows by this share of what the same size grows by elsewhere. */
+export const LAYER_SHARE = 0.5;
+/** A part of the page where full growth broke something first tries this share of it (then the site's own sizes). */
+export const KEEP_SHARE = 0.5;
+/** Row labels: at most this many characters (an item with more text than ITEM_TEXT is not a menu item). */
+const LABEL_TEXT = 40;
+const ITEM_TEXT = 60;
+/** Small text grows at most this much more than body text does. */
+const SMALL_TEXT_MAX_OVER = 1.3;
+/** Headings grow by (s/b)^e: e = 1 - this x log2(k), never under HEADING_EXP_MIN. */
+const HEADING_EXP_SLOPE = 0.35;
+export const HEADING_EXP_MIN = 0.5;
 
 const ATTR = 'data-wa-tm';
 /** Specificity (0,4,0): above the site's rules and WebAble's own size and spacing tokens, so the map multiplies them. */
 const REPEAT = 4;
 /** Inputs whose text the person reads or types (submit/button/reset show their value as a label). */
-const TEXT_INPUTS = new Set(['text', 'search', 'email', 'url', 'tel', 'password', 'number', 'date', 'datetime-local', 'month', 'week', 'time', 'submit', 'button', 'reset']);
-const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'IFRAME', 'OBJECT', 'EMBED', 'VIDEO', 'AUDIO', 'CANVAS', 'PICTURE', 'IMG', 'WEBABLE-UI']);
-const SKIP_CLOSEST = 'svg, math, script, style, noscript, template, iframe, object, embed, webable-ui';
+const TEXT_INPUTS = new Set([
+  'text',
+  'search',
+  'email',
+  'url',
+  'tel',
+  'password',
+  'number',
+  'date',
+  'datetime-local',
+  'month',
+  'week',
+  'time',
+  'submit',
+  'button',
+  'reset',
+]);
+const SKIP_TAGS = new Set([
+  'SCRIPT',
+  'STYLE',
+  'NOSCRIPT',
+  'TEMPLATE',
+  'HEAD',
+  'IFRAME',
+  'OBJECT',
+  'EMBED',
+  'VIDEO',
+  'AUDIO',
+  'CANVAS',
+  'PICTURE',
+  'IMG',
+  'WEBABLE-UI',
+]);
+const SKIP_CLOSEST =
+  'svg, math, script, style, noscript, template, iframe, object, embed, webable-ui';
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const MATH_NS = 'http://www.w3.org/1998/Math/MathML';
-const ICON_FONT = /icon|awesome|material symbols|material icons|glyph|fontello|ionicons|feather|remixicon|bootstrap-icons|dashicons/i;
+const ICON_FONT =
+  /icon|awesome|material symbols|material icons|glyph|fontello|ionicons|feather|remixicon|bootstrap-icons|dashicons/i;
 /** Private-use glyphs only (an icon font drawn from a code point). */
 const PUA_ONLY = /^[-\s]+$/;
 const STYLE_SIZE = /font|line-height|letter-spacing|word-spacing/i;
-const PROPS = ['font-size', 'line-height', 'letter-spacing', 'word-spacing'] as const;
+const PROPS = [
+  'font-size',
+  'line-height',
+  'letter-spacing',
+  'word-spacing',
+] as const;
 /** A line of text needs about this many times its font size of height. */
 const LINE_ROOM = 1.2;
 const MAX_ELEMENTS = 12000;
@@ -57,18 +121,22 @@ const BIG_SUBTREE = 2000;
 /* Pure planning                                                       */
 /* ------------------------------------------------------------------ */
 
-/** The text map is for narrow screens only: on wider screens zoom has the width to carry size by itself. */
-export function textScaleGate(screenPx: number): boolean {
-  return Number.isFinite(screenPx) && screenPx > 0 && screenPx < TEXT_SCALE_NARROW_PX;
-}
-
 /**
- * k for a page whose zoom the width stopped at `zoom` when the plan wanted `wantZoom`: the rest of the way, so body
- * text lands where the plan put it (body x zoom x k = body x wantZoom), capped at TEXT_SCALE_MAX. Null below
- * TEXT_SCALE_MIN.
+ * k for a tab at the person's own zoom `zoom` when the plan wants body text at `wantZoom` x the site's size: body x
+ * zoom x k = body x wantZoom, capped at TEXT_SCALE_MAX. Null below TEXT_SCALE_MIN.
  */
-export function planTextScale(wantZoom: number, zoom: number, max = TEXT_SCALE_MAX): number | null {
-  if (!(Number.isFinite(wantZoom) && wantZoom > 0 && Number.isFinite(zoom) && zoom > 0)) return null;
+export function planTextScale(
+  wantZoom: number,
+  zoom: number,
+  max = TEXT_SCALE_MAX,
+): number | null {
+  if (!(
+    Number.isFinite(wantZoom) &&
+    wantZoom > 0 &&
+    Number.isFinite(zoom) &&
+    zoom > 0
+  ))
+    return null;
   const k = Math.min(max, wantZoom / zoom);
   if (!(k >= TEXT_SCALE_MIN)) return null;
   return Math.round(k * 100) / 100;
@@ -80,20 +148,42 @@ export function fallbackTextScale(k: number): number | null {
   return h >= TEXT_SCALE_MIN && h < k ? h : null;
 }
 
+/** The exponent text larger than body text grows by at body factor k: 1 (in proportion) at k <= 1, down to 0.5. */
+export function headingExponent(k: number): number {
+  if (!(k > 1)) return 1;
+  return Math.min(
+    1,
+    Math.max(HEADING_EXP_MIN, 1 - HEADING_EXP_SLOPE * Math.log2(k)),
+  );
+}
+
 /**
- * The next zoom to try after the page scrolled sideways at `failedZoom`, from what was measured there: the page
- * needed `scrollW` CSS px, so the zoom that gives it that width is screen ÷ scrollW. The largest zoom on `ladder`
- * at or under that, below the failed zoom and above the person's own; null when there is none. Not linear guesses:
- * every step down is a new measurement (a page's minimum width depends on the width it is given).
+ * The factor for text whose own size is `f` px on a page whose body text is `bodyPx`, when body text grows by `k`
+ * (the proportions at the top of this file). 1 when k <= 1 (text never gets smaller); k when the body size is unknown.
  */
-export function widthLimitedZoom(o: { screenPx: number; scrollW: number; failedZoom: number; own: number; ladder: readonly number[] }): number | null {
-  if (!(o.screenPx > 0) || !(o.scrollW > 0)) return null;
-  const maxZ = o.screenPx / o.scrollW;
-  let best: number | null = null;
-  for (const z of o.ladder) {
-    if (z > o.own + 0.005 && z < o.failedZoom - 0.005 && z <= maxZ + 0.001 && (best === null || z > best)) best = z;
+export function textRatio(f: number, bodyPx: number, k: number): number {
+  if (!(k > 1) || !(f > 0) || !Number.isFinite(f)) return 1;
+  if (!(bodyPx > 0) || !Number.isFinite(bodyPx)) return k;
+  const target = bodyPx * k;
+  const r = f / bodyPx;
+  let g: number;
+  if (r >= 1) {
+    g = Math.max(f, target * r ** headingExponent(k));
+  } else {
+    g = f * k;
+    const floor = target * SMALL_TEXT_FLOOR;
+    if (g < floor)
+      g = Math.min(
+        floor * (g / floor) ** SMALL_TEXT_KNEE,
+        f * k * SMALL_TEXT_MAX_OVER,
+      );
   }
-  return best;
+  return g / f;
+}
+
+/** The size text of `f` px is drawn at (px, to 0.01). */
+export function mappedTextPx(f: number, bodyPx: number, k: number): number {
+  return Math.round(f * textRatio(f, bodyPx, k) * 100) / 100;
 }
 
 /** k as people read it: one decimal ("1.6"). */
@@ -114,13 +204,18 @@ export interface TextBase {
   /** letter-spacing and word-spacing when not zero / normal */
   ls: number | null;
   ws: number | null;
+  /** In a fixed or sticky layer (grows by LAYER_SHARE). */
+  layer?: boolean;
+  /** The share of the mapped growth it gets now (the layer share times its kept box's share; 1 when absent). */
+  share?: number;
 }
 
-type Skip = 'zero' | 'icon' | 'hidden' | 'control';
+/** Why an element keeps the site's size: no size, an icon glyph, hidden text, a field too short, or a box with no room. */
+type Skip = 'zero' | 'icon' | 'hidden' | 'control' | 'room';
 
 interface Measured {
   base: TextBase;
-  /** One-line control in a fixed box: the largest k whose text line still fits its box (Infinity: it grows). */
+  /** One-line control in a fixed box: the largest factor whose text line still fits its box (Infinity: it grows). */
   maxK: number;
   /** The element sets a size inline with !important (only an inline value beats it). */
   inline: boolean;
@@ -147,26 +242,120 @@ export interface TextMapStats {
   setMs: number;
 }
 
+/** Leave fixed player controls and clipped navigation rails at the site's sizes. */
+function restrictedText(el: Element): boolean {
+  if (
+    el.closest(
+      '[role=dialog],[aria-modal=true],[class*="player-container"],[class*="video-resource"]',
+    )
+  )
+    return true;
+  const nav = el.closest('nav,[role=navigation]');
+  if (!nav) return false;
+  const css = getComputedStyle(nav);
+  return [css.overflow, css.overflowX, css.overflowY].some(
+    (v) => v === 'hidden' || v === 'clip',
+  );
+}
+
 const r2 = (v: number): number => Math.round(v * 100) / 100;
 const r3 = (v: number): number => Math.round(v * 1000) / 1000;
 
-function hasDirectText(el: Element): boolean {
-  for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3 && /\S/.test((c as Text).data)) return true;
+/**
+ * The element's parent as the page is drawn: a slot for an element shown through one, the host for the top of a
+ * shadow tree, else its parent element. Walks up the page never stop at a web component's edge.
+ */
+export function flatParent(n: Element): Element | null {
+  const slot = (n as HTMLElement).assignedSlot;
+  if (slot) return slot;
+  if (n.parentElement) return n.parentElement;
+  const p = n.parentNode as ShadowRoot | null;
+  return p && p.host ? p.host : null;
+}
+
+/** a holds b as the page is drawn (through slots and shadow roots). */
+export function holds(a: Element, b: Element): boolean {
+  for (let n: Element | null = b; n; n = flatParent(n))
+    if (n === a) return true;
   return false;
+}
+
+/** Hidden by the page's CSS (visibility, opacity 0, display none): laid out, perhaps, but not drawn. */
+function cssHidden(el: Element): boolean {
+  const he = el as HTMLElement;
+  if (typeof he.checkVisibility !== 'function') return false;
+  return !he.checkVisibility({
+    opacityProperty: true,
+    visibilityProperty: true,
+    checkOpacity: true,
+    checkVisibilityCSS: true,
+  } as CheckVisibilityOptions);
+}
+
+/**
+ * Drawn on the page: not hidden by CSS, with a box, and not clipped away by a box around it that hides overflow
+ * (a closed dropdown with no height). A closed menu's links are laid out but never seen; they are not checked.
+ */
+export function drawn(el: Element): boolean {
+  if (cssHidden(el)) return false;
+  const r = el.getBoundingClientRect();
+  if (r.width < 1 || r.height < 1) return false;
+  let d = 0;
+  for (let n = flatParent(el); n && d < 10; n = flatParent(n), d++) {
+    if (n === document.body || n === document.documentElement) break;
+    const cs = getComputedStyle(n);
+    if (cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+    const b = n.getBoundingClientRect();
+    if (
+      b.width < 1 ||
+      b.height < 1 ||
+      b.bottom <= r.top ||
+      b.top >= r.bottom ||
+      b.right <= r.left ||
+      b.left >= r.right
+    )
+      return false;
+  }
+  return true;
+}
+
+function hasDirectText(el: Element): boolean {
+  for (let c = el.firstChild; c; c = c.nextSibling)
+    if (c.nodeType === 3 && /\S/.test((c as Text).data)) return true;
+  return false;
+}
+
+/**
+ * A slot in a web component's shadow tree that shows text from the page (slotted text takes its size from the slot,
+ * not from the element it is written in, so the slot is what gets sized).
+ */
+function slotsText(el: Element): boolean {
+  if (el.tagName !== 'SLOT') return false;
+  const nodes = (el as HTMLSlotElement).assignedNodes?.() ?? [];
+  return nodes.some((n) => n.nodeType === 3 && /\S/.test((n as Text).data));
 }
 
 function directText(el: Element): string {
   let s = '';
-  for (let c = el.firstChild; c; c = c.nextSibling) if (c.nodeType === 3) s += (c as Text).data;
+  for (let c = el.firstChild; c; c = c.nextSibling)
+    if (c.nodeType === 3) s += (c as Text).data;
   return s;
 }
 
 function textControl(el: Element): 'multi' | 'single' | null {
   const t = el.tagName;
   if (t === 'TEXTAREA') return 'multi';
-  if (t === 'SELECT') return (el as HTMLSelectElement).multiple || (el as HTMLSelectElement).size > 1 ? 'multi' : 'single';
+  if (t === 'SELECT')
+    return (el as HTMLSelectElement).multiple ||
+      (el as HTMLSelectElement).size > 1
+      ? 'multi'
+      : 'single';
   if (t === 'INPUT') {
-    const type = ((el as HTMLInputElement).type || el.getAttribute('type') || 'text').toLowerCase();
+    const type = (
+      (el as HTMLInputElement).type ||
+      el.getAttribute('type') ||
+      'text'
+    ).toLowerCase();
     return TEXT_INPUTS.has(type) ? 'single' : null;
   }
   return null;
@@ -181,7 +370,8 @@ function pxOf(v: string): number | null {
 /** The box's height is auto (it grows with its text), when the browser can say. */
 function autoHeight(el: Element): boolean {
   try {
-    const KV = (globalThis as { CSSKeywordValue?: typeof CSSKeywordValue }).CSSKeywordValue;
+    const KV = (globalThis as { CSSKeywordValue?: typeof CSSKeywordValue })
+      .CSSKeywordValue;
     const v = (el as HTMLElement).computedStyleMap?.().get('height');
     return !!KV && v instanceof KV && v.value === 'auto';
   } catch {
@@ -190,18 +380,30 @@ function autoHeight(el: Element): boolean {
 }
 
 /**
- * The page's text sizes times one factor. One instance per page view; `set(k)` puts it on (or changes k), `clear()`
- * takes it off and leaves the page exactly as it was. `suspend(fn)` runs fn with the page's own sizes showing (the
- * engine's reader measures the page, never its own scaled text).
+ * The page's text sizes, each mapped from the page's body size to the person's (textRatio). One instance per page
+ * view; `set(k, bodyPx)` puts it on (or changes k), `clear()` takes it off and leaves the page exactly as it was.
+ * `keep(boxes)` leaves the text in those boxes at the site's own sizes. `suspend(fn)` runs fn with the page's own
+ * sizes showing (the engine's reader measures the page, never its own scaled text).
  */
 export class TextMap {
-  /** The factor on the page now (1: off). */
+  /** How much body text grows now (1: off). Every other size follows from it (textRatio). */
   scale = 1;
+  /** The page's own body text size (CSS px) the proportions are worked out from. */
+  bodyPx = 16;
   /** The op whose effect is on the page (a newer op with another k takes it over). */
   owner: Op | null = null;
-  readonly stats: TextMapStats = { tokened: 0, skipped: { zero: 0, icon: 0, hidden: 0, control: 0 }, refreshes: 0, setMs: 0 };
+  readonly stats: TextMapStats = {
+    tokened: 0,
+    skipped: { zero: 0, icon: 0, hidden: 0, control: 0, room: 0 },
+    refreshes: 0,
+    setMs: 0,
+  };
   private host: TextMapHost;
   private sheet: CSSStyleSheet | null = null;
+  /** Boxes whose text grows by a share of the map (0: the site's own sizes) because full growth broke them. */
+  private kept = new Map<Element, number>();
+  /** Open shadow roots (web components) whose text the map reaches; its sheet is adopted into each. */
+  private shadows = new Set<ShadowRoot>();
   /** Holds transitions while the map is lifted for a read or written (see holdTransitions). */
   private still: CSSStyleSheet | null = null;
   private holds = 0;
@@ -227,10 +429,52 @@ export class TextMap {
     return this.attached && this.scale !== 1;
   }
 
+  /** How much text of `f` px grows at the current k, given the share of the growth it gets (see TextBase.share). */
+  ratioOf(f: number, share = 1): number {
+    const q = textRatio(f, this.bodyPx, this.scale);
+    return share >= 1 ? q : 1 + (q - 1) * Math.max(0, share);
+  }
+
+  /** The boxes whose text grows less than the rest of the page (or not at all). */
+  get keptBoxes(): readonly Element[] {
+    return [...this.kept.keys()];
+  }
+
+  /** The share of the growth a kept box's text gets (0: the site's own sizes; undefined: not kept). */
+  keptShare(box: Element): number | undefined {
+    return this.kept.get(box);
+  }
+
+  /**
+   * From the next set() or refresh on, the text in these boxes grows by `share` of what it would (0: it keeps the
+   * site's own sizes). A box never goes back up.
+   */
+  keep(boxes: Iterable<Element>, share = 0): void {
+    for (const b of boxes)
+      this.kept.set(b, Math.min(this.kept.get(b) ?? 1, Math.max(0, share)));
+  }
+
+  /** The smallest share among the kept boxes around el (1: none). */
+  private shareIn(el: Element): number {
+    if (!this.kept.size) return 1;
+    let s = 1;
+    for (let n: Element | null = el; n; n = flatParent(n)) {
+      const v = this.kept.get(n);
+      if (v !== undefined && v < s) s = v;
+    }
+    return s;
+  }
+
   /* ---------------- which elements draw text ---------------- */
 
   private skipNode(el: Element): boolean {
-    if (SKIP_TAGS.has(el.tagName) || el.namespaceURI === SVG_NS || el.namespaceURI === MATH_NS) return true;
+    if (
+      SKIP_TAGS.has(el.tagName) ||
+      restrictedText(el) ||
+      el.namespaceURI === SVG_NS ||
+      el.namespaceURI === MATH_NS
+    )
+      return true;
     try {
       return this.host.isOurUi(el);
     } catch {
@@ -239,7 +483,7 @@ export class TextMap {
   }
 
   private inSkipped(el: Element): boolean {
-    if (el.closest(SKIP_CLOSEST)) return true;
+    if (el.closest(SKIP_CLOSEST) || restrictedText(el)) return true;
     try {
       return this.host.isOurUi(el);
     } catch {
@@ -247,20 +491,74 @@ export class TextMap {
     }
   }
 
-  /** Elements that draw text under `root` (default the body), in document order. Reads only. */
-  candidates(root: Element | null = document.body, cap = MAX_ELEMENTS): Element[] {
+  /**
+   * Elements that draw text under `root` (default the body), in document order, including the text inside open
+   * shadow roots (web components), each walked right after its host. Reads only (it notes the shadow roots it saw,
+   * so the map's sheet can go into them).
+   */
+  candidates(
+    root: Element | null = document.body,
+    cap = MAX_ELEMENTS,
+  ): Element[] {
     if (!root || !root.isConnected || this.inSkipped(root)) return [];
     const out: Element[] = [];
     const consider = (el: Element) => {
       if (el === document.documentElement) return; // the root's size is every rem: never touched
-      if (hasDirectText(el) || textControl(el)) out.push(el);
+      if (hasDirectText(el) || textControl(el) || slotsText(el)) out.push(el);
+    };
+    const walk = (from: Node) => {
+      const walker = document.createTreeWalker(from, NodeFilter.SHOW_ELEMENT, {
+        acceptNode: (n) =>
+          this.skipNode(n as Element)
+            ? NodeFilter.FILTER_REJECT
+            : NodeFilter.FILTER_ACCEPT,
+      });
+      for (
+        let n = walker.nextNode();
+        n && out.length < cap;
+        n = walker.nextNode()
+      ) {
+        consider(n as Element);
+        const sr = (n as Element).shadowRoot;
+        if (sr) {
+          this.shadows.add(sr);
+          walk(sr);
+        }
+      }
     };
     consider(root);
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
-      acceptNode: (n) => (this.skipNode(n as Element) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
-    });
-    for (let n = walker.nextNode(); n && out.length < cap; n = walker.nextNode()) consider(n as Element);
+    if (root.shadowRoot && !this.skipNode(root)) {
+      this.shadows.add(root.shadowRoot);
+      walk(root.shadowRoot);
+    }
+    walk(root);
     return out;
+  }
+
+  /** Every element carrying a token, in the page and in the open shadow roots the map reached. */
+  private tokened(): Element[] {
+    const out = Array.from(document.querySelectorAll(`[${ATTR}]`));
+    for (const sr of this.shadows)
+      if (sr.host.isConnected) out.push(...sr.querySelectorAll(`[${ATTR}]`));
+    return out;
+  }
+
+  /** Put the map's sheet into each open shadow root it reached (a constructed sheet can sit in several roots). */
+  private adoptShadows(): void {
+    if (!this.sheet) return;
+    const sheet = this.sheet;
+    for (const sr of [...this.shadows]) {
+      if (!sr.host.isConnected) {
+        this.shadows.delete(sr);
+        continue;
+      }
+      try {
+        if (!sr.adoptedStyleSheets.includes(sheet))
+          sr.adoptedStyleSheets = [...sr.adoptedStyleSheets, sheet];
+      } catch {
+        /* a root that refuses adopted sheets keeps its own sizes */
+      }
+    }
   }
 
   /* ---------------- reading the page's own sizes ---------------- */
@@ -304,13 +602,21 @@ export class TextMap {
         if (!this.still) {
           this.still = new CSSStyleSheet();
           // Any element whose size the map sets or inherits; id-level specificity beats the motion op's !important.
-          this.still.replaceSync(`:is([${ATTR}], [${ATTR}] *):not(#wa-tm-still-a):not(#wa-tm-still-b) { transition: none !important; }`);
+          this.still.replaceSync(
+            `:is([${ATTR}], [${ATTR}] *):not(#wa-tm-still-a):not(#wa-tm-still-b) { transition: none !important; }`,
+          );
         }
-        if (!document.adoptedStyleSheets.includes(this.still)) document.adoptedStyleSheets = [...document.adoptedStyleSheets, this.still];
+        if (!document.adoptedStyleSheets.includes(this.still))
+          document.adoptedStyleSheets = [
+            ...document.adoptedStyleSheets,
+            this.still,
+          ];
       } else if (this.still) {
         void document.documentElement.offsetWidth;
         const still = this.still;
-        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((x) => x !== still);
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+          (x) => x !== still,
+        );
       }
     } catch {
       /* no constructed sheets: nothing to hold */
@@ -347,7 +653,10 @@ export class TextMap {
           out.set(el, 'zero');
           continue;
         }
-        if (ICON_FONT.test(cs.fontFamily) || (hasDirectText(el) && PUA_ONLY.test(directText(el)))) {
+        if (
+          ICON_FONT.test(cs.fontFamily) ||
+          (hasDirectText(el) && PUA_ONLY.test(directText(el)))
+        ) {
           out.set(el, 'icon');
           continue;
         }
@@ -355,9 +664,15 @@ export class TextMap {
         const ls = pxOf(cs.letterSpacing);
         const ws = pxOf(cs.wordSpacing);
         const st = (el as HTMLElement).style as CSSStyleDeclaration | undefined;
-        const inline = !!st && PROPS.some((p) => st.getPropertyPriority(p) === 'important');
+        const inline =
+          !!st && PROPS.some((p) => st.getPropertyPriority(p) === 'important');
         out.set(el, {
-          base: { f, lh: lh !== null && lh > 0 ? lh : null, ls: ls !== null && Math.abs(ls) > 0.001 ? ls : null, ws: ws !== null && Math.abs(ws) > 0.001 ? ws : null },
+          base: {
+            f,
+            lh: lh !== null && lh > 0 ? lh : null,
+            ls: ls !== null && Math.abs(ls) > 0.001 ? ls : null,
+            ws: ws !== null && Math.abs(ws) > 0.001 ? ws : null,
+          },
           maxK: Infinity,
           inline,
         });
@@ -367,15 +682,49 @@ export class TextMap {
       this.mo?.takeRecords();
       if (pending.length) queueMicrotask(() => this.onRecords(pending));
     }
+    // Fixed and sticky layers (one walk up per element, cached along the way).
+    const layers = new Map<Element, boolean>();
+    const inLayer = (start: Element): boolean => {
+      const path: Element[] = [];
+      let hit = false;
+      for (
+        let n: Element | null = start;
+        n && n !== document.body && n !== document.documentElement;
+        n = flatParent(n)
+      ) {
+        const known = layers.get(n);
+        if (known !== undefined) {
+          hit = known;
+          break;
+        }
+        path.push(n);
+        const p = getComputedStyle(n).position;
+        if (p === 'fixed' || p === 'sticky') {
+          hit = true;
+          break;
+        }
+      }
+      for (const x of path) layers.set(x, hit);
+      return hit;
+    };
+    for (const [el, m] of out)
+      if (typeof m !== 'string' && inLayer(el)) m.base.layer = true;
     // Layout reads with the map on (what is drawn now).
     for (const [el, m] of out) {
       if (typeof m === 'string') continue;
       const r = el.getBoundingClientRect();
-      const visible = typeof (el as HTMLElement).checkVisibility === 'function' ? (el as HTMLElement).checkVisibility() : r.width > 0;
+      const visible =
+        typeof (el as HTMLElement).checkVisibility === 'function'
+          ? (el as HTMLElement).checkVisibility()
+          : r.width > 0;
       if (visible && r.width > 0 && (r.width <= 2 || r.height <= 2)) {
         // Hidden by design in a tiny box: scaled only when the box clips it (it then stays hidden).
         const cs = getComputedStyle(el);
-        const clips = cs.overflowX !== 'visible' || cs.overflowY !== 'visible' || (cs.clip && cs.clip !== 'auto') || (cs.clipPath && cs.clipPath !== 'none');
+        const clips =
+          cs.overflowX !== 'visible' ||
+          cs.overflowY !== 'visible' ||
+          (cs.clip && cs.clip !== 'auto') ||
+          (cs.clipPath && cs.clipPath !== 'none');
         if (!clips) {
           out.set(el, 'hidden');
           continue;
@@ -392,30 +741,50 @@ export class TextMap {
   /* ---------------- writing ---------------- */
 
   private bucketOf(b: TextBase): number {
-    const key = `${r2(b.f)}|${b.lh === null ? '' : r2(b.lh)}|${b.ls === null ? '' : r3(b.ls)}|${b.ws === null ? '' : r3(b.ws)}`;
+    const share = b.share ?? 1;
+    const key = `${r2(b.f)}|${b.lh === null ? '' : r2(b.lh)}|${b.ls === null ? '' : r3(b.ls)}|${b.ws === null ? '' : r3(b.ws)}|${share < 1 ? r3(share) : ''}`;
     let i = this.buckets.get(key);
     if (i === undefined) {
       i = this.bucketBase.length;
       this.buckets.set(key, i);
-      this.bucketBase.push({ f: r2(b.f), lh: b.lh === null ? null : r2(b.lh), ls: b.ls === null ? null : r3(b.ls), ws: b.ws === null ? null : r3(b.ws) });
+      this.bucketBase.push({
+        f: r2(b.f),
+        lh: b.lh === null ? null : r2(b.lh),
+        ls: b.ls === null ? null : r3(b.ls),
+        ws: b.ws === null ? null : r3(b.ws),
+        ...(share < 1 ? { share: r3(share) } : {}),
+      });
     }
     return i;
   }
 
-  /** The declarations for one base at the current k. */
+  /** The declarations for one base at the current k: its font size mapped, its spacing by the same ratio. */
   private decls(b: TextBase): Array<[string, string]> {
-    const k = this.scale;
-    const d: Array<[string, string]> = [['font-size', `${r2(b.f * k)}px`]];
-    if (b.lh !== null) d.push(['line-height', `${r2(b.lh * k)}px`]);
-    if (b.ls !== null) d.push(['letter-spacing', `${r3(b.ls * k)}px`]);
-    if (b.ws !== null) d.push(['word-spacing', `${r3(b.ws * k)}px`]);
+    const q = this.ratioOf(b.f, b.share ?? 1);
+    const d: Array<[string, string]> = [['font-size', `${r2(b.f * q)}px`]];
+    if (b.lh !== null) d.push(['line-height', `${r2(b.lh * q)}px`]);
+    if (b.ls !== null) d.push(['letter-spacing', `${r3(b.ls * q)}px`]);
+    if (b.ws !== null) d.push(['word-spacing', `${r3(b.ws * q)}px`]);
     return d;
   }
 
   private css(): string {
-    return this.bucketBase
-      .map((b, i) => `${`[${ATTR}="${i}"]`.repeat(REPEAT)} { ${this.decls(b).map(([p, v]) => `${p}: ${v} !important;`).join(' ')} }`)
-      .join('\n');
+    return (
+      this.bucketBase
+        .map(
+          (b, i) =>
+            `${`[${ATTR}="${i}"]`.repeat(REPEAT)} { ${this.decls(b)
+              .map(([p, v]) => `${p}: ${v} !important;`)
+              .join(' ')} }`,
+        )
+        .join('\n') +
+      `
+      :is(main,[role=main],article) [${ATTR}]:is(h1,h2,h3,h4,h5,h6,p,[class*="headline"]) {
+        height: auto !important; max-height: none !important;
+        -webkit-line-clamp: unset !important; line-clamp: unset !important;
+        white-space: normal !important; overflow-wrap: break-word !important;
+      }`
+    );
   }
 
   private unmark(el: Element): void {
@@ -449,7 +818,19 @@ export class TextMap {
 
   /** Mark one measured element at the current k. Writes only what changed. */
   private place(el: Element, m: Measured | Skip): void {
-    if (typeof m === 'string' || m.maxK < this.scale) {
+    if (typeof m !== 'string') {
+      const kept = this.shareIn(el);
+      if (kept <= 0) m = 'room';
+      else {
+        const share = (m.base.layer ? LAYER_SHARE : 1) * kept;
+        if (share < 1) m.base.share = share;
+        else delete m.base.share;
+      }
+    }
+    if (
+      typeof m === 'string' ||
+      m.maxK < this.ratioOf(m.base.f, m.base.share ?? 1)
+    ) {
       const why: Skip = typeof m === 'string' ? m : 'control';
       if (this.marks.get(el) !== why) {
         this.unmark(el);
@@ -476,16 +857,17 @@ export class TextMap {
   }
 
   /**
-   * Put the map on at factor k, or change k: every text element's own sizes are read again (with the map lifted),
-   * so a change of k or of the window never compounds.
+   * Put the map on with body text x k (bodyPx: the page's own body size), or change k: every text element's own
+   * sizes are read again (with the map lifted), so a change of k or of the window never compounds.
    */
-  set(k: number): void {
+  set(k: number, bodyPx: number = this.bodyPx): void {
     const t0 = performance.now();
     if (!(Number.isFinite(k) && k > 0)) return;
+    if (Number.isFinite(bodyPx) && bodyPx > 0) this.bodyPx = bodyPx;
     if (!this.sheet) this.sheet = this.host.sheets.make('');
     this.scale = k;
     this.stats.tokened = 0;
-    this.stats.skipped = { zero: 0, icon: 0, hidden: 0, control: 0 };
+    this.stats.skipped = { zero: 0, icon: 0, hidden: 0, control: 0, room: 0 };
     // Text changes size at once: no transition animates it (and the checks never see it half way).
     this.holdTransitions(true);
     try {
@@ -503,7 +885,7 @@ export class TextMap {
     const els = this.candidates();
     const measured = this.measure(els);
     const keep = new Set(els);
-    for (const el of Array.from(document.querySelectorAll(`[${ATTR}]`))) if (!keep.has(el)) this.unmark(el);
+    for (const el of this.tokened()) if (!keep.has(el)) this.unmark(el);
     for (const [el, pin] of [...this.inline]) {
       if (!keep.has(el)) {
         this.unpin(el, pin);
@@ -517,6 +899,7 @@ export class TextMap {
       this.host.sheets.attach(this.sheet);
       this.attached = true;
     }
+    this.adoptShadows();
   }
 
   /** Take the map off: every token and inline value goes, the page's own styles are exactly as they were. */
@@ -526,14 +909,27 @@ export class TextMap {
     this.holdTransitions(true);
     try {
       if (this.sheet && this.attached) this.host.sheets.detach(this.sheet);
+      const sheet = this.sheet;
+      if (sheet)
+        for (const sr of this.shadows) {
+          try {
+            sr.adoptedStyleSheets = sr.adoptedStyleSheets.filter(
+              (x) => x !== sheet,
+            );
+          } catch {
+            /* nothing to remove */
+          }
+        }
       this.attached = false;
       void document.documentElement.offsetWidth;
-      for (const el of Array.from(document.querySelectorAll(`[${ATTR}]`))) el.removeAttribute(ATTR);
+      for (const el of this.tokened()) el.removeAttribute(ATTR);
       for (const [el, pin] of this.inline) this.unpin(el, pin);
     } finally {
       this.holdTransitions(false);
     }
     this.inline.clear();
+    this.kept.clear();
+    this.shadows.clear();
     this.buckets.clear();
     this.bucketBase = [];
     this.marks = new WeakMap();
@@ -555,17 +951,19 @@ export class TextMap {
     const within: Element[] = [];
     for (const root of roots) {
       if (!root.isConnected || els.size >= MAX_ELEMENTS) continue;
-      for (const el of this.candidates(root, MAX_ELEMENTS - els.size)) els.add(el);
+      for (const el of this.candidates(root, MAX_ELEMENTS - els.size))
+        els.add(el);
       within.push(root);
     }
     for (const el of selves) {
       if (!el.isConnected || els.has(el) || this.inSkipped(el)) continue;
-      if (hasDirectText(el) || textControl(el)) els.add(el);
+      if (hasDirectText(el) || textControl(el) || slotsText(el)) els.add(el);
     }
     // Tokens under the roots on elements that no longer draw text go.
     for (const root of within) {
       if (root.hasAttribute(ATTR) && !els.has(root)) this.unmark(root);
-      for (const el of Array.from(root.querySelectorAll(`[${ATTR}]`))) if (!els.has(el)) this.unmark(el);
+      for (const el of Array.from(root.querySelectorAll(`[${ATTR}]`)))
+        if (!els.has(el)) this.unmark(el);
     }
     if (!els.size) return;
     this.stats.refreshes++;
@@ -575,6 +973,7 @@ export class TextMap {
       const measured = this.measure([...els]);
       for (const [el, m] of measured) this.place(el, m);
       if (this.bucketBase.length !== before) this.sheet.replaceSync(this.css());
+      this.adoptShadows();
     } finally {
       this.holdTransitions(false);
     }
@@ -587,7 +986,11 @@ export class TextMap {
     if (this.mo || typeof MutationObserver === 'undefined') return;
     this.mo = new MutationObserver((records) => this.onRecords(records));
     this.mo.observe(document.documentElement, {
-      subtree: true, childList: true, characterData: true, attributes: true, attributeOldValue: true,
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeOldValue: true,
       attributeFilter: ['class', 'style', 'data-wa-hs', 'data-wa-sp'],
     });
     window.addEventListener('resize', this.onResize, { passive: true });
@@ -632,14 +1035,22 @@ export class TextMap {
         for (const n of Array.from(rec.addedNodes)) {
           if (n.nodeType === 1) {
             const el = n as Element;
-            if (el.tagName === 'STYLE' || (el.tagName === 'LINK' && /stylesheet/i.test(el.getAttribute('rel') ?? ''))) {
+            if (
+              el.tagName === 'STYLE' ||
+              (el.tagName === 'LINK' &&
+                /stylesheet/i.test(el.getAttribute('rel') ?? ''))
+            ) {
               // A late stylesheet can change any size: read the page again (a link once it has loaded).
               full = true;
-              if (el.tagName === 'LINK') el.addEventListener('load', () => this.fullSoon(), { once: true });
+              if (el.tagName === 'LINK')
+                el.addEventListener('load', () => this.fullSoon(), {
+                  once: true,
+                });
               continue;
             }
             roots.add(el);
-          } else if (n.nodeType === 3 && rec.target.nodeType === 1) selves.add(rec.target as Element);
+          } else if (n.nodeType === 3 && rec.target.nodeType === 1)
+            selves.add(rec.target as Element);
         }
       } else if (rec.type === 'characterData') {
         const p = rec.target.parentElement;
@@ -649,7 +1060,8 @@ export class TextMap {
         const el = rec.target as Element;
         if (rec.attributeName === 'style') {
           const now = el.getAttribute('style') ?? '';
-          if (!STYLE_SIZE.test(now) && !STYLE_SIZE.test(rec.oldValue ?? '')) continue;
+          if (!STYLE_SIZE.test(now) && !STYLE_SIZE.test(rec.oldValue ?? ''))
+            continue;
           // WebAble's own inline pin.
           const pin = this.inline.get(el);
           if (pin && now === pin.ours) continue;
@@ -664,13 +1076,19 @@ export class TextMap {
     if (!roots.size && !selves.size) return;
     // A root inside another root is read with it.
     let top = [...roots].filter((el) => {
-      for (let p = el.parentElement; p; p = p.parentElement) if (roots.has(p)) return false;
+      for (let p = el.parentElement; p; p = p.parentElement)
+        if (roots.has(p)) return false;
       return true;
     });
     // A class or style change on the whole page (many sites toggle a class on <body> as it scrolls) would read every
     // text element again each time: those are read at most once a second, after the changes stop (sizes such a
     // change sets are rare; new content below is still read at once).
-    const big = top.filter((el) => el === document.documentElement || el === document.body || el.getElementsByTagName('*').length > BIG_SUBTREE);
+    const big = top.filter(
+      (el) =>
+        el === document.documentElement ||
+        el === document.body ||
+        el.getElementsByTagName('*').length > BIG_SUBTREE,
+    );
     if (big.length) {
       top = top.filter((el) => !big.includes(el));
       this.bigSoon();
@@ -694,7 +1112,11 @@ export class TextMap {
    * between (a page's width and what covers what do not grow linearly with its text: tables, pills, a title growing
    * under the button beside it). Null when even `min` fails. The map is left at k.
    */
-  largestScale(k: number, pass: () => boolean, min = TEXT_SCALE_MIN): number | null {
+  largestScale(
+    k: number,
+    pass: () => boolean,
+    min = TEXT_SCALE_MIN,
+  ): number | null {
     const sheet = this.sheet;
     if (!this.attached || !sheet || !(k > min)) return null;
     const at = (s: number): boolean => {
@@ -752,7 +1174,12 @@ export class TextMap {
  * only new cover counts. Fixed and sticky layers cover the page by design (a scrolled header, a chat button) and
  * are left out unless the text is in the same layer. Points off screen cannot be tested and are skipped.
  */
-export function textCover(els: readonly Element[], isOurUi: (el: Element) => boolean, only?: ReadonlyMap<Element, number>, cap = 500): Map<Element, number> {
+export function textCover(
+  els: readonly Element[],
+  isOurUi: (el: Element) => boolean,
+  only?: ReadonlyMap<Element, number>,
+  cap = 500,
+): Map<Element, number> {
   const de = document.documentElement;
   const vw = de.clientWidth || innerWidth;
   const vh = de.clientHeight || innerHeight;
@@ -761,7 +1188,11 @@ export function textCover(els: readonly Element[], isOurUi: (el: Element) => boo
   const layerOf = (start: Element): Element | null => {
     const path: Element[] = [];
     let found: Element | null = null;
-    for (let n: Element | null = start; n && n !== document.body && n !== de; n = n.parentElement) {
+    for (
+      let n: Element | null = start;
+      n && n !== document.body && n !== de;
+      n = flatParent(n)
+    ) {
       const known = layers.get(n);
       if (known !== undefined) {
         found = known;
@@ -779,18 +1210,26 @@ export function textCover(els: readonly Element[], isOurUi: (el: Element) => boo
   };
   // What a box clips its content to (its own and up to 8 boxes above it that hide overflow): text outside it is not
   // drawn, so nothing can cover it there (an icon button's hidden label running under the next button).
-  const clipOf = (start: Element): { l: number; t: number; r: number; b: number } => {
+  const clipOf = (
+    start: Element,
+  ): { l: number; t: number; r: number; b: number } => {
     let box = { l: -Infinity, t: -Infinity, r: Infinity, b: Infinity };
     let d = 0;
-    for (let n: Element | null = start; n && d < 9 && n !== document.body && n !== de; n = n.parentElement, d++) {
+    for (
+      let n: Element | null = start;
+      n && d < 9 && n !== document.body && n !== de;
+      n = flatParent(n), d++
+    ) {
       const cs = getComputedStyle(n);
       const cx = cs.overflowX !== 'visible';
       const cy = cs.overflowY !== 'visible';
       if (!cx && !cy) continue;
       const b = n.getBoundingClientRect();
       box = {
-        l: cx ? Math.max(box.l, b.left) : box.l, r: cx ? Math.min(box.r, b.right) : box.r,
-        t: cy ? Math.max(box.t, b.top) : box.t, b: cy ? Math.min(box.b, b.bottom) : box.b,
+        l: cx ? Math.max(box.l, b.left) : box.l,
+        r: cx ? Math.min(box.r, b.right) : box.r,
+        t: cy ? Math.max(box.t, b.top) : box.t,
+        b: cy ? Math.min(box.b, b.bottom) : box.b,
       };
     }
     return box;
@@ -801,7 +1240,16 @@ export function textCover(els: readonly Element[], isOurUi: (el: Element) => boo
     if (only && !only.has(el)) continue;
     if (!el.isConnected) continue;
     const r = el.getBoundingClientRect();
-    if (r.width < 1 || r.height < 1 || r.bottom <= 0 || r.top >= vh || r.right <= 0 || r.left >= vw) continue;
+    if (
+      r.width < 1 ||
+      r.height < 1 ||
+      r.bottom <= 0 ||
+      r.top >= vh ||
+      r.right <= 0 ||
+      r.left >= vw
+    )
+      continue;
+    if (cssHidden(el)) continue; // laid out but not drawn (a closed menu): nothing can cover it
     const clip = clipOf(el);
     if (clip.r - clip.l < 2 || clip.b - clip.t < 2) continue; // clipped away (a visually hidden label)
     const mine = layerOf(el);
@@ -819,7 +1267,7 @@ export function textCover(els: readonly Element[], isOurUi: (el: Element) => boo
           const x = lr.left + lr.width * fx;
           if (x < 0 || x >= vw || x < clip.l || x > clip.r) continue;
           const hit = document.elementFromPoint(x, y);
-          if (!hit || hit === el || el.contains(hit) || hit.contains(el)) continue;
+          if (!hit || hit === el || holds(el, hit) || holds(hit, el)) continue;
           let ours = false;
           try {
             ours = isOurUi(hit);
@@ -838,14 +1286,164 @@ export function textCover(els: readonly Element[], isOurUi: (el: Element) => boo
   return out;
 }
 
+/** How many lines the text inside el is drawn on (its text only: icons and boxes do not count). */
+export function lineCount(el: Element): number {
+  const rects: DOMRect[] = [];
+  const range = document.createRange();
+  const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let t = walk.nextNode(); t; t = walk.nextNode()) {
+    if (!(t as Text).data.trim()) continue;
+    range.selectNodeContents(t);
+    for (const r of range.getClientRects())
+      if (r.width > 0.5 && r.height > 0.5) rects.push(r);
+  }
+  rects.sort((a, b) => a.top - b.top);
+  let lines = 0;
+  let bottom = -Infinity;
+  for (const r of rects) {
+    if ((r.top + r.bottom) / 2 > bottom) {
+      lines++;
+      bottom = r.bottom;
+    } else if (r.bottom > bottom) bottom = r.bottom;
+  }
+  return lines;
+}
+
+/**
+ * The box el sits in as one item of a row (a menu item, a tab, a button beside others), or null: the nearest box
+ * around el, up to 5 levels, with a sibling drawn beside it on the same line. Stops at a box with more text than a
+ * menu item holds (a card, a column), so text that wraps by design is never a row label.
+ */
+function rowItem(el: Element): Element | null {
+  let n: Element | null = el;
+  for (let d = 0; n && d < 5; d++, n = n.parentElement) {
+    if (n === document.body || n === document.documentElement) return null;
+    // Visible text only: a menu item often holds its whole hidden dropdown.
+    const shown = (n as HTMLElement).innerText ?? n.textContent ?? '';
+    if (shown.trim().length > ITEM_TEXT) return null;
+    const cs = getComputedStyle(n);
+    if (cs.display === 'inline' || cs.display === 'contents') continue;
+    const p: Element | null = n.parentElement;
+    if (!p || p.childElementCount < 2) continue;
+    const r = n.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) return null;
+    for (
+      let s: Element | null = p.firstElementChild;
+      s;
+      s = s.nextElementSibling
+    ) {
+      if (s === n) continue;
+      const q = s.getBoundingClientRect();
+      if (q.width < 1 || q.height < 1) continue;
+      const sameRow = q.top < r.bottom - 1 && q.bottom > r.top + 1;
+      const beside = q.left >= r.right - 1 || q.right <= r.left + 1;
+      if (sameRow && beside) return n;
+    }
+  }
+  return null;
+}
+
+/**
+ * Labels of more than one word that sit on one line in a row of menu items, tabs or buttons (read at the site's own
+ * sizes, before the map). A label that breaks onto two lines once the text is bigger breaks the row: the items no
+ * longer line up and a two-word label reads as two. Text in tables and paragraphs wraps by design and is left out.
+ */
+export function rowLabels(
+  els: readonly Element[],
+  isOurUi: (el: Element) => boolean,
+  cap = 400,
+): Element[] {
+  const out: Element[] = [];
+  for (const el of els) {
+    if (out.length >= cap) break;
+    if (!el.isConnected || isOurUi(el)) continue;
+    const text = (el.textContent ?? '').trim();
+    if (!text || text.length > LABEL_TEXT || !/\s/.test(text)) continue;
+    if (el.closest('td, th, p, textarea, pre')) continue;
+    if (!rowItem(el) || !drawn(el)) continue;
+    if (lineCount(el) === 1) out.push(el);
+  }
+  return out;
+}
+
+/** The row labels (from rowLabels) now drawn on more than one line. */
+export function wrappedLabels(labels: readonly Element[]): Element[] {
+  return labels.filter(
+    (el) => el.isConnected && lineCount(el) > 1 && drawn(el),
+  );
+}
+
+/** A picture's drawn size. */
+export interface PictureSize {
+  w: number;
+  h: number;
+}
+
+/**
+ * Pictures on the page (images, logos, icons drawn as SVG, video, canvas) at least 12 px each way, drawn and loaded,
+ * with their sizes before the map. Bigger text beside a picture in a row can take its room and draw it smaller.
+ */
+export function pictureSizes(
+  isOurUi: (el: Element) => boolean,
+  cap = 300,
+): Map<Element, PictureSize> {
+  const out = new Map<Element, PictureSize>();
+  for (const el of Array.from(
+    document.querySelectorAll('img, svg, video, canvas'),
+  )) {
+    if (out.size >= cap) break;
+    if (el.tagName.toLowerCase() === 'svg' && el.parentElement?.closest('svg'))
+      continue;
+    if (el instanceof HTMLImageElement && !(el.complete && el.naturalWidth > 0))
+      continue;
+    if (isOurUi(el)) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 12 || r.height < 12) continue;
+    if (!drawn(el)) continue;
+    out.set(el, { w: r.width, h: r.height });
+  }
+  return out;
+}
+
+/** The pictures (from pictureSizes) now drawn more than a tenth narrower or shorter. */
+export function squeezedPictures(
+  before: ReadonlyMap<Element, PictureSize>,
+): Element[] {
+  const out: Element[] = [];
+  for (const [el, b] of before) {
+    if (!el.isConnected) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width < 1 || r.height < 1) continue; // gone or hidden since: not a squeeze
+    if (r.width < b.w * 0.9 - 1 || r.height < b.h * 0.9 - 1) out.push(el);
+  }
+  return out;
+}
+
+/** The row a picture sits in: the nearest flex or grid box around it (up to 6 levels), else its parent. */
+export function pictureRow(el: Element): Element | null {
+  let n = flatParent(el);
+  for (let d = 0; n && d < 6; d++, n = flatParent(n)) {
+    if (n === document.body || n === document.documentElement) break;
+    const disp = getComputedStyle(n).display;
+    if (disp.includes('flex') || disp.includes('grid')) return n;
+  }
+  return flatParent(el);
+}
+
+/** The row a label sits in (the box holding its item and the items beside it), or null. */
+export function rowOf(label: Element): Element | null {
+  const item = rowItem(label);
+  return item ? flatParent(item) : null;
+}
+
 /* ------------------------------------------------------------------ */
 /* The op                                                              */
 /* ------------------------------------------------------------------ */
 
 export interface TextMapOpInfo {
-  /** The tab's text zoom the map sits on (the zoom the width allows). */
+  /** The tab's zoom the map sits on (the person's own zoom: WebAble never zooms for size). */
   zoom: number;
-  /** The zoom the plan wanted. */
+  /** The zoom the plan wanted body text at (body x wantZoom). */
   wantZoom: number;
   source: LedgerEntry['source'];
   /** The page's own body size (CSS px at 100%) and the person's size. */
@@ -861,19 +1459,38 @@ function pct(z: number): string {
 /** The text map as an op (one per k): its Undo takes the map off; a newer op with another k takes over the page. */
 export function textMapOp(tm: TextMap, k: number, info: TextMapOpInfo): Op {
   const els = tm.candidates();
-  const shown = Math.round(info.bodyPx * info.zoom * k);
-  const zoomWords = info.zoom > 1.005 ? `Zoom stops at ${pct(info.zoom)} here` : 'Zoom can’t go above 100% here';
+  const own = info.zoom > 0 ? info.zoom : 1;
+  const shown = Math.round(info.bodyPx * own * k);
+  const before = Math.round(info.bodyPx * own);
+  const keptAll = tm.keptBoxes;
+  const kept = keptAll.length;
+  const still = keptAll.filter((b) => (tm.keptShare(b) ?? 1) <= 0).length;
+  const less = kept - still;
+  const parts = (n: number) => (n === 1 ? 'One part' : `${n} parts`);
+  const keptWords =
+    (less
+      ? ` ${parts(less)} of the page had room for only some of it, so the text there grew half as much.`
+      : '') +
+    (still
+      ? ` ${parts(still)} of the page had no room for bigger text, so ${still === 1 ? 'it keeps' : 'they keep'} the site’s own sizes.`
+      : '');
   const op: Op = {
-    rec: makeOpRecord('text_map', 'page', els, `every text size ×${k} at ${pct(info.zoom)} zoom (planned ${pct(info.wantZoom)}; a larger zoom scrolls sideways on this narrow screen)`, info.idOf),
+    rec: makeOpRecord(
+      'text_map',
+      'page',
+      els,
+      `body text ${before} -> ${shown} px (x${k}; planned ${pct(info.wantZoom)} of the site's size at ${pct(own)} zoom); other text in proportion${less ? `; ${less} boxes at half the growth` : ''}${still ? `; ${still} boxes kept at the site's sizes` : ''}`,
+      info.idOf,
+    ),
     elements: els,
     risk: 6,
     active: false,
     persistent: true,
     source: info.source,
-    title: `Made the text ${scaleWords(k)}× bigger; the page can’t get narrower on this phone`,
-    detail: `${zoomWords}: at more, the page scrolls sideways. So every text size on the page is ${scaleWords(k)}× the site’s own, and headings, body text and captions keep their proportions. Body text is ${shown} px here${info.targetPx ? ` (your size is ${Math.round(info.targetPx)} px)` : ''}.`,
+    title: `Made the text bigger: body text is ${shown} px, was ${before} px`,
+    detail: `Every piece of text grew with it: small text about as much as body text, headings a little less, so they stay larger than body text without outgrowing their space. The page keeps the site’s own layout.${keptWords}${info.targetPx ? ` Your size is ${Math.round(info.targetPx)} px.` : ''}`,
     apply() {
-      tm.set(k);
+      tm.set(k, info.bodyPx);
       tm.owner = op;
       op.active = true;
     },

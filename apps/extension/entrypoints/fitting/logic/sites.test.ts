@@ -4,17 +4,37 @@ import type { SiteTaskResult } from '../../../src/sitetask/types';
 import { runSiteTasks, SITE_TASKS } from './sites';
 
 type Listener = (msg: unknown) => unknown;
-type ChangeListener = (changes: Record<string, { newValue?: unknown }>, area: string) => void;
+type ChangeListener = (
+  changes: Record<string, { newValue?: unknown }>,
+  area: string,
+) => void;
 
-function result(id: string, over: Partial<SiteTaskResult> = {}): SiteTaskResult {
+function result(
+  id: string,
+  over: Partial<SiteTaskResult> = {},
+): SiteTaskResult {
   const t = SITE_TASKS.find((s) => s.id === id)!;
   return {
-    id, name: t.name, busy: t.busy, found: true, skipped: false, ms: 4200, wrongClicks: 1, nearMisses: 1, slips: 0,
-    presses: 3, scrollScreens: 1.5, motionSeen: false, adsSeen: 0, ...over,
+    id,
+    name: t.name,
+    busy: t.busy,
+    found: true,
+    skipped: false,
+    ms: 4200,
+    wrongClicks: 1,
+    nearMisses: 1,
+    slips: 0,
+    presses: 3,
+    scrollScreens: 1.5,
+    motionSeen: false,
+    adsSeen: 0,
+    ...over,
   };
 }
 
-function fakeChrome(opts: { startReply?: unknown; startThrows?: boolean } = {}) {
+function fakeChrome(
+  opts: { startReply?: unknown; startThrows?: boolean } = {},
+) {
   const messageListeners = new Set<Listener>();
   const changeListeners = new Set<ChangeListener>();
   const store: Record<string, unknown> = {};
@@ -33,7 +53,11 @@ function fakeChrome(opts: { startReply?: unknown; startThrows?: boolean } = {}) 
     },
     storage: {
       session: {
-        get: vi.fn(async (keys: string[]) => Object.fromEntries(keys.filter((k) => k in store).map((k) => [k, store[k]]))),
+        get: vi.fn(async (keys: string[]) =>
+          Object.fromEntries(
+            keys.filter((k) => k in store).map((k) => [k, store[k]]),
+          ),
+        ),
         remove: vi.fn(async (k: string) => {
           delete store[k];
         }),
@@ -55,7 +79,8 @@ function fakeChrome(opts: { startReply?: unknown; startThrows?: boolean } = {}) 
     },
     change(key: string, value: unknown) {
       store[key] = value;
-      for (const l of Array.from(changeListeners)) l({ [key]: { newValue: value } }, 'session');
+      for (const l of Array.from(changeListeners))
+        l({ [key]: { newValue: value } }, 'session');
     },
   };
 }
@@ -64,12 +89,18 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe('SITE_TASKS', () => {
   it('is Wikipedia (quiet), then CNN and Allrecipes (busy), with real https pages and a target each', () => {
-    expect(SITE_TASKS.map((t) => t.name)).toEqual(['Wikipedia', 'CNN', 'Allrecipes']);
+    expect(SITE_TASKS.map((t) => t.name)).toEqual([
+      'Wikipedia',
+      'CNN',
+      'Allrecipes',
+    ]);
     expect(SITE_TASKS.map((t) => t.busy)).toEqual([false, true, true]);
     expect(new Set(SITE_TASKS.map((t) => t.id)).size).toBe(3);
     for (const t of SITE_TASKS) {
       expect(t.url).toMatch(/^https:\/\//);
-      expect((t.target.hrefIncludes?.length ?? 0) + (t.target.text?.length ?? 0)).toBeGreaterThan(0);
+      expect(
+        (t.target.hrefIncludes?.length ?? 0) + (t.target.text?.length ?? 0),
+      ).toBeGreaterThan(0);
       expect(t.prompt).not.toMatch(/\bpx\b|pixel/i);
     }
     expect(SITE_TASKS[0]!.prompt).toBe('the link to the University of Florida');
@@ -95,13 +126,29 @@ describe('runSiteTasks', () => {
     await flush();
     await flush();
     expect(fake.sent[0]).toEqual({ siteTask: 'start', tasks: SITE_TASKS });
-    fake.change(RUN_KEY, { taskTabId: 9, tasks: SITE_TASKS, index: 1, results: [result('wikipedia')] });
-    fake.emit({ siteTask: 'finished', results: [result('allrecipes', { found: false, skipped: true, ms: null }), result('wikipedia'), result('cnn')] });
+    fake.change(RUN_KEY, {
+      taskTabId: 9,
+      tasks: SITE_TASKS,
+      index: 1,
+      results: [result('wikipedia')],
+    });
+    fake.emit({
+      siteTask: 'finished',
+      results: [
+        result('allrecipes', { found: false, skipped: true, ms: null }),
+        result('wikipedia'),
+        result('cnn'),
+      ],
+    });
     const out = await p;
     expect(out.map((r) => r.id)).toEqual(['wikipedia', 'cnn', 'allrecipes']);
     expect(out[2]!.skipped).toBe(true);
     expect(out[0]!.ms).toBe(4200);
-    expect(progress).toEqual([[0, 3], [1, 3], [3, 3]]);
+    expect(progress).toEqual([
+      [0, 3],
+      [1, 3],
+      [3, 3],
+    ]);
     expect(fake.messageListeners.size).toBe(0);
     expect(fake.changeListeners.size).toBe(0);
   });
@@ -110,10 +157,18 @@ describe('runSiteTasks', () => {
     vi.useFakeTimers();
     const p = runSiteTasks(SITE_TASKS);
     await vi.advanceTimersByTimeAsync(10);
-    fake.store[RUN_KEY] = { taskTabId: 9, tasks: SITE_TASKS, index: 2, results: [result('wikipedia'), result('cnn')] };
+    fake.store[RUN_KEY] = {
+      taskTabId: 9,
+      tasks: SITE_TASKS,
+      index: 2,
+      results: [result('wikipedia'), result('cnn')],
+    };
     await vi.advanceTimersByTimeAsync(1600);
     delete fake.store[RUN_KEY];
-    fake.store[FINISHED_KEY] = { results: [result('wikipedia'), result('cnn'), result('allrecipes')], at: 1 };
+    fake.store[FINISHED_KEY] = {
+      results: [result('wikipedia'), result('cnn'), result('allrecipes')],
+      at: 1,
+    };
     await vi.advanceTimersByTimeAsync(1600);
     const out = await p;
     expect(out.every((r) => r.found)).toBe(true);
@@ -123,7 +178,12 @@ describe('runSiteTasks', () => {
     vi.useFakeTimers();
     const p = runSiteTasks(SITE_TASKS);
     await vi.advanceTimersByTimeAsync(10);
-    fake.store[RUN_KEY] = { taskTabId: 9, tasks: SITE_TASKS, index: 1, results: [result('wikipedia')] };
+    fake.store[RUN_KEY] = {
+      taskTabId: 9,
+      tasks: SITE_TASKS,
+      index: 1,
+      results: [result('wikipedia')],
+    };
     await vi.advanceTimersByTimeAsync(1600);
     delete fake.store[RUN_KEY];
     await vi.advanceTimersByTimeAsync(3200);
@@ -148,9 +208,28 @@ describe('runSiteTasks', () => {
     await flush();
     fake.emit({
       siteTask: 'finished',
-      results: [{ id: 'wikipedia', name: 'X', busy: true, found: false, skipped: false, ms: 900, wrongClicks: -2, presses: 'many' }],
+      results: [
+        {
+          id: 'wikipedia',
+          name: 'X',
+          busy: true,
+          found: false,
+          skipped: false,
+          ms: 900,
+          wrongClicks: -2,
+          presses: 'many',
+        },
+      ],
     });
     const [w] = await p;
-    expect(w).toMatchObject({ id: 'wikipedia', name: 'Wikipedia', busy: false, found: false, ms: null, wrongClicks: 0, presses: 0 });
+    expect(w).toMatchObject({
+      id: 'wikipedia',
+      name: 'Wikipedia',
+      busy: false,
+      found: false,
+      ms: null,
+      wrongClicks: 0,
+      presses: 0,
+    });
   });
 });

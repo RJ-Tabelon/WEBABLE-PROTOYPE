@@ -17,7 +17,8 @@ const FIRST = 9;
 function usePress(el: Element): (e: MouseEvent) => void {
   const ctx = useCalm();
   return (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; // our own href opens a new tab
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return; // our own href opens a new tab
     e.preventDefault();
     ctx.click(el);
   };
@@ -25,11 +26,23 @@ function usePress(el: Element): (e: MouseEvent) => void {
 
 /** A story's one short meta line: its time, else a length the page prints ("6 min read", "25 mins"). */
 function metaOf(s: CardLinkBlock): string | null {
-  return s.time ?? s.lines.find((l) => /\b\d+\s*(min(ute)?s?|hrs?|hours?)\b/i.test(l) && l.length <= 24) ?? null;
+  return (
+    s.time ??
+    s.lines.find(
+      (l) => /\b\d+\s*(min(ute)?s?|hrs?|hours?)\b/i.test(l) && l.length <= 24,
+    ) ??
+    null
+  );
 }
 
 /** One story as a card: its picture on top (16:9), the title in ink at weight 600, then a short meta line. */
-function StoryCard({ s, pictures }: { s: CardLinkBlock; pictures: boolean }): JSX.Element {
+function StoryCard({
+  s,
+  pictures,
+}: {
+  s: CardLinkBlock;
+  pictures: boolean;
+}): JSX.Element {
   const press = usePress(s.el);
   const ctx = useCalm();
   const pic = pictures && s.image && keepImage(s.image, true) ? s.image : null;
@@ -46,7 +59,13 @@ function StoryCard({ s, pictures }: { s: CardLinkBlock; pictures: boolean }): JS
       {body}
     </a>
   ) : (
-    <div class="wa-card2" role="link" tabIndex={0} onClick={() => ctx.click(s.el)} onKeyDown={(e) => e.key === 'Enter' && ctx.click(s.el)}>
+    <div
+      class="wa-card2"
+      role="link"
+      tabIndex={0}
+      onClick={() => ctx.click(s.el)}
+      onKeyDown={(e) => e.key === 'Enter' && ctx.click(s.el)}
+    >
       {body}
     </div>
   );
@@ -57,13 +76,24 @@ function StoryCard({ s, pictures }: { s: CardLinkBlock; pictures: boolean }): JS
  * none has), so the cards are uniform; one column of rows (title left, picture right) when the text is enlarged past
  * 18 px or only some stories have pictures. No counts.
  */
-export function MoreFrom({ plan, bodyPx }: { plan: CalmPlan; bodyPx: number }): JSX.Element | null {
+export function MoreFrom({
+  plan,
+  bodyPx,
+}: {
+  plan: CalmPlan;
+  bodyPx: number;
+}): JSX.Element | null {
   const [all, setAll] = useState(false);
   const list = plan.more;
   if (!list.length) return null;
-  const site = plan.siteName && plan.siteName !== 'This page' ? plan.siteName : 'this site';
+  const site =
+    plan.siteName && plan.siteName !== 'This page'
+      ? plan.siteName
+      : 'this site';
   const title = `More from ${site}`;
-  const pictured = list.filter((s) => !!s.image && keepImage(s.image, true)).length;
+  const pictured = list.filter(
+    (s) => !!s.image && keepImage(s.image, true),
+  ).length;
   const uniform = pictured === 0 || pictured === list.length;
   const rows = bodyPx > 18 || !uniform;
   const shown = all ? list : list.slice(0, FIRST);
@@ -85,7 +115,12 @@ export function MoreFrom({ plan, bodyPx }: { plan: CalmPlan; bodyPx: number }): 
       )}
       {list.length > FIRST && (
         <div class="wa-more">
-          <button type="button" class="wa-btn" aria-expanded={all} onClick={() => setAll(!all)}>
+          <button
+            type="button"
+            class="wa-btn"
+            aria-expanded={all}
+            onClick={() => setAll(!all)}
+          >
             {all ? 'Show fewer' : 'Show more'}
           </button>
         </div>

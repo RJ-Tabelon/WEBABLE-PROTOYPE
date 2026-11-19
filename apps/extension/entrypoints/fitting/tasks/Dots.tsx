@@ -5,7 +5,12 @@
 import type { JSX } from 'preact';
 import { useContext, useMemo, useRef, useState } from 'preact/hooks';
 import { StepLabelsContext } from '../ui/words';
-import { BlockWalk, RING_COUNT, RING_ORDER, ringDiameter } from '../logic/pointing';
+import {
+  BlockWalk,
+  RING_COUNT,
+  RING_ORDER,
+  ringDiameter,
+} from '../logic/pointing';
 import { useBox } from '../ui/hooks';
 import { TaskLayout, type TaskProps } from './Task';
 
@@ -32,13 +37,19 @@ export function DotsTask(props: TaskProps): JSX.Element {
 
   const zoom = raw.zoom || 1;
   const css = size / zoom;
-  const D = Math.min(ringDiameter(box.w, box.h, touch, css), Math.max(120, box.h - css - 24));
+  const D = Math.min(
+    ringDiameter(box.w, box.h, touch, css),
+    Math.max(120, box.h - css - 24),
+  );
   const R = D / 2;
   const centers = useMemo(
     () =>
       Array.from({ length: RING_COUNT }, (_, i) => {
         const a = -Math.PI / 2 + (i / RING_COUNT) * Math.PI * 2;
-        return { x: box.w / 2 + R * Math.cos(a), y: box.h / 2 + R * Math.sin(a) };
+        return {
+          x: box.w / 2 + R * Math.cos(a),
+          y: box.h / 2 + R * Math.sin(a),
+        };
       }),
     [box.w, box.h, R],
   );
@@ -57,7 +68,16 @@ export function DotsTask(props: TaskProps): JSX.Element {
     const c = centers[active] ?? { x: 0, y: 0 };
     const dx = p.x - c.x;
     const dy = p.y - c.y;
-    down.current = { id: e.pointerId, x: e.clientX, y: e.clientY, t: e.timeStamp, dx, dy, inside: Math.hypot(dx, dy) <= css / 2, idx: active };
+    down.current = {
+      id: e.pointerId,
+      x: e.clientX,
+      y: e.clientY,
+      t: e.timeStamp,
+      dx,
+      dy,
+      inside: Math.hypot(dx, dy) <= css / 2,
+      idx: active,
+    };
   };
 
   const onUp = (e: PointerEvent) => {
@@ -71,8 +91,14 @@ export function DotsTask(props: TaskProps): JSX.Element {
     walk.press({ dx: d.dx * zoom, dy: d.dy * zoom, hit: d.inside, slipped });
     props.onAnswer();
     if (walk.done) {
-      raw.blocks = walk.blocks.map((b) => ({ sizePx: b.sizePx, presses: b.presses }));
-      props.onDone({ trials: walk.scoredCount, stop: walk.stopReason ?? undefined });
+      raw.blocks = walk.blocks.map((b) => ({
+        sizePx: b.sizePx,
+        presses: b.presses,
+      }));
+      props.onDone({
+        trials: walk.scoredCount,
+        stop: walk.stopReason ?? undefined,
+      });
       return;
     }
     setStep((s) => s + 1);
@@ -82,7 +108,12 @@ export function DotsTask(props: TaskProps): JSX.Element {
 
   const verb = touch ? 'Tap' : 'Click';
   return (
-    <TaskLayout title={L.dotsTitle(touch)} sub={L.dotsLine} stageClass="is-dots" focusTitle>
+    <TaskLayout
+      title={L.dotsTitle(touch)}
+      sub={L.dotsLine}
+      stageClass="is-dots"
+      focusTitle
+    >
       <div
         ref={ref}
         class="fl-ring"
@@ -97,7 +128,12 @@ export function DotsTask(props: TaskProps): JSX.Element {
         {centers.map((c, i) => (
           <span
             class={`fl-dot ${i === active ? 'is-lit' : ''}`}
-            style={{ left: `${c.x - css / 2}px`, top: `${c.y - css / 2}px`, width: `${css}px`, height: `${css}px` }}
+            style={{
+              left: `${c.x - css / 2}px`,
+              top: `${c.y - css / 2}px`,
+              width: `${css}px`,
+              height: `${css}px`,
+            }}
             aria-hidden="true"
           />
         ))}

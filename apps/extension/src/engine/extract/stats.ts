@@ -4,8 +4,18 @@
 // with no controls. Cards are grouped by their highest common box that holds little else, so the record grid and the
 // "more stats" grid on a page stay two grids, and a scoreboard or a table nearby is never swallowed.
 
-import type { ExtractedData } from '@webable/core';
-import { contains, descendants, isControl, isDateText, isImage, isLabelText, isValueText, textLeaves, textOf } from './text';
+import type { ExtractedData } from '@webable/engine';
+import {
+  contains,
+  descendants,
+  isControl,
+  isDateText,
+  isImage,
+  isLabelText,
+  isValueText,
+  textLeaves,
+  textOf,
+} from './text';
 import type { ExtractItem, SNode } from './types';
 
 export interface Card {
@@ -32,14 +42,17 @@ export function findCards(root: SNode, opt: CardOptions): Card[] {
     const vt = textOf(v);
     if (!isValueText(vt)) continue;
     // The highest node that is still only the value ("<div><span>54</span></div>" -> the div).
-    if (v.parent && isValueText(textOf(v.parent)) && textOf(v.parent) === vt) continue;
+    if (v.parent && isValueText(textOf(v.parent)) && textOf(v.parent) === vt)
+      continue;
     const card = cardFor(v, vt, opt);
     if (!card || seenRoots.has(card.root)) continue;
     seenRoots.add(card.root);
     out.push(card);
   }
   // A box that turned out to hold two cards' roots is not a card itself.
-  return out.filter((c) => !out.some((o) => o !== c && contains(c.root, o.root)));
+  return out.filter(
+    (c) => !out.some((o) => o !== c && contains(c.root, o.root)),
+  );
 }
 
 function cardFor(v: SNode, vt: string, opt: CardOptions): Card | null {
@@ -63,9 +76,21 @@ function cardFor(v: SNode, vt: string, opt: CardOptions): Card | null {
     const label = (before[before.length - 1] ?? labels[0]) as SNode;
     const rest = leaves.filter((l) => l !== label);
     if (rest.length > 2) return null;
-    const sub = rest.map((r) => textOf(r)).filter(Boolean).join(' · ');
-    const card: Card = { root: a, label: textOf(label).replace(/\s*[:：]$/, ''), value: vt, valueNode: v };
-    if (sub && (rest.every((r) => isDateText(textOf(r)) || textOf(r).length <= 40))) card.sub = sub;
+    const sub = rest
+      .map((r) => textOf(r))
+      .filter(Boolean)
+      .join(' · ');
+    const card: Card = {
+      root: a,
+      label: textOf(label).replace(/\s*[:：]$/, ''),
+      value: vt,
+      valueNode: v,
+    };
+    if (
+      sub &&
+      rest.every((r) => isDateText(textOf(r)) || textOf(r).length <= 40)
+    )
+      card.sub = sub;
     else if (sub) return null;
     return card;
   }
@@ -82,7 +107,10 @@ export interface StatGroup {
  * Group cards by their highest common box that is still mostly cards (>= 80% of its text). `blocked` boxes (ones that
  * hold a scoreboard, a table or a recipe) are never a group's box.
  */
-export function groupCards(cards: Card[], opt: { excluded: (n: SNode) => boolean; blocked: (n: SNode) => boolean }): StatGroup[] {
+export function groupCards(
+  cards: Card[],
+  opt: { excluded: (n: SNode) => boolean; blocked: (n: SNode) => boolean },
+): StatGroup[] {
   const groups = new Map<SNode, Card[]>();
   for (const c of cards) {
     let best: SNode | null = null;
@@ -104,7 +132,9 @@ export function groupCards(cards: Card[], opt: { excluded: (n: SNode) => boolean
   const out: StatGroup[] = [];
   for (const r of roots) {
     if (roots.some((o) => o !== r && contains(o, r))) continue;
-    const inside = cards.filter((c) => contains(r, c.root)).sort((a, b) => (a.root.i ?? 0) - (b.root.i ?? 0));
+    const inside = cards
+      .filter((c) => contains(r, c.root))
+      .sort((a, b) => (a.root.i ?? 0) - (b.root.i ?? 0));
     if (inside.length < 2) continue;
     const g: StatGroup = { root: r, cards: inside };
     const title = groupTitle(r, inside);
@@ -121,7 +151,8 @@ function groupTitle(root: SNode, cards: Card[]): string | undefined {
   for (const l of leaves) {
     if (first && (l.i ?? 0) > (first.i ?? 0)) break;
     const t = textOf(l);
-    if (t.length <= 80 && t.split(' ').length <= 12 && !isValueText(t)) return t;
+    if (t.length <= 80 && t.split(' ').length <= 12 && !isValueText(t))
+      return t;
   }
   return undefined;
 }
@@ -131,7 +162,11 @@ export function statsItems(groups: StatGroup[]): ExtractItem[] {
   return groups.map((g) => {
     const data: ExtractedData = {
       kind: 'stats',
-      items: g.cards.map((c) => (c.sub ? { label: c.label, value: c.value, sub: c.sub } : { label: c.label, value: c.value })),
+      items: g.cards.map((c) =>
+        c.sub
+          ? { label: c.label, value: c.value, sub: c.sub }
+          : { label: c.label, value: c.value },
+      ),
     };
     if (g.title) data.title = g.title;
     return { node: g.root, data, valueNodes: g.cards.map((c) => c.valueNode) };

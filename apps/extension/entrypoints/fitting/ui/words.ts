@@ -1,4 +1,4 @@
-// The words on the steps' own headings and buttons, in one place, so another host page can say them its own
+// The words on the steps' own headings and buttons, in one place, so a host (the phone study) can say them its own
 // way without changing what the steps measure. The defaults are the onboarding's words. A `…Line` is one instruction
 // that stays on screen under the heading while the step runs; the onboarding has none.
 

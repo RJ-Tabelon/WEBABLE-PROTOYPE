@@ -2,14 +2,32 @@
 // visible word or control from the placed part is dropped.
 import type { JSX } from 'preact';
 import { useState } from 'preact/hooks';
-import { Blocks, BlockView, ControlView, FlowView, ImageView, Picture, PillButton, ResultItem, Thumb, ToolIcon, isResultCard, keepImage } from '../Blocks';
+import {
+  Blocks,
+  BlockView,
+  ControlView,
+  FlowView,
+  ImageView,
+  Picture,
+  PillButton,
+  ResultItem,
+  Thumb,
+  ToolIcon,
+  isResultCard,
+  keepImage,
+} from '../Blocks';
 import { BYLINE_RE } from '../compose/composeGroups';
 import { useCalm } from '../context';
 import { Segments } from '../Grouped';
 import { readingParts } from '../grouping';
 import * as I from '../icons';
 import {
-  type Block, type CardLinkBlock, type ControlBlock, type FlowBlock, type ImageBlock, PRICE_RE,
+  type Block,
+  type CardLinkBlock,
+  type ControlBlock,
+  type FlowBlock,
+  type ImageBlock,
+  PRICE_RE,
 } from '../model';
 import { type PlanPart, type PlanSection, allBlocks } from '../plan';
 
@@ -22,7 +40,15 @@ export function leaves(blocks: Block[]): Block[] {
     for (const b of bs) {
       if (b.b === 'list') b.items.forEach(walk);
       else if (b.b === 'group') {
-        if (b.legend) out.push({ b: 'heading', level: 3, text: b.legend, el: b.src as Element, key: `${b.key}l`, src: b.src });
+        if (b.legend)
+          out.push({
+            b: 'heading',
+            level: 3,
+            text: b.legend,
+            el: b.src as Element,
+            key: `${b.key}l`,
+            src: b.src,
+          });
         walk(b.blocks);
       } else out.push(b);
     }
@@ -31,9 +57,14 @@ export function leaves(blocks: Block[]): Block[] {
   return out;
 }
 
-const BADGE_RE = /^(new|sale|sponsored|ad|advertisement|best ?seller|popular|limited|exclusive|featured|deal|top rated|\d+% off|save \S+)$/i;
+const BADGE_RE =
+  /^(new|sale|sponsored|ad|advertisement|best ?seller|popular|limited|exclusive|featured|deal|top rated|\d+% off|save \S+)$/i;
 function isBadge(t: string): boolean {
-  return t.length <= 22 && (BADGE_RE.test(t) || (/[A-Z]/.test(t) && t === t.toUpperCase() && t.split(' ').length <= 3));
+  return (
+    t.length <= 22 &&
+    (BADGE_RE.test(t) ||
+      (/[A-Z]/.test(t) && t === t.toUpperCase() && t.split(' ').length <= 3))
+  );
 }
 
 interface TileParts {
@@ -48,7 +79,16 @@ interface TileParts {
 }
 
 function tileParts(blocks: Block[]): TileParts {
-  const t: TileParts = { image: null, eyebrow: [], title: null, link: null, lines: [], meta: [], actions: [], other: [] };
+  const t: TileParts = {
+    image: null,
+    eyebrow: [],
+    title: null,
+    link: null,
+    lines: [],
+    meta: [],
+    actions: [],
+    other: [],
+  };
   for (const b of leaves(blocks)) {
     if (b.b === 'image' && !t.image) t.image = b;
     else if (b.b === 'cardlink' && !t.title) {
@@ -62,7 +102,8 @@ function tileParts(blocks: Block[]): TileParts {
       t.link = b;
     } else if (b.b === 'flow') {
       if (!t.title && isBadge(b.text)) t.eyebrow.push(b.text);
-      else if (!t.title && b.text.length <= 120 && !PRICE_RE.test(b.text)) t.title = b.text;
+      else if (!t.title && b.text.length <= 120 && !PRICE_RE.test(b.text))
+        t.title = b.text;
       else t.meta.push(b);
     } else if (b.b === 'control') t.actions.push(b);
     else t.other.push(b);
@@ -70,16 +111,28 @@ function tileParts(blocks: Block[]): TileParts {
   return t;
 }
 
-function TitleLink({ link, text }: { link: ControlBlock | CardLinkBlock; text: string }): JSX.Element {
+function TitleLink({
+  link,
+  text,
+}: {
+  link: ControlBlock | CardLinkBlock;
+  text: string;
+}): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(link.el);
   };
   if (!link.href) {
     return (
-      <button type="button" class="wa-inline-link" style={{ textDecoration: 'none', color: 'inherit' }} onClick={() => ctx.click(link.el)}>
+      <button
+        type="button"
+        class="wa-inline-link"
+        style={{ textDecoration: 'none', color: 'inherit' }}
+        onClick={() => ctx.click(link.el)}
+      >
         {text}
       </button>
     );
@@ -97,12 +150,20 @@ function Meta({ f }: { f: FlowBlock }): JSX.Element {
 }
 
 /** Show the first n, then "Show all N" (n = 0 shows everything). */
-function useShowFirst<T>(items: T[], n: number): { shown: T[]; more: JSX.Element | null } {
+function useShowFirst<T>(
+  items: T[],
+  n: number,
+): { shown: T[]; more: JSX.Element | null } {
   const [all, setAll] = useState(false);
   if (!n || items.length <= n) return { shown: items, more: null };
   const more = (
     <div class="wa-more">
-      <button type="button" class="wa-btn wa-btn--block" aria-expanded={all} onClick={() => setAll(!all)}>
+      <button
+        type="button"
+        class="wa-btn wa-btn--block"
+        aria-expanded={all}
+        onClick={() => setAll(!all)}
+      >
         {all ? 'Show fewer' : `Show all ${items.length}`}
       </button>
     </div>
@@ -129,9 +190,16 @@ function Tile({ blocks }: { blocks: Block[] }): JSX.Element {
           {e}
         </span>
       ))}
-      {t.title && <h3 class="wa-tile__title">{t.link ? <TitleLink link={t.link} text={t.title} /> : t.title}</h3>}
+      {t.title && (
+        <h3 class="wa-tile__title">
+          {t.link ? <TitleLink link={t.link} text={t.title} /> : t.title}
+        </h3>
+      )}
       {t.lines.map((l, i) => (
-        <span key={`l${i}`} class={PRICE_RE.test(l) && l.length < 40 ? 'wa-p--price' : 'wa-meta'}>
+        <span
+          key={`l${i}`}
+          class={PRICE_RE.test(l) && l.length < 40 ? 'wa-p--price' : 'wa-meta'}
+        >
           {l}
         </span>
       ))}
@@ -155,7 +223,8 @@ export function CardGrid({ p }: { p: PlanSection }): JSX.Element {
   const records = p.records ?? [];
   const { shown, more } = useShowFirst(records, p.showFirst);
   if (!p.records) return <Generic p={p} />;
-  if (shown.length && shown.every((r) => resultRecord(r, !!ctx.results))) return <ResultList p={p} shown={shown} more={more} />;
+  if (shown.length && shown.every((r) => resultRecord(r, !!ctx.results)))
+    return <ResultList p={p} shown={shown} more={more} />;
   const controls = onlyControls(allBlocks(p));
   if (controls && controls.length >= 2) return <ChipList controls={controls} />;
   return (
@@ -174,10 +243,14 @@ export function CardGrid({ p }: { p: PlanSection }): JSX.Element {
 
 /** Thumbnails only when at least half the rows have a picture worth showing. */
 function rowsWithThumbs(records: Block[][]): boolean {
-  return records.filter((r) => {
-    const im = tileParts(r).image;
-    return !!im && keepImage(im, true);
-  }).length * 2 >= records.length;
+  return (
+    records.filter((r) => {
+      const im = tileParts(r).image;
+      return !!im && keepImage(im, true);
+    }).length *
+      2 >=
+    records.length
+  );
 }
 
 /** A record that reads as a search result: a title link (with an address line, or any title link on a results page). */
@@ -193,7 +266,12 @@ function ResultRecord({ blocks }: { blocks: Block[] }): JSX.Element {
   const t = tileParts(blocks);
   const link = t.link!;
   return (
-    <ResultItem link={link} title={t.title!} lines={t.lines} dek={link.b === 'cardlink' ? link.dek : null}>
+    <ResultItem
+      link={link}
+      title={t.title!}
+      lines={t.lines}
+      dek={link.b === 'cardlink' ? link.dek : null}
+    >
       {t.meta.map((f) => (
         <FlowView key={f.key} b={f} />
       ))}
@@ -202,7 +280,15 @@ function ResultRecord({ blocks }: { blocks: Block[] }): JSX.Element {
   );
 }
 
-function ResultList({ p, shown, more }: { p: PlanSection; shown: Block[][]; more: JSX.Element | null }): JSX.Element {
+function ResultList({
+  p,
+  shown,
+  more,
+}: {
+  p: PlanSection;
+  shown: Block[][];
+  more: JSX.Element | null;
+}): JSX.Element {
   return (
     <div class="wa-stack" style={{ gap: 'var(--wa-card-gap)' }}>
       <Blocks blocks={p.before} />
@@ -217,10 +303,18 @@ function ResultList({ p, shown, more }: { p: PlanSection; shown: Block[][]; more
   );
 }
 
-function RecordRow({ blocks, thumbs = true }: { blocks: Block[]; thumbs?: boolean }): JSX.Element {
+function RecordRow({
+  blocks,
+  thumbs = true,
+}: {
+  blocks: Block[];
+  thumbs?: boolean;
+}): JSX.Element {
   const ctx = useCalm();
   const t = tileParts(blocks);
-  const thumb = thumbs && t.image && keepImage(t.image, true) && <Thumb img={t.image} />;
+  const thumb = thumbs && t.image && keepImage(t.image, true) && (
+    <Thumb img={t.image} />
+  );
   const body = (
     <span class="wa-row__main">
       {t.eyebrow.map((e, i) => (
@@ -243,7 +337,8 @@ function RecordRow({ blocks, thumbs = true }: { blocks: Block[]; thumbs?: boolea
   if (t.link && !t.actions.length && !t.other.length) {
     const link = t.link;
     const press = (e: MouseEvent): void => {
-      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+        return;
       e.preventDefault();
       ctx.click(link.el);
     };
@@ -270,7 +365,9 @@ function RecordRow({ blocks, thumbs = true }: { blocks: Block[]; thumbs?: boolea
       {body}
       {(t.actions.length > 0 || t.link) && (
         <span class="wa-row__aside">
-          {t.link && t.link.b === 'control' && <ControlView b={t.link} variant="link" />}
+          {t.link && t.link.b === 'control' && (
+            <ControlView b={t.link} variant="link" />
+          )}
           {t.actions.map((a) => (
             <ControlView key={a.key} b={a} />
           ))}
@@ -286,7 +383,8 @@ export function RowList({ p }: { p: PlanSection }): JSX.Element {
   const { shown, more } = useShowFirst(records, p.showFirst);
   const thumbs = rowsWithThumbs(records);
   if (!p.records) return <Generic p={p} />;
-  if (shown.length && shown.every((r) => resultRecord(r, !!ctx.results))) return <ResultList p={p} shown={shown} more={more} />;
+  if (shown.length && shown.every((r) => resultRecord(r, !!ctx.results)))
+    return <ResultList p={p} shown={shown} more={more} />;
   return (
     <div class="wa-stack" style={{ gap: 'var(--wa-card-gap)' }}>
       <Blocks blocks={p.before} />
@@ -309,7 +407,10 @@ function textBlocks(bs: Block[]): { k: string; rest: Block[] } | null {
   const ls = leaves(bs);
   const first = ls.find((b) => b.b === 'flow' || b.b === 'heading');
   if (!first) return null;
-  return { k: (first as { text: string }).text, rest: ls.filter((b) => b !== first) };
+  return {
+    k: (first as { text: string }).text,
+    rest: ls.filter((b) => b !== first),
+  };
 }
 
 export function Facts({ p }: { p: PlanSection }): JSX.Element {
@@ -321,7 +422,10 @@ export function Facts({ p }: { p: PlanSection }): JSX.Element {
     }
   } else {
     const ls = leaves(p.blocks);
-    if (ls.length >= 2 && ls.every((b) => b.b === 'flow' || b.b === 'heading')) {
+    if (
+      ls.length >= 2 &&
+      ls.every((b) => b.b === 'flow' || b.b === 'heading')
+    ) {
       for (let i = 0; i < ls.length; i += 2) {
         const a = ls[i] as { text: string; key: string };
         const b = ls[i + 1];
@@ -350,7 +454,10 @@ export function Facts({ p }: { p: PlanSection }): JSX.Element {
   );
 }
 
-function split(p: PlanSection, pick: (b: Block) => boolean): { picked: Block[]; rest: Block[] } {
+function split(
+  p: PlanSection,
+  pick: (b: Block) => boolean,
+): { picked: Block[]; rest: Block[] } {
   const all = leaves(allBlocks(p));
   return { picked: all.filter(pick), rest: all.filter((b) => !pick(b)) };
 }
@@ -422,7 +529,11 @@ function ChipList({ controls }: { controls: ControlBlock[] }): JSX.Element {
   return (
     <div class="wa-chips">
       {controls.map((c) =>
-        c.primary ? <ControlView key={c.key} b={c} /> : <PillButton key={c.key} b={c} cls="wa-chip" />,
+        c.primary ? (
+          <ControlView key={c.key} b={c} />
+        ) : (
+          <PillButton key={c.key} b={c} cls="wa-chip" />
+        ),
       )}
     </div>
   );
@@ -430,12 +541,19 @@ function ChipList({ controls }: { controls: ControlBlock[] }): JSX.Element {
 
 function onlyControls(bs: Block[]): ControlBlock[] | null {
   const ls = leaves(bs);
-  return ls.length && ls.every((b) => b.b === 'control') ? (ls as ControlBlock[]) : null;
+  return ls.length && ls.every((b) => b.b === 'control')
+    ? (ls as ControlBlock[])
+    : null;
 }
 
 function PartView({ pt, rows }: { pt: PlanPart; rows: boolean }): JSX.Element {
   const ctx = useCalm();
-  const controls = onlyControls([...pt.before, ...pt.blocks, ...(pt.records ?? []).flat(), ...pt.after]);
+  const controls = onlyControls([
+    ...pt.before,
+    ...pt.blocks,
+    ...(pt.records ?? []).flat(),
+    ...pt.after,
+  ]);
   if (controls && controls.length >= 2) return <ChipList controls={controls} />;
   if (!pt.records) {
     return (
@@ -452,7 +570,11 @@ function PartView({ pt, rows }: { pt: PlanPart; rows: boolean }): JSX.Element {
           {chunk(pt.records, ctx.groupSize).map((g, gi) => (
             <div key={gi} class="wa-rows">
               {g.map((r) => (
-                <RecordRow key={r[0]?.key} blocks={r} thumbs={rowsWithThumbs(pt.records ?? [])} />
+                <RecordRow
+                  key={r[0]?.key}
+                  blocks={r}
+                  thumbs={rowsWithThumbs(pt.records ?? [])}
+                />
               ))}
             </div>
           ))}
@@ -469,7 +591,13 @@ function PartView({ pt, rows }: { pt: PlanPart; rows: boolean }): JSX.Element {
   );
 }
 
-export function Generic({ p, variant }: { p: PlanSection; variant?: 'default' | 'quiet' | 'prose' }): JSX.Element {
+export function Generic({
+  p,
+  variant,
+}: {
+  p: PlanSection;
+  variant?: 'default' | 'quiet' | 'prose';
+}): JSX.Element {
   const ctx = useCalm();
   if (p.parts) return <Parts p={p} />;
   // Round 10: a plain part's running text in groups, each laid out for the person once it is ready.
@@ -478,9 +606,15 @@ export function Generic({ p, variant }: { p: PlanSection; variant?: 'default' | 
     <div class="wa-stack">
       <Blocks blocks={p.before} variant={variant} />
       {segs ? (
-        <Segments segs={segs} render={(bs) => <Blocks blocks={bs} variant={variant} />} />
+        <Segments
+          segs={segs}
+          render={(bs) => <Blocks blocks={bs} variant={variant} />}
+        />
       ) : (
-        <Blocks blocks={p.records ? p.records.flat() : p.blocks} variant={variant} />
+        <Blocks
+          blocks={p.records ? p.records.flat() : p.blocks}
+          variant={variant}
+        />
       )}
       <Blocks blocks={p.after} variant={variant} />
     </div>
@@ -512,7 +646,12 @@ export function Reading({ p }: { p: PlanSection }): JSX.Element {
         {tools.length > 0 && (
           <div class="wa-tools">
             {tools.map((t) => (
-              <button key={t.key} type="button" class="wa-btn wa-btn--tool" onClick={() => ctx.click(t.el)}>
+              <button
+                key={t.key}
+                type="button"
+                class="wa-btn wa-btn--tool"
+                onClick={() => ctx.click(t.el)}
+              >
                 <ToolIcon text={t.text} />
                 <span>{t.text}</span>
               </button>
@@ -567,12 +706,19 @@ export function Hero({ p }: { p: PlanSection }): JSX.Element {
     }
   }
   const lead: FlowBlock[] = [];
-  while (rest[0]?.b === 'flow' && lead.length < 2) lead.push(rest.shift() as FlowBlock);
-  const controls = rest.filter((b): b is ControlBlock => b.b === 'control' && !b.primary);
+  while (rest[0]?.b === 'flow' && lead.length < 2)
+    lead.push(rest.shift() as FlowBlock);
+  const controls = rest.filter(
+    (b): b is ControlBlock => b.b === 'control' && !b.primary,
+  );
   const others = rest.filter((b) => !(b.b === 'control' && !b.primary));
   return (
     <div class="wa-stack" style={{ gap: 'var(--wa-head-gap)' }}>
-      {title && <h1 class={p.titleSize === 'page' ? 'wa-h-page' : 'wa-h-section'}>{title}</h1>}
+      {title && (
+        <h1 class={p.titleSize === 'page' ? 'wa-h-page' : 'wa-h-section'}>
+          {title}
+        </h1>
+      )}
       {lead.map((f) => (
         <FlowView key={f.key} b={f} pageline />
       ))}
@@ -595,21 +741,43 @@ export function Hero({ p }: { p: PlanSection }): JSX.Element {
  */
 export function BuyBox({ p }: { p: PlanSection }): JSX.Element {
   const ls = leaves(allBlocks(p));
-  const pics = ls.filter((b): b is ImageBlock => b.b === 'image' && keepImage(b, true));
+  const pics = ls.filter(
+    (b): b is ImageBlock => b.b === 'image' && keepImage(b, true),
+  );
   // The largest picture is the product's own; other pictures of the product follow as thumbnails (at most 5 in all).
-  const main = pics.reduce<ImageBlock | null>((m, b) => (!m || b.w * b.h > m.w * m.h ? b : m), null);
-  const shots = main ? [main, ...pics.filter((b) => b !== main && b.url !== main.url)].slice(0, 5) : [];
+  const main = pics.reduce<ImageBlock | null>(
+    (m, b) => (!m || b.w * b.h > m.w * m.h ? b : m),
+    null,
+  );
+  const shots = main
+    ? [main, ...pics.filter((b) => b !== main && b.url !== main.url)].slice(
+        0,
+        5,
+      )
+    : [];
   const [sel, setSel] = useState(0);
   const media = shots[Math.min(sel, shots.length - 1)] ?? null;
-  const rest = ls.filter((b) => !(b.b === 'image' && (shots.includes(b) || b.logo)));
+  const rest = ls.filter(
+    (b) => !(b.b === 'image' && (shots.includes(b) || b.logo)),
+  );
   const name = rest.find((b) => b.b === 'heading');
-  const price = rest.find((b): b is FlowBlock => b.b === 'flow' && b.text.length <= 40 && PRICE_RE.test(b.text));
+  const price = rest.find(
+    (b): b is FlowBlock =>
+      b.b === 'flow' && b.text.length <= 40 && PRICE_RE.test(b.text),
+  );
   const others = rest.filter((b) => b !== name && b !== price);
   return (
     <div class={`wa-buy${media ? '' : ' wa-buy--nomedia'}`}>
       {media && (
         <div class="wa-buy__media">
-          <Picture key={media.key} b={{ ...media, important: true }} ratio={1} fit="contain" lead caption={false} />
+          <Picture
+            key={media.key}
+            b={{ ...media, important: true }}
+            ratio={1}
+            fit="contain"
+            lead
+            caption={false}
+          />
           {shots.length > 1 && (
             <div class="wa-buy__thumbs">
               {shots.map((s, i) => (
@@ -629,10 +797,18 @@ export function BuyBox({ p }: { p: PlanSection }): JSX.Element {
         </div>
       )}
       <div class="wa-buy__info">
-        {name && name.b === 'heading' && <h2 class="wa-h-section">{name.text}</h2>}
+        {name && name.b === 'heading' && (
+          <h2 class="wa-h-section">{name.text}</h2>
+        )}
         {price && <p class="wa-buy__price">{price.text}</p>}
         <div class="wa-buy__opts">
-          {others.map((b) => (b.b === 'flow' ? <Meta key={b.key} f={b} /> : <BlockView key={b.key} b={b} />))}
+          {others.map((b) =>
+            b.b === 'flow' ? (
+              <Meta key={b.key} f={b} />
+            ) : (
+              <BlockView key={b.key} b={b} />
+            ),
+          )}
         </div>
       </div>
     </div>
@@ -640,7 +816,13 @@ export function BuyBox({ p }: { p: PlanSection }): JSX.Element {
 }
 
 /** Help is always open: a quiet card with a help icon. */
-export function HelpCard({ blocks, title }: { blocks: Block[]; title?: string | null }): JSX.Element {
+export function HelpCard({
+  blocks,
+  title,
+}: {
+  blocks: Block[];
+  title?: string | null;
+}): JSX.Element {
   return (
     <div class="wa-help">
       <span class="wa-help__icon" aria-hidden="true">

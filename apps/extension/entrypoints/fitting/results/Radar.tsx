@@ -45,7 +45,9 @@ function splitTwo(s: string): string[] {
   const spaces = [...s.matchAll(/ /g)].map((m) => m.index ?? 0);
   if (!spaces.length) return [s];
   const mid = s.length / 2;
-  const at = spaces.reduce((a, b) => (Math.abs(b - mid) < Math.abs(a - mid) ? b : a));
+  const at = spaces.reduce((a, b) =>
+    Math.abs(b - mid) < Math.abs(a - mid) ? b : a,
+  );
   return [s.slice(0, at), s.slice(at + 1)];
 }
 
@@ -58,19 +60,33 @@ interface Geometry {
   lines: string[][];
 }
 
-function geometry(width: number, labels: string[], emphasis: boolean[], family: string): Geometry {
+function geometry(
+  width: number,
+  labels: string[],
+  emphasis: boolean[],
+  family: string,
+): Geometry {
   const w = Math.max(260, Math.floor(width));
   const weightOf = (i: number): number => (emphasis[i] ? 600 : 500);
   const sideWidth = (lines: string[][]): number =>
-    Math.max(...SIDES.map((i) => Math.max(...(lines[i] ?? ['']).map((s) => textWidth(s, weightOf(i), family))))) + 3;
-  const radiusFor = (lines: string[][]): number => (w / 2 - PAD - sideWidth(lines) - GAP) / COS30;
+    Math.max(
+      ...SIDES.map((i) =>
+        Math.max(
+          ...(lines[i] ?? ['']).map((s) => textWidth(s, weightOf(i), family)),
+        ),
+      ),
+    ) + 3;
+  const radiusFor = (lines: string[][]): number =>
+    (w / 2 - PAD - sideWidth(lines) - GAP) / COS30;
 
   const single = labels.map((l) => [l]);
   let lines = single;
   let r = radiusFor(single);
   if (r < 112) {
     // Narrow: break the four side labels onto two lines and take whichever leaves the bigger chart.
-    const wrapped = labels.map((l, i) => (SIDES.includes(i) ? splitTwo(l) : [l]));
+    const wrapped = labels.map((l, i) =>
+      SIDES.includes(i) ? splitTwo(l) : [l],
+    );
     const r2 = radiusFor(wrapped);
     if (r2 > r) {
       lines = wrapped;
@@ -79,14 +95,24 @@ function geometry(width: number, labels: string[], emphasis: boolean[], family: 
   }
   r = Math.max(MIN_R, Math.min(MAX_R, Math.floor(r)));
   const cy = PAD + LINE + GAP + r;
-  return { w, h: Math.ceil(cy + r + GAP + LINE + PAD), cx: w / 2, cy, r, lines };
+  return {
+    w,
+    h: Math.ceil(cy + r + GAP + LINE + PAD),
+    cx: w / 2,
+    cy,
+    r,
+    lines,
+  };
 }
 
 const angle = (i: number): number => -Math.PI / 2 + (i * Math.PI) / 3;
 
 function hexPoints(cx: number, cy: number, radii: number[]): string {
   return radii
-    .map((rad, i) => `${(cx + rad * Math.cos(angle(i))).toFixed(2)},${(cy + rad * Math.sin(angle(i))).toFixed(2)}`)
+    .map(
+      (rad, i) =>
+        `${(cx + rad * Math.cos(angle(i))).toFixed(2)},${(cy + rad * Math.sin(angle(i))).toFixed(2)}`,
+    )
     .join(' ');
 }
 
@@ -143,17 +169,35 @@ export function Radar(props: RadarProps): JSX.Element {
       setShown(values);
       return;
     }
-    return animate(260, (e) => setShown(values.map((v, i) => (from[i] ?? 0) + (v - (from[i] ?? 0)) * e)));
+    return animate(260, (e) =>
+      setShown(values.map((v, i) => (from[i] ?? 0) + (v - (from[i] ?? 0)) * e)),
+    );
   }, [key, reduced]);
 
   const g = geometry(Math.min(width, 480), labels, emphasis, family);
   const { cx, cy, r } = g;
-  const radii = shown.map((v) => r * grow * (MIN_SHOW + (1 - MIN_SHOW) * Math.max(0, Math.min(100, v)) / 100));
-  const ring = (k: number): string => hexPoints(cx, cy, [0, 1, 2, 3, 4, 5].map(() => r * k));
+  const radii = shown.map(
+    (v) =>
+      r *
+      grow *
+      (MIN_SHOW + ((1 - MIN_SHOW) * Math.max(0, Math.min(100, v))) / 100),
+  );
+  const ring = (k: number): string =>
+    hexPoints(
+      cx,
+      cy,
+      [0, 1, 2, 3, 4, 5].map(() => r * k),
+    );
 
   return (
     <div class="rd" ref={wrap}>
-      <svg class="rd-svg" width={g.w} height={g.h} role="img" aria-label={summary}>
+      <svg
+        class="rd-svg"
+        width={g.w}
+        height={g.h}
+        role="img"
+        aria-label={summary}
+      >
         <polygon class="rd-plate" points={ring(1)} />
         <polygon class="rd-ring" points={ring(2 / 3)} />
         <polygon class="rd-ring" points={ring(1 / 3)} />
@@ -201,7 +245,12 @@ export function Radar(props: RadarProps): JSX.Element {
           const x = right ? vx + GAP : vx - GAP;
           const y0 = vy + 5 - ((ls.length - 1) * LINE) / 2;
           return (
-            <text key={i} class={`${cls} ${right ? 'rd-start' : 'rd-end'}`} x={x} y={y0}>
+            <text
+              key={i}
+              class={`${cls} ${right ? 'rd-start' : 'rd-end'}`}
+              x={x}
+              y={y0}
+            >
               {ls.map((s, j) => (
                 <tspan key={j} x={x} y={y0 + j * LINE}>
                   {s}

@@ -49,7 +49,10 @@ export interface ScoreboardProps {
   joiner?: string;
   sides: ScoreSide[];
   /** Optional line score: period labels and one row per side. */
-  periods?: { labels: string[]; rows: Array<{ name: string; values: string[] }> };
+  periods?: {
+    labels: string[];
+    rows: Array<{ name: string; values: string[] }>;
+  };
 }
 
 export interface DataTableProps {

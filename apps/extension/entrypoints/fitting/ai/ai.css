@@ -275,7 +275,9 @@
   background: var(--c-card);
   color: var(--c-ink);
   text-decoration: none;
-  transition: border-color var(--t-ui) var(--ease), box-shadow var(--t-ui) var(--ease);
+  transition:
+    border-color var(--t-ui) var(--ease),
+    box-shadow var(--t-ui) var(--ease);
 }
 .ai-page:hover {
   border-color: var(--c-line-strong);

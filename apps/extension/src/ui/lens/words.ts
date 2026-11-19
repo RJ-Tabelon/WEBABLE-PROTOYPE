@@ -2,9 +2,16 @@
 // Numbers are "Jev's probability". This file never says "confidence" or "chance".
 //
 // When a field is missing or empty, the helpers return null or an empty list so the Lens can keep the v2 view.
-import type { ElementJudgment, FineRole, PageDigest, PagePurpose, PageUnderstanding } from '@webable/core';
+import type {
+  ElementJudgment,
+  FineRole,
+  PageDigest,
+  PagePurpose,
+  PageUnderstanding,
+} from '@webable/engine';
 
-export type FineFamily = 'content' | 'data' | 'task' | 'navigation' | 'help' | 'distraction' | 'other';
+export type FineFamily =
+  'content' | 'data' | 'task' | 'navigation' | 'help' | 'distraction' | 'other';
 
 export type OutlineWeight = 'solid' | 'dashed' | 'hair';
 
@@ -306,7 +313,13 @@ export const FINE_FAMILY: Record<FineRole, FineFamily> = {
 };
 
 /** 0 distraction, 1 minor, 2 secondary, 3 supporting, 4 essential. */
-export const IMPORTANCE_WORD = ['Distraction', 'Minor', 'Secondary', 'Supporting', 'Essential'] as const;
+export const IMPORTANCE_WORD = [
+  'Distraction',
+  'Minor',
+  'Secondary',
+  'Supporting',
+  'Essential',
+] as const;
 
 const FINE_SET = new Set<string>(Object.keys(FINE_WORDS));
 const PURPOSE_SET = new Set<string>(Object.keys(PURPOSE));
@@ -330,7 +343,10 @@ export function capFirst(s: string): string {
 }
 
 /** Article and name for a purpose kind. Unknown kinds still get a readable phrase. */
-export function purposeReading(kind: string): { article: string; name: string } {
+export function purposeReading(kind: string): {
+  article: string;
+  name: string;
+} {
   if (isPagePurpose(kind)) return PURPOSE[kind];
   const name = kind.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
   if (!name) return { article: 'a', name: 'page' };
@@ -349,7 +365,9 @@ export interface PurposeLine {
 }
 
 /** Header line, or null when the purpose field is missing or has no kind and no probability. */
-export function purposeLine(purpose: PageUnderstanding['purpose'] | null | undefined): PurposeLine | null {
+export function purposeLine(
+  purpose: PageUnderstanding['purpose'] | null | undefined,
+): PurposeLine | null {
   if (!purpose || typeof purpose !== 'object') return null;
   const kind = typeof purpose.kind === 'string' ? purpose.kind.trim() : '';
   const p = purpose.p;
@@ -372,7 +390,10 @@ export interface ProbBar {
 }
 
 /** Top purpose kinds by Jev's probability. Empty when the field is missing or has no numbers. */
-export function purposeBars(purpose: PageUnderstanding['purpose'] | null | undefined, limit = 5): ProbBar[] {
+export function purposeBars(
+  purpose: PageUnderstanding['purpose'] | null | undefined,
+  limit = 5,
+): ProbBar[] {
   if (!purpose || typeof purpose !== 'object') return [];
   const rows: ProbBar[] = [];
   const probs = purpose.probs;
@@ -383,8 +404,19 @@ export function purposeBars(purpose: PageUnderstanding['purpose'] | null | undef
     }
   }
   rows.sort((a, b) => b.p - a.p || a.name.localeCompare(b.name));
-  if (rows.length === 0 && typeof purpose.kind === 'string' && purpose.kind && typeof purpose.p === 'number' && Number.isFinite(purpose.p) && purpose.p > 0) {
-    rows.push({ id: purpose.kind, name: capFirst(purposeReading(purpose.kind).name), p: clamp01(purpose.p) });
+  if (
+    rows.length === 0 &&
+    typeof purpose.kind === 'string' &&
+    purpose.kind &&
+    typeof purpose.p === 'number' &&
+    Number.isFinite(purpose.p) &&
+    purpose.p > 0
+  ) {
+    rows.push({
+      id: purpose.kind,
+      name: capFirst(purposeReading(purpose.kind).name),
+      p: clamp01(purpose.p),
+    });
   }
   return rows.slice(0, limit);
 }
@@ -399,14 +431,25 @@ export interface RegionPick {
  * The region Jev picked, and the next-highest different id.
  * `{ id: 'none', p: 0, probs: {} }` counts as empty: there is nothing to draw.
  */
-export function mainRegionPick(region: PageUnderstanding['mainRegion'] | null | undefined): RegionPick | null {
+export function mainRegionPick(
+  region: PageUnderstanding['mainRegion'] | null | undefined,
+): RegionPick | null {
   if (!region || typeof region !== 'object') return null;
   const id = typeof region.id === 'string' ? region.id : '';
   if (!id) return null;
-  const p = typeof region.p === 'number' && Number.isFinite(region.p) ? clamp01(region.p) : 0;
-  const probs = region.probs && typeof region.probs === 'object' ? region.probs : {};
+  const p =
+    typeof region.p === 'number' && Number.isFinite(region.p)
+      ? clamp01(region.p)
+      : 0;
+  const probs =
+    region.probs && typeof region.probs === 'object' ? region.probs : {};
   const ranked = Object.entries(probs)
-    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0)
+    .filter(
+      (entry): entry is [string, number] =>
+        typeof entry[1] === 'number' &&
+        Number.isFinite(entry[1]) &&
+        entry[1] > 0,
+    )
     .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
   const any = p > 0 || ranked.length > 0;
   if (!any) return null;
@@ -455,21 +498,40 @@ function asFineProbs(j: ElementJudgment): Record<string, number> | null {
  * A `fineProbs` map on the judgment (not in the shared contract yet) supplies the distribution.
  * Without it, the single `fine` / `fineP` answer is one bar. Missing both returns [].
  */
-export function fineRoleBars(j: ElementJudgment | null | undefined, limit = 5): FineBar[] {
+export function fineRoleBars(
+  j: ElementJudgment | null | undefined,
+  limit = 5,
+): FineBar[] {
   if (!j) return [];
   const probs = asFineProbs(j);
   if (probs) {
     const rows: FineBar[] = [];
     for (const [role, v] of Object.entries(probs)) {
-      if (!isFineRole(role) || typeof v !== 'number' || !Number.isFinite(v) || v <= 0) continue;
-      rows.push({ role, name: FINE_WORDS[role], family: FINE_FAMILY[role], p: clamp01(v) });
+      if (
+        !isFineRole(role) ||
+        typeof v !== 'number' ||
+        !Number.isFinite(v) ||
+        v <= 0
+      )
+        continue;
+      rows.push({
+        role,
+        name: FINE_WORDS[role],
+        family: FINE_FAMILY[role],
+        p: clamp01(v),
+      });
     }
     rows.sort((a, b) => b.p - a.p || a.name.localeCompare(b.name));
     if (rows.length) return rows.slice(0, limit);
   }
   if (!isFineRole(j.fine)) return [];
-  const p = typeof j.fineP === 'number' && Number.isFinite(j.fineP) ? clamp01(j.fineP) : 0;
-  return [{ role: j.fine, name: FINE_WORDS[j.fine], family: FINE_FAMILY[j.fine], p }];
+  const p =
+    typeof j.fineP === 'number' && Number.isFinite(j.fineP)
+      ? clamp01(j.fineP)
+      : 0;
+  return [
+    { role: j.fine, name: FINE_WORDS[j.fine], family: FINE_FAMILY[j.fine], p },
+  ];
 }
 
 export interface SettledFine {
@@ -482,11 +544,18 @@ export interface SettledFine {
 }
 
 const EMPTY_FINE: SettledFine = {
-  fine: null, fineP: null, fineName: null, family: null, importance: null, weight: null,
+  fine: null,
+  fineP: null,
+  fineName: null,
+  family: null,
+  importance: null,
+  weight: null,
 };
 
 /** What the Lens draws for one judgment. All nulls when the round-7 fields are absent. */
-export function settledFine(j: ElementJudgment | null | undefined): SettledFine {
+export function settledFine(
+  j: ElementJudgment | null | undefined,
+): SettledFine {
   if (!j) return EMPTY_FINE;
   const importance = importanceScore(j.importance);
   let fine: FineRole | null = null;
@@ -494,7 +563,10 @@ export function settledFine(j: ElementJudgment | null | undefined): SettledFine 
   if (isFineRole(j.fine)) {
     fine = j.fine;
     // A missing probability stays blank. 0 is a real answer and still shows.
-    fineP = typeof j.fineP === 'number' && Number.isFinite(j.fineP) ? clamp01(j.fineP) : null;
+    fineP =
+      typeof j.fineP === 'number' && Number.isFinite(j.fineP)
+        ? clamp01(j.fineP)
+        : null;
   } else {
     const top = fineRoleBars(j, 1)[0];
     if (top) {
@@ -516,15 +588,23 @@ export function settledFine(j: ElementJudgment | null | undefined): SettledFine 
 /** True when the side sheet has a Page tab to show. */
 export function hasPageRead(u: PageUnderstanding | null | undefined): boolean {
   if (!u) return false;
-  return purposeBars(u.purpose).length > 0 || mainRegionPick(u.mainRegion) != null;
+  return (
+    purposeBars(u.purpose).length > 0 || mainRegionPick(u.mainRegion) != null
+  );
 }
 
 /** Label for a region or element id, from the digest (elements, then regions) or "none of these". */
-export function regionLabel(id: string, labels: ReadonlyMap<string, string>, digest: PageDigest | null): string {
+export function regionLabel(
+  id: string,
+  labels: ReadonlyMap<string, string>,
+  digest: PageDigest | null,
+): string {
   if (id === 'none') return 'none of these';
   const known = labels.get(id);
   if (known) return known;
-  const ev = digest?.elements.find((e) => e.id === id) ?? digest?.regions?.find((e) => e.id === id);
+  const ev =
+    digest?.elements.find((e) => e.id === id) ??
+    digest?.regions?.find((e) => e.id === id);
   const raw = (ev?.label || '').trim();
   return raw && raw !== '·' ? raw : id;
 }

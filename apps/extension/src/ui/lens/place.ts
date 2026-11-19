@@ -11,7 +11,12 @@
 //     priority chip it collides with; any other chip without a slot goes to the list. A leader line is drawn when a
 //     chip ends up more than 12 px from its element.
 
-export interface Rect { x: number; y: number; w: number; h: number }
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
 
 export interface PlaceItem {
   id: string;
@@ -81,7 +86,9 @@ export function rectGap(a: Rect, b: Rect): number {
 }
 
 export function overlaps(a: Rect, b: Rect): boolean {
-  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  return (
+    a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h
+  );
 }
 
 function union(rs: Rect[]): Rect {
@@ -108,8 +115,16 @@ class Grid {
   add(r: Rect, owner: number): void {
     const i = this.rects.length;
     this.rects.push({ r, owner });
-    for (let cx = Math.floor(r.x / CELL); cx <= Math.floor((r.x + r.w) / CELL); cx++) {
-      for (let cy = Math.floor(r.y / CELL); cy <= Math.floor((r.y + r.h) / CELL); cy++) {
+    for (
+      let cx = Math.floor(r.x / CELL);
+      cx <= Math.floor((r.x + r.w) / CELL);
+      cx++
+    ) {
+      for (
+        let cy = Math.floor(r.y / CELL);
+        cy <= Math.floor((r.y + r.h) / CELL);
+        cy++
+      ) {
         const k = this.key(cx, cy);
         const list = this.cells.get(k);
         if (list) list.push(i);
@@ -120,8 +135,16 @@ class Grid {
   /** Owners of live rects that overlap r (owner -1 = reserved). */
   hits(r: Rect, dead: Set<number>): Set<number> {
     const out = new Set<number>();
-    for (let cx = Math.floor(r.x / CELL); cx <= Math.floor((r.x + r.w) / CELL); cx++) {
-      for (let cy = Math.floor(r.y / CELL); cy <= Math.floor((r.y + r.h) / CELL); cy++) {
+    for (
+      let cx = Math.floor(r.x / CELL);
+      cx <= Math.floor((r.x + r.w) / CELL);
+      cx++
+    ) {
+      for (
+        let cy = Math.floor(r.y / CELL);
+        cy <= Math.floor((r.y + r.h) / CELL);
+        cy++
+      ) {
         for (const i of this.cells.get(this.key(cx, cy)) ?? []) {
           const e = this.rects[i]!;
           if (dead.has(e.owner)) continue;
@@ -165,7 +188,14 @@ export function shouldMerge(a: Rect, b: Rect, px: number): boolean {
 }
 
 export function onScreen(r: Rect, vw: number, vh: number): boolean {
-  return r.w >= 4 && r.h >= 4 && r.x + r.w > 0 && r.y + r.h > 0 && r.x < vw && r.y < vh;
+  return (
+    r.w >= 4 &&
+    r.h >= 4 &&
+    r.x + r.w > 0 &&
+    r.y + r.h > 0 &&
+    r.x < vw &&
+    r.y < vh
+  );
 }
 
 export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
@@ -182,7 +212,12 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
   // label and the plain-rule chip stay alone.
   const dsu = new DSU(live.length);
   const mergeable = (a: PlaceItem, b: PlaceItem) =>
-    a.cls === b.cls && a.cls !== 'main' && a.cls !== 'page' && a.cls !== 'rule' && !a.forced && !b.forced;
+    a.cls === b.cls &&
+    a.cls !== 'main' &&
+    a.cls !== 'page' &&
+    a.cls !== 'rule' &&
+    !a.forced &&
+    !b.forced;
   for (let i = 0; i < live.length; i++) {
     for (let k = i + 1; k < live.length; k++) {
       const a = live[i]!;
@@ -198,12 +233,21 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
     if (g) g.push(live[i]!);
     else groups.set(r, [live[i]!]);
   }
-  interface Cluster { key: string; cls: string; members: PlaceItem[]; anchor: Rect; priority: number; forced: boolean; field: boolean }
+  interface Cluster {
+    key: string;
+    cls: string;
+    members: PlaceItem[];
+    anchor: Rect;
+    priority: number;
+    forced: boolean;
+    field: boolean;
+  }
   const clusters: Cluster[] = [];
   for (const members of groups.values()) {
     members.sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
     const forced = members.some((m) => m.forced);
-    const priority = Math.max(...members.map((m) => m.priority)) + (forced ? 1000 : 0);
+    const priority =
+      Math.max(...members.map((m) => m.priority)) + (forced ? 1000 : 0);
     clusters.push({
       key: members[0]!.id,
       cls: members[0]!.cls,
@@ -214,7 +258,12 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
       field: members.some((m) => m.field),
     });
   }
-  clusters.sort((a, b) => b.priority - a.priority || a.anchor.y - b.anchor.y || a.anchor.x - b.anchor.x);
+  clusters.sort(
+    (a, b) =>
+      b.priority - a.priority ||
+      a.anchor.y - b.anchor.y ||
+      a.anchor.x - b.anchor.x,
+  );
 
   // 4: budget (forced chips never count against it).
   const listed: string[] = [];
@@ -232,8 +281,10 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
   for (const r of o.reserved) grid.add(r, -1);
   const dead = new Set<number>();
   const placed = new Map<number, ChipPlan>();
-  const clampX = (x: number, w: number) => Math.max(EDGE, Math.min(o.vw - w - EDGE, x));
-  const clampY = (y: number, h: number) => Math.max(EDGE, Math.min(o.vh - h - EDGE, y));
+  const clampX = (x: number, w: number) =>
+    Math.max(EDGE, Math.min(o.vw - w - EDGE, x));
+  const clampY = (y: number, h: number) =>
+    Math.max(EDGE, Math.min(o.vh - h - EDGE, y));
 
   chosen.forEach((c, idx) => {
     const ids = c.members.map((m) => m.id);
@@ -246,11 +297,14 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
     cands.push([A.x + A.w - w, A.y - h - gap]); // above-right
     cands.push([A.x, A.y + A.h + gap]); // below-left
     // Inside only when every member is itself a big block: a chip never sits on a small control's own text.
-    const big = !c.field && c.members.every((m) => m.box.w >= w + 2 * gap && m.box.h >= h * 3);
+    const big =
+      !c.field &&
+      c.members.every((m) => m.box.w >= w + 2 * gap && m.box.h >= h * 3);
     if (big) cands.push([A.x + gap, A.y + gap]); // inside, top-left
     cands.push([A.x - w - gap, A.y]); // left
     cands.push([A.x + A.w + gap, A.y]); // right
-    for (const k of [1, -1, 2, -2, 3, -3, 4, -4]) cands.push([A.x + 24 * k, A.y - h - gap]); // slides along the top
+    for (const k of [1, -1, 2, -2, 3, -3, 4, -4])
+      cands.push([A.x + 24 * k, A.y - h - gap]); // slides along the top
     if (big) cands.push([A.x + A.w - w - gap, A.y + gap]); // inside, top-right
 
     let slot: Rect | null = null;
@@ -264,7 +318,8 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
         break;
       }
       // The main chip and the "what this page is for" label may evict chips (never reserved areas).
-      if ((c.cls === 'main' || c.cls === 'page') && !hits.has(-1) && !fallback) fallback = { r, hits };
+      if ((c.cls === 'main' || c.cls === 'page') && !hits.has(-1) && !fallback)
+        fallback = { r, hits };
     }
     if (!slot && (c.cls === 'main' || c.cls === 'page')) {
       if (fallback) {
@@ -293,7 +348,10 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
         listed.push(...victim.ids);
       }
     }
-    grid.add({ x: slot.x - 1, y: slot.y - 1, w: slot.w + 2, h: slot.h + 2 }, idx);
+    grid.add(
+      { x: slot.x - 1, y: slot.y - 1, w: slot.w + 2, h: slot.h + 2 },
+      idx,
+    );
     placed.set(idx, {
       key: c.key,
       cls: c.cls,
@@ -313,7 +371,8 @@ export function placeChips(items: PlaceItem[], o: PlaceOptions): PlaceResult {
 
 /** A 1 px line from the chip to its element when they are more than 12 px apart. */
 export function leaderFor(chip: Rect, el: Rect): ChipPlan['leader'] {
-  const near = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+  const near = (v: number, lo: number, hi: number) =>
+    Math.max(lo, Math.min(hi, v));
   // Closest points between the two rects.
   const ex = near(chip.x + chip.w / 2, el.x, el.x + el.w);
   const ey = near(chip.y + chip.h / 2, el.y, el.y + el.h);
@@ -333,9 +392,20 @@ export function chipBudget(physW: number, physH: number): number {
  * (a folded ad inside a kept column stays folded, a help link inside a folded block stays kept). Returns, per kind,
  * disjoint rectangles (row runs merged straight down), so an evenodd path built from them never refills an overlap.
  */
-export function cellRegions(vw: number, vh: number, boxes: Array<{ r: Rect; kind: string }>): Map<string, Rect[]> {
+export function cellRegions(
+  vw: number,
+  vh: number,
+  boxes: Array<{ r: Rect; kind: string }>,
+): Map<string, Rect[]> {
   const out = new Map<string, Rect[]>();
-  const clipped: Array<{ x0: number; y0: number; x1: number; y1: number; kind: string; area: number }> = [];
+  const clipped: Array<{
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+    kind: string;
+    area: number;
+  }> = [];
   for (const b of boxes) {
     const x0 = Math.max(0, b.r.x);
     const y0 = Math.max(0, b.r.y);
@@ -346,9 +416,19 @@ export function cellRegions(vw: number, vh: number, boxes: Array<{ r: Rect; kind
   }
   if (!clipped.length) return out;
   clipped.sort((a, b) => a.area - b.area);
-  const xs = [...new Set(clipped.flatMap((c) => [c.x0, c.x1]))].sort((a, b) => a - b);
-  const ys = [...new Set(clipped.flatMap((c) => [c.y0, c.y1]))].sort((a, b) => a - b);
-  const runs: Array<{ kind: string; x0: number; x1: number; y0: number; y1: number }> = [];
+  const xs = [...new Set(clipped.flatMap((c) => [c.x0, c.x1]))].sort(
+    (a, b) => a - b,
+  );
+  const ys = [...new Set(clipped.flatMap((c) => [c.y0, c.y1]))].sort(
+    (a, b) => a - b,
+  );
+  const runs: Array<{
+    kind: string;
+    x0: number;
+    x1: number;
+    y0: number;
+    y1: number;
+  }> = [];
   for (let yi = 0; yi < ys.length - 1; yi++) {
     const y0 = ys[yi]!;
     const y1 = ys[yi + 1]!;
@@ -370,10 +450,20 @@ export function cellRegions(vw: number, vh: number, boxes: Array<{ r: Rect; kind
       }
       if (kind !== null && !run) run = { kind, x0 };
     }
-    if (run) runs.push({ kind: run.kind, x0: run.x0, x1: xs[xs.length - 1]!, y0, y1 });
+    if (run)
+      runs.push({ kind: run.kind, x0: run.x0, x1: xs[xs.length - 1]!, y0, y1 });
   }
-  const open = new Map<string, { kind: string; x0: number; x1: number; y0: number; y1: number }>();
-  const done: Array<{ kind: string; x0: number; x1: number; y0: number; y1: number }> = [];
+  const open = new Map<
+    string,
+    { kind: string; x0: number; x1: number; y0: number; y1: number }
+  >();
+  const done: Array<{
+    kind: string;
+    x0: number;
+    x1: number;
+    y0: number;
+    y1: number;
+  }> = [];
   for (const r of runs) {
     const k = `${r.kind}|${r.x0}|${r.x1}`;
     const o = open.get(k);
@@ -395,7 +485,8 @@ export function cellRegions(vw: number, vh: number, boxes: Array<{ r: Rect; kind
 /** Subpaths for a list of disjoint rectangles. */
 export function rectsPath(rs: Rect[]): string {
   let d = '';
-  for (const h of rs) d += `M${r1(h.x)} ${r1(h.y)}H${r1(h.x + h.w)}V${r1(h.y + h.h)}H${r1(h.x)}Z`;
+  for (const h of rs)
+    d += `M${r1(h.x)} ${r1(h.y)}H${r1(h.x + h.w)}V${r1(h.y + h.h)}H${r1(h.x)}Z`;
   return d;
 }
 
@@ -403,9 +494,17 @@ export function rectsPath(rs: Rect[]): string {
  * The scrim: one evenodd path, the viewport minus disjoint holes over every lit box. Each spot on screen takes the
  * decision of the smallest element covering it.
  */
-export function scrimPath(vw: number, vh: number, boxes: Array<{ r: Rect; lit: boolean }>): string {
+export function scrimPath(
+  vw: number,
+  vh: number,
+  boxes: Array<{ r: Rect; lit: boolean }>,
+): string {
   const outer = `M0 0H${r1(vw)}V${r1(vh)}H0Z`;
-  const regions = cellRegions(vw, vh, boxes.map((b) => ({ r: b.r, kind: b.lit ? 'lit' : 'dim' })));
+  const regions = cellRegions(
+    vw,
+    vh,
+    boxes.map((b) => ({ r: b.r, kind: b.lit ? 'lit' : 'dim' })),
+  );
   return outer + rectsPath(regions.get('lit') ?? []);
 }
 

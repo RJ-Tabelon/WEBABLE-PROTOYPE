@@ -14,7 +14,8 @@ function findEsbuild() {
     const pnpm = join(current, 'node_modules', '.pnpm');
     if (existsSync(pnpm)) {
       const hit = readdirSync(pnpm).find((name) => name.startsWith('esbuild@'));
-      if (hit) return join(pnpm, hit, 'node_modules', 'esbuild', 'lib', 'main.js');
+      if (hit)
+        return join(pnpm, hit, 'node_modules', 'esbuild', 'lib', 'main.js');
     }
     const parent = dirname(current);
     if (parent === current) break;

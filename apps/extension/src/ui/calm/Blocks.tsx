@@ -1,18 +1,63 @@
 // Owner: C, D (round 4: pictures in reserved boxes, story rows). Draws the block model. Every control proxies its
 // original; every word is the page's own visible text. Alt text is only ever an <img> alt, never visible text.
-import { STORY_RATIO, isWideFigure, loadedFrame, pictureFrame } from '@webable/core';
+import {
+  STORY_RATIO,
+  isWideFigure,
+  loadedFrame,
+  pictureFrame,
+} from '@webable/engine';
 import type { ComponentChildren, JSX } from 'preact';
-import { useEffect, useId, useState } from 'preact/hooks';
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'preact/hooks';
 import type { EngineApi, RewordInline, RewordView } from '../../contracts';
-import { proxyCheck, proxyClick, proxyCommit, proxyInput, proxyKey, proxySelect, proxySubmit, renderLiveValue } from '../proxy';
+import {
+  proxyCheck,
+  proxyClick,
+  proxyCommit,
+  proxyInput,
+  proxyKey,
+  proxySelect,
+  proxySubmit,
+  renderLiveValue,
+} from '../proxy';
 import { isIrreversible, useCalm } from './context';
 import * as I from './icons';
 import { tickNow, useLive } from './live';
-import { AdTag, Kicker, LIVE_MAX_CHARS, LiveDot, isAdItem, liveLabelFor } from './markers';
 import {
-  type Block, type CardLinkBlock, type ChoiceBlock, type ChoicesBlock, type ControlBlock, type FieldBlock, type FlowBlock,
-  type ImageBlock, type Inline, type LinkPart, type ListBlock, type PeekBlock, type RichTableBlock, type SelectBlock, type TableBlock,
-  PRICE_RE, RW_ATTR, TOOL_RE, keepImage, splitParts, stripMarker,
+  AdTag,
+  Kicker,
+  LIVE_MAX_CHARS,
+  LiveDot,
+  isAdItem,
+  liveLabelFor,
+} from './markers';
+import {
+  type Block,
+  type CardLinkBlock,
+  type ChoiceBlock,
+  type ChoicesBlock,
+  type ControlBlock,
+  type FieldBlock,
+  type FlowBlock,
+  type ImageBlock,
+  type Inline,
+  type LinkPart,
+  type ListBlock,
+  type PeekBlock,
+  type RichTableBlock,
+  type SelectBlock,
+  type TableBlock,
+  PRICE_RE,
+  RW_ATTR,
+  TOOL_RE,
+  keepImage,
+  splitParts,
+  stripMarker,
 } from './model';
 
 export { TOOL_RE, keepImage };
@@ -20,7 +65,13 @@ export { TOOL_RE, keepImage };
 export type Variant = 'default' | 'quiet' | 'prose';
 
 /** Blocks in page order; runs of adjacent buttons or links share one wrapping row. */
-export function Blocks({ blocks, variant = 'default' }: { blocks: Block[]; variant?: Variant }): JSX.Element {
+export function Blocks({
+  blocks,
+  variant = 'default',
+}: {
+  blocks: Block[];
+  variant?: Variant;
+}): JSX.Element {
   const ctx = useCalm();
   const out: JSX.Element[] = [];
   let run: ControlBlock[] = [];
@@ -31,12 +82,20 @@ export function Blocks({ blocks, variant = 'default' }: { blocks: Block[]; varia
       out.push(
         <div class="wa-results" key={`${cards[0]!.key}c`}>
           {cards.map((c) => (
-            <ResultItem key={c.key} link={c} title={c.title} lines={c.lines} dek={c.dek} />
+            <ResultItem
+              key={c.key}
+              link={c}
+              title={c.title}
+              lines={c.lines}
+              dek={c.dek}
+            />
           ))}
         </div>,
       );
     } else if (cards.length) {
-      const thumbs = cards.filter((c) => c.image && keepImage(c.image, true)).length * 2 >= cards.length;
+      const thumbs =
+        cards.filter((c) => c.image && keepImage(c.image, true)).length * 2 >=
+        cards.length;
       out.push(
         <div class="wa-rows" key={`${cards[0]!.key}c`}>
           {cards.map((c) => (
@@ -49,7 +108,8 @@ export function Blocks({ blocks, variant = 'default' }: { blocks: Block[]; varia
   };
   const flush = (): void => {
     flushCards();
-    if (run.length === 1) out.push(<BlockView key={run[0]!.key} b={run[0]!} variant={variant} />);
+    if (run.length === 1)
+      out.push(<BlockView key={run[0]!.key} b={run[0]!} variant={variant} />);
     else if (run.length > 1) {
       out.push(
         <div class="wa-actions" key={`${run[0]!.key}r`}>
@@ -79,23 +139,49 @@ export function Blocks({ blocks, variant = 'default' }: { blocks: Block[]; varia
   return <>{out}</>;
 }
 
-export function BlockView({ b, variant = 'default' }: { b: Block; variant?: Variant }): JSX.Element | null {
+export function BlockView({
+  b,
+  variant = 'default',
+}: {
+  b: Block;
+  variant?: Variant;
+}): JSX.Element | null {
   switch (b.b) {
     case 'heading': {
       if (b.level <= 1) return <h2 class="wa-h-section">{b.text}</h2>;
       if (b.level <= 3) return <h3 class="wa-h-title">{b.text}</h3>;
       return <h4 class="wa-label">{b.text}</h4>;
     }
-    case 'flow': return <FlowView b={b} quiet={variant === 'quiet'} />;
-    case 'control': return <ControlView b={b} />;
-    case 'field': return <FieldView b={b} />;
-    case 'select': return <SelectView b={b} />;
-    case 'choices': return <ChoicesView b={b} />;
-    case 'choice': return <ChoicesView b={{ b: 'choices', type: b.type, items: [b], key: `${b.key}g`, src: b.src }} />;
-    case 'image': return keepImage(b, false) ? <ImageView b={b} /> : null;
-    case 'list': return <ListView b={b} variant={variant} />;
-    case 'table': return <TableView b={b} />;
-    case 'rtable': return <RichTableView b={b} />;
+    case 'flow':
+      return <FlowView b={b} quiet={variant === 'quiet'} />;
+    case 'control':
+      return <ControlView b={b} />;
+    case 'field':
+      return <FieldView b={b} />;
+    case 'select':
+      return <SelectView b={b} />;
+    case 'choices':
+      return <ChoicesView b={b} />;
+    case 'choice':
+      return (
+        <ChoicesView
+          b={{
+            b: 'choices',
+            type: b.type,
+            items: [b],
+            key: `${b.key}g`,
+            src: b.src,
+          }}
+        />
+      );
+    case 'image':
+      return keepImage(b, false) ? <ImageView b={b} /> : null;
+    case 'list':
+      return <ListView b={b} variant={variant} />;
+    case 'table':
+      return <TableView b={b} />;
+    case 'rtable':
+      return <RichTableView b={b} />;
     case 'group':
       return (
         <div class="wa-group" role="group" aria-label={b.legend || undefined}>
@@ -103,9 +189,12 @@ export function BlockView({ b, variant = 'default' }: { b: Block; variant?: Vari
           <Blocks blocks={b.blocks} variant={variant} />
         </div>
       );
-    case 'cardlink': return <CardLinkView b={b} />;
-    case 'peek': return <PeekView b={b} />;
-    default: return null;
+    case 'cardlink':
+      return <CardLinkView b={b} />;
+    case 'peek':
+      return <PeekView b={b} />;
+    default:
+      return null;
   }
 }
 
@@ -116,13 +205,18 @@ export function BlockView({ b, variant = 'default' }: { b: Block; variant?: Vari
 export function InlineLink({ p }: { p: LinkPart }): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return; // our own href opens a new tab
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return; // our own href opens a new tab
     e.preventDefault();
     ctx.click(p.el);
   };
   if (!p.href) {
     return (
-      <button type="button" class="wa-inline-link" onClick={() => ctx.click(p.el)}>
+      <button
+        type="button"
+        class="wa-inline-link"
+        onClick={() => ctx.click(p.el)}
+      >
         {p.text}
       </button>
     );
@@ -135,7 +229,11 @@ export function InlineLink({ p }: { p: LinkPart }): JSX.Element {
 }
 
 /** Bold and italic the page shows on these words (<strong> / <em> in the view's own font). */
-function emphasis(p: { b?: true; i?: true }, el: JSX.Element, key: number): JSX.Element {
+function emphasis(
+  p: { b?: true; i?: true },
+  el: JSX.Element,
+  key: number,
+): JSX.Element {
   if (!p.b) return <em key={key}>{el}</em>;
   return <strong key={key}>{p.i ? <em>{el}</em> : el}</strong>;
 }
@@ -143,16 +241,32 @@ function emphasis(p: { b?: true; i?: true }, el: JSX.Element, key: number): JSX.
 /** Inline parts as the page shows them: its words, its emphasis, its links and line breaks. */
 export function renderParts(parts: Inline[]): JSX.Element[] {
   return parts.map((p, i) => {
-    if (p.t === 'text') return p.b || p.i ? emphasis(p, <>{p.text}</>, i) : <span key={i}>{p.text}</span>;
+    if (p.t === 'text')
+      return p.b || p.i ? (
+        emphasis(p, <>{p.text}</>, i)
+      ) : (
+        <span key={i}>{p.text}</span>
+      );
     if (p.t === 'br') return <br key={i} />;
-    return p.b || p.i ? emphasis(p, <InlineLink p={p} />, i) : <InlineLink key={i} p={p} />;
+    return p.b || p.i ? (
+      emphasis(p, <InlineLink p={p} />, i)
+    ) : (
+      <InlineLink key={i} p={p} />
+    );
   });
 }
 
 /** Round 9: a rewritten paragraph's words; its links are the page's own anchors, pressed through like any other. */
 function renderRw(parts: RewordInline[]): JSX.Element[] {
   return parts.map((p, i) =>
-    p.t === 'text' ? <span key={i}>{p.text}</span> : <InlineLink key={i} p={{ t: 'link', el: p.el, text: p.text, href: p.href, help: false }} />,
+    p.t === 'text' ? (
+      <span key={i}>{p.text}</span>
+    ) : (
+      <InlineLink
+        key={i}
+        p={{ t: 'link', el: p.el, text: p.text, href: p.href, help: false }}
+      />
+    ),
   );
 }
 
@@ -172,25 +286,44 @@ function rewordOf(api: EngineApi, src: Node): RewordView | null {
 export function RewordMark({ rv }: { rv: RewordView }): JSX.Element {
   const ctx = useCalm();
   const fresh = rv.showing === 'new';
-  const say = fresh ? 'Rewritten for you by WebAble. Click to see the original.' : "The page's own words. Click to see them rewritten for you.";
+  const say = fresh
+    ? 'Rewritten for you by WebAble. Click to see the original.'
+    : "The page's own words. Click to see them rewritten for you.";
   return (
     <button
       type="button"
       class="wa-rw-mark"
       data-showing={rv.showing}
       title={say}
-      aria-label={fresh ? 'Rewritten for you by WebAble. Show the original.' : "The page's own words. Show them rewritten for you."}
+      aria-label={
+        fresh
+          ? 'Rewritten for you by WebAble. Show the original.'
+          : "The page's own words. Show them rewritten for you."
+      }
       onClick={() => ctx.api.toggleParagraph(rv.id)}
     />
   );
 }
 
-export function FlowView({ b, quiet = false, pageline = false }: { b: FlowBlock; quiet?: boolean; pageline?: boolean }): JSX.Element {
+export function FlowView({
+  b,
+  quiet = false,
+  pageline = false,
+}: {
+  b: FlowBlock;
+  quiet?: boolean;
+  pageline?: boolean;
+}): JSX.Element {
   const ctx = useCalm();
   const rv = rewordOf(ctx.api, b.src);
   // The rewrite is drawn only from the rewritten paragraph's own block (model.ts reads it as one), so never twice; a
   // block read before the rewrite landed shows the page's words until the view reads the page again.
-  if (rv && rv.showing === 'new' && b.src instanceof Element && b.src.hasAttribute(RW_ATTR)) {
+  if (
+    rv &&
+    rv.showing === 'new' &&
+    b.src instanceof Element &&
+    b.src.hasAttribute(RW_ATTR)
+  ) {
     const List = rv.ordered ? 'ol' : 'ul';
     const pcls = `wa-p${quiet || pageline ? ' wa-p--quiet' : ''}`;
     return (
@@ -198,7 +331,9 @@ export function FlowView({ b, quiet = false, pageline = false }: { b: FlowBlock;
         <RewordMark rv={rv} />
         {rv.lead.length > 0 && <p class={pcls}>{renderRw(rv.lead)}</p>}
         {rv.items.length > 0 && (
-          <List class={`wa-list wa-rw__list${rv.ordered ? ' wa-list--ol' : ''}`}>
+          <List
+            class={`wa-list wa-rw__list${rv.ordered ? ' wa-list--ol' : ''}`}
+          >
             {rv.items.map((it, i) => (
               <li key={i}>{renderRw(it)}</li>
             ))}
@@ -218,10 +353,21 @@ export function FlowView({ b, quiet = false, pageline = false }: { b: FlowBlock;
 }
 
 /** A paragraph in the page's own words. */
-function FlowOwn({ b, quiet, pageline }: { b: FlowBlock; quiet: boolean; pageline: boolean }): JSX.Element {
+function FlowOwn({
+  b,
+  quiet,
+  pageline,
+}: {
+  b: FlowBlock;
+  quiet: boolean;
+  pageline: boolean;
+}): JSX.Element {
   const ctx = useCalm();
   const price = b.text.length <= 40 && PRICE_RE.test(b.text);
-  const paras: Inline[][] = Number.isFinite(ctx.splitN) && b.text.length > 160 ? splitParts(b.parts, ctx.splitN) : [b.parts];
+  const paras: Inline[][] =
+    Number.isFinite(ctx.splitN) && b.text.length > 160
+      ? splitParts(b.parts, ctx.splitN)
+      : [b.parts];
   const links = b.parts.filter((p) => p.t === 'link').length;
   const plain = b.parts.map((p) => (p.t === 'text' ? p.text : '')).join('');
   const crumbs = links >= 2 && b.text.length <= 120 && /[›»>/|]/.test(plain);
@@ -256,8 +402,12 @@ function FlowOwn({ b, quiet, pageline }: { b: FlowBlock; quiet: boolean; pagelin
 /* Controls                                                            */
 /* ------------------------------------------------------------------ */
 
-function liveLabel(v: ReturnType<typeof renderLiveValue>, fallback: string): string {
-  if (v.kind === 'control' && v.label) return v.label.length > 160 ? `${v.label.slice(0, 157)}…` : v.label;
+function liveLabel(
+  v: ReturnType<typeof renderLiveValue>,
+  fallback: string,
+): string {
+  if (v.kind === 'control' && v.label)
+    return v.label.length > 160 ? `${v.label.slice(0, 157)}…` : v.label;
   return fallback;
 }
 
@@ -271,14 +421,24 @@ export function ToolIcon({ text }: { text: string }): JSX.Element {
 function ToolButton({ b }: { b: ControlBlock }): JSX.Element {
   const ctx = useCalm();
   return (
-    <button type="button" class="wa-btn wa-btn--tool" onClick={() => ctx.click(b.el)}>
+    <button
+      type="button"
+      class="wa-btn wa-btn--tool"
+      onClick={() => ctx.click(b.el)}
+    >
       <ToolIcon text={b.text} />
       <span>{b.text}</span>
     </button>
   );
 }
 
-export function ControlView({ b, variant }: { b: ControlBlock; variant?: 'pill' | 'chip' | 'link' | 'quiet' }): JSX.Element | null {
+export function ControlView({
+  b,
+  variant,
+}: {
+  b: ControlBlock;
+  variant?: 'pill' | 'chip' | 'link' | 'quiet';
+}): JSX.Element | null {
   // The page's main action lives in the dock (one filled button on screen at most).
   if (b.primary) return null;
   if (TOOL_RE.test(b.text.trim())) return <ToolButton b={b} />;
@@ -288,17 +448,36 @@ export function ControlView({ b, variant }: { b: ControlBlock; variant?: 'pill' 
   return <PillButton b={b} cls={variant === 'quiet' ? 'wa-btn--quiet' : ''} />;
 }
 
-export function PillButton({ b, cls = '' }: { b: ControlBlock; cls?: string }): JSX.Element | null {
+export function PillButton({
+  b,
+  cls = '',
+}: {
+  b: ControlBlock;
+  cls?: string;
+}): JSX.Element | null {
   // Only real buttons are pills: a link (a result title, a heading link, a tab) is always drawn as a text link.
-  if (b.role === 'link') return <LinkButton b={b} cls={cls.includes('wa-chip') ? 'wa-chiplink' : ''} />;
+  if (b.role === 'link')
+    return (
+      <LinkButton b={b} cls={cls.includes('wa-chip') ? 'wa-chiplink' : ''} />
+    );
   return <ButtonPill b={b} cls={cls} />;
 }
 
-function ButtonPill({ b, cls }: { b: ControlBlock; cls: string }): JSX.Element | null {
+function ButtonPill({
+  b,
+  cls,
+}: {
+  b: ControlBlock;
+  cls: string;
+}): JSX.Element | null {
   const ctx = useCalm();
   const live = useLive(b.el);
   if (live.kind === 'gone') return null;
-  const disabled = (live.kind === 'control' || live.kind === 'check' || live.kind === 'text') && live.disabled;
+  const disabled =
+    (live.kind === 'control' ||
+      live.kind === 'check' ||
+      live.kind === 'text') &&
+    live.disabled;
   const pressed = live.kind === 'control' ? live.pressed : null;
   const expanded = live.kind === 'control' ? live.expanded : null;
   const selected = b.selected || pressed === true;
@@ -317,12 +496,19 @@ function ButtonPill({ b, cls }: { b: ControlBlock; cls: string }): JSX.Element |
   );
 }
 
-export function LinkButton({ b, cls = '' }: { b: ControlBlock; cls?: string }): JSX.Element {
+export function LinkButton({
+  b,
+  cls = '',
+}: {
+  b: ControlBlock;
+  cls?: string;
+}): JSX.Element {
   const ctx = useCalm();
   const tel = b.href?.startsWith('tel:');
   const mail = b.href?.startsWith('mailto:');
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(b.el);
   };
@@ -336,13 +522,24 @@ export function LinkButton({ b, cls = '' }: { b: ControlBlock; cls?: string }): 
   );
   if (!b.href) {
     return (
-      <button type="button" class={`wa-btn wa-btn--link ${cls}`} data-selected={b.selected || undefined} onClick={() => ctx.click(b.el)}>
+      <button
+        type="button"
+        class={`wa-btn wa-btn--link ${cls}`}
+        data-selected={b.selected || undefined}
+        onClick={() => ctx.click(b.el)}
+      >
         {body}
       </button>
     );
   }
   return (
-    <a class={`wa-btn wa-btn--link ${cls}`} href={b.href} data-selected={b.selected || undefined} aria-current={b.selected ? 'page' : undefined} onClick={press}>
+    <a
+      class={`wa-btn wa-btn--link ${cls}`}
+      href={b.href}
+      data-selected={b.selected || undefined}
+      aria-current={b.selected ? 'page' : undefined}
+      onClick={press}
+    >
       {body}
     </a>
   );
@@ -352,7 +549,8 @@ export function LinkButton({ b, cls = '' }: { b: ControlBlock; cls?: string }): 
 export function HeadLink({ b }: { b: ControlBlock }): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(b.el);
   };
@@ -368,7 +566,8 @@ export function HeadLink({ b }: { b: ControlBlock }): JSX.Element {
 }
 
 /** An address line under a result title ("https://example.com › path", "example.com", "www.example.org/…"). */
-const URL_LINE_RE = /(^|\s)(https?:\/\/|www\.)\S|^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(\s*[›»/]|$)/i;
+const URL_LINE_RE =
+  /(^|\s)(https?:\/\/|www\.)\S|^[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}(\s*[›»/]|$)/i;
 
 export function isUrlLine(l: string): boolean {
   return URL_LINE_RE.test(l.trim());
@@ -383,12 +582,23 @@ export function isResultCard(c: CardLinkBlock, resultsPage: boolean): boolean {
 }
 
 /** One search result: the title as a link at headline size, the address in grey, then any snippet lines. */
-export function ResultItem({ link, title, lines, dek, children }: {
-  link: ControlBlock | CardLinkBlock; title: string; lines: string[]; dek?: string | null; children?: ComponentChildren;
+export function ResultItem({
+  link,
+  title,
+  lines,
+  dek,
+  children,
+}: {
+  link: ControlBlock | CardLinkBlock;
+  title: string;
+  lines: string[];
+  dek?: string | null;
+  children?: ComponentChildren;
 }): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(link.el);
   };
@@ -404,7 +614,11 @@ export function ResultItem({ link, title, lines, dek, children }: {
           {title}
         </a>
       ) : (
-        <button type="button" class="wa-res__title" onClick={() => ctx.click(link.el)}>
+        <button
+          type="button"
+          class="wa-res__title"
+          onClick={() => ctx.click(link.el)}
+        >
           {title}
         </button>
       )}
@@ -433,7 +647,8 @@ export function PrimaryAction({ b }: { b: ControlBlock }): JSX.Element | null {
   }, [armed]);
   if (live.kind === 'gone') return null;
   const label = liveLabel(live, b.text);
-  const disabled = (live.kind === 'control' || live.kind === 'text') && live.disabled;
+  const disabled =
+    (live.kind === 'control' || live.kind === 'text') && live.disabled;
   const twice = isIrreversible(label);
   const press = (): void => {
     if (disabled) return;
@@ -444,19 +659,47 @@ export function PrimaryAction({ b }: { b: ControlBlock }): JSX.Element | null {
     setArmed(false);
     ctx.pressPrimary(b.el);
   };
+  const actionProps = {
+    class: 'wa-btn wa-btn--primary',
+    'data-primary': 'true',
+    'data-armed': armed || undefined,
+    'aria-describedby': hint,
+  };
   return (
     <div class="wa-primary">
-      <button
-        type="button"
-        class="wa-btn wa-btn--primary"
-        data-primary="true"
-        data-armed={armed || undefined}
-        disabled={disabled}
-        aria-describedby={hint}
-        onClick={press}
-      >
-        {label}
-      </button>
+      {b.role === 'link' && b.href ? (
+        <a
+          {...actionProps}
+          href={disabled ? undefined : b.href}
+          target={b.el.getAttribute('target') ?? undefined}
+          rel={b.el.getAttribute('rel') ?? undefined}
+          aria-disabled={disabled || undefined}
+          onClick={(e) => {
+            if (
+              !disabled &&
+              (e.metaKey ||
+                e.ctrlKey ||
+                e.shiftKey ||
+                e.altKey ||
+                e.button !== 0)
+            )
+              return;
+            e.preventDefault();
+            press();
+          }}
+        >
+          {label}
+        </a>
+      ) : (
+        <button
+          {...actionProps}
+          type="button"
+          disabled={disabled}
+          onClick={press}
+        >
+          {label}
+        </button>
+      )}
       <p id={hint} class="wa-primary__hint" aria-live="polite">
         {armed
           ? `Press again to confirm. This presses “${label}” on the page.`
@@ -472,7 +715,13 @@ export function PrimaryAction({ b }: { b: ControlBlock }): JSX.Element | null {
 /* Fields                                                              */
 /* ------------------------------------------------------------------ */
 
-export function FieldView({ b, compact = false }: { b: FieldBlock; compact?: boolean }): JSX.Element | null {
+export function FieldView({
+  b,
+  compact = false,
+}: {
+  b: FieldBlock;
+  compact?: boolean;
+}): JSX.Element | null {
   const live = useLive(b.el);
   const id = useId();
   const hintId = useId();
@@ -481,7 +730,11 @@ export function FieldView({ b, compact = false }: { b: FieldBlock; compact?: boo
   const disabled = live.kind === 'text' && live.disabled;
   const readOnly = live.kind === 'text' && live.readOnly;
   const label = (b.required ? stripMarker(b.label) : b.label) || 'Text field';
-  const onInput = (e: Event): void => proxyInput(b.el, (e.currentTarget as HTMLInputElement | HTMLTextAreaElement).value);
+  const onInput = (e: Event): void =>
+    proxyInput(
+      b.el,
+      (e.currentTarget as HTMLInputElement | HTMLTextAreaElement).value,
+    );
   const onKey = (e: KeyboardEvent): void => {
     if (e.key !== 'Enter' || b.multiline) return;
     e.preventDefault();
@@ -490,9 +743,17 @@ export function FieldView({ b, compact = false }: { b: FieldBlock; compact?: boo
   };
   const ac = (b.el.getAttribute('autocomplete') ?? '').toLowerCase();
   const width =
-    /postal-code|cc-csc|bday-(day|month|year)/.test(ac) || /\b(zip|postcode|postal)\b/i.test(label) || (b.el instanceof HTMLInputElement && b.el.maxLength > 0 && b.el.maxLength <= 5)
+    /postal-code|cc-csc|bday-(day|month|year)/.test(ac) ||
+    /\b(zip|postcode|postal)\b/i.test(label) ||
+    (b.el instanceof HTMLInputElement &&
+      b.el.maxLength > 0 &&
+      b.el.maxLength <= 5)
       ? ' wa-input--10'
-      : b.type === 'tel' || /\btel\b/.test(ac) || (b.el instanceof HTMLInputElement && b.el.maxLength > 0 && b.el.maxLength <= 12)
+      : b.type === 'tel' ||
+          /\btel\b/.test(ac) ||
+          (b.el instanceof HTMLInputElement &&
+            b.el.maxLength > 0 &&
+            b.el.maxLength <= 12)
         ? ' wa-input--20'
         : b.type === 'email' || /\bemail\b/.test(ac)
           ? ' wa-input--30'
@@ -508,7 +769,8 @@ export function FieldView({ b, compact = false }: { b: FieldBlock; compact?: boo
     'aria-required': b.required || undefined,
     'aria-invalid': b.el.getAttribute('aria-invalid') === 'true' || undefined,
     autoComplete: b.el.getAttribute('autocomplete') ?? undefined,
-    inputMode: (b.el.getAttribute('inputmode') ?? undefined) as JSX.HTMLAttributes['inputMode'],
+    inputMode: (b.el.getAttribute('inputmode') ??
+      undefined) as JSX.HTMLAttributes['inputMode'],
     onInput,
     onBlur: () => proxyCommit(b.el),
   };
@@ -521,7 +783,12 @@ export function FieldView({ b, compact = false }: { b: FieldBlock; compact?: boo
       {b.multiline ? (
         <textarea {...common} rows={4} />
       ) : (
-        <input {...common} type={b.type} onKeyDown={onKey} placeholder={compact ? label : undefined} />
+        <input
+          {...common}
+          type={b.type}
+          onKeyDown={onKey}
+          placeholder={compact ? label : undefined}
+        />
       )}
       {b.hint && (
         <span id={hintId} class="wa-hint">
@@ -550,7 +817,10 @@ export function SelectView({ b }: { b: SelectBlock }): JSX.Element | null {
           value={String(live.index)}
           disabled={live.disabled}
           onChange={(e) => {
-            proxySelect(b.el, Number((e.currentTarget as HTMLSelectElement).value));
+            proxySelect(
+              b.el,
+              Number((e.currentTarget as HTMLSelectElement).value),
+            );
             tickNow();
           }}
         >
@@ -570,15 +840,28 @@ export function SelectView({ b }: { b: SelectBlock }): JSX.Element | null {
 export function ChoicesView({ b }: { b: ChoicesBlock }): JSX.Element {
   const group = useId();
   return (
-    <div class="wa-choices" role={b.type === 'radio' ? 'radiogroup' : undefined}>
+    <div
+      class="wa-choices"
+      role={b.type === 'radio' ? 'radiogroup' : undefined}
+    >
       {b.items.map((c) => (
-        <ChoiceRow key={c.key} c={c} name={b.type === 'radio' ? `wa${group}` : undefined} />
+        <ChoiceRow
+          key={c.key}
+          c={c}
+          name={b.type === 'radio' ? `wa${group}` : undefined}
+        />
       ))}
     </div>
   );
 }
 
-function ChoiceRow({ c, name }: { c: ChoiceBlock; name?: string }): JSX.Element | null {
+function ChoiceRow({
+  c,
+  name,
+}: {
+  c: ChoiceBlock;
+  name?: string;
+}): JSX.Element | null {
   const live = useLive(c.el);
   if (live.kind === 'gone') return null;
   const checked = live.kind === 'check' && live.checked;
@@ -593,9 +876,24 @@ function ChoiceRow({ c, name }: { c: ChoiceBlock; name?: string }): JSX.Element 
   };
   return (
     <>
-      <label class="wa-choice" data-checked={checked || undefined} data-disabled={disabled || undefined}>
-        <input class="wa-sr" type={c.type} name={name} checked={checked} disabled={disabled} onChange={onChange} data-k={c.key} />
-        <span class={`wa-box${c.type === 'radio' ? ' wa-box--radio' : ''}`} aria-hidden="true">
+      <label
+        class="wa-choice"
+        data-checked={checked || undefined}
+        data-disabled={disabled || undefined}
+      >
+        <input
+          class="wa-sr"
+          type={c.type}
+          name={name}
+          checked={checked}
+          disabled={disabled}
+          onChange={onChange}
+          data-k={c.key}
+        />
+        <span
+          class={`wa-box${c.type === 'radio' ? ' wa-box--radio' : ''}`}
+          aria-hidden="true"
+        >
           {c.type === 'radio' ? <span class="wa-box__dot" /> : <I.Check />}
         </span>
         <span class="wa-choice__text">
@@ -634,30 +932,60 @@ type PicState = 'loading' | 'ok' | 'error';
 /** Natural sizes of pictures that loaded, so a box drawn again starts at the picture's own shape. */
 const natural = new Map<string, { w: number; h: number }>();
 
-function usePicture(url: string, keepWaiting: boolean): {
-  state: PicState; attempt: number; size: { w: number; h: number } | null; onLoad: (e: Event) => void; onError: () => void;
+function usePicture(
+  url: string,
+  keepWaiting: boolean,
+): {
+  state: PicState;
+  attempt: number;
+  size: { w: number; h: number } | null;
+  onLoad: (e: Event) => void;
+  onError: () => void;
+  image: { current: HTMLImageElement | null };
 } {
-  const [state, setState] = useState<PicState>(() => (failed.has(url) ? 'error' : 'loading'));
+  const image = useRef<HTMLImageElement | null>(null);
+  const retry = useRef(0);
+  const [state, setState] = useState<PicState>(() =>
+    failed.has(url) ? 'error' : 'loading',
+  );
   const [attempt, setAttempt] = useState(0);
-  const [size, setSize] = useState<{ w: number; h: number } | null>(() => natural.get(url) ?? null);
-  useEffect(() => {
-    setState(failed.has(url) ? 'error' : 'loading');
+  const [size, setSize] = useState<{ w: number; h: number } | null>(
+    () => natural.get(url) ?? null,
+  );
+  useLayoutEffect(() => {
+    // A cached image can load before a passive effect runs. Resetting it to
+    // "loading" after onLoad left an already-loaded photo permanently hidden.
+    const img = image.current;
+    const loaded = !!img?.complete && img.naturalWidth >= 48;
+    setState(loaded ? 'ok' : failed.has(url) ? 'error' : 'loading');
     setAttempt(0);
-    setSize(natural.get(url) ?? null);
+    setSize(
+      loaded && img
+        ? { w: img.naturalWidth, h: img.naturalHeight }
+        : (natural.get(url) ?? null),
+    );
+    return () => window.clearTimeout(retry.current);
   }, [url]);
   useEffect(() => {
     if (state !== 'loading') return;
     // Not here in 4 s: ask again once; not here after that: give the space back. The lead and story pictures keep
     // their box a while longer (12 s), then collapse too, so an empty reserved box never stays on the page.
-    const t = window.setTimeout(() => {
-      if (attempt === 0) setAttempt(1);
-      else setState('error');
-    }, attempt === 0 ? 4000 : keepWaiting ? 12000 : 4000);
+    const t = window.setTimeout(
+      () => {
+        if (attempt === 0) setAttempt(1);
+        else setState('error');
+      },
+      attempt === 0 ? 4000 : keepWaiting ? 12000 : 4000,
+    );
     return () => window.clearTimeout(t);
   }, [state, attempt, keepWaiting]);
   const onLoad = (e: Event): void => {
     const img = e.currentTarget as HTMLImageElement;
-    if (img.naturalWidth > 0 && img.naturalWidth < 48 && img.naturalHeight < 48) {
+    if (
+      img.naturalWidth > 0 &&
+      img.naturalWidth < 48 &&
+      img.naturalHeight < 48
+    ) {
       failed.add(url);
       setState('error');
       return;
@@ -671,13 +999,12 @@ function usePicture(url: string, keepWaiting: boolean): {
   };
   const onError = (): void => {
     if (attempt === 0) {
-      window.setTimeout(() => setAttempt(1), 1200);
+      retry.current = window.setTimeout(() => setAttempt(1), 1200);
       return;
     }
-    failed.add(url);
     setState('error');
   };
-  return { state, attempt, size, onLoad, onError };
+  return { state, attempt, size, onLoad, onError, image };
 }
 
 export interface PictureProps {
@@ -696,30 +1023,70 @@ export interface PictureProps {
 }
 
 /** One picture in a reserved box, with its caption and then its credit in meta style. */
-export function Picture({ b, ratio, lead = false, caption = true, wide = false, fit: fitIn, cls = '' }: PictureProps): JSX.Element | null {
-  const { state, attempt, size, onLoad, onError } = usePicture(b.url, lead || b.important);
+export function Picture({
+  b,
+  ratio,
+  lead = false,
+  caption = true,
+  wide = false,
+  fit: fitIn,
+  cls = '',
+}: PictureProps): JSX.Element | null {
+  const { state, attempt, size, onLoad, onError, image } = usePicture(
+    b.url,
+    lead || b.important,
+  );
   if (state === 'error') return null;
   // Before it loads: the shape the page drew it at (16:9 when unknown, never a tall 4:3 well that leaves an empty band
   // above a wide photo). Once loaded: the picture's own shape (loadedFrame), unless a story forces 16:9.
   const known = (b.nw || b.w) > 0 && (b.nh || b.h) > 0;
-  const before = known ? pictureFrame(b.nw || b.w, b.nh || b.h) : { ratio: STORY_RATIO, fit: 'cover' as const, well: false };
+  const before = known
+    ? pictureFrame(b.nw || b.w, b.nh || b.h)
+    : { ratio: STORY_RATIO, fit: 'cover' as const, well: false };
   const after = size ? loadedFrame(size.w, size.h) : null;
   const frame = after ?? before;
   const product = b.fit === 'contain' && !after;
-  const fit: 'cover' | 'contain' = fitIn ?? (ratio ? 'cover' : product || frame.well ? 'contain' : 'cover');
-  const r = ratio ?? (after ? after.ratio : frame.well || product ? 4 / 3 : frame.ratio);
+  const fit: 'cover' | 'contain' =
+    fitIn ?? (ratio ? 'cover' : product || frame.well ? 'contain' : 'cover');
+  const r =
+    ratio ??
+    (after ? after.ratio : frame.well || product ? 4 / 3 : frame.ratio);
   const cap = caption ? b.caption : '';
   const credit = caption ? b.credit : '';
-  const imgProps: Record<string, string> = lead ? { fetchpriority: 'high' } : {};
+  const imgProps: Record<string, string> = lead
+    ? { fetchpriority: 'high' }
+    : {};
   return (
-    <figure class={`wa-pic${wide ? ' wa-pic--wide' : ''}${cls ? ` ${cls}` : ''}`} style={{ '--wa-ratio': String(Math.round(r * 1000) / 1000) }}>
+    <figure
+      class={`wa-pic${wide ? ' wa-pic--wide' : ''}${cls ? ` ${cls}` : ''}`}
+      style={{ '--wa-ratio': String(Math.round(r * 1000) / 1000) }}
+    >
       <div class="wa-pic__box" data-fit={fit} data-state={state}>
-        <img key={attempt} src={b.url} alt={b.alt} decoding="async" loading="eager" {...imgProps} onLoad={onLoad} onError={onError} />
+        <img
+          ref={image}
+          key={attempt}
+          src={
+            attempt > 0 &&
+            b.src instanceof HTMLImageElement &&
+            b.src.complete &&
+            b.src.naturalWidth >= 48
+              ? b.src.currentSrc || b.url
+              : b.url
+          }
+          alt={b.alt}
+          decoding="async"
+          loading="eager"
+          {...imgProps}
+          onLoad={onLoad}
+          onError={onError}
+        />
       </div>
       {(cap || credit) && (
         <figcaption class="wa-pic__cap">
           {cap}
-          {credit && <span class="wa-pic__credit">{cap ? ` · ${credit}` : credit}</span>}
+          {credit && (
+            <span class="wa-pic__credit">{cap ? ` · ${credit}` : credit}</span>
+          )}
         </figcaption>
       )}
     </figure>
@@ -727,11 +1094,23 @@ export function Picture({ b, ratio, lead = false, caption = true, wide = false, 
 }
 
 /** A picture in running text: wide when its natural width is at least 1.4 × the text column; icons stay small. */
-export function ImageView({ b, well = false }: { b: ImageBlock; well?: boolean }): JSX.Element | null {
+export function ImageView({
+  b,
+  well = false,
+}: {
+  b: ImageBlock;
+  well?: boolean;
+}): JSX.Element | null {
   const ctx = useCalm();
   if (well) return <Picture b={b} caption={false} />;
   const small = Math.max(b.w, b.h) < 160;
-  return <Picture b={b} wide={!small && isWideFigure(b.nw || b.w, ctx.textCol)} cls={small ? 'wa-pic--small' : ''} />;
+  return (
+    <Picture
+      b={b}
+      wide={!small && isWideFigure(b.nw || b.w, ctx.textCol)}
+      cls={small ? 'wa-pic--small' : ''}
+    />
+  );
 }
 
 function onlyControls(items: Block[][]): ControlBlock[] | null {
@@ -743,21 +1122,38 @@ function onlyControls(items: Block[][]): ControlBlock[] | null {
   return out;
 }
 
-function ListView({ b, variant }: { b: ListBlock; variant: Variant }): JSX.Element {
+function ListView({
+  b,
+  variant,
+}: {
+  b: ListBlock;
+  variant: Variant;
+}): JSX.Element {
   const ctx = useCalm();
   // A list of card links is one grouped list of rows.
-  if (b.items.length >= 2 && b.items.every((it) => it.length === 1 && it[0]!.b === 'cardlink')) {
+  if (
+    b.items.length >= 2 &&
+    b.items.every((it) => it.length === 1 && it[0]!.b === 'cardlink')
+  ) {
     const cards = b.items.map((it) => it[0] as CardLinkBlock);
     if (cards.every((c) => isResultCard(c, !!ctx.results))) {
       return (
         <div class="wa-results">
           {cards.map((c) => (
-            <ResultItem key={c.key} link={c} title={c.title} lines={c.lines} dek={c.dek} />
+            <ResultItem
+              key={c.key}
+              link={c}
+              title={c.title}
+              lines={c.lines}
+              dek={c.dek}
+            />
           ))}
         </div>
       );
     }
-    const thumbs = cards.filter((c) => c.image && keepImage(c.image, true)).length * 2 >= cards.length;
+    const thumbs =
+      cards.filter((c) => c.image && keepImage(c.image, true)).length * 2 >=
+      cards.length;
     return (
       <div class="wa-rows">
         {cards.map((c) => (
@@ -787,9 +1183,13 @@ function ListView({ b, variant }: { b: ListBlock; variant: Variant }): JSX.Eleme
   }
   const Tag = b.ordered ? 'ol' : 'ul';
   // Bullets for lists of words only; a list of cards, pictures or buttons is drawn without them.
-  const plain = b.items.some((it) => it.some((x) => x.b !== 'flow' && x.b !== 'control'));
+  const plain = b.items.some((it) =>
+    it.some((x) => x.b !== 'flow' && x.b !== 'control'),
+  );
   return (
-    <Tag class={`wa-list${b.ordered ? ' wa-list--ol' : ''}${plain ? ' wa-list--plain' : ''}`}>
+    <Tag
+      class={`wa-list${b.ordered ? ' wa-list--ol' : ''}${plain ? ' wa-list--plain' : ''}`}
+    >
       {b.items.map((it, i) => (
         <li key={it[0]?.key ?? i} class="wa-stack" style={{ gap: '6px' }}>
           <Blocks blocks={it} variant={variant} />
@@ -802,7 +1202,8 @@ function ListView({ b, variant }: { b: ListBlock; variant: Variant }): JSX.Eleme
 export function RowLink({ b }: { b: ControlBlock }): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(b.el);
   };
@@ -860,7 +1261,8 @@ function TableView({ b }: { b: TableBlock }): JSX.Element {
 }
 
 function RichTableView({ b }: { b: RichTableBlock }): JSX.Element {
-  const wide = b.rows.filter((r) => r.cells.length > 2).length > b.rows.length / 2;
+  const wide =
+    b.rows.filter((r) => r.cells.length > 2).length > b.rows.length / 2;
   if (wide) {
     return (
       <div class="wa-table-wrap">
@@ -890,7 +1292,10 @@ function RichTableView({ b }: { b: RichTableBlock }): JSX.Element {
     <div class="wa-facts">
       {b.rows.map((r, i) =>
         r.cells.length === 1 ? (
-          <div key={i} class={`wa-fact wa-fact--one${r.head ? ' wa-fact--head' : ''}`}>
+          <div
+            key={i}
+            class={`wa-fact wa-fact--one${r.head ? ' wa-fact--head' : ''}`}
+          >
             <div class="wa-stack">
               <Blocks blocks={r.cells[0]!} />
             </div>
@@ -924,10 +1329,17 @@ export function Thumb({ img }: { img: ImageBlock }): JSX.Element | null {
 }
 
 /** A card link as a row: kicker, headline, dek and time from the page, its picture on the right. */
-function CardLinkRow({ b, thumbs = true }: { b: CardLinkBlock; thumbs?: boolean }): JSX.Element {
+function CardLinkRow({
+  b,
+  thumbs = true,
+}: {
+  b: CardLinkBlock;
+  thumbs?: boolean;
+}): JSX.Element {
   const ctx = useCalm();
   const press = (e: MouseEvent): void => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0)
+      return;
     e.preventDefault();
     ctx.click(b.el);
   };
@@ -941,7 +1353,12 @@ function CardLinkRow({ b, thumbs = true }: { b: CardLinkBlock; thumbs?: boolean 
         {b.title && <span class="wa-row__title">{b.title}</span>}
         {b.dek && <span class="wa-meta wa-story__dek">{b.dek}</span>}
         {b.lines.map((l, i) => (
-          <span key={i} class={PRICE_RE.test(l) && l.length < 40 ? 'wa-p--price' : 'wa-meta'}>
+          <span
+            key={i}
+            class={
+              PRICE_RE.test(l) && l.length < 40 ? 'wa-p--price' : 'wa-meta'
+            }
+          >
             {l}
           </span>
         ))}
@@ -952,11 +1369,21 @@ function CardLinkRow({ b, thumbs = true }: { b: CardLinkBlock; thumbs?: boolean 
   );
   const label = b.title || b.image?.alt || undefined;
   return b.href ? (
-    <a class="wa-row" href={b.href} onClick={press} aria-label={b.title ? undefined : label}>
+    <a
+      class="wa-row"
+      href={b.href}
+      onClick={press}
+      aria-label={b.title ? undefined : label}
+    >
       {inner}
     </a>
   ) : (
-    <button type="button" class="wa-row" onClick={() => ctx.click(b.el)} aria-label={b.title ? undefined : label}>
+    <button
+      type="button"
+      class="wa-row"
+      onClick={() => ctx.click(b.el)}
+      aria-label={b.title ? undefined : label}
+    >
       {inner}
     </button>
   );
@@ -978,19 +1405,51 @@ export function CardLinkView({ b }: { b: CardLinkBlock }): JSX.Element {
   );
 }
 
-const PEEK_COPY: Record<PeekBlock['why'], { title: string; line: string; button: string }> = {
-  sensitive: { title: 'Private field', line: 'Type this on the page itself. WebAble does not copy it.', button: 'Type it on the page' },
-  media: { title: 'Video or audio', line: 'Play it on the page.', button: 'Play it on the page' },
-  editor: { title: 'Text editor', line: 'Type in it on the page.', button: 'Use it on the page' },
-  file: { title: 'Control', line: 'This control works best on the page.', button: 'Use it on the page' },
-  frame: { title: 'Embedded part of the page', line: 'It is shown on the page itself.', button: 'Show it on the page' },
-  rest: { title: 'The rest of this part', line: 'This part is long. The rest is on the page.', button: 'Show it on the page' },
+const PEEK_COPY: Record<
+  PeekBlock['why'],
+  { title: string; line: string; button: string }
+> = {
+  sensitive: {
+    title: 'Private field',
+    line: 'Type this on the page itself. WebAble does not copy it.',
+    button: 'Type it on the page',
+  },
+  media: {
+    title: 'Video or audio',
+    line: 'Play it on the page.',
+    button: 'Play it on the page',
+  },
+  editor: {
+    title: 'Text editor',
+    line: 'Type in it on the page.',
+    button: 'Use it on the page',
+  },
+  file: {
+    title: 'Control',
+    line: 'This control works best on the page.',
+    button: 'Use it on the page',
+  },
+  frame: {
+    title: 'Embedded part of the page',
+    line: 'It is shown on the page itself.',
+    button: 'Show it on the page',
+  },
+  rest: {
+    title: 'The rest of this part',
+    line: 'This part is long. The rest is on the page.',
+    button: 'Show it on the page',
+  },
 };
 
 function PeekView({ b }: { b: PeekBlock }): JSX.Element {
   const ctx = useCalm();
   const copy = PEEK_COPY[b.why];
-  const Icon = b.why === 'sensitive' ? I.Lock : b.why === 'media' ? I.Play : I.ChevronRight;
+  const Icon =
+    b.why === 'sensitive'
+      ? I.Lock
+      : b.why === 'media'
+        ? I.Play
+        : I.ChevronRight;
   return (
     <div class="wa-peek">
       <span class="wa-help__icon" aria-hidden="true">

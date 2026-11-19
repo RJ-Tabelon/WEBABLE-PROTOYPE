@@ -3,15 +3,26 @@
 
 import type { SAttrs, SNode } from './types';
 
-const FIELD_TAGS = new Set(['INPUT', 'SELECT', 'TEXTAREA', 'OPTION', 'OPTGROUP', 'DATALIST']);
+const FIELD_TAGS = new Set([
+  'INPUT',
+  'SELECT',
+  'TEXTAREA',
+  'OPTION',
+  'OPTGROUP',
+  'DATALIST',
+]);
 
 function collapse(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
 /** Direct text of an element, and its segments when text follows a child element. Form fields give ''. */
-export function directSegs(el: Element): { text: string; segs?: Array<[number, string]> } {
-  if (FIELD_TAGS.has(el.tagName) || (el as HTMLElement).isContentEditable) return { text: '' };
+export function directSegs(el: Element): {
+  text: string;
+  segs?: Array<[number, string]>;
+} {
+  if (FIELD_TAGS.has(el.tagName) || (el as HTMLElement).isContentEditable)
+    return { text: '' };
   let k = 0;
   let late = false;
   const segs: Array<[number, string]> = [];
@@ -31,9 +42,20 @@ export function directSegs(el: Element): { text: string; segs?: Array<[number, s
 }
 
 /** A tree node for one visible element the reader walked. */
-export function snapNode(el: Element, tag: string, cs: CSSStyleDeclaration, rect: DOMRect, sx: number, sy: number, ci: number): SNode {
+export function snapNode(
+  el: Element,
+  tag: string,
+  cs: CSSStyleDeclaration,
+  rect: DOMRect,
+  sx: number,
+  sy: number,
+  ci: number,
+): SNode {
   const { text, segs } = directSegs(el);
-  const cls = `${el.id ?? ''} ${el.getAttribute('class') ?? ''}`.toLowerCase().slice(0, 300).trim();
+  const cls = `${el.id ?? ''} ${el.getAttribute('class') ?? ''}`
+    .toLowerCase()
+    .slice(0, 300)
+    .trim();
   const n: SNode = {
     tag: tag.toLowerCase(),
     cls,
@@ -63,7 +85,8 @@ export function snapNode(el: Element, tag: string, cs: CSSStyleDeclaration, rect
     const alt = el.getAttribute('alt');
     if (alt !== null) attrs.alt = collapse(alt).slice(0, 200);
     const src = img.currentSrc || img.src;
-    if (src && (!src.startsWith('data:') || src.length < 20000)) attrs.src = src;
+    if (src && (!src.startsWith('data:') || src.length < 20000))
+      attrs.src = src;
     if (img.naturalWidth) attrs.nw = img.naturalWidth;
     if (img.naturalHeight) attrs.nh = img.naturalHeight;
   } else if (tag === 'SVG' || tag === 'svg') {
@@ -87,7 +110,9 @@ export function snapNode(el: Element, tag: string, cs: CSSStyleDeclaration, rect
 export function readLdTexts(doc: Document = document): string[] {
   const out: string[] = [];
   let total = 0;
-  for (const s of Array.from(doc.querySelectorAll('script[type="application/ld+json" i]')).slice(0, 30)) {
+  for (const s of Array.from(
+    doc.querySelectorAll('script[type="application/ld+json" i]'),
+  ).slice(0, 30)) {
     const t = s.textContent ?? '';
     if (!t || total + t.length > 3_000_000) continue;
     total += t.length;
@@ -98,12 +123,18 @@ export function readLdTexts(doc: Document = document): string[] {
 
 /** The site's own name, when the page states one (og:site_name, application-name). */
 export function readSiteName(doc: Document = document): string | null {
-  for (const sel of ['meta[property="og:site_name" i]', 'meta[name="application-name" i]', 'meta[name="apple-mobile-web-app-title" i]']) {
+  for (const sel of [
+    'meta[property="og:site_name" i]',
+    'meta[name="application-name" i]',
+    'meta[name="apple-mobile-web-app-title" i]',
+  ]) {
     const v = doc.querySelector(sel)?.getAttribute('content');
     if (v && collapse(v)) return collapse(v).slice(0, 80);
   }
   // "Refunds | Internal Revenue Service": the last part of a split title names the site.
-  const parts = collapse(doc.title ?? '').split(/\s+[|–—]\s+|\s+-\s+/).filter(Boolean);
+  const parts = collapse(doc.title ?? '')
+    .split(/\s+[|–—]\s+|\s+-\s+/)
+    .filter(Boolean);
   const last = parts.length >= 2 ? parts[parts.length - 1] : undefined;
   return last && last.length <= 40 ? last : null;
 }
@@ -113,24 +144,41 @@ export function svgDataUrl(svg: Element): string {
   try {
     const clone = svg.cloneNode(true) as Element;
     for (const use of Array.from(clone.querySelectorAll('use'))) {
-      const ref = use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '';
+      const ref =
+        use.getAttribute('href') ?? use.getAttribute('xlink:href') ?? '';
       if (!ref.startsWith('#')) continue;
       const target = svg.ownerDocument.getElementById(ref.slice(1));
       if (!target) continue;
-      const g = svg.ownerDocument.createElementNS('http://www.w3.org/2000/svg', 'g');
-      for (const c of Array.from(target.childNodes)) g.appendChild(c.cloneNode(true));
-      if (!clone.getAttribute('viewBox') && target.getAttribute('viewBox')) clone.setAttribute('viewBox', target.getAttribute('viewBox') ?? '');
+      const g = svg.ownerDocument.createElementNS(
+        'http://www.w3.org/2000/svg',
+        'g',
+      );
+      for (const c of Array.from(target.childNodes))
+        g.appendChild(c.cloneNode(true));
+      if (!clone.getAttribute('viewBox') && target.getAttribute('viewBox'))
+        clone.setAttribute('viewBox', target.getAttribute('viewBox') ?? '');
       use.replaceWith(g);
     }
-    if (!clone.getAttribute('xmlns')) clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    if (!clone.getAttribute('xmlns'))
+      clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     // The logo's colour often comes from CSS `currentColor`: pin it to what the page shows.
     const color = getComputedStyle(svg).color;
-    if (color && !clone.getAttribute('color')) clone.setAttribute('color', color);
+    if (color && !clone.getAttribute('color'))
+      clone.setAttribute('color', color);
     const r = svg.getBoundingClientRect();
-    if (!clone.getAttribute('width') && r.width) clone.setAttribute('width', String(Math.round(r.width)));
-    if (!clone.getAttribute('height') && r.height) clone.setAttribute('height', String(Math.round(r.height)));
+    if (!clone.getAttribute('width') && r.width)
+      clone.setAttribute('width', String(Math.round(r.width)));
+    if (!clone.getAttribute('height') && r.height)
+      clone.setAttribute('height', String(Math.round(r.height)));
     const xml = new XMLSerializer().serializeToString(clone);
-    if (!xml || xml.length > 60_000 || !/<(path|g|rect|circle|polygon|text|image|ellipse|line|polyline)\b/i.test(xml)) return '';
+    if (
+      !xml ||
+      xml.length > 60_000 ||
+      !/<(path|g|rect|circle|polygon|text|image|ellipse|line|polyline)\b/i.test(
+        xml,
+      )
+    )
+      return '';
     return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(xml)}`;
   } catch {
     return '';

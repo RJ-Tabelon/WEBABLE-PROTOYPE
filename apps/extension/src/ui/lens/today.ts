@@ -1,11 +1,16 @@
 // Owner: D2. "Today: N decisions · $X" session meter, kept in chrome.storage.local under `todayMeter`.
 import { useEffect, useState } from 'preact/hooks';
-import type { JevMetrics } from '@webable/core';
+import type { JevMetrics } from '@webable/engine';
 import type { EngineState } from '../../contracts';
 import { jevMetricsList } from '../panel/format';
 
 export const TODAY_KEY = 'todayMeter';
-export interface TodayMeter { day: string; decisions: number; usd: number; pages: number }
+export interface TodayMeter {
+  day: string;
+  decisions: number;
+  usd: number;
+  pages: number;
+}
 
 function today(): string {
   const d = new Date();
@@ -14,7 +19,11 @@ function today(): string {
 
 function area(): chrome.storage.StorageArea | null {
   try {
-    return typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local ? chrome.storage.local : null;
+    return typeof chrome !== 'undefined' &&
+      chrome.storage &&
+      chrome.storage.local
+      ? chrome.storage.local
+      : null;
   } catch {
     return null;
   }
@@ -28,7 +37,12 @@ export async function readToday(): Promise<TodayMeter> {
     const got = await a.get(TODAY_KEY);
     const v = got[TODAY_KEY] as Partial<TodayMeter> | undefined;
     if (!v || v.day !== fresh.day) return fresh;
-    return { day: fresh.day, decisions: Number(v.decisions) || 0, usd: Number(v.usd) || 0, pages: Number(v.pages) || 0 };
+    return {
+      day: fresh.day,
+      decisions: Number(v.decisions) || 0,
+      usd: Number(v.usd) || 0,
+      pages: Number(v.pages) || 0,
+    };
   } catch {
     return fresh;
   }
@@ -37,23 +51,29 @@ export async function readToday(): Promise<TodayMeter> {
 const counted = new WeakSet<JevMetrics>();
 let queue: Promise<void> = Promise.resolve();
 
-function addToToday(decisions: number, usd: number, page: boolean): Promise<void> {
-  queue = queue.then(async () => {
-    const a = area();
-    if (!a) return;
-    const cur = await readToday();
-    const next: TodayMeter = {
-      day: cur.day,
-      decisions: cur.decisions + decisions,
-      usd: cur.usd + usd,
-      pages: cur.pages + (page ? 1 : 0),
-    };
-    try {
-      await a.set({ [TODAY_KEY]: next });
-    } catch {
-      /* storage unavailable: the meter just stays local */
-    }
-  }).catch(() => {});
+function addToToday(
+  decisions: number,
+  usd: number,
+  page: boolean,
+): Promise<void> {
+  queue = queue
+    .then(async () => {
+      const a = area();
+      if (!a) return;
+      const cur = await readToday();
+      const next: TodayMeter = {
+        day: cur.day,
+        decisions: cur.decisions + decisions,
+        usd: cur.usd + usd,
+        pages: cur.pages + (page ? 1 : 0),
+      };
+      try {
+        await a.set({ [TODAY_KEY]: next });
+      } catch {
+        /* storage unavailable: the meter just stays local */
+      }
+    })
+    .catch(() => {});
   return queue;
 }
 
@@ -73,7 +93,8 @@ export function useTodayMeter(s: EngineState): TodayMeter | null {
         for (const m of fresh) {
           counted.add(m);
           // Cached answers cost nothing the second time; count only what Jev actually answered.
-          if (m === s.understanding?.metrics && s.understanding?.cached) continue;
+          if (m === s.understanding?.metrics && s.understanding?.cached)
+            continue;
           d += Number(m.questions) || 0;
           usd += Number(m.costUsd) || 0;
           if (m === s.understanding?.metrics) page = true;

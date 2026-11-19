@@ -7,7 +7,10 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
  * to the tab or a pixel-ratio change restarts the clock, so a trial never carries time spent elsewhere. `armed()`
  * ignores presses in the first 250 ms (accidental repeats).
  */
-export function useTrialClock(trialKey: unknown): { elapsed: () => number; armed: () => boolean } {
+export function useTrialClock(trialKey: unknown): {
+  elapsed: () => number;
+  armed: () => boolean;
+} {
   const onset = useRef(performance.now() + 1e9);
 
   useEffect(() => {
@@ -59,7 +62,10 @@ export function useTrialClock(trialKey: unknown): { elapsed: () => number; armed
 }
 
 /** Window key handler while `enabled`. Ignores keys with modifiers, repeats, and keys typed into fields. */
-export function useKeys(enabled: boolean, handler: (key: string, e: KeyboardEvent) => void): void {
+export function useKeys(
+  enabled: boolean,
+  handler: (key: string, e: KeyboardEvent) => void,
+): void {
   const ref = useRef(handler);
   ref.current = handler;
   useEffect(() => {
@@ -67,7 +73,12 @@ export function useKeys(enabled: boolean, handler: (key: string, e: KeyboardEven
     const onKey = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
       const t = e.target;
-      if (t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement) return;
+      if (
+        t instanceof HTMLInputElement ||
+        t instanceof HTMLTextAreaElement ||
+        t instanceof HTMLSelectElement
+      )
+        return;
       ref.current(e.key, e);
     };
     window.addEventListener('keydown', onKey);
@@ -76,7 +87,10 @@ export function useKeys(enabled: boolean, handler: (key: string, e: KeyboardEven
 }
 
 /** The content box of an element, kept current. */
-export function useBox<T extends HTMLElement>(fallback: { w: number; h: number }): [preact.RefObject<T>, { w: number; h: number }] {
+export function useBox<T extends HTMLElement>(fallback: {
+  w: number;
+  h: number;
+}): [preact.RefObject<T>, { w: number; h: number }] {
   const ref = useRef<T>(null);
   const [box, setBox] = useState(fallback);
   useLayoutEffect(() => {
@@ -84,9 +98,17 @@ export function useBox<T extends HTMLElement>(fallback: { w: number; h: number }
     if (!el) return;
     const measure = () => {
       const cs = getComputedStyle(el);
-      const w = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      const h = el.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
-      setBox((b) => (Math.abs(b.w - w) < 1 && Math.abs(b.h - h) < 1 ? b : { w, h }));
+      const w =
+        el.clientWidth -
+        parseFloat(cs.paddingLeft) -
+        parseFloat(cs.paddingRight);
+      const h =
+        el.clientHeight -
+        parseFloat(cs.paddingTop) -
+        parseFloat(cs.paddingBottom);
+      setBox((b) =>
+        Math.abs(b.w - w) < 1 && Math.abs(b.h - h) < 1 ? b : { w, h },
+      );
     };
     measure();
     const ro = new ResizeObserver(measure);

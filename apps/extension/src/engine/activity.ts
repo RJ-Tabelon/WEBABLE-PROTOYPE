@@ -1,7 +1,15 @@
-import type { BgRequest } from '@webable/core';
+import type { BgRequest } from '@webable/engine';
 
 const CONTENT_WORK = new Set<BgRequest['type']>([
-  'understand', 'struggle', 'overlayClose', 'meaning', 'redesign', 'visualVerify', 'rewordScore', 'rewordWrite', 'compose',
+  'understand',
+  'struggle',
+  'overlayClose',
+  'meaning',
+  'redesign',
+  'visualVerify',
+  'rewordScore',
+  'rewordWrite',
+  'compose',
 ]);
 
 /** Count overlapping work, including failures, so the launcher never stops on the first completed request. */

@@ -7,7 +7,15 @@
 // lists, forms, prose, figures, card grids and the boxes that hold extracted data (a stats grid, a scoreboard, a
 // recipe) stay whole.
 
-import { area, descendants, hasWord, isControl, isHeading, isImage, textOf } from './text';
+import {
+  area,
+  descendants,
+  hasWord,
+  isControl,
+  isHeading,
+  isImage,
+  textOf,
+} from './text';
 import type { SNode } from './types';
 
 export const MIN_REGIONS = 4;
@@ -17,30 +25,66 @@ export const SPLIT_SHARE = 0.2;
 
 const CHROME_TAGS = new Set(['header', 'footer', 'nav']);
 const CHROME_ROLES = new Set(['banner', 'contentinfo', 'navigation', 'search']);
-const HEADER_WORDS = /^(header|masthead|navbar|topbar|topnav|sitenav|globalnav|menubar|nav|navigation|menu|utility|skip)$/;
+const HEADER_WORDS =
+  /^(header|masthead|navbar|topbar|topnav|sitenav|globalnav|menubar|nav|navigation|menu|utility|skip)$/;
 const FOOTER_WORDS = /^(footer|colophon|sitefooter|copyright)$/;
 // <article> is not here: many sites wrap the whole page in one. Article bodies stay whole by `isProse`.
-const UNIT_TAGS = new Set(['table', 'ul', 'ol', 'dl', 'form', 'fieldset', 'figure', 'pre', 'blockquote', 'details', 'iframe', 'video', 'picture', 'img', 'svg', 'canvas']);
-const UNIT_ROLES = new Set(['table', 'grid', 'list', 'form', 'dialog', 'tablist', 'radiogroup', 'feed', 'figure']);
+const UNIT_TAGS = new Set([
+  'table',
+  'ul',
+  'ol',
+  'dl',
+  'form',
+  'fieldset',
+  'figure',
+  'pre',
+  'blockquote',
+  'details',
+  'iframe',
+  'video',
+  'picture',
+  'img',
+  'svg',
+  'canvas',
+]);
+const UNIT_ROLES = new Set([
+  'table',
+  'grid',
+  'list',
+  'form',
+  'dialog',
+  'tablist',
+  'radiogroup',
+  'feed',
+  'figure',
+]);
 
 /**
  * Chrome boxes: header/footer/nav and banner/contentinfo/navigation landmarks outside the main content and outside any
  * article, plus boxes whose class says header (near the top) or footer.
  */
-export function chromeOf(nodes: SNode[], main: SNode | null, docH: number): Set<SNode> {
+export function chromeOf(
+  nodes: SNode[],
+  main: SNode | null,
+  docH: number,
+): Set<SNode> {
   const out = new Set<SNode>();
   const inMain = (n: SNode) => {
     if (!main || main.tag === 'body') return false;
-    for (let p: SNode | null | undefined = n; p; p = p.parent) if (p === main) return true;
+    for (let p: SNode | null | undefined = n; p; p = p.parent)
+      if (p === main) return true;
     return false;
   };
   const holdsMain = (n: SNode) => {
     if (!main) return false;
-    for (let p: SNode | null | undefined = main; p; p = p.parent) if (p === n) return true;
+    for (let p: SNode | null | undefined = main; p; p = p.parent)
+      if (p === n) return true;
     return false;
   };
   const inArticle = (n: SNode) => {
-    for (let p = n.parent; p; p = p.parent) if (p.tag === 'article' || p.tag === 'main' || p.role === 'main') return true;
+    for (let p = n.parent; p; p = p.parent)
+      if (p.tag === 'article' || p.tag === 'main' || p.role === 'main')
+        return true;
     return false;
   };
   for (const n of nodes) {
@@ -48,9 +92,12 @@ export function chromeOf(nodes: SNode[], main: SNode | null, docH: number): Set<
     let under = false;
     for (let p = n.parent; p && !under; p = p.parent) under = out.has(p);
     if (under) continue;
-    const landmark = (CHROME_TAGS.has(n.tag) && !inArticle(n)) || (n.role !== undefined && CHROME_ROLES.has(n.role));
+    const landmark =
+      (CHROME_TAGS.has(n.tag) && !inArticle(n)) ||
+      (n.role !== undefined && CHROME_ROLES.has(n.role));
     const ws = wordsOf(n);
-    const headerish = n.y < Math.max(400, 0.15 * docH) && ws.some((w) => HEADER_WORDS.test(w));
+    const headerish =
+      n.y < Math.max(400, 0.15 * docH) && ws.some((w) => HEADER_WORDS.test(w));
     const footerish = ws.some((w) => FOOTER_WORDS.test(w)) && n.y > 0.4 * docH;
     if (landmark || headerish || footerish) out.add(n);
   }
@@ -58,11 +105,16 @@ export function chromeOf(nodes: SNode[], main: SNode | null, docH: number): Set<
 }
 
 function wordsOf(n: SNode): string[] {
-  return n.cls.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(/[^a-z]+/).filter((w) => w.length >= 2);
+  return n.cls
+    .replace(/([a-z])([A-Z])/g, '$1 $2')
+    .toLowerCase()
+    .split(/[^a-z]+/)
+    .filter((w) => w.length >= 2);
 }
 
 function isWithin(n: SNode, outer: SNode): boolean {
-  for (let p: SNode | null | undefined = n; p; p = p.parent) if (p === outer) return true;
+  for (let p: SNode | null | undefined = n; p; p = p.parent)
+    if (p === outer) return true;
   return false;
 }
 
@@ -79,7 +131,11 @@ export interface RegionOptions {
 }
 
 /** Nodes under `n` outside excluded boxes (chrome inside a wrapper does not count as the wrapper's content). */
-function liveNodes(n: SNode, excluded: (x: SNode) => boolean, out: SNode[] = []): SNode[] {
+function liveNodes(
+  n: SNode,
+  excluded: (x: SNode) => boolean,
+  out: SNode[] = [],
+): SNode[] {
   if (excluded(n)) return out;
   out.push(n);
   for (const k of n.kids) liveNodes(k, excluded, out);
@@ -93,7 +149,13 @@ function hasContent(n: SNode, excluded: (x: SNode) => boolean): boolean {
     chars += d.text.length;
     if (chars >= 15) return true;
   }
-  return live.some((d) => (isImage(d) && d.w * d.h >= 4000) || d.tag === 'video' || d.tag === 'iframe' || isControl(d));
+  return live.some(
+    (d) =>
+      (isImage(d) && d.w * d.h >= 4000) ||
+      d.tag === 'video' ||
+      d.tag === 'iframe' ||
+      isControl(d),
+  );
 }
 
 /**
@@ -101,7 +163,12 @@ function hasContent(n: SNode, excluded: (x: SNode) => boolean): boolean {
  * stays one region; a page wrapper whose text is mostly one article does not count).
  */
 function isProse(n: SNode): boolean {
-  const ps = descendants(n).filter((d) => d.tag === 'p' && textOf(d).length >= 40 && (d.parent === n || d.parent?.parent === n));
+  const ps = descendants(n).filter(
+    (d) =>
+      d.tag === 'p' &&
+      textOf(d).length >= 40 &&
+      (d.parent === n || d.parent?.parent === n),
+  );
   if (ps.length < 3) return false;
   const pt = ps.reduce((s, p) => s + textOf(p).length, 0);
   return pt >= 0.6 * textOf(n).length;
@@ -110,15 +177,25 @@ function isProse(n: SNode): boolean {
 /** A picture with its caption: one image covering a good part of the box, little text. */
 function isFigureLike(n: SNode): boolean {
   if (textOf(n).length > 400) return false;
-  const pics = descendants(n).filter((d) => (d.tag === 'img' || d.tag === 'video' || d.tag === 'picture' || d.tag === 'svg') && d.w * d.h >= 0.3 * area(n));
-  return pics.length >= 1 && !descendants(n).some((d) => isControl(d) && d !== n);
+  const pics = descendants(n).filter(
+    (d) =>
+      (d.tag === 'img' ||
+        d.tag === 'video' ||
+        d.tag === 'picture' ||
+        d.tag === 'svg') &&
+      d.w * d.h >= 0.3 * area(n),
+  );
+  return (
+    pics.length >= 1 && !descendants(n).some((d) => isControl(d) && d !== n)
+  );
 }
 
 /** Four or more similar children (a card grid or a list of rows). */
 function isCardGrid(n: SNode): boolean {
   const kids = n.kids.filter((k) => k.w * k.h > 0);
   if (kids.length < 4) return false;
-  const sig = (k: SNode) => `${k.tag}|${k.cls.split(' ').slice(0, 2).join(' ')}`;
+  const sig = (k: SNode) =>
+    `${k.tag}|${k.cls.split(' ').slice(0, 2).join(' ')}`;
   const counts = new Map<string, number>();
   for (const k of kids) counts.set(sig(k), (counts.get(sig(k)) ?? 0) + 1);
   return Math.max(...counts.values()) >= Math.max(4, 0.7 * kids.length);
@@ -129,7 +206,11 @@ export function findRegions(root: SNode, opt: RegionOptions): SNode[] {
   const rootArea = Math.max(1, area(root));
   const minArea = Math.max(9000, 0.004 * rootArea);
   const substantial = (n: SNode) =>
-    !opt.excluded(n) && n.w >= 120 && n.h >= 40 && area(n) >= minArea && hasContent(n, opt.excluded);
+    !opt.excluded(n) &&
+    n.w >= 120 &&
+    n.h >= 40 &&
+    area(n) >= minArea &&
+    hasContent(n, opt.excluded);
   const contentKids = (n: SNode): SNode[] => {
     const out: SNode[] = [];
     for (const k of n.kids) {
@@ -164,10 +245,18 @@ export function findRegions(root: SNode, opt: RegionOptions): SNode[] {
     return v;
   };
   const isDashboard = (n: SNode): boolean =>
-    dash.size >= 2 && !dash.has(n) && madeOfDash(n) && [...dash].filter((d) => isWithin(d, n)).length >= 2;
+    dash.size >= 2 &&
+    !dash.has(n) &&
+    madeOfDash(n) &&
+    [...dash].filter((d) => isWithin(d, n)).length >= 2;
   const isUnit = (n: SNode): boolean =>
-    opt.units.has(n) || UNIT_TAGS.has(n.tag) || (n.role !== undefined && UNIT_ROLES.has(n.role)) || isProse(n) || isCardGrid(n)
-    || isFigureLike(n) || isDashboard(n);
+    opt.units.has(n) ||
+    UNIT_TAGS.has(n.tag) ||
+    (n.role !== undefined && UNIT_ROLES.has(n.role)) ||
+    isProse(n) ||
+    isCardGrid(n) ||
+    isFigureLike(n) ||
+    isDashboard(n);
 
   let regions = partsOf(root);
   if (!regions.length) return [];
@@ -178,7 +267,8 @@ export function findRegions(root: SNode, opt: RegionOptions): SNode[] {
       .filter((r) => !stuck.has(r) && !isUnit(r))
       .sort((a, b) => area(b) - area(a))[0];
     if (!cand) break;
-    if (regions.length >= MIN_REGIONS && area(cand) < SPLIT_SHARE * total()) break;
+    if (regions.length >= MIN_REGIONS && area(cand) < SPLIT_SHARE * total())
+      break;
     const parts = partsOf(cand);
     if (parts.length < 2 || regions.length - 1 + parts.length > MAX_REGIONS) {
       stuck.add(cand);
@@ -194,21 +284,29 @@ export function findRegions(root: SNode, opt: RegionOptions): SNode[] {
  * A structure-only description of what a region holds, for Jev ('number cards x6, scoreboard with 2 logos, links x2').
  * Counts and kinds only: no page text.
  */
-export function describeRegion(n: SNode, inside: Array<{ node: SNode; kind: string; size?: string }>): string {
+export function describeRegion(
+  n: SNode,
+  inside: Array<{ node: SNode; kind: string; size?: string }>,
+): string {
   const parts: string[] = [];
   // Same-kind items read as one phrase: two grids of 6 number cards are "number cards x12 in 2 groups".
   const byKind = new Map<string, Array<{ kind: string; size?: string }>>();
-  for (const it of inside) byKind.set(it.kind, [...(byKind.get(it.kind) ?? []), it]);
+  for (const it of inside)
+    byKind.set(it.kind, [...(byKind.get(it.kind) ?? []), it]);
   for (const [kind, list] of byKind) {
     const first = list[0] as { kind: string; size?: string };
     if (list.length === 1) {
       parts.push(first.size ? `${kind} ${first.size}` : kind);
       continue;
     }
-    const counts = list.map((x) => /^x(\d+)$/.exec(x.size ?? '')?.[1]).map(Number);
-    parts.push(counts.every((c) => Number.isFinite(c) && c > 0)
-      ? `${kind} x${counts.reduce((a, b) => a + b, 0)} in ${list.length} groups`
-      : `${kind} x${list.length}`);
+    const counts = list
+      .map((x) => /^x(\d+)$/.exec(x.size ?? '')?.[1])
+      .map(Number);
+    parts.push(
+      counts.every((c) => Number.isFinite(c) && c > 0)
+        ? `${kind} x${counts.reduce((a, b) => a + b, 0)} in ${list.length} groups`
+        : `${kind} x${list.length}`,
+    );
   }
   const ds = descendants(n);
   const covered = (d: SNode) => inside.some((it) => isWithin(d, it.node));
@@ -216,14 +314,28 @@ export function describeRegion(n: SNode, inside: Array<{ node: SNode; kind: stri
   const count = (pred: (d: SNode) => boolean) => free.filter(pred).length;
   const paras = count((d) => d.tag === 'p' && textOf(d).length >= 60);
   const heads = count((d) => isHeading(d));
-  const imgs = count((d) => (d.tag === 'img' || d.tag === 'svg' || d.tag === 'picture') && d.w * d.h >= 10000);
+  const imgs = count(
+    (d) =>
+      (d.tag === 'img' || d.tag === 'svg' || d.tag === 'picture') &&
+      d.w * d.h >= 10000,
+  );
   const videos = count((d) => d.tag === 'video' || d.tag === 'iframe');
-  const fields = count((d) => d.tag === 'input' || d.tag === 'select' || d.tag === 'textarea');
+  const fields = count(
+    (d) => d.tag === 'input' || d.tag === 'select' || d.tag === 'textarea',
+  );
   const buttons = count((d) => d.tag === 'button' || d.role === 'button');
   const links = count((d) => d.tag === 'a' && d.attrs?.href !== undefined);
   const tables = count((d) => d.tag === 'table');
-  const lists = count((d) => (d.tag === 'ul' || d.tag === 'ol') && d.kids.length >= 2);
-  const grid = free.find((d) => isCardGrid(d) && d.kids.some((k) => descendants(k).some((x) => x.tag === 'img' || x.tag === 'picture')));
+  const lists = count(
+    (d) => (d.tag === 'ul' || d.tag === 'ol') && d.kids.length >= 2,
+  );
+  const grid = free.find(
+    (d) =>
+      isCardGrid(d) &&
+      d.kids.some((k) =>
+        descendants(k).some((x) => x.tag === 'img' || x.tag === 'picture'),
+      ),
+  );
   if (grid) parts.push(`cards with pictures x${grid.kids.length}`);
   if (heads) parts.push(`headings x${heads}`);
   if (paras) parts.push(`paragraphs x${paras}`);
@@ -234,6 +346,7 @@ export function describeRegion(n: SNode, inside: Array<{ node: SNode; kind: stri
   if (fields) parts.push(`form fields x${fields}`);
   if (buttons) parts.push(`buttons x${buttons}`);
   if (links) parts.push(`links x${links}`);
-  if (hasWord(n, /^(ad|ads|advert|advertisement|sponsored|sponsor)$/)) parts.push('marked as an ad');
+  if (hasWord(n, /^(ad|ads|advert|advertisement|sponsored|sponsor)$/))
+    parts.push('marked as an ad');
   return parts.slice(0, 8).join(', ');
 }

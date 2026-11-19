@@ -1,7 +1,15 @@
 import { LOGO_PATHS, LOGO_VIEWBOX } from '../brand/geometry';
 
 /** The same three-piece mark used by the favicon and extension icons. */
-export function Logo({ size = 28, active = false, class: className = '' }: { size?: number; active?: boolean; class?: string }) {
+export function Logo({
+  size = 28,
+  active = false,
+  class: className = '',
+}: {
+  size?: number;
+  active?: boolean;
+  class?: string;
+}) {
   return (
     <svg
       class={`wa-logo ${className}`.trim()}
@@ -13,7 +21,11 @@ export function Logo({ size = 28, active = false, class: className = '' }: { siz
       focusable="false"
       data-active={active ? '' : undefined}
     >
-      {LOGO_PATHS.map((d, i) => <g key={i} class={`wa-logo-piece wa-logo-piece-${i + 1}`}><path d={d} /></g>)}
+      {LOGO_PATHS.map((d, i) => (
+        <g key={i} class={`wa-logo-piece wa-logo-piece-${i + 1}`}>
+          <path d={d} />
+        </g>
+      ))}
     </svg>
   );
 }

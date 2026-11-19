@@ -5,22 +5,48 @@
 import type { JSX } from 'preact';
 import { useMemo } from 'preact/hooks';
 import { Blocks, PrimaryAction } from './Blocks';
-import { DataTable, LogoMark, Recipe, ScheduleList, Scoreboard, StatGrid } from './components';
+import {
+  DataTable,
+  LogoMark,
+  Recipe,
+  ScheduleList,
+  Scoreboard,
+  StatGrid,
+} from './components';
 import { useCalm } from './context';
 import { Disclosure } from './Disclosure';
 import type { MeaningItem, MeaningPlan } from './plan';
-import { dataTableProps, logoProps, recipeProps, scheduleProps, scoreboardProps, statGridProps } from './purpose-props';
+import {
+  dataTableProps,
+  logoProps,
+  recipeProps,
+  scheduleProps,
+  scoreboardProps,
+  statGridProps,
+} from './purpose-props';
 
 /** More links than this beside one part go behind a disclosure (a history table's row buttons). */
 const LINKS_OPEN = 4;
 
-function same(a: string | null | undefined, b: string | null | undefined): boolean {
-  const n = (s: string | null | undefined): string => (s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+function same(
+  a: string | null | undefined,
+  b: string | null | undefined,
+): boolean {
+  const n = (s: string | null | undefined): string =>
+    (s ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ' ')
+      .trim();
   return !!n(a) && (n(a) === n(b) || n(b).includes(n(a)));
 }
 
 const ARIA: Record<MeaningItem['data']['kind'], string> = {
-  scoreboard: 'Score', stats: 'Record', table: 'Table', schedule: 'Schedule', recipe: 'Recipe', logo: 'Logo',
+  scoreboard: 'Score',
+  stats: 'Record',
+  table: 'Table',
+  schedule: 'Schedule',
+  recipe: 'Recipe',
+  logo: 'Logo',
 };
 
 function ItemLinks({ item }: { item: MeaningItem }): JSX.Element | null {
@@ -41,7 +67,17 @@ function ItemLinks({ item }: { item: MeaningItem }): JSX.Element | null {
   );
 }
 
-function ItemView({ item, leadTitle, listFirst, firstStats }: { item: MeaningItem; leadTitle: string | null; listFirst: number; firstStats: boolean }): JSX.Element | null {
+function ItemView({
+  item,
+  leadTitle,
+  listFirst,
+  firstStats,
+}: {
+  item: MeaningItem;
+  leadTitle: string | null;
+  listFirst: number;
+  firstStats: boolean;
+}): JSX.Element | null {
   const ctx = useCalm();
   const origin = location.origin;
   const d = item.data;
@@ -50,11 +86,18 @@ function ItemView({ item, leadTitle, listFirst, firstStats }: { item: MeaningIte
       case 'scoreboard':
         return <Scoreboard {...scoreboardProps(d, origin)} />;
       case 'stats': {
-        const p = statGridProps(d, { title: same(d.title, leadTitle) ? null : undefined, lead: firstStats });
+        const p = statGridProps(d, {
+          title: same(d.title, leadTitle) ? null : undefined,
+          lead: firstStats,
+        });
         return <StatGrid {...p} />;
       }
       case 'table':
-        return <DataTable {...dataTableProps(d, { showFirst: Math.max(6, listFirst || 10) })} />;
+        return (
+          <DataTable
+            {...dataTableProps(d, { showFirst: Math.max(6, listFirst || 10) })}
+          />
+        );
       case 'schedule': {
         const activate = (id: string): (() => void) | undefined => {
           const el = ctx.api.elementFor(id);
@@ -74,7 +117,11 @@ function ItemView({ item, leadTitle, listFirst, firstStats }: { item: MeaningIte
   }, [d, leadTitle, listFirst, firstStats, ctx, origin]);
   if (!body) return null;
   return (
-    <section class="wa-purpose__item" data-kind={d.kind} aria-label={ARIA[d.kind]}>
+    <section
+      class="wa-purpose__item"
+      data-kind={d.kind}
+      aria-label={ARIA[d.kind]}
+    >
       {body}
       <ItemLinks item={item} />
     </section>
@@ -82,13 +129,26 @@ function ItemView({ item, leadTitle, listFirst, firstStats }: { item: MeaningIte
 }
 
 /** The template's content, in its order, right after the page's title. */
-export function PurposeView({ meaning, leadTitle, listFirst }: { meaning: MeaningPlan; leadTitle: string | null; listFirst: number }): JSX.Element | null {
+export function PurposeView({
+  meaning,
+  leadTitle,
+  listFirst,
+}: {
+  meaning: MeaningPlan;
+  leadTitle: string | null;
+  listFirst: number;
+}): JSX.Element | null {
   if (!meaning.items.length && !meaning.action) return null;
   return (
-    <div class="wa-band wa-band--task wa-purpose" data-template={meaning.template}>
+    <div
+      class="wa-band wa-band--task wa-purpose"
+      data-template={meaning.template}
+    >
       {meaning.orient && (
         <div class="wa-purpose__orient">
-          {meaning.orient.title && <h2 class="wa-h-section">{meaning.orient.title}</h2>}
+          {meaning.orient.title && (
+            <h2 class="wa-h-section">{meaning.orient.title}</h2>
+          )}
           <Blocks blocks={meaning.orient.blocks} />
         </div>
       )}
@@ -99,8 +159,14 @@ export function PurposeView({ meaning, leadTitle, listFirst }: { meaning: Meanin
       )}
       {meaning.items.map((it) => (
         <ItemView
-          key={it.key} item={it} leadTitle={leadTitle} listFirst={listFirst}
-          firstStats={it.data.kind === 'stats' && meaning.items.find((x) => x.data.kind === 'stats') === it}
+          key={it.key}
+          item={it}
+          leadTitle={leadTitle}
+          listFirst={listFirst}
+          firstStats={
+            it.data.kind === 'stats' &&
+            meaning.items.find((x) => x.data.kind === 'stats') === it
+          }
         />
       ))}
     </div>

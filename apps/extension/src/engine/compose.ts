@@ -10,8 +10,15 @@
 // the server could not be reached); 'kept' and 'failed' show the page's own words. A new page starts again, and late
 // answers for an old page are dropped. When every group asked for has an answer, one summary for the ledger.
 
-import { markersIn, numbersKept, stripMarkers } from '@webable/core';
-import type { BgRequest, ComposeBlock, ComposeGroupIn, ComposeResponse, ComposeResult, RewordPage } from '@webable/core';
+import { markersIn, numbersKept, stripMarkers } from '@webable/engine';
+import type {
+  BgRequest,
+  ComposeBlock,
+  ComposeGroupIn,
+  ComposeResponse,
+  ComposeResult,
+  RewordPage,
+} from '@webable/engine';
 import type { ComposeGroupState, EngineState } from '../contracts';
 
 /** Groups per request. */
@@ -25,7 +32,16 @@ const COMPOSE_TIMEOUT_MS = 24_000;
 export type ComposeState = NonNullable<EngineState['compose']>;
 
 export const COMPOSE_KINDS: ReadonlySet<string> = new Set<ComposeBlock['k']>([
-  'prose', 'keyfacts', 'steps', 'stats', 'compare', 'callout', 'definitions', 'quote', 'contact', 'points',
+  'prose',
+  'keyfacts',
+  'steps',
+  'stats',
+  'compare',
+  'callout',
+  'definitions',
+  'quote',
+  'contact',
+  'points',
 ]);
 
 export interface ComposeSummary {
@@ -93,7 +109,9 @@ export function blockTexts(blocks: ComposeBlock[]): string[] {
 
 /** Digit numbers as written (thousands separators and trailing .0 ignored). */
 function digitsIn(s: string): string[] {
-  return (s.match(/\d+(?:[.,:]\d+)*/g) ?? []).map((n) => n.replace(/,(?=\d{3}\b)/g, '').replace(/\.0+$/, ''));
+  return (s.match(/\d+(?:[.,:]\d+)*/g) ?? []).map((n) =>
+    n.replace(/,(?=\d{3}\b)/g, '').replace(/\.0+$/, ''),
+  );
 }
 
 /**
@@ -101,10 +119,18 @@ function digitsIn(s: string): string[] {
  * kinds, every ⟦n⟧ in range, every link of the group kept, every number of the page's text kept, and no number the
  * page doesn't have. Null when it passes, else the reason.
  */
-export function checkBlocks(group: ComposeGroupIn, blocks: unknown): string | null {
+export function checkBlocks(
+  group: ComposeGroupIn,
+  blocks: unknown,
+): string | null {
   if (!Array.isArray(blocks) || !blocks.length) return 'invalid';
   for (const b of blocks) {
-    if (!b || typeof b !== 'object' || !COMPOSE_KINDS.has((b as { k?: unknown }).k as string)) return 'invalid';
+    if (
+      !b ||
+      typeof b !== 'object' ||
+      !COMPOSE_KINDS.has((b as { k?: unknown }).k as string)
+    )
+      return 'invalid';
   }
   const texts = blockTexts(blocks as ComposeBlock[]);
   const all = texts.join('\n');
@@ -114,7 +140,8 @@ export function checkBlocks(group: ComposeGroupIn, blocks: unknown): string | nu
     if (n < 1 || n > links) return 'links';
     seen.add(n);
   }
-  if (seen.size !== links || /[⟦⟧]/.test(all.replace(/⟦\d{1,3}⟧/g, ''))) return 'links';
+  if (seen.size !== links || /[⟦⟧]/.test(all.replace(/⟦\d{1,3}⟧/g, '')))
+    return 'links';
   const original = group.units.map((u) => u.text).join('\n');
   const words = stripMarkers(all);
   if (!numbersKept(stripMarkers(original), words)) return 'numbers';
@@ -129,11 +156,16 @@ export function checkBlocks(group: ComposeGroupIn, blocks: unknown): string | nu
  * The send order after a call: this call's groups not yet sent, in its order (new ones and ones already waiting), then
  * the rest of the queue as it was. Ids already sent are never queued again.
  */
-export function nextQueue(queue: ComposeGroupIn[], call: ComposeGroupIn[], sent: ReadonlySet<string>): ComposeGroupIn[] {
+export function nextQueue(
+  queue: ComposeGroupIn[],
+  call: ComposeGroupIn[],
+  sent: ReadonlySet<string>,
+): ComposeGroupIn[] {
   const first: ComposeGroupIn[] = [];
   const ids = new Set<string>();
   for (const g of call) {
-    if (!g || typeof g.id !== 'string' || sent.has(g.id) || ids.has(g.id)) continue;
+    if (!g || typeof g.id !== 'string' || sent.has(g.id) || ids.has(g.id))
+      continue;
     ids.add(g.id);
     first.push(g);
   }
@@ -141,10 +173,17 @@ export function nextQueue(queue: ComposeGroupIn[], call: ComposeGroupIn[], sent:
 }
 
 function isResponse(x: unknown): x is ComposeResponse {
-  return !!x && typeof x === 'object' && Array.isArray((x as ComposeResponse).results);
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    Array.isArray((x as ComposeResponse).results)
+  );
 }
 
-const prob = (x: unknown): number | null => (typeof x === 'number' && Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : null);
+const prob = (x: unknown): number | null =>
+  typeof x === 'number' && Number.isFinite(x)
+    ? Math.max(0, Math.min(1, x))
+    : null;
 
 /* ------------------------------------------------------------------ */
 /* The runner                                                          */
@@ -166,7 +205,11 @@ export function createCompose(host: ComposeHost): ComposeRunner {
   let summary: ComposeSummary | null = null;
   const ops = new Set<string>();
 
-  const snapshot = (): ComposeState => ({ status, groups: { ...groups }, version });
+  const snapshot = (): ComposeState => ({
+    status,
+    groups: { ...groups },
+    version,
+  });
 
   const publish = () => {
     version++;
@@ -179,21 +222,45 @@ export function createCompose(host: ComposeHost): ComposeRunner {
 
   const settle = (g: ComposeGroupIn, r: ComposeResult | undefined) => {
     if (!r) {
-      set(g.id, { id: g.id, state: 'failed', blocks: null, better: null, reason: 'llm_unavailable' });
+      set(g.id, {
+        id: g.id,
+        state: 'failed',
+        blocks: null,
+        better: null,
+        reason: 'llm_unavailable',
+      });
       return;
     }
     const better = prob(r.better);
     if (!r.ok) {
       const reason = r.reason || 'check_unavailable';
-      set(g.id, { id: g.id, state: reason === 'plain_is_better' ? 'kept' : 'failed', blocks: null, better, reason });
+      set(g.id, {
+        id: g.id,
+        state: reason === 'plain_is_better' ? 'kept' : 'failed',
+        blocks: null,
+        better,
+        reason,
+      });
       return;
     }
     const bad = checkBlocks(g, r.blocks);
     if (bad) {
-      set(g.id, { id: g.id, state: 'failed', blocks: null, better, reason: bad });
+      set(g.id, {
+        id: g.id,
+        state: 'failed',
+        blocks: null,
+        better,
+        reason: bad,
+      });
       return;
     }
-    set(g.id, { id: g.id, state: 'ready', blocks: r.blocks as ComposeBlock[], better, readyAt: now() });
+    set(g.id, {
+      id: g.id,
+      state: 'ready',
+      blocks: r.blocks as ComposeBlock[],
+      better,
+      readyAt: now(),
+    });
   };
 
   const maybeDone = (my: number) => {
@@ -211,7 +278,9 @@ export function createCompose(host: ComposeHost): ComposeRunner {
       laidOut: ready.length,
       kept: all.filter((g) => g.state === 'kept').length,
       failed: all.filter((g) => g.state === 'failed').length,
-      unreachable: all.filter((g) => g.state === 'failed' && g.reason === 'unreachable').length,
+      unreachable: all.filter(
+        (g) => g.state === 'failed' && g.reason === 'unreachable',
+      ).length,
       better: ready.map((g) => g.better).filter((p): p is number => p !== null),
       ms: Math.round(now() - startedAt),
     };
@@ -221,7 +290,10 @@ export function createCompose(host: ComposeHost): ComposeRunner {
   const send = async (my: number, batch: ComposeGroupIn[]): Promise<void> => {
     let res: ComposeResponse | null = null;
     try {
-      const got = await host.ask<unknown>({ type: 'compose', req: { page: host.page(), groups: batch } }, COMPOSE_TIMEOUT_MS);
+      const got = await host.ask<unknown>(
+        { type: 'compose', req: { page: host.page(), groups: batch } },
+        COMPOSE_TIMEOUT_MS,
+      );
       res = isResponse(got) ? got : null;
     } catch {
       res = null;
@@ -229,9 +301,20 @@ export function createCompose(host: ComposeHost): ComposeRunner {
     if (my !== run) return;
     inFlight--;
     if (!res) {
-      for (const g of batch) set(g.id, { id: g.id, state: 'failed', blocks: null, better: null, reason: 'unreachable' });
+      for (const g of batch)
+        set(g.id, {
+          id: g.id,
+          state: 'failed',
+          blocks: null,
+          better: null,
+          reason: 'unreachable',
+        });
     } else {
-      const byId = new Map(res.results.filter((r) => r && typeof r.id === 'string').map((r) => [r.id, r] as const));
+      const byId = new Map(
+        res.results
+          .filter((r) => r && typeof r.id === 'string')
+          .map((r) => [r.id, r] as const),
+      );
       for (const g of batch) settle(g, byId.get(g.id));
     }
     publish();
@@ -251,7 +334,9 @@ export function createCompose(host: ComposeHost): ComposeRunner {
 
   function compose(input: ComposeGroupIn[]): void {
     if (!Array.isArray(input) || !input.length || host.blocked()) return;
-    const fresh = input.filter((g) => g && typeof g.id === 'string' && !known.has(g.id));
+    const fresh = input.filter(
+      (g) => g && typeof g.id === 'string' && !known.has(g.id),
+    );
     queue = nextQueue(queue, input, sent);
     if (!fresh.length && !queue.length) return;
     if (!startedAt) startedAt = now();

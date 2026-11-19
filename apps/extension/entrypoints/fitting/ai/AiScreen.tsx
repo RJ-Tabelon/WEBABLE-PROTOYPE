@@ -4,13 +4,27 @@
 // real pages to see it on. With a saved one it opens on its points, and switches save at once.
 // Never shown here: "reword", "profile", "score", "probability" or a pixel.
 
-import { AI_ASK_URLS, AI_PROMPT, type ReaderPoint, type ReaderProfile } from '@webable/core';
+import {
+  AI_ASK_URLS,
+  AI_PROMPT,
+  type ReaderPoint,
+  type ReaderProfile,
+} from '@webable/engine';
 import type { JSX } from 'preact';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Switch } from '../results/controls';
 import { OutIcon } from '../results/icons';
 import { CheckIcon, TopBar } from '../ui/Chrome';
-import { fromWords, ImportError, importReader, longEnough, PROBLEM_WORDS, saveReader, type AiSource, type ImportProblem } from './reader';
+import {
+  fromWords,
+  ImportError,
+  importReader,
+  longEnough,
+  PROBLEM_WORDS,
+  saveReader,
+  type AiSource,
+  type ImportProblem,
+} from './reader';
 import './ai.css';
 
 type Step =
@@ -23,9 +37,21 @@ type Step =
   | { kind: 'done' };
 
 /** Real pages to see it on. */
-export const AI_PAGES: ReadonlyArray<{ label: string; host: string; url: string }> = [
-  { label: 'Where’s my refund, on the IRS site', host: 'irs.gov', url: 'https://www.irs.gov/refunds' },
-  { label: 'A health story on CNN', host: 'cnn.com', url: 'https://www.cnn.com/2026/10/24/health/gen-z-stare-wellness' },
+export const AI_PAGES: ReadonlyArray<{
+  label: string;
+  host: string;
+  url: string;
+}> = [
+  {
+    label: 'Where’s my refund, on the IRS site',
+    host: 'irs.gov',
+    url: 'https://www.irs.gov/refunds',
+  },
+  {
+    label: 'A health story on CNN',
+    host: 'cnn.com',
+    url: 'https://www.cnn.com/2026/10/24/health/gen-z-stare-wellness',
+  },
 ];
 
 const COPIED_MS = 2400;
@@ -41,7 +67,9 @@ export interface AiScreenProps {
 
 export function AiScreen(props: AiScreenProps): JSX.Element {
   const { saved, onSaved, onClose } = props;
-  const [step, setStep] = useState<Step>(saved ? { kind: 'saved' } : { kind: 'ask', problem: null });
+  const [step, setStep] = useState<Step>(
+    saved ? { kind: 'saved' } : { kind: 'ask', problem: null },
+  );
   const [text, setText] = useState('');
   const [source, setSource] = useState<AiSource | null>(null);
   const [announce, setAnnounce] = useState('');
@@ -62,7 +90,8 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
   }, [step.kind]);
   // Removed from elsewhere (the test hook): back to the start.
   useEffect(() => {
-    if (step.kind === 'saved' && !saved) setStep({ kind: 'ask', problem: null });
+    if (step.kind === 'saved' && !saved)
+      setStep({ kind: 'ask', problem: null });
   }, [saved, step.kind]);
 
   const read = async (): Promise<void> => {
@@ -76,7 +105,10 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
       setAnnounce('');
     } catch (err) {
       if (!alive.current) return;
-      setStep({ kind: 'ask', problem: err instanceof ImportError ? err.problem : 'unavailable' });
+      setStep({
+        kind: 'ask',
+        problem: err instanceof ImportError ? err.problem : 'unavailable',
+      });
       setAnnounce('');
     }
   };
@@ -97,7 +129,10 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
 
   const toggleSaved = (id: string, on: boolean): void => {
     if (!saved) return;
-    const next: ReaderProfile = { ...saved, points: saved.points.map((p) => (p.id === id ? { ...p, on } : p)) };
+    const next: ReaderProfile = {
+      ...saved,
+      points: saved.points.map((p) => (p.id === id ? { ...p, on } : p)),
+    };
     onSaved(next);
     void saveReader(next);
   };
@@ -122,7 +157,11 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
         onText={setText}
         onSource={setSource}
         onContinue={() => void read()}
-        back={saved ? { label: 'Back', go: () => setStep({ kind: 'saved' }) } : { label: 'Not now', go: onClose }}
+        back={
+          saved
+            ? { label: 'Back', go: () => setStep({ kind: 'saved' }) }
+            : { label: 'Not now', go: onClose }
+        }
       />
     );
   } else if (step.kind === 'reading') {
@@ -148,14 +187,32 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
         reader={reader}
         deck="Switch off anything that’s wrong, then save."
         onToggle={(id, on) =>
-          setStep({ kind: 'review', reader: { ...reader, points: reader.points.map((p) => (p.id === id ? { ...p, on } : p)) } })
+          setStep({
+            kind: 'review',
+            reader: {
+              ...reader,
+              points: reader.points.map((p) =>
+                p.id === id ? { ...p, on } : p,
+              ),
+            },
+          })
         }
       >
         <div class="ai-actions">
-          <button type="button" class="btn btn-primary ai-btn" onClick={() => void save(reader)} data-answer="save">
+          <button
+            type="button"
+            class="btn btn-primary ai-btn"
+            onClick={() => void save(reader)}
+            data-answer="save"
+          >
             Save
           </button>
-          <button type="button" class="btn btn-secondary ai-btn" onClick={() => void pasteAgain()} data-answer="paste-again">
+          <button
+            type="button"
+            class="btn btn-secondary ai-btn"
+            onClick={() => void pasteAgain()}
+            data-answer="paste-again"
+          >
             Paste a different answer
           </button>
         </div>
@@ -170,7 +227,11 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
         deck={`${fromWords(saved.source)}. Switch off anything that’s wrong. Changes save as you make them.`}
         onToggle={toggleSaved}
       >
-        <SavedActions onClose={onClose} onPasteNew={() => void pasteAgain()} onRemove={() => void remove()} />
+        <SavedActions
+          onClose={onClose}
+          onPasteNew={() => void pasteAgain()}
+          onRemove={() => void remove()}
+        />
       </Points>
     );
   } else {
@@ -179,7 +240,13 @@ export function AiScreen(props: AiScreenProps): JSX.Element {
 
   return (
     <div class="fl-app ai">
-      <TopBar parts={null} current={null} done={NO_PARTS} ticking={false} onSkip={null} />
+      <TopBar
+        parts={null}
+        current={null}
+        done={NO_PARTS}
+        ticking={false}
+        onSkip={null}
+      />
       <main class="fl-main">
         <div class="fl-col">{body}</div>
       </main>
@@ -208,8 +275,9 @@ function Ask(props: {
         Let pages explain things the way you like
       </h1>
       <p class="ai-deck">
-        Your AI assistant already knows how you like things explained. Ask it once, paste its answer here, and WebAble
-        will word and lay out the pages you read the way you like.
+        Your AI assistant already knows how you like things explained. Ask it
+        once, paste its answer here, and WebAble will word and lay out the pages
+        you read the way you like.
       </p>
       <AskSteps {...props} />
     </section>
@@ -283,7 +351,12 @@ export function AskSteps(props: {
               <span class="visually-hidden"> (opens in a new tab)</span>
             </a>
           ))}
-          <button type="button" class="btn btn-secondary ai-btn" onClick={() => void copy()} data-answer="copy-question">
+          <button
+            type="button"
+            class="btn btn-secondary ai-btn"
+            onClick={() => void copy()}
+            data-answer="copy-question"
+          >
             {copied ? (
               <>
                 <CheckIcon size={18} /> Copied
@@ -293,8 +366,17 @@ export function AskSteps(props: {
             )}
           </button>
         </div>
-        <p class="ai-hint">ChatGPT and Claude open with the question filled in. For any other AI, copy it and paste it there.</p>
-        <div class="ai-question" ref={question} tabIndex={0} role="region" aria-label="The question">
+        <p class="ai-hint">
+          ChatGPT and Claude open with the question filled in. For any other AI,
+          copy it and paste it there.
+        </p>
+        <div
+          class="ai-question"
+          ref={question}
+          tabIndex={0}
+          role="region"
+          aria-label="The question"
+        >
           {AI_PROMPT}
         </div>
       </li>
@@ -314,7 +396,9 @@ export function AskSteps(props: {
           rows={8}
           spellcheck={false}
           value={text}
-          onInput={(e) => props.onText((e.currentTarget as HTMLTextAreaElement).value)}
+          onInput={(e) =>
+            props.onText((e.currentTarget as HTMLTextAreaElement).value)
+          }
           data-answer="answer"
         />
         {problem ? (
@@ -323,11 +407,22 @@ export function AskSteps(props: {
           </p>
         ) : null}
         <div class="ai-actions">
-          <button type="button" class="btn btn-primary ai-btn" disabled={!ready} onClick={props.onContinue} data-answer="continue">
+          <button
+            type="button"
+            class="btn btn-primary ai-btn"
+            disabled={!ready}
+            onClick={props.onContinue}
+            data-answer="continue"
+          >
             Continue
           </button>
           {props.back ? (
-            <button type="button" class="btn-text ai-quiet" onClick={props.back.go} data-answer="back">
+            <button
+              type="button"
+              class="btn-text ai-quiet"
+              onClick={props.back.go}
+              data-answer="back"
+            >
               {props.back.label}
             </button>
           ) : null}
@@ -357,7 +452,12 @@ function Points(props: {
       <p class="ai-deck">{props.deck}</p>
       <ul class="ai-points" aria-label="What WebAble took from your AI">
         {reader.points.map((p) => (
-          <PointRow key={p.id} point={p} source={reader.source} onToggle={props.onToggle} />
+          <PointRow
+            key={p.id}
+            point={p}
+            source={reader.source}
+            onToggle={props.onToggle}
+          />
         ))}
       </ul>
       {props.children}
@@ -365,7 +465,11 @@ function Points(props: {
   );
 }
 
-export function PointRow(props: { point: ReaderPoint; source: string; onToggle(id: string, on: boolean): void }): JSX.Element {
+export function PointRow(props: {
+  point: ReaderPoint;
+  source: string;
+  onToggle(id: string, on: boolean): void;
+}): JSX.Element {
   const { point } = props;
   return (
     <li class={`ai-point${point.on ? '' : ' is-off'}`} data-point={point.id}>
@@ -377,12 +481,20 @@ export function PointRow(props: { point: ReaderPoint; source: string; onToggle(i
           </p>
         ) : null}
       </div>
-      <Switch checked={point.on} label={point.says} onChange={(on) => props.onToggle(point.id, on)} />
+      <Switch
+        checked={point.on}
+        label={point.says}
+        onChange={(on) => props.onToggle(point.id, on)}
+      />
     </li>
   );
 }
 
-function SavedActions(props: { onClose(): void; onPasteNew(): void; onRemove(): void }): JSX.Element {
+function SavedActions(props: {
+  onClose(): void;
+  onPasteNew(): void;
+  onRemove(): void;
+}): JSX.Element {
   const [confirming, setConfirming] = useState(false);
   const keep = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -391,10 +503,20 @@ function SavedActions(props: { onClose(): void; onPasteNew(): void; onRemove(): 
   return (
     <>
       <div class="ai-actions">
-        <button type="button" class="btn btn-primary ai-btn" onClick={props.onClose} data-answer="close">
+        <button
+          type="button"
+          class="btn btn-primary ai-btn"
+          onClick={props.onClose}
+          data-answer="close"
+        >
           Done
         </button>
-        <button type="button" class="btn btn-secondary ai-btn" onClick={props.onPasteNew} data-answer="paste-new">
+        <button
+          type="button"
+          class="btn btn-secondary ai-btn"
+          onClick={props.onPasteNew}
+          data-answer="paste-new"
+        >
           Paste a new answer
         </button>
       </div>
@@ -402,15 +524,31 @@ function SavedActions(props: { onClose(): void; onPasteNew(): void; onRemove(): 
         {confirming ? (
           <p class="ai-confirm" role="group" aria-label="Remove">
             <span>Remove this? Pages go back to their own words.</span>
-            <button type="button" class="btn-text ai-confirm-yes" onClick={props.onRemove} data-answer="remove-yes">
+            <button
+              type="button"
+              class="btn-text ai-confirm-yes"
+              onClick={props.onRemove}
+              data-answer="remove-yes"
+            >
               Remove
             </button>
-            <button type="button" class="btn-text" ref={keep} onClick={() => setConfirming(false)} data-answer="remove-no">
+            <button
+              type="button"
+              class="btn-text"
+              ref={keep}
+              onClick={() => setConfirming(false)}
+              data-answer="remove-no"
+            >
               Keep it
             </button>
           </p>
         ) : (
-          <button type="button" class="btn-text" onClick={() => setConfirming(true)} data-answer="remove">
+          <button
+            type="button"
+            class="btn-text"
+            onClick={() => setConfirming(true)}
+            data-answer="remove"
+          >
             Remove
           </button>
         )}
@@ -421,7 +559,10 @@ function SavedActions(props: { onClose(): void; onPasteNew(): void; onRemove(): 
 
 /* ---------------- 4. Done ---------------- */
 
-function Done(props: { heading: preact.RefObject<HTMLHeadingElement>; onClose(): void }): JSX.Element {
+function Done(props: {
+  heading: preact.RefObject<HTMLHeadingElement>;
+  onClose(): void;
+}): JSX.Element {
   return (
     <section class="ai-card ai-done card" aria-labelledby="ai-title">
       <span class="ai-done-mark" aria-hidden="true">
@@ -436,7 +577,12 @@ function Done(props: { heading: preact.RefObject<HTMLHeadingElement>; onClose():
       <ul class="ai-pages" aria-labelledby="ai-see">
         {AI_PAGES.map((p) => (
           <li key={p.url}>
-            <a class="ai-page" href={p.url} target="_blank" rel="noopener noreferrer">
+            <a
+              class="ai-page"
+              href={p.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <span class="ai-page-text">
                 <span class="ai-page-label">{p.label}</span>
                 <span class="ai-page-host">
@@ -452,7 +598,12 @@ function Done(props: { heading: preact.RefObject<HTMLHeadingElement>; onClose():
         ))}
       </ul>
       <div class="ai-actions">
-        <button type="button" class="btn btn-secondary ai-btn" onClick={props.onClose} data-answer="close">
+        <button
+          type="button"
+          class="btn btn-secondary ai-btn"
+          onClick={props.onClose}
+          data-answer="close"
+        >
           Close
         </button>
       </div>

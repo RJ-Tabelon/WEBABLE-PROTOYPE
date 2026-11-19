@@ -7,9 +7,18 @@
 // - rule 5: related stories become one list of real titles, "More from {site}";
 // - rule 7: the page's own "Listen to this article" control, found so one quiet button can press it.
 // Everything here only reads the page.
-import { hrefKey } from '@webable/core';
+import { hrefKey } from '@webable/engine';
 import {
-  type Block, type CardLinkBlock, type ControlBlock, type FlowBlock, TOOL_RE, clean, isShown, nameOf, storyFromLink, textOf,
+  type Block,
+  type CardLinkBlock,
+  type ControlBlock,
+  type FlowBlock,
+  TOOL_RE,
+  clean,
+  isShown,
+  nameOf,
+  storyFromLink,
+  textOf,
 } from './model';
 
 /* ------------------------------------------------------------------ */
@@ -17,13 +26,17 @@ import {
 /* ------------------------------------------------------------------ */
 
 /** "Related card", "Related item", "Story", "Untitled": words a site leaves where a title should be. */
-const PLACEHOLDER = /^(related|recommended|suggested|sponsored|promoted|promo|teaser|story|article|card|item|items|link|links|content|untitled|null|undefined|none|n\/a|loading\W*|placeholder)( (card|cards|item|items|link|links|content|story|stories|module|article))?$/i;
+const PLACEHOLDER =
+  /^(related|recommended|suggested|sponsored|promoted|promo|teaser|story|article|card|item|items|link|links|content|untitled|null|undefined|none|n\/a|loading\W*|placeholder)( (card|cards|item|items|link|links|content|story|stories|module|article))?$/i;
 /** Words that name a part of the page's machinery when they end a short label ("Open Menu Icon", "CNN logo"). */
-const MACHINE_END = /\b(icon|logo|logotype|container|button|btn|svg|image|img|placeholder|widget)s?$/i;
+const MACHINE_END =
+  /\b(icon|logo|logotype|container|button|btn|svg|image|img|placeholder|widget)s?$/i;
 /** An internal id in a label: "(4015-358)", "#a1b2c3", "ad_slot_3". */
-const MACHINE_ID = /\(\s*\w*\d{2,}[-_:/]\d+\w*\s*\)|#[0-9a-f]{6,}\b|\b[a-z]+_[a-z0-9]+\b/i;
+const MACHINE_ID =
+  /\(\s*\w*\d{2,}[-_:/]\d+\w*\s*\)|#[0-9a-f]{6,}\b|\b[a-z]+_[a-z0-9]+\b/i;
 /** A label that reads like code ("header-nav-toggle", "openMenu", "btn_share"). */
-const CODEY = /^[a-z]{2,}[a-z0-9]*([A-Z][a-z0-9]+)+$|^[a-z0-9]+([-_][a-z0-9]+){2,}$|^[a-z0-9]+(_[a-z0-9]+)+$/;
+const CODEY =
+  /^[a-z]{2,}[a-z0-9]*([A-Z][a-z0-9]+)+$|^[a-z0-9]+([-_][a-z0-9]+){2,}$|^[a-z0-9]+(_[a-z0-9]+)+$/;
 
 /** Rule 2: a label nobody should read (a machine label, an internal id or a placeholder). */
 export function isMachineLabel(raw: string): boolean {
@@ -33,43 +46,72 @@ export function isMachineLabel(raw: string): boolean {
   if (CODEY.test(t)) return true;
   if (MACHINE_ID.test(t) && t.split(/\s+/).length <= 8) return true;
   const words = t.split(/\s+/).length;
-  if (words <= 4 && MACHINE_END.test(t.replace(/\s*\([^)]*\)\s*$/, ''))) return true;
+  if (words <= 4 && MACHINE_END.test(t.replace(/\s*\([^)]*\)\s*$/, '')))
+    return true;
   return /^(share|copy link|copy the link)\b/i.test(t) && t === t.toLowerCase();
 }
 
-const SOCIAL = 'facebook|x|twitter|instagram|youtube|tiktok|threads|linkedin|pinterest|snapchat|whatsapp|reddit|bluesky|flipboard|tumblr|mastodon|rss';
-const SHARE_RE = new RegExp(`^(share|sharing|save|saved|bookmark|print|email|e-mail|copy)\\b|\\bcopy (the )?link\\b|^(${SOCIAL})$|\\b(share|post) (on|to|with|via) (${SOCIAL}|email)\\b`, 'i');
-const FOLLOW_RE = new RegExp(`^(follow|visit|find|join|like|add|connect with|subscribe to) (us|our [\\w ]+|[\\w .&']{1,30}) on\\b|^follow\\b|\\bon (${SOCIAL})$`, 'i');
-const APP_RE = /\b(app store|google play|play store|get (it|the app)|download (the|our)\b.*\bapps?\b|download on (the )?app|get the [\w ]+ app|open in (the )?app)\b|^(our|get|download|try)\b.{0,40}\bapps?$/i;
-const ACCOUNT_RE = /^(subscribe|subscribe now|subscribe today|sign ?in|sign ?up|sign ?out|log ?in|log ?out|register|create (an |your )?account|my account|account|your account|join now|manage (my )?(account|subscription)|start (your |a )?free trial|try [\w ]+ free|get (unlimited )?access|become a (member|subscriber))$/i;
-const AD_RE = /^(ad|ads|advert|advertisement|advertisements|sponsored|sponsored (content|links?|stories|by [\w .&'-]+)|paid (content|post|partner( content)?|for by [\w .&'-]+)|promoted( (content|stories))?|partner content|ad feedback|feedback|from our (partners|sponsors)|recommended by|around the web)$/i;
-const NEWSLETTER_RE = /\b(newsletter|sign up for (our|the)|get (our|the) [\w ]*(email|newsletter)|enter your email|inbox)\b/i;
-const MENU_RE = /^((open|close|show|hide|toggle|expand|collapse)( the)? )?((main|site|primary|mobile|navigation|nav) )?(menu|navigation|nav|sections?|search|more)( (icon|button|toggle))?$/i;
-const UTIL_RE = /^(skip to [\w ]+|back to top|top|scroll to top|close|cancel|ok|okay|done|go|submit|next|previous|prev|more|less|show more|show less|load more|see more|read more|continue reading|play|pause|mute|unmute|replay|watch now|listen now|toggle [\w ]+|, ?opens in (a )?new (window|tab)|opens in (a )?new (window|tab))$/i;
-const LEGAL_TEXT = /(©|\(c\)\s*\d{4}|\ball rights reserved\b|™|®|\bcopyright\b)/i;
+const SOCIAL =
+  'facebook|x|twitter|instagram|youtube|tiktok|threads|linkedin|pinterest|snapchat|whatsapp|reddit|bluesky|flipboard|tumblr|mastodon|rss';
+const SHARE_RE = new RegExp(
+  `^(share|sharing|save|saved|bookmark|print|email|e-mail|copy)\\b|\\bcopy (the )?link\\b|^(${SOCIAL})$|\\b(share|post) (on|to|with|via) (${SOCIAL}|email)\\b`,
+  'i',
+);
+const FOLLOW_RE = new RegExp(
+  `^(follow|visit|find|join|like|add|connect with|subscribe to) (us|our [\\w ]+|[\\w .&']{1,30}) on\\b|^follow\\b|\\bon (${SOCIAL})$`,
+  'i',
+);
+const APP_RE =
+  /\b(app store|google play|play store|get (it|the app)|download (the|our)\b.*\bapps?\b|download on (the )?app|get the [\w ]+ app|open in (the )?app)\b|^(our|get|download|try)\b.{0,40}\bapps?$/i;
+const ACCOUNT_RE =
+  /^(subscribe|subscribe now|subscribe today|sign ?in|sign ?up|sign ?out|log ?in|log ?out|register|create (an |your )?account|my account|account|your account|join now|manage (my )?(account|subscription)|start (your |a )?free trial|try [\w ]+ free|get (unlimited )?access|become a (member|subscriber))$/i;
+const AD_RE =
+  /^(ad|ads|advert|advertisement|advertisements|sponsored|sponsored (content|links?|stories|by [\w .&'-]+)|paid (content|post|partner( content)?|for by [\w .&'-]+)|promoted( (content|stories))?|partner content|ad feedback|feedback|from our (partners|sponsors)|recommended by|around the web)$/i;
+const NEWSLETTER_RE =
+  /\b(newsletter|sign up for (our|the)|get (our|the) [\w ]*(email|newsletter)|enter your email|inbox)\b/i;
+const MENU_RE =
+  /^((open|close|show|hide|toggle|expand|collapse)( the)? )?((main|site|primary|mobile|navigation|nav) )?(menu|navigation|nav|sections?|search|more)( (icon|button|toggle))?$/i;
+const UTIL_RE =
+  /^(skip to [\w ]+|back to top|top|scroll to top|close|cancel|ok|okay|done|go|submit|next|previous|prev|more|less|show more|show less|load more|see more|read more|continue reading|play|pause|mute|unmute|replay|watch now|listen now|toggle [\w ]+|, ?opens in (a )?new (window|tab)|opens in (a )?new (window|tab))$/i;
+const LEGAL_TEXT =
+  /(©|\(c\)\s*\d{4}|\ball rights reserved\b|™|®|\bcopyright\b)/i;
 
 /** Rule 1: the site's own tools and chrome (share, follow, app, account, ad, newsletter, menu and utility labels). */
 export function isChromeLabel(raw: string): boolean {
-  const t = clean(raw).replace(/[,.]?\s*opens? in (a )?new (window|tab)$/i, '').trim();
+  const t = clean(raw)
+    .replace(/[,.]?\s*opens? in (a )?new (window|tab)$/i, '')
+    .trim();
   if (!t) return true;
   return (
-    TOOL_RE.test(t) || SHARE_RE.test(t) || FOLLOW_RE.test(t) || APP_RE.test(t) || ACCOUNT_RE.test(t) || AD_RE.test(t) ||
-    MENU_RE.test(t) || UTIL_RE.test(t)
+    TOOL_RE.test(t) ||
+    SHARE_RE.test(t) ||
+    FOLLOW_RE.test(t) ||
+    APP_RE.test(t) ||
+    ACCOUNT_RE.test(t) ||
+    AD_RE.test(t) ||
+    MENU_RE.test(t) ||
+    UTIL_RE.test(t)
   );
 }
 
 /** A label to show: trimmed, the screen-reader suffix dropped, all-lowercase put in sentence case. */
 export function cleanLabel(raw: string): string {
-  let t = clean(raw).replace(/[,.]?\s*\(?opens? in (a )?new (window|tab)\)?$/i, '').trim();
+  let t = clean(raw)
+    .replace(/[,.]?\s*\(?opens? in (a )?new (window|tab)\)?$/i, '')
+    .trim();
   // An address ("wcjb.com/livestream") keeps its own case.
   const address = !/\s/.test(t) && /[./@]/.test(t);
-  if (!address && /[a-z]/.test(t) && t === t.toLowerCase()) t = t.charAt(0).toUpperCase() + t.slice(1);
+  if (!address && /[a-z]/.test(t) && t === t.toLowerCase())
+    t = t.charAt(0).toUpperCase() + t.slice(1);
   return t;
 }
 
 /** Normalised words for "the same item": lowercase, letters and digits only. */
 export function normText(raw: string): string {
-  return clean(raw).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  return clean(raw)
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
 }
 
 /** Same address: without the fragment and a trailing slash. */
@@ -102,7 +144,8 @@ function sameSite(href: string | null): boolean {
   }
 }
 
-const AD_BOX = '[class*="sponsor" i],[class*="dianomi" i],[class*="taboola" i],[class*="outbrain" i],[class*="paid-" i],[class*="native-ad" i],[data-ad],[data-ad-unit],[id^="google_ads" i],[class*="ad-slot" i],[class*="ad-container" i],[class*="ad-feedback" i]';
+const AD_BOX =
+  '[class*="sponsor" i],[class*="dianomi" i],[class*="taboola" i],[class*="outbrain" i],[class*="paid-" i],[class*="native-ad" i],[data-ad],[data-ad-unit],[id^="google_ads" i],[class*="ad-slot" i],[class*="ad-container" i],[class*="ad-feedback" i]';
 
 /** Inside an ad box the page marks as one (a Dianomi, Taboola or "sponsor" container). */
 export function inAdBox(el: Element | null): boolean {
@@ -113,7 +156,8 @@ export function inAdBox(el: Element | null): boolean {
   }
 }
 
-const CHROME_BOX = 'nav,header,footer,[role=navigation],[role=banner],[role=contentinfo]';
+const CHROME_BOX =
+  'nav,header,footer,[role=navigation],[role=banner],[role=contentinfo]';
 
 /**
  * In the site's own menu, banner or footer: a nav, header or footer that is not part of the main content (an article's
@@ -142,7 +186,13 @@ function elOf(b: Block): Element | null {
 /** A real headline: at least four words and 24 characters, not chrome, not a placeholder. */
 export function isHeadline(t: string): boolean {
   const s = clean(t);
-  return s.length >= 24 && s.split(/\s+/).length >= 4 && !isChromeLabel(s) && !isMachineLabel(s) && !NEWSLETTER_RE.test(s);
+  return (
+    s.length >= 24 &&
+    s.split(/\s+/).length >= 4 &&
+    !isChromeLabel(s) &&
+    !isMachineLabel(s) &&
+    !NEWSLETTER_RE.test(s)
+  );
 }
 
 /** One story for "More from {site}", with a cleaned title, or null when it is not a real story. */
@@ -151,13 +201,25 @@ export function storyFrom(b: Block, fromChrome: boolean): CardLinkBlock | null {
   if (b.b === 'cardlink') {
     const title = cleanLabel(b.title);
     if (!isHeadline(title) || inAdBox(b.el) || !sameSite(b.href)) return null;
-    if ([b.kicker, ...b.lines].some((l) => !!l && AD_RE.test(clean(l)))) return null;
+    if ([b.kicker, ...b.lines].some((l) => !!l && AD_RE.test(clean(l))))
+      return null;
     if (b.el.closest(CHROME_BOX) && !b.image) return null;
-    return { ...b, title, kicker: b.kicker && !isMachineLabel(b.kicker) ? cleanLabel(b.kicker) : null };
+    return {
+      ...b,
+      title,
+      kicker:
+        b.kicker && !isMachineLabel(b.kicker) ? cleanLabel(b.kicker) : null,
+    };
   }
   if (b.b === 'control' && b.role === 'link' && !b.primary && !b.help) {
     const title = cleanLabel(b.text);
-    if (!isHeadline(title) || inAdBox(b.el) || !sameSite(b.href) || b.el.closest(CHROME_BOX)) return null;
+    if (
+      !isHeadline(title) ||
+      inAdBox(b.el) ||
+      !sameSite(b.href) ||
+      b.el.closest(CHROME_BOX)
+    )
+      return null;
     return { ...storyFromLink(b), title };
   }
   return null;
@@ -166,15 +228,49 @@ export function storyFrom(b: Block, fromChrome: boolean): CardLinkBlock | null {
 /** One link for "Site links": a short page link with a real label that is not chrome. */
 export function siteLinkFrom(b: Block): ControlBlock | null {
   if (b.b === 'control') {
-    if (b.role !== 'link' || b.primary || !b.href || onThisPage(b.href) || /^(javascript|tel|mailto):/i.test(b.href)) return null;
+    if (
+      b.role !== 'link' ||
+      b.primary ||
+      !b.href ||
+      onThisPage(b.href) ||
+      /^(javascript|tel|mailto):/i.test(b.href)
+    )
+      return null;
     const text = cleanLabel(b.text);
-    if (!text || text.length > 48 || isMachineLabel(text) || isChromeLabel(text) || inAdBox(b.el)) return null;
+    if (
+      !text ||
+      text.length > 48 ||
+      isMachineLabel(text) ||
+      isChromeLabel(text) ||
+      inAdBox(b.el)
+    )
+      return null;
     return text === b.text ? b : { ...b, text };
   }
   if (b.b === 'cardlink') {
     const text = cleanLabel(b.title);
-    if (!b.href || !text || text.length > 48 || isMachineLabel(text) || isChromeLabel(text) || inAdBox(b.el)) return null;
-    return { b: 'control', el: b.el, role: 'link', text, href: b.href, primary: false, help: false, selected: false, popup: false, key: `${b.key}l`, src: b.src };
+    if (
+      !b.href ||
+      !text ||
+      text.length > 48 ||
+      isMachineLabel(text) ||
+      isChromeLabel(text) ||
+      inAdBox(b.el)
+    )
+      return null;
+    return {
+      b: 'control',
+      el: b.el,
+      role: 'link',
+      text,
+      href: b.href,
+      primary: false,
+      help: false,
+      selected: false,
+      popup: false,
+      key: `${b.key}l`,
+      src: b.src,
+    };
   }
   return null;
 }
@@ -183,12 +279,27 @@ export function siteLinkFrom(b: Block): ControlBlock | null {
 function flowLinks(f: FlowBlock): ControlBlock[] | null {
   const links = f.parts.filter((p) => p.t === 'link');
   if (!links.length) return null;
-  const words = f.parts.filter((p) => p.t === 'text').map((p) => (p.t === 'text' ? p.text : '')).join('');
+  const words = f.parts
+    .filter((p) => p.t === 'text')
+    .map((p) => (p.t === 'text' ? p.text : ''))
+    .join('');
   if (/[\p{L}\p{N}]{3,}/u.test(words.replace(/[|·•,/-]/g, ''))) return null;
   const out: ControlBlock[] = [];
   links.forEach((p, i) => {
     if (p.t !== 'link') return;
-    out.push({ b: 'control', el: p.el, role: 'link', text: p.text, href: p.href, primary: false, help: p.help, selected: false, popup: false, key: `${f.key}f${i}`, src: p.el });
+    out.push({
+      b: 'control',
+      el: p.el,
+      role: 'link',
+      text: p.text,
+      href: p.href,
+      primary: false,
+      help: p.help,
+      selected: false,
+      popup: false,
+      key: `${f.key}f${i}`,
+      src: p.el,
+    });
   });
   return out;
 }
@@ -196,11 +307,22 @@ function flowLinks(f: FlowBlock): ControlBlock[] | null {
 /** Running words worth keeping at the end of a reading page (not a label, a legal line or an ad line). */
 function isRealText(t: string): boolean {
   const s = clean(t);
-  if (s.length < 60 || LEGAL_TEXT.test(s) || NEWSLETTER_RE.test(s) || AD_RE.test(s)) return false;
+  if (
+    s.length < 60 ||
+    LEGAL_TEXT.test(s) ||
+    NEWSLETTER_RE.test(s) ||
+    AD_RE.test(s)
+  )
+    return false;
   return /[.!?:]/.test(s) || s.split(/\s+/).length >= 12;
 }
 
-export interface EndPart { key: string; label: string; blocks: Block[]; chrome: boolean }
+export interface EndPart {
+  key: string;
+  label: string;
+  blocks: Block[];
+  chrome: boolean;
+}
 
 export interface EndMatter {
   /** Real related stories, de-duplicated ("More from {site}"). */
@@ -242,7 +364,10 @@ export class Seen {
  * links", real words kept in their part, and the site's chrome dropped (rules 1–3). `seenStories` holds what the page
  * already shows, so a story is never listed twice.
  */
-export function sortEnd(parts: EndPart[], seenStories: Seen = new Seen()): EndMatter {
+export function sortEnd(
+  parts: EndPart[],
+  seenStories: Seen = new Seen(),
+): EndMatter {
   const stories: CardLinkBlock[] = [];
   const links: ControlBlock[] = [];
   const rest: EndMatter['rest'] = [];
@@ -290,7 +415,12 @@ export function sortEnd(parts: EndPart[], seenStories: Seen = new Seen()): EndMa
             break;
           }
           case 'heading':
-            heading = isMachineLabel(b.text) || isChromeLabel(b.text) || NEWSLETTER_RE.test(b.text) ? null : b;
+            heading =
+              isMachineLabel(b.text) ||
+              isChromeLabel(b.text) ||
+              NEWSLETTER_RE.test(b.text)
+                ? null
+                : b;
             break;
           case 'table':
           case 'rtable':
@@ -307,7 +437,8 @@ export function sortEnd(parts: EndPart[], seenStories: Seen = new Seen()): EndMa
       }
     };
     walk(part.blocks);
-    if (kept.length) rest.push({ key: part.key, label: part.label, blocks: kept });
+    if (kept.length)
+      rest.push({ key: part.key, label: part.label, blocks: kept });
   }
   return { stories, links, rest, dropped };
 }
@@ -316,7 +447,8 @@ export function sortEnd(parts: EndPart[], seenStories: Seen = new Seen()): EndMa
 /* Inside the main content                                             */
 /* ------------------------------------------------------------------ */
 
-const AD_PEEK = /\b(ad|ads|advert\w*|sponsor\w*|dianomi|taboola|outbrain|paid)\b|\(\s*\d+[-_]\d+\s*\)/i;
+const AD_PEEK =
+  /\b(ad|ads|advert\w*|sponsor\w*|dianomi|taboola|outbrain|paid)\b|\(\s*\d+[-_]\d+\s*\)/i;
 
 /**
  * Rules 1–3 inside the content the page keeps: share and follow bars, account and app links, ad frames and "Paid
@@ -331,15 +463,26 @@ export function isCaptionEcho(text: string, captions: string[]): boolean {
   return captions.some((c) => c === t || c.startsWith(t));
 }
 
-export function scrubBlocks(bs: Block[], o: { reading: boolean; seen?: Seen; chrome?: Block[]; captions?: string[] }): Block[] {
+export function scrubBlocks(
+  bs: Block[],
+  o: { reading: boolean; seen?: Seen; chrome?: Block[]; captions?: string[] },
+): Block[] {
   const seen = o.seen ?? new Seen();
   const out: Block[] = [];
   for (const b of bs) {
     // On a reading page the site's menu, banner and footer are not content: their links go to "Site links", the rest
     // (a copyright line, partner logos, a sign-up box) is left out.
-    if (o.reading && b.b !== 'list' && b.b !== 'group' && !(b.b === 'control' && (b.primary || b.help)) && inSiteChrome(elOf(b))) {
-      if ((b.b === 'control' || b.b === 'cardlink') && o.chrome) o.chrome.push(b);
-      else if (b.b === 'flow' && o.chrome) o.chrome.push(...(flowLinks(b) ?? []));
+    if (
+      o.reading &&
+      b.b !== 'list' &&
+      b.b !== 'group' &&
+      !(b.b === 'control' && (b.primary || b.help)) &&
+      inSiteChrome(elOf(b))
+    ) {
+      if ((b.b === 'control' || b.b === 'cardlink') && o.chrome)
+        o.chrome.push(b);
+      else if (b.b === 'flow' && o.chrome)
+        o.chrome.push(...(flowLinks(b) ?? []));
       continue;
     }
     switch (b.b) {
@@ -369,7 +512,13 @@ export function scrubBlocks(bs: Block[], o: { reading: boolean; seen?: Seen; chr
       }
       case 'peek':
         // An ad frame, or a frame with no name of its own, is the site's: never drawn on a reading page.
-        if (o.reading && (AD_PEEK.test(b.label) || inAdBox(b.el) || (b.why === 'frame' && (!b.label || isMachineLabel(b.label))))) break;
+        if (
+          o.reading &&
+          (AD_PEEK.test(b.label) ||
+            inAdBox(b.el) ||
+            (b.why === 'frame' && (!b.label || isMachineLabel(b.label))))
+        )
+          break;
         out.push(b.label && isMachineLabel(b.label) ? { ...b, label: '' } : b);
         break;
       case 'field':
@@ -377,19 +526,36 @@ export function scrubBlocks(bs: Block[], o: { reading: boolean; seen?: Seen; chr
         out.push(b);
         break;
       case 'flow':
-        if (o.reading && b.text.length <= 40 && AD_RE.test(clean(b.text))) break;
-        if (o.reading && inAdBox(b.src instanceof Element ? b.src : b.src.parentElement)) break;
+        if (o.reading && b.text.length <= 40 && AD_RE.test(clean(b.text)))
+          break;
+        if (
+          o.reading &&
+          inAdBox(b.src instanceof Element ? b.src : b.src.parentElement)
+        )
+          break;
         // The site's copyright line ("© 1998 - 2026 … All Rights Reserved.") is the legal footer's.
-        if (o.reading && b.text.length <= 200 && /(©|\ball rights reserved\b)/i.test(b.text)) break;
+        if (
+          o.reading &&
+          b.text.length <= 200 &&
+          /(©|\ball rights reserved\b)/i.test(b.text)
+        )
+          break;
         if (o.captions && isCaptionEcho(b.text, o.captions)) break;
         out.push(b);
         break;
       case 'heading':
-        if (isMachineLabel(b.text) || (o.reading && (AD_RE.test(clean(b.text)) || FOLLOW_RE.test(clean(b.text))))) break;
+        if (
+          isMachineLabel(b.text) ||
+          (o.reading &&
+            (AD_RE.test(clean(b.text)) || FOLLOW_RE.test(clean(b.text))))
+        )
+          break;
         out.push(b);
         break;
       case 'list': {
-        const items = b.items.map((it) => scrubBlocks(it, { ...o, seen })).filter((it) => it.length);
+        const items = b.items
+          .map((it) => scrubBlocks(it, { ...o, seen }))
+          .filter((it) => it.length);
         if (items.length) out.push({ ...b, items });
         break;
       }
@@ -409,7 +575,8 @@ export function scrubBlocks(bs: Block[], o: { reading: boolean; seen?: Seen; chr
 /* Listen to this article (rule 7)                                     */
 /* ------------------------------------------------------------------ */
 
-const LISTEN_RE = /^(listen|listen now|listen to (this |the )?(article|story|page|post)|play (this |the )?(article|story|audio)|play audio|hear (this |the )?(article|story)|audio (version|article)|read (it )?aloud|read (this |the )?(article|story) aloud|text to speech)\b/i;
+const LISTEN_RE =
+  /^(listen|listen now|listen to (this |the )?(article|story|page|post)|play (this |the )?(article|story|audio)|play audio|hear (this |the )?(article|story)|audio (version|article)|read (it )?aloud|read (this |the )?(article|story) aloud|text to speech)\b/i;
 
 /**
  * The article's own "Listen" or "Play audio" control: a button (or a link that stays on this page) near the
@@ -423,14 +590,20 @@ export function findListen(h1: Element | null): Element | null {
   } catch {
     return null;
   }
-  const cands = Array.from(document.querySelectorAll('button,[role=button],a[href],[aria-label]')).slice(0, 4000);
+  const cands = Array.from(
+    document.querySelectorAll('button,[role=button],a[href],[aria-label]'),
+  ).slice(0, 4000);
   for (const el of cands) {
-    if (el.closest('webable-ui') || el.closest(CHROME_BOX) || inAdBox(el)) continue;
-    const name = clean(nameOf(el) || el.getAttribute('aria-label') || textOf(el));
+    if (el.closest('webable-ui') || el.closest(CHROME_BOX) || inAdBox(el))
+      continue;
+    const name = clean(
+      nameOf(el) || el.getAttribute('aria-label') || textOf(el),
+    );
     if (!name || name.length > 60 || !LISTEN_RE.test(name)) continue;
     if (el.localName === 'a') {
       const href = el.getAttribute('href') ?? '';
-      if (href && !href.startsWith('#') && !/^javascript:/i.test(href)) continue;
+      if (href && !href.startsWith('#') && !/^javascript:/i.test(href))
+        continue;
     } else if (!el.matches('button,[role=button]')) continue;
     if (!isShown(el)) continue;
     const r = el.getBoundingClientRect();

@@ -18,11 +18,20 @@ function LiveText({ el }: { el: Element }): JSX.Element | null {
   return t ? <span>{t}</span> : null;
 }
 
-export function Dock({ plan, outcome }: { plan: CalmPlan; outcome: Outcome | null }): JSX.Element | null {
+export function Dock({
+  plan,
+  outcome,
+}: {
+  plan: CalmPlan;
+  outcome: Outcome | null;
+}): JSX.Element | null {
   const ctx = useCalm();
   useTick();
   const primary = plan.primary;
-  const block = useMemo(() => (primary ? controlFor(primary, newCtx({ primary })) : null), [primary]);
+  const block = useMemo(
+    () => (primary ? controlFor(primary, newCtx({ primary })) : null),
+    [primary],
+  );
   if (block) block.primary = true;
   const steps = plan.form?.mode === 'steps' ? plan.form.steps : null;
   const n = steps?.length ?? 0;
@@ -30,7 +39,13 @@ export function Dock({ plan, outcome }: { plan: CalmPlan; outcome: Outcome | nul
   const last = !steps || at === n - 1;
 
   if (outcome?.kind === 'success') {
-    const rest = outcome.heading.startsWith(outcome.doneLabel.replace(/\s*✓$/, '')) ? outcome.heading.slice(outcome.doneLabel.replace(/\s*✓$/, '').length).replace(/^[\s✓.:–—-]+/, '') : outcome.heading;
+    const rest = outcome.heading.startsWith(
+      outcome.doneLabel.replace(/\s*✓$/, ''),
+    )
+      ? outcome.heading
+          .slice(outcome.doneLabel.replace(/\s*✓$/, '').length)
+          .replace(/^[\s✓.:–—-]+/, '')
+      : outcome.heading;
     return (
       <div class="wa-dock" role="region" aria-label="Main action on this page">
         <div class="wa-dock__in">
@@ -53,20 +68,32 @@ export function Dock({ plan, outcome }: { plan: CalmPlan; outcome: Outcome | nul
     <LiveText el={plan.form.context} />
   ) : null;
   return (
-    <div class="wa-dock" role="region" aria-label={steps && !last ? 'Steps' : 'Main action on this page'}>
+    <div
+      class="wa-dock"
+      role="region"
+      aria-label={steps && !last ? 'Steps' : 'Main action on this page'}
+    >
       <div class="wa-dock__in">
         <p class="wa-dock__ctx" aria-live="polite">
           {context}
         </p>
         <div class="wa-dock__btns">
           {steps && at > 0 && (
-            <button type="button" class="wa-btn wa-btn--tonal wa-btn--back" onClick={() => ctx.goStep(at - 1)}>
+            <button
+              type="button"
+              class="wa-btn wa-btn--tonal wa-btn--back"
+              onClick={() => ctx.goStep(at - 1)}
+            >
               <I.ArrowLeft />
               <span>Back</span>
             </button>
           )}
           {!last ? (
-            <button type="button" class="wa-btn wa-btn--primary wa-btn--continue" onClick={() => ctx.goStep(at + 1)}>
+            <button
+              type="button"
+              class="wa-btn wa-btn--primary wa-btn--continue"
+              onClick={() => ctx.goStep(at + 1)}
+            >
               Continue
             </button>
           ) : block && live ? (

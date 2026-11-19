@@ -6,7 +6,8 @@ const FONT =
   '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
 const DISPLAY =
   '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI Variable Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif';
-const MONO = 'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
+const MONO =
+  'ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace';
 
 /** Class colours: white text on each is 5.0–6.5 : 1. */
 export const LENS_COLOR = {
@@ -28,8 +29,13 @@ const OUT = `0 0 0 ${L(1)} #FFFFFF`; // 1 px white outside the band
 function fitRules(): string {
   const out: string[] = [];
   for (let lvl = 1; lvl <= 7; lvl++) {
-    const sel = Array.from({ length: lvl }, (_, i) => `[data-o="${i + 1}"]`).join(',');
-    out.push(`.wa-lhead[data-fit="${lvl}"] :is(${sel}) { display: none !important; }`);
+    const sel = Array.from(
+      { length: lvl },
+      (_, i) => `[data-o="${i + 1}"]`,
+    ).join(',');
+    out.push(
+      `.wa-lhead[data-fit="${lvl}"] :is(${sel}) { display: none !important; }`,
+    );
   }
   return out.join('\n');
 }

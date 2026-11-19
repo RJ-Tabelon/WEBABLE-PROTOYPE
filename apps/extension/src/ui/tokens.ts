@@ -7,10 +7,17 @@
 //   hairline dividers and ink pill buttons. Type comes from the person's body size F with a large-heading ratio that
 //   shrinks as F grows; body line height at least 1.6; at most 68 characters a line.
 // Every length is computed here (the model never computes sizes) and divided by the tab zoom when one is given.
-import { type FitProfile, calmMeasureCh, calmMetaPx, calmTypeRatios } from '@webable/core';
+import {
+  type FitProfile,
+  calmMeasureCh,
+  calmMetaPx,
+  calmTypeRatios,
+} from '@webable/engine';
 
 export type ThemeMode = 'light' | 'dark' | 'max';
-export interface Tokens { [name: string]: string }
+export interface Tokens {
+  [name: string]: string;
+}
 
 export interface TokenOptions {
   /** Current tab zoom factor; lengths are divided by it. Default 1. */
@@ -90,39 +97,108 @@ const FONT_DISPLAY =
 const NO_SHADOW = '0 0 0 0 transparent';
 
 interface Palette {
-  canvas: string; raised: string; tonal: string; hover: string; press: string; well: string;
-  ink: string; ink2: string; line: string; lineStrong: string;
-  action: string; onAction: string; actionHover: string; link: string; badge: string;
-  accent: string; onAccent: string; accentHover: string; accentTint: string;
-  warning: string; warningTint: string; success: string; successTint: string; focus: string; selection: string; glass: string;
-  shadowCard: string; shadowLift: string; shadowFloat: string;
+  canvas: string;
+  raised: string;
+  tonal: string;
+  hover: string;
+  press: string;
+  well: string;
+  ink: string;
+  ink2: string;
+  line: string;
+  lineStrong: string;
+  action: string;
+  onAction: string;
+  actionHover: string;
+  link: string;
+  badge: string;
+  accent: string;
+  onAccent: string;
+  accentHover: string;
+  accentTint: string;
+  warning: string;
+  warningTint: string;
+  success: string;
+  successTint: string;
+  focus: string;
+  selection: string;
+  glass: string;
+  shadowCard: string;
+  shadowLift: string;
+  shadowFloat: string;
   edge: number; // card and control edge width in px
   edgeColor: string;
   scheme: 'light' | 'dark';
 }
 
 const LIGHT: Palette = {
-  canvas: '#F5F5F7', raised: '#FFFFFF', tonal: '#E8E8ED', hover: '#DCDCE1', press: '#D2D2D7', well: '#F5F5F7',
-  ink: '#1D1D1F', ink2: '#5E5E63', line: '#D2D2D7', lineStrong: '#86868B',
-  action: '#0071E3', onAction: '#FFFFFF', actionHover: '#0077ED', link: '#0066CC', badge: '#B64400',
-  accent: '#2D6A3E', onAccent: '#FFFFFF', accentHover: '#22552F', accentTint: '#E4EFE6',
-  warning: '#7A4800', warningTint: '#FAEFD9', success: '#1E7B3C', successTint: '#E3F1E7', focus: '#0071E3', selection: '#B3D7FF',
+  canvas: '#F5F5F7',
+  raised: '#FFFFFF',
+  tonal: '#E8E8ED',
+  hover: '#DCDCE1',
+  press: '#D2D2D7',
+  well: '#F5F5F7',
+  ink: '#1D1D1F',
+  ink2: '#5E5E63',
+  line: '#D2D2D7',
+  lineStrong: '#86868B',
+  action: '#0071E3',
+  onAction: '#FFFFFF',
+  actionHover: '#0077ED',
+  link: '#0066CC',
+  badge: '#B64400',
+  accent: '#2D6A3E',
+  onAccent: '#FFFFFF',
+  accentHover: '#22552F',
+  accentTint: '#E4EFE6',
+  warning: '#7A4800',
+  warningTint: '#FAEFD9',
+  success: '#1E7B3C',
+  successTint: '#E3F1E7',
+  focus: '#0071E3',
+  selection: '#B3D7FF',
   glass: 'rgba(255,255,255,.72)',
   shadowCard: '0 1px 2px rgba(0,0,0,.04), 0 6px 20px rgba(0,0,0,.06)',
   shadowLift: '0 2px 4px rgba(0,0,0,.05), 0 12px 32px rgba(0,0,0,.10)',
   shadowFloat: '0 12px 40px rgba(0,0,0,.16)',
-  edge: 0, edgeColor: 'transparent', scheme: 'light',
+  edge: 0,
+  edgeColor: 'transparent',
+  scheme: 'light',
 };
 
 const DARK: Palette = {
-  canvas: '#000000', raised: '#1C1C1E', tonal: '#2C2C2E', hover: '#3A3A3C', press: '#48484A', well: '#2C2C2E',
-  ink: '#F5F5F7', ink2: '#A1A1A6', line: '#38383A', lineStrong: '#8E8E93',
-  action: '#0071E3', onAction: '#FFFFFF', actionHover: '#0077ED', link: '#2997FF', badge: '#FF9F45',
-  accent: '#8FCB9B', onAccent: '#0F1A12', accentHover: '#A9D9B2', accentTint: '#1B2B1F',
-  warning: '#F2B75E', warningTint: '#2E2412', success: '#6FD08C', successTint: '#12301C', focus: '#2997FF', selection: '#1F4E85',
+  canvas: '#000000',
+  raised: '#1C1C1E',
+  tonal: '#2C2C2E',
+  hover: '#3A3A3C',
+  press: '#48484A',
+  well: '#2C2C2E',
+  ink: '#F5F5F7',
+  ink2: '#A1A1A6',
+  line: '#38383A',
+  lineStrong: '#8E8E93',
+  action: '#0071E3',
+  onAction: '#FFFFFF',
+  actionHover: '#0077ED',
+  link: '#2997FF',
+  badge: '#FF9F45',
+  accent: '#8FCB9B',
+  onAccent: '#0F1A12',
+  accentHover: '#A9D9B2',
+  accentTint: '#1B2B1F',
+  warning: '#F2B75E',
+  warningTint: '#2E2412',
+  success: '#6FD08C',
+  successTint: '#12301C',
+  focus: '#2997FF',
+  selection: '#1F4E85',
   glass: 'rgba(22,22,23,.78)',
-  shadowCard: NO_SHADOW, shadowLift: NO_SHADOW, shadowFloat: '0 12px 40px rgba(0,0,0,.6)',
-  edge: 0, edgeColor: 'transparent', scheme: 'dark',
+  shadowCard: NO_SHADOW,
+  shadowLift: NO_SHADOW,
+  shadowFloat: '0 12px 40px rgba(0,0,0,.6)',
+  edge: 0,
+  edgeColor: 'transparent',
+  scheme: 'dark',
 };
 
 function moreContrast(p: Palette): Palette {
@@ -141,59 +217,161 @@ function moreContrast(p: Palette): Palette {
 }
 
 const MAX_LIGHT: Palette = {
-  canvas: '#FFFFFF', raised: '#FFFFFF', tonal: '#F0F0F0', hover: '#E2E2E2', press: '#D4D4D4', well: '#FFFFFF',
-  ink: '#000000', ink2: '#000000', line: '#000000', lineStrong: '#000000',
-  action: '#0040DD', onAction: '#FFFFFF', actionHover: '#0033B8', link: '#0040DD', badge: '#8A2E00',
-  accent: '#1F4D2B', onAccent: '#FFFFFF', accentHover: '#163A20', accentTint: '#FFFFFF',
-  warning: '#5C3600', warningTint: '#FFFFFF', success: '#0B5A26', successTint: '#FFFFFF', focus: '#000000', selection: '#B3D7FF',
+  canvas: '#FFFFFF',
+  raised: '#FFFFFF',
+  tonal: '#F0F0F0',
+  hover: '#E2E2E2',
+  press: '#D4D4D4',
+  well: '#FFFFFF',
+  ink: '#000000',
+  ink2: '#000000',
+  line: '#000000',
+  lineStrong: '#000000',
+  action: '#0040DD',
+  onAction: '#FFFFFF',
+  actionHover: '#0033B8',
+  link: '#0040DD',
+  badge: '#8A2E00',
+  accent: '#1F4D2B',
+  onAccent: '#FFFFFF',
+  accentHover: '#163A20',
+  accentTint: '#FFFFFF',
+  warning: '#5C3600',
+  warningTint: '#FFFFFF',
+  success: '#0B5A26',
+  successTint: '#FFFFFF',
+  focus: '#000000',
+  selection: '#B3D7FF',
   glass: '#FFFFFF',
-  shadowCard: NO_SHADOW, shadowLift: NO_SHADOW, shadowFloat: NO_SHADOW,
-  edge: 2, edgeColor: '#000000', scheme: 'light',
+  shadowCard: NO_SHADOW,
+  shadowLift: NO_SHADOW,
+  shadowFloat: NO_SHADOW,
+  edge: 2,
+  edgeColor: '#000000',
+  scheme: 'light',
 };
 
 const MAX_DARK: Palette = {
-  canvas: '#000000', raised: '#000000', tonal: '#1A1A1A', hover: '#2A2A2A', press: '#333333', well: '#1A1A1A',
-  ink: '#FFFFFF', ink2: '#FFFFFF', line: '#FFFFFF', lineStrong: '#FFFFFF',
-  action: '#6CB4FF', onAction: '#000000', actionHover: '#8AC4FF', link: '#6CB4FF', badge: '#FFB366',
-  accent: '#A9D9B2', onAccent: '#000000', accentHover: '#C2E6CA', accentTint: '#000000',
-  warning: '#F2B75E', warningTint: '#000000', success: '#7FE09A', successTint: '#000000', focus: '#FFFFFF', selection: '#1F4E85',
+  canvas: '#000000',
+  raised: '#000000',
+  tonal: '#1A1A1A',
+  hover: '#2A2A2A',
+  press: '#333333',
+  well: '#1A1A1A',
+  ink: '#FFFFFF',
+  ink2: '#FFFFFF',
+  line: '#FFFFFF',
+  lineStrong: '#FFFFFF',
+  action: '#6CB4FF',
+  onAction: '#000000',
+  actionHover: '#8AC4FF',
+  link: '#6CB4FF',
+  badge: '#FFB366',
+  accent: '#A9D9B2',
+  onAccent: '#000000',
+  accentHover: '#C2E6CA',
+  accentTint: '#000000',
+  warning: '#F2B75E',
+  warningTint: '#000000',
+  success: '#7FE09A',
+  successTint: '#000000',
+  focus: '#FFFFFF',
+  selection: '#1F4E85',
   glass: '#000000',
-  shadowCard: NO_SHADOW, shadowLift: NO_SHADOW, shadowFloat: NO_SHADOW,
-  edge: 2, edgeColor: '#FFFFFF', scheme: 'dark',
+  shadowCard: NO_SHADOW,
+  shadowLift: NO_SHADOW,
+  shadowFloat: NO_SHADOW,
+  edge: 2,
+  edgeColor: '#FFFFFF',
+  scheme: 'dark',
 };
 
 /**
  * Calm view v3, light (design.md §2): a white page; ink #121317 (18.6:1) and meta #45474D (9.3:1, where the
  * references' 5.7:1 greys fail WCAG 1.4.6); hairlines #E0E0E3; field borders #8A8A8F (3.4:1, 1.4.11); #F6F6F7 for
  * picture wells and secondary pills; the primary action is an ink pill; links are blue #0040DD (7.6:1; ink links read as
- * plain text to people in testing, 2 Nov 2026); no shadows on
+ * plain text to people, Caden's study, 2 Nov 2026); no shadows on
  * content (only on things that float: popovers and the page's popups).
  */
 const CALM_LIGHT: Palette = {
-  canvas: '#FFFFFF', raised: '#FFFFFF', tonal: '#F6F6F7', hover: '#EDEDEF', press: '#E3E3E6', well: '#F6F6F7',
-  ink: '#121317', ink2: '#45474D', line: '#E0E0E3', lineStrong: '#8A8A8F',
-  action: '#121317', onAction: '#FFFFFF', actionHover: '#2D2E34', link: '#0040DD', badge: '#45474D',
-  accent: '#2D6A3E', onAccent: '#FFFFFF', accentHover: '#22552F', accentTint: '#EBF2EC',
-  warning: '#7A4800', warningTint: '#FBF4E6', success: '#1E6B36', successTint: '#ECF5EE', focus: '#121317', selection: '#CFE0FC',
+  canvas: '#FFFFFF',
+  raised: '#FFFFFF',
+  tonal: '#F6F6F7',
+  hover: '#EDEDEF',
+  press: '#E3E3E6',
+  well: '#F6F6F7',
+  ink: '#121317',
+  ink2: '#45474D',
+  line: '#E0E0E3',
+  lineStrong: '#8A8A8F',
+  action: '#121317',
+  onAction: '#FFFFFF',
+  actionHover: '#2D2E34',
+  link: '#0040DD',
+  badge: '#45474D',
+  accent: '#2D6A3E',
+  onAccent: '#FFFFFF',
+  accentHover: '#22552F',
+  accentTint: '#EBF2EC',
+  warning: '#7A4800',
+  warningTint: '#FBF4E6',
+  success: '#1E6B36',
+  successTint: '#ECF5EE',
+  focus: '#121317',
+  selection: '#CFE0FC',
   glass: 'rgba(255,255,255,.9)',
-  shadowCard: NO_SHADOW, shadowLift: NO_SHADOW, shadowFloat: '0 1px 2px rgba(18,19,23,.06), 0 12px 36px rgba(18,19,23,.14)',
-  edge: 0, edgeColor: 'transparent', scheme: 'light',
+  shadowCard: NO_SHADOW,
+  shadowLift: NO_SHADOW,
+  shadowFloat: '0 1px 2px rgba(18,19,23,.06), 0 12px 36px rgba(18,19,23,.14)',
+  edge: 0,
+  edgeColor: 'transparent',
+  scheme: 'light',
 };
 
 const CALM_DARK: Palette = {
-  canvas: '#121317', raised: '#121317', tonal: '#222328', hover: '#2C2D33', press: '#36373D', well: '#222328',
-  ink: '#F3F3F5', ink2: '#B6B7BD', line: '#33343A', lineStrong: '#8A8A8F',
-  action: '#F3F3F5', onAction: '#121317', actionHover: '#FFFFFF', link: '#6CB4FF', badge: '#B6B7BD',
-  accent: '#8FCB9B', onAccent: '#0F1A12', accentHover: '#A9D9B2', accentTint: '#1B2B1F',
-  warning: '#F2B75E', warningTint: '#2B2316', success: '#6FD08C', successTint: '#13301D', focus: '#F3F3F5', selection: '#1F4E85',
+  canvas: '#121317',
+  raised: '#121317',
+  tonal: '#222328',
+  hover: '#2C2D33',
+  press: '#36373D',
+  well: '#222328',
+  ink: '#F3F3F5',
+  ink2: '#B6B7BD',
+  line: '#33343A',
+  lineStrong: '#8A8A8F',
+  action: '#F3F3F5',
+  onAction: '#121317',
+  actionHover: '#FFFFFF',
+  link: '#6CB4FF',
+  badge: '#B6B7BD',
+  accent: '#8FCB9B',
+  onAccent: '#0F1A12',
+  accentHover: '#A9D9B2',
+  accentTint: '#1B2B1F',
+  warning: '#F2B75E',
+  warningTint: '#2B2316',
+  success: '#6FD08C',
+  successTint: '#13301D',
+  focus: '#F3F3F5',
+  selection: '#1F4E85',
   glass: 'rgba(18,19,23,.88)',
-  shadowCard: NO_SHADOW, shadowLift: NO_SHADOW, shadowFloat: '0 12px 40px rgba(0,0,0,.6)',
-  edge: 0, edgeColor: 'transparent', scheme: 'dark',
+  shadowCard: NO_SHADOW,
+  shadowLift: NO_SHADOW,
+  shadowFloat: '0 12px 40px rgba(0,0,0,.6)',
+  edge: 0,
+  edgeColor: 'transparent',
+  scheme: 'dark',
 };
 
 /** Contrast band M in the Calm view: meta in full ink, hairlines and field borders at the strong grey, 1 px edges. */
 function calmMoreContrast(p: Palette): Palette {
-  return { ...p, ink2: p.ink, line: p.lineStrong, edge: 1, edgeColor: p.lineStrong };
+  return {
+    ...p,
+    ink2: p.ink,
+    line: p.lineStrong,
+    edge: 1,
+    edgeColor: p.lineStrong,
+  };
 }
 
 /** Light unless the fit says dark (never from the OS setting alone); max contrast when the fit's band is S. */
@@ -203,11 +381,31 @@ export function themeModeFor(fit: FitProfile | null): ThemeMode {
   return 'light';
 }
 
-function paletteFor(fit: FitProfile | null, mode: ThemeMode, surface: 'chrome' | 'calm' = 'chrome'): Palette {
-  const dark = mode === 'dark' || (mode === 'max' && fit?.polarity.value === 'dark');
+function paletteFor(
+  fit: FitProfile | null,
+  mode: ThemeMode,
+  surface: 'chrome' | 'calm' = 'chrome',
+): Palette {
+  const dark =
+    mode === 'dark' || (mode === 'max' && fit?.polarity.value === 'dark');
   if (surface === 'calm') {
     // Maximum contrast keeps its 2 px edges; its one action stays an ink pill like every other Calm v3 action.
-    if (mode === 'max') return dark ? { ...MAX_DARK, action: '#FFFFFF', onAction: '#000000', actionHover: '#E6E6E6', link: '#8AC4FF' } : { ...MAX_LIGHT, action: '#000000', onAction: '#FFFFFF', actionHover: '#1A1A1A', link: '#0033CC' };
+    if (mode === 'max')
+      return dark
+        ? {
+            ...MAX_DARK,
+            action: '#FFFFFF',
+            onAction: '#000000',
+            actionHover: '#E6E6E6',
+            link: '#8AC4FF',
+          }
+        : {
+            ...MAX_LIGHT,
+            action: '#000000',
+            onAction: '#FFFFFF',
+            actionHover: '#1A1A1A',
+            link: '#0033CC',
+          };
     const base = dark ? CALM_DARK : CALM_LIGHT;
     return fit?.contrast.band === 'M' ? calmMoreContrast(base) : base;
   }
@@ -216,8 +414,10 @@ function paletteFor(fit: FitProfile | null, mode: ThemeMode, surface: 'chrome' |
   return fit?.contrast.band === 'M' ? moreContrast(base) : base;
 }
 
-const clamp = (v: number, lo: number, hi: number): number => Math.min(hi, Math.max(lo, v));
-const finite = (v: unknown, d: number): number => (typeof v === 'number' && Number.isFinite(v) ? v : d);
+const clamp = (v: number, lo: number, hi: number): number =>
+  Math.min(hi, Math.max(lo, v));
+const finite = (v: unknown, d: number): number =>
+  typeof v === 'number' && Number.isFinite(v) ? v : d;
 
 /** Heading ratios to F, interpolated between anchors (docs/12 §4.2). */
 const RAMP: Array<[number, number, number, number]> = [
@@ -227,7 +427,11 @@ const RAMP: Array<[number, number, number, number]> = [
   [40, 1.35, 1.18, 1.08],
 ];
 
-export function typeRamp(F: number): { page: number; section: number; title: number } {
+export function typeRamp(F: number): {
+  page: number;
+  section: number;
+  title: number;
+} {
   const first = RAMP[0]!;
   const last = RAMP[RAMP.length - 1]!;
   let r: [number, number, number] = [first[1], first[2], first[3]];
@@ -238,7 +442,11 @@ export function typeRamp(F: number): { page: number; section: number; title: num
       const b = RAMP[i + 1]!;
       if (F >= a[0] && F <= b[0]) {
         const t = (F - a[0]) / (b[0] - a[0]);
-        r = [a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, a[3] + (b[3] - a[3]) * t];
+        r = [
+          a[1] + (b[1] - a[1]) * t,
+          a[2] + (b[2] - a[2]) * t,
+          a[3] + (b[3] - a[3]) * t,
+        ];
         break;
       }
     }
@@ -247,10 +455,36 @@ export function typeRamp(F: number): { page: number; section: number; title: num
 }
 
 /** Structure parameters by level (research-fitting §8.18): open sections, records first, group size, split above n sentences. */
-export function structureParams(level: 0 | 1 | 2): { sectionsOpen: number; listFirst: number; groupSize: number; splitSentences: number; stepMax: number } {
-  if (level === 2) return { sectionsOpen: 1, listFirst: 8, groupSize: 4, splitSentences: 3, stepMax: 5 };
-  if (level === 1) return { sectionsOpen: 2, listFirst: 12, groupSize: 5, splitSentences: 4, stepMax: 8 };
-  return { sectionsOpen: Infinity, listFirst: Infinity, groupSize: 6, splitSentences: Infinity, stepMax: 12 };
+export function structureParams(level: 0 | 1 | 2): {
+  sectionsOpen: number;
+  listFirst: number;
+  groupSize: number;
+  splitSentences: number;
+  stepMax: number;
+} {
+  if (level === 2)
+    return {
+      sectionsOpen: 1,
+      listFirst: 8,
+      groupSize: 4,
+      splitSentences: 3,
+      stepMax: 5,
+    };
+  if (level === 1)
+    return {
+      sectionsOpen: 2,
+      listFirst: 12,
+      groupSize: 5,
+      splitSentences: 4,
+      stepMax: 8,
+    };
+  return {
+    sectionsOpen: Infinity,
+    listFirst: Infinity,
+    groupSize: 6,
+    splitSentences: Infinity,
+    stepMax: 12,
+  };
 }
 
 /** Width of one "0" of the body font as a share of the font size (CSS `ch`), measured once; 0.55 without a canvas. */
@@ -276,7 +510,8 @@ function chRatio(): number {
  * of the font size; measured once (0.47 without a canvas). CSS `ch` (a "0") is wider than an average letter, so a
  * 68ch measure holds about 85 characters; prose lines use this instead to stay at the 68 characters design.md asks for.
  */
-const SAMPLE_TEXT = 'The council said the new footbridge opens on Monday, and walkers can cross the river in four minutes.';
+const SAMPLE_TEXT =
+  'The council said the new footbridge opens on Monday, and walkers can cross the river in four minutes.';
 let avgShare: number | null = null;
 function avgCharRatio(): number {
   if (avgShare !== null) return avgShare;
@@ -294,10 +529,21 @@ function avgCharRatio(): number {
   return avgShare;
 }
 
-function measureCtx(): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null {
+function measureCtx():
+  CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null {
   const canvas: OffscreenCanvas | HTMLCanvasElement | null =
-    typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(8, 8) : typeof document !== 'undefined' ? document.createElement('canvas') : null;
-  return (canvas?.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null | undefined) ?? null;
+    typeof OffscreenCanvas !== 'undefined'
+      ? new OffscreenCanvas(8, 8)
+      : typeof document !== 'undefined'
+        ? document.createElement('canvas')
+        : null;
+  return (
+    (canvas?.getContext('2d') as
+      | CanvasRenderingContext2D
+      | OffscreenCanvasRenderingContext2D
+      | null
+      | undefined) ?? null
+  );
 }
 
 /**
@@ -308,7 +554,10 @@ function measureCtx(): CanvasRenderingContext2D | OffscreenCanvasRenderingContex
  * .75 F below, bands 3 F apart (at least 56 px), rows padded 1 F, gutter max(24, 1.5 F). Round 6 brought back the
  * round-3 proportions where the round-4 restyle overshot at large F.
  */
-export function calmMetrics(fit: FitProfile | null, opts: TokenOptions = {}): CalmMetrics {
+export function calmMetrics(
+  fit: FitProfile | null,
+  opts: TokenOptions = {},
+): CalmMetrics {
   const zoom = clamp(finite(opts.zoom, 1), 0.25, 5);
   const scale = clamp(finite(opts.scale, 1), 0.7, 2);
   const airy = (opts.density ?? 'airy') === 'airy';
@@ -319,18 +568,33 @@ export function calmMetrics(fit: FitProfile | null, opts: TokenOptions = {}): Ca
   const ctl = Math.max(T, 44, Math.round(F * 2.2));
   const primaryH = Math.max(T, 52, Math.round(F * 2.55));
   const ratios = calmTypeRatios(F);
-  const lhBody = clamp(Math.max(1.6, finite(fit?.spacing.lineHeight, 1.6)), 1.6, 2.0);
+  const lhBody = clamp(
+    Math.max(1.6, finite(fit?.spacing.lineHeight, 1.6)),
+    1.6,
+    2.0,
+  );
   const floor = clamp(finite(fit?.weight.floor, 400), 300, 700);
   const measureCh = calmMeasureCh(fit?.measure.targetCpl);
   const textCol = Math.round(measureCh * F * chRatio());
   const wideCol = Math.round(textCol * 1.45);
-  const measurePx = Math.min(textCol, Math.round(measureCh * F * avgCharRatio()));
+  const measurePx = Math.min(
+    textCol,
+    Math.round(measureCh * F * avgCharRatio()),
+  );
   // The top bar's controls follow the fit's target size but stay at most 48 px tall (their hit area is T).
   const stripCtl = clamp(T, 36, 48);
   return {
-    F, T, ctl, primaryH,
-    page: F * ratios.page, section: F * ratios.section, title: F * ratios.title,
-    lhBody, lhPage: 1.08, lhSection: 1.2, lhTitle: 1.3,
+    F,
+    T,
+    ctl,
+    primaryH,
+    page: F * ratios.page,
+    section: F * ratios.section,
+    title: F * ratios.title,
+    lhBody,
+    lhPage: 1.08,
+    lhSection: 1.2,
+    lhTitle: 1.3,
     wBody: clamp(Math.max(400, floor), 400, 700),
     wCtl: clamp(Math.max(500, floor), 500, 700),
     wHead: clamp(Math.max(500, floor), 500, 700),
@@ -374,44 +638,119 @@ export function calmMetrics(fit: FitProfile | null, opts: TokenOptions = {}): Ca
 
 const r2 = (n: number): number => Math.round(n * 100) / 100;
 
-export function tokensFor(fit: FitProfile | null, mode: ThemeMode, opts: TokenOptions = {}): Tokens {
+export function tokensFor(
+  fit: FitProfile | null,
+  mode: ThemeMode,
+  opts: TokenOptions = {},
+): Tokens {
   const calm = opts.surface === 'calm';
   const p = paletteFor(fit, mode, calm ? 'calm' : 'chrome');
   const m = calmMetrics(fit, opts);
   const px = (n: number): string => `${r2(n / m.zoom)}px`;
-  const tracking = (em: number): string => (m.letterEm > 0 ? `${m.letterEm}em` : `${em}em`);
+  const tracking = (em: number): string =>
+    m.letterEm > 0 ? `${m.letterEm}em` : `${em}em`;
   return {
     // colour
-    canvas: p.canvas, raised: p.raised, tonal: p.tonal, hover: p.hover, press: p.press, well: p.well,
-    ink: p.ink, 'ink-2': p.ink2, line: p.line, 'line-strong': p.lineStrong,
-    action: p.action, 'on-action': p.onAction, 'action-hover': p.actionHover, link: p.link, badge: p.badge,
-    accent: p.accent, 'on-accent': p.onAccent, 'accent-hover': p.accentHover, 'accent-tint': p.accentTint,
-    warning: p.warning, 'warning-tint': p.warningTint, success: p.success, 'success-tint': p.successTint,
-    focus: p.focus, selection: p.selection, glass: p.glass,
-    'shadow-card': p.shadowCard, 'shadow-lift': p.shadowLift, 'shadow-float': p.shadowFloat,
-    edge: px(p.edge), 'edge-color': p.edgeColor, 'ctl-edge': px(Math.max(1, p.edge)),
+    canvas: p.canvas,
+    raised: p.raised,
+    tonal: p.tonal,
+    hover: p.hover,
+    press: p.press,
+    well: p.well,
+    ink: p.ink,
+    'ink-2': p.ink2,
+    line: p.line,
+    'line-strong': p.lineStrong,
+    action: p.action,
+    'on-action': p.onAction,
+    'action-hover': p.actionHover,
+    link: p.link,
+    badge: p.badge,
+    accent: p.accent,
+    'on-accent': p.onAccent,
+    'accent-hover': p.accentHover,
+    'accent-tint': p.accentTint,
+    warning: p.warning,
+    'warning-tint': p.warningTint,
+    success: p.success,
+    'success-tint': p.successTint,
+    focus: p.focus,
+    selection: p.selection,
+    glass: p.glass,
+    'shadow-card': p.shadowCard,
+    'shadow-lift': p.shadowLift,
+    'shadow-float': p.shadowFloat,
+    edge: px(p.edge),
+    'edge-color': p.edgeColor,
+    'ctl-edge': px(Math.max(1, p.edge)),
     scheme: p.scheme,
     // type
-    font: FONT_TEXT, 'font-display': FONT_DISPLAY,
-    f: px(m.F), 'f-page': px(m.page), 'f-section': px(m.section), 'f-title': px(m.title),
-    'lh-body': String(m.lhBody), 'lh-page': String(m.lhPage), 'lh-section': String(m.lhSection), 'lh-title': String(m.lhTitle),
-    'w-body': String(m.wBody), 'w-ctl': String(m.wCtl), 'w-head': String(m.wHead),
-    'tr-page': tracking(-0.02), 'tr-section': tracking(-0.015), 'tr-title': tracking(-0.008),
-    'word-sp': `${m.wordEm}em`, 'letter-sp': `${m.letterEm}em`, measure: px(m.measurePx),
-    'f-meta': px(m.meta), 'text-col': px(m.textCol), 'wide-col': px(m.wideCol), 'form-col': px(m.formCol),
-    'para-gap': px(m.paraGap), 'h2-above': px(m.h2Above), 'h2-below': px(m.h2Below), 'row-pad': px(m.rowPad),
-    gutter: px(m.gutter), 'r-pic': px(m.rPic),
+    font: FONT_TEXT,
+    'font-display': FONT_DISPLAY,
+    f: px(m.F),
+    'f-page': px(m.page),
+    'f-section': px(m.section),
+    'f-title': px(m.title),
+    'lh-body': String(m.lhBody),
+    'lh-page': String(m.lhPage),
+    'lh-section': String(m.lhSection),
+    'lh-title': String(m.lhTitle),
+    'w-body': String(m.wBody),
+    'w-ctl': String(m.wCtl),
+    'w-head': String(m.wHead),
+    'tr-page': tracking(-0.02),
+    'tr-section': tracking(-0.015),
+    'tr-title': tracking(-0.008),
+    'word-sp': `${m.wordEm}em`,
+    'letter-sp': `${m.letterEm}em`,
+    measure: px(m.measurePx),
+    'f-meta': px(m.meta),
+    'text-col': px(m.textCol),
+    'wide-col': px(m.wideCol),
+    'form-col': px(m.formCol),
+    'para-gap': px(m.paraGap),
+    'h2-above': px(m.h2Above),
+    'h2-below': px(m.h2Below),
+    'row-pad': px(m.rowPad),
+    gutter: px(m.gutter),
+    'r-pic': px(m.rPic),
     // size and space
-    t: px(m.T), ctl: px(m.ctl), 'primary-h': px(m.primaryH), 'pill-pad': px(m.pillPad), 'field-pad': px(m.fieldPad),
-    'strip-h': px(m.stripH), 'strip-ctl': px(m.stripCtl), 'strip-f': px(m.stripF), 'top-pad': px(m.topPad), 'lead-gap': px(m.leadGap), 'task-gap': px(m.taskGap),
-    'field-gap': px(m.fieldGap), 'dock-h': px(m.dockH), 'band-gap': px(m.bandGap), 'head-gap': px(m.headGap), 'card-gap': px(m.cardGap),
-    'card-pad': px(m.cardPad), 'panel-pad': px(m.panelPad), check: px(m.check), row: px(m.row),
-    'col-max': px(m.colMax), 'page-max': px(calm ? Math.max(1280, m.wideCol + 2 * m.gutter) : 1280), 'tile-min': px(m.tileMin),
+    t: px(m.T),
+    ctl: px(m.ctl),
+    'primary-h': px(m.primaryH),
+    'pill-pad': px(m.pillPad),
+    'field-pad': px(m.fieldPad),
+    'strip-h': px(m.stripH),
+    'strip-ctl': px(m.stripCtl),
+    'strip-f': px(m.stripF),
+    'top-pad': px(m.topPad),
+    'lead-gap': px(m.leadGap),
+    'task-gap': px(m.taskGap),
+    'field-gap': px(m.fieldGap),
+    'dock-h': px(m.dockH),
+    'band-gap': px(m.bandGap),
+    'head-gap': px(m.headGap),
+    'card-gap': px(m.cardGap),
+    'card-pad': px(m.cardPad),
+    'panel-pad': px(m.panelPad),
+    check: px(m.check),
+    row: px(m.row),
+    'col-max': px(m.colMax),
+    'page-max': px(calm ? Math.max(1280, m.wideCol + 2 * m.gutter) : 1280),
+    'tile-min': px(m.tileMin),
     'side-pad': px(calm ? m.gutter : Math.max(24, m.F)),
-    'r-card': px(calm ? 12 : 22), 'r-panel': px(calm ? 16 : 28), 'r-media': px(calm ? m.rPic : 16), 'r-field': px(calm ? 10 : 14),
-    'r-small': px(calm ? 8 : 10), 'r-pill': '999px',
-    gap: px(Math.max(10, m.F * 0.6)), 'gap-s': px(Math.max(6, m.F * 0.35)), hair: px(1),
-    ring: px(mode === 'max' ? 3 : 3), 'chip-h': px(Math.max(40, 1.8 * m.F)), 'f-big': px(1.25 * m.F),
+    'r-card': px(calm ? 12 : 22),
+    'r-panel': px(calm ? 16 : 28),
+    'r-media': px(calm ? m.rPic : 16),
+    'r-field': px(calm ? 10 : 14),
+    'r-small': px(calm ? 8 : 10),
+    'r-pill': '999px',
+    gap: px(Math.max(10, m.F * 0.6)),
+    'gap-s': px(Math.max(6, m.F * 0.35)),
+    hair: px(1),
+    ring: px(mode === 'max' ? 3 : 3),
+    'chip-h': px(Math.max(40, 1.8 * m.F)),
+    'f-big': px(1.25 * m.F),
   };
 }
 

@@ -1,22 +1,50 @@
-import { deriveFit } from '@webable/core';
+import { deriveFit } from '@webable/engine';
 import { describe, expect, it } from 'vitest';
 import type { SiteTaskResult } from '../../../src/sitetask/types';
 import { BlockWalk } from './pointing';
 import { RawCollector, siteTrial } from './raw';
 import { ladderPx, ladderStartPx, ladderStop, LADDER } from './read';
-import { eyebrowFor, IN_THE_WAY, partSetLine, planSteps, wordsFor, type StepId } from './steps';
+import {
+  eyebrowFor,
+  IN_THE_WAY,
+  partSetLine,
+  planSteps,
+  wordsFor,
+  type StepId,
+} from './steps';
 
-const BANNED = /\b(test|score|results?|normal|calibrat\w*|profile|fit|calm view|lens|jev)\b/i;
+const BANNED =
+  /\b(test|score|results?|normal|calibrat\w*|profile|fit|calm view|lens|jev)\b/i;
 /** Round 8c: no pixels and no technical words in anything a person sees. */
-const TECHNICAL = /\b(px|pixels?|contrast|ratio|target|threshold|settings? values?)\b|\d\s*:\s*1\b/i;
+const TECHNICAL =
+  /\b(px|pixels?|contrast|ratio|target|threshold|settings? values?)\b|\d\s*:\s*1\b/i;
 
 function site(over: Partial<SiteTaskResult> = {}): SiteTaskResult {
   return {
-    id: 'cnn', name: 'CNN', busy: true, found: true, skipped: false, ms: 9000, wrongClicks: 0, nearMisses: 0, slips: 0,
-    presses: 3, scrollScreens: 1, motionSeen: true, adsSeen: 5, ...over,
+    id: 'cnn',
+    name: 'CNN',
+    busy: true,
+    found: true,
+    skipped: false,
+    ms: 9000,
+    wrongClicks: 0,
+    nearMisses: 0,
+    slips: 0,
+    presses: 3,
+    scrollScreens: 1,
+    motionSeen: true,
+    adsSeen: 5,
+    ...over,
   };
 }
-const ALL: StepId[] = ['size', 'truefalse', 'faint', 'lightdark', 'dots', 'find'];
+const ALL: StepId[] = [
+  'size',
+  'truefalse',
+  'faint',
+  'lightdark',
+  'dots',
+  'find',
+];
 
 describe('words', () => {
   it('stay plain: no banned or technical words in any step', () => {
@@ -36,7 +64,8 @@ describe('words', () => {
     expect(wordsFor('find', 'mouse')).toEqual({
       title: 'Now, some real websites',
       todo: 'We’ll open three websites, one at a time. On each one, find what we ask for and click it.',
-      success: 'WebAble stays off while you do this, so we see the web as it really is.',
+      success:
+        'WebAble stays off while you do this, so we see the web as it really is.',
     });
   });
 
@@ -50,7 +79,13 @@ describe('words', () => {
   it('leaves out the dots for keyboard users and the colour steps under system colours', () => {
     expect(planSteps('keyboard', null)).not.toContain('dots');
     const forced = { forcedColors: true } as Parameters<typeof planSteps>[1];
-    expect(planSteps('mouse', forced)).toEqual(['size', 'truefalse', 'dots', 'find', 'context']);
+    expect(planSteps('mouse', forced)).toEqual([
+      'size',
+      'truefalse',
+      'dots',
+      'find',
+      'context',
+    ]);
   });
 });
 
@@ -61,10 +96,22 @@ describe('reading ladder', () => {
   });
 
   it('stops at two misses in a row, 9 sentences, or 35 s', () => {
-    expect(ladderStop([{ correct: true }, { correct: false }], 1000, 15)).toBeNull();
-    expect(ladderStop([{ correct: false }, { correct: false }], 1000, 15)).toBe('reversal');
-    expect(ladderStop(Array.from({ length: 9 }, () => ({ correct: true })), 1000, 15)).toBe('max_trials');
-    expect(ladderStop([{ correct: true }], LADDER.maxActiveMs, 15)).toBe('time');
+    expect(
+      ladderStop([{ correct: true }, { correct: false }], 1000, 15),
+    ).toBeNull();
+    expect(ladderStop([{ correct: false }, { correct: false }], 1000, 15)).toBe(
+      'reversal',
+    );
+    expect(
+      ladderStop(
+        Array.from({ length: 9 }, () => ({ correct: true })),
+        1000,
+        15,
+      ),
+    ).toBe('max_trials');
+    expect(ladderStop([{ correct: true }], LADDER.maxActiveMs, 15)).toBe(
+      'time',
+    );
   });
 });
 
@@ -93,19 +140,56 @@ describe('dots walk', () => {
 
 describe('real websites', () => {
   it('makes one trial per site the person tried', () => {
-    expect(siteTrial(site())).toEqual({ clutter: true, motion: true, ms: 9000, found: true });
-    expect(siteTrial(site({ found: false, ms: null, skipped: false }))).toMatchObject({ found: false });
+    expect(siteTrial(site())).toEqual({
+      clutter: true,
+      motion: true,
+      ms: 9000,
+      found: true,
+    });
+    expect(
+      siteTrial(site({ found: false, ms: null, skipped: false })),
+    ).toMatchObject({ found: false });
     // Searched, then skipped: not found. Never loaded (or skipped untouched): no trial.
-    expect(siteTrial(site({ found: false, ms: null, skipped: true, wrongClicks: 2 }))).toMatchObject({ found: false });
-    expect(siteTrial(site({ found: false, ms: null, skipped: true, presses: 0, scrollScreens: 0 }))).toBeNull();
+    expect(
+      siteTrial(
+        site({ found: false, ms: null, skipped: true, wrongClicks: 2 }),
+      ),
+    ).toMatchObject({ found: false });
+    expect(
+      siteTrial(
+        site({
+          found: false,
+          ms: null,
+          skipped: true,
+          presses: 0,
+          scrollScreens: 0,
+        }),
+      ),
+    ).toBeNull();
   });
 
   it('adds the sites to finding and every site press to allPresses', () => {
     const raw = new RawCollector();
     const n = raw.addSites([
-      site({ id: 'wikipedia', name: 'Wikipedia', busy: false, ms: 5000, presses: 2, slips: 1, motionSeen: false }),
+      site({
+        id: 'wikipedia',
+        name: 'Wikipedia',
+        busy: false,
+        ms: 5000,
+        presses: 2,
+        slips: 1,
+        motionSeen: false,
+      }),
       site({ presses: 4, slips: 0 }),
-      site({ id: 'allrecipes', name: 'Allrecipes', skipped: true, found: false, ms: null, presses: 0, scrollScreens: 0 }),
+      site({
+        id: 'allrecipes',
+        name: 'Allrecipes',
+        skipped: true,
+        found: false,
+        ms: null,
+        presses: 0,
+        scrollScreens: 0,
+      }),
     ]);
     expect(n).toBe(2);
     raw.complete('find');

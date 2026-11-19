@@ -13,7 +13,9 @@
   --c-accent-fill: rgba(23, 105, 74, 0.14);
   --c-dim: rgba(255, 255, 255, 0.82);
 
-  --font: system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font:
+    system-ui, -apple-system, 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
   --f-h1: 600 44px/50px var(--font);
   --f-h2: 600 30px/36px var(--font);
   --f-deck: 400 20px/30px var(--font);
@@ -30,8 +32,10 @@
   --h-answer: 72px;
   --gap: 16px;
   --gap-l: 32px;
-  --shadow-card: 0 1px 2px rgba(22, 21, 15, 0.04), 0 12px 40px rgba(22, 21, 15, 0.06);
-  --shadow-modal: 0 2px 6px rgba(22, 21, 15, 0.06), 0 30px 80px rgba(22, 21, 15, 0.14);
+  --shadow-card:
+    0 1px 2px rgba(22, 21, 15, 0.04), 0 12px 40px rgba(22, 21, 15, 0.06);
+  --shadow-modal:
+    0 2px 6px rgba(22, 21, 15, 0.06), 0 30px 80px rgba(22, 21, 15, 0.14);
   --focus: 0 0 0 3px var(--c-card), 0 0 0 6px var(--c-accent);
 
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -71,7 +75,9 @@ body {
   font: var(--f-btn);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform var(--t-ui) var(--ease), background var(--t-ui) var(--ease);
+  transition:
+    transform var(--t-ui) var(--ease),
+    background var(--t-ui) var(--ease);
 }
 .btn:active {
   transform: scale(0.98);
@@ -102,7 +108,9 @@ body {
   color: var(--c-ink);
   font: 500 20px/1.2 var(--font);
   cursor: pointer;
-  transition: background var(--t-ui) var(--ease), transform var(--t-ui) var(--ease);
+  transition:
+    background var(--t-ui) var(--ease),
+    transform var(--t-ui) var(--ease);
 }
 .answer:hover {
   background: var(--c-canvas);

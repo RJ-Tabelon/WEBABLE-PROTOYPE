@@ -1,7 +1,7 @@
 // Extension storage and tab helpers for the fitting page. Falls back to localStorage when the page is
 // opened outside the extension (development preview), so the flow never crashes.
 
-import { SERVER_ORIGIN, type FitProfile, type Settings } from '@webable/core';
+import { SERVER_ORIGIN, type FitProfile, type Settings } from '@webable/engine';
 import type { RunEvidence } from './evidence';
 
 type ChromeLike = typeof chrome;
@@ -44,14 +44,22 @@ export const EVIDENCE_KEY = 'webable.evidence';
 const DEV_EVIDENCE_KEY = 'webable.dev.evidence';
 
 function isEvidence(x: unknown): x is RunEvidence {
-  return !!x && typeof x === 'object' && Array.isArray((x as RunEvidence).sites) && Array.isArray((x as RunEvidence).gotInWay);
+  return (
+    !!x &&
+    typeof x === 'object' &&
+    Array.isArray((x as RunEvidence).sites) &&
+    Array.isArray((x as RunEvidence).gotInWay)
+  );
 }
 
 export async function loadEvidence(): Promise<RunEvidence | null> {
   const c = ext();
   try {
     if (c) {
-      const got = (await c.storage.local.get(EVIDENCE_KEY)) as Record<string, unknown>;
+      const got = (await c.storage.local.get(EVIDENCE_KEY)) as Record<
+        string,
+        unknown
+      >;
       const e = got[EVIDENCE_KEY];
       return isEvidence(e) ? e : null;
     }

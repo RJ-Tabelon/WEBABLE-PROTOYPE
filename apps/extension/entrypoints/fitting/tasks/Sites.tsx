@@ -19,7 +19,12 @@ type Phase = 'running' | 'failed' | 'which' | 'inway';
 function looksLikeResult(x: unknown): x is SiteTaskResult {
   if (!x || typeof x !== 'object') return false;
   const r = x as Partial<SiteTaskResult>;
-  return typeof r.id === 'string' && typeof r.name === 'string' && typeof r.found === 'boolean' && typeof r.busy === 'boolean';
+  return (
+    typeof r.id === 'string' &&
+    typeof r.name === 'string' &&
+    typeof r.found === 'boolean' &&
+    typeof r.busy === 'boolean'
+  );
 }
 
 export function SitesTask(props: TaskProps): JSX.Element {
@@ -34,7 +39,10 @@ export function SitesTask(props: TaskProps): JSX.Element {
   const [pressed, press] = usePressed();
   const [chips, setChips] = useState<string[]>([]);
   const [nothing, setNothing] = useState(false);
-  const [names, setNames] = useState<{ quiet: string; busy: string }>({ quiet: 'Wikipedia', busy: 'CNN' });
+  const [names, setNames] = useState<{ quiet: string; busy: string }>({
+    quiet: 'Wikipedia',
+    busy: 'CNN',
+  });
   const askedWhich = useRef(false);
   const heading = useRef<HTMLHeadingElement>(null);
 
@@ -43,16 +51,24 @@ export function SitesTask(props: TaskProps): JSX.Element {
   const onProgress = (n: number) => {
     if (settled.current || !Number.isFinite(n)) return;
     if (n > 0 && n < total) progressed.current = true;
-    setDone((d) => Math.min(total, Math.max(d, Math.floor(n), got.current.size)));
+    setDone((d) =>
+      Math.min(total, Math.max(d, Math.floor(n), got.current.size)),
+    );
   };
 
   /** The sites are over (all done, closed early, or skipped): keep what we have and ask the two questions. */
   const finishSites = (results: SiteTaskResult[] | null, byPerson: boolean) => {
     if (settled.current || !alive.current) return;
     settled.current = true;
-    const list = (results && results.length ? results : [...got.current.values()]).filter(looksLikeResult);
+    const list = (
+      results && results.length ? results : [...got.current.values()]
+    ).filter(looksLikeResult);
     const trials = raw.addSites(list);
-    if (trials > 0) raw.endBlock('find', { trials, stop: byPerson ? 'person' : 'max_trials' });
+    if (trials > 0)
+      raw.endBlock('find', {
+        trials,
+        stop: byPerson ? 'person' : 'max_trials',
+      });
     else raw.endBlock('find', { trials: 0, skipped: true });
     raw.beginBlock('pick');
     const tried = list.filter((r) => siteTrial(r));
@@ -62,7 +78,12 @@ export function SitesTask(props: TaskProps): JSX.Element {
       setNames({ quiet: quiet.name, busy: busy.name });
       askedWhich.current = true;
       setPhase('which');
-    } else if (!byPerson && trials === 0 && !progressed.current && got.current.size === 0) {
+    } else if (
+      !byPerson &&
+      trials === 0 &&
+      !progressed.current &&
+      got.current.size === 0
+    ) {
       // Every site came back skipped without the run ever moving: they couldn't be opened. Say so plainly.
       setPhase('failed');
     } else {
@@ -77,7 +98,13 @@ export function SitesTask(props: TaskProps): JSX.Element {
     const rt = (globalThis as { chrome?: typeof chrome }).chrome?.runtime;
     const onMessage = (msg: unknown) => {
       const m = msg as { siteTask?: string; result?: unknown } | null;
-      if (settled.current || !m || m.siteTask !== 'done' || !looksLikeResult(m.result)) return;
+      if (
+        settled.current ||
+        !m ||
+        m.siteTask !== 'done' ||
+        !looksLikeResult(m.result)
+      )
+        return;
       got.current.set(m.result.id, m.result);
       onProgress(got.current.size);
     };
@@ -89,7 +116,9 @@ export function SitesTask(props: TaskProps): JSX.Element {
     // runSiteTasks never rejects; it resolves with one result per site once the task tab has closed.
     let run: Promise<SiteTaskResult[]>;
     try {
-      run = Promise.resolve(runSiteTasks(SITE_TASKS, (n: number) => onProgress(n)));
+      run = Promise.resolve(
+        runSiteTasks(SITE_TASKS, (n: number) => onProgress(n)),
+      );
     } catch {
       run = Promise.resolve([]);
     }
@@ -135,15 +164,39 @@ export function SitesTask(props: TaskProps): JSX.Element {
 
   if (phase === 'which') {
     return (
-      <TaskLayout title="Which site was easier to find things on?" stageClass="is-which" focusTitle>
-        <div class="fl-which" role="group" aria-label="Which site was easier to find things on?">
-          <Answer id="first" pressed={pressed} onClick={() => which('first')} keys="1">
+      <TaskLayout
+        title="Which site was easier to find things on?"
+        stageClass="is-which"
+        focusTitle
+      >
+        <div
+          class="fl-which"
+          role="group"
+          aria-label="Which site was easier to find things on?"
+        >
+          <Answer
+            id="first"
+            pressed={pressed}
+            onClick={() => which('first')}
+            keys="1"
+          >
             {names.quiet}
           </Answer>
-          <Answer id="same" kind="quiet" pressed={pressed} onClick={() => which('same')} keys="2">
+          <Answer
+            id="same"
+            kind="quiet"
+            pressed={pressed}
+            onClick={() => which('same')}
+            keys="2"
+          >
             About the same
           </Answer>
-          <Answer id="second" pressed={pressed} onClick={() => which('second')} keys="3">
+          <Answer
+            id="second"
+            pressed={pressed}
+            onClick={() => which('second')}
+            keys="3"
+          >
             {names.busy}
           </Answer>
         </div>
@@ -158,7 +211,12 @@ export function SitesTask(props: TaskProps): JSX.Element {
         stageClass="is-inway"
         focusTitle
         actions={
-          <button type="button" class="btn btn-primary fl-btn-wide" onClick={finish} data-answer="done-find">
+          <button
+            type="button"
+            class="btn btn-primary fl-btn-wide"
+            onClick={finish}
+            data-answer="done-find"
+          >
             Done
           </button>
         }
@@ -167,7 +225,13 @@ export function SitesTask(props: TaskProps): JSX.Element {
           {IN_THE_WAY.map((c) => {
             const on = chips.includes(c.id);
             return (
-              <button type="button" class={`fl-toggle ${on ? 'is-on' : ''}`} aria-pressed={on} onClick={() => toggle(c.id)} data-answer={c.id}>
+              <button
+                type="button"
+                class={`fl-toggle ${on ? 'is-on' : ''}`}
+                aria-pressed={on}
+                onClick={() => toggle(c.id)}
+                data-answer={c.id}
+              >
                 {on ? <CheckIcon size={20} /> : null}
                 {c.label}
               </button>
@@ -197,7 +261,12 @@ export function SitesTask(props: TaskProps): JSX.Element {
         <h2 class="fl-sites-title">We couldn’t open the websites right now.</h2>
         <p class="fl-sites-deck">You can go on without them.</p>
         <div class="fl-sites-actions">
-          <button type="button" class="btn btn-primary fl-btn-wide" onClick={() => setPhase('inway')} data-answer="sites-go-on">
+          <button
+            type="button"
+            class="btn btn-primary fl-btn-wide"
+            onClick={() => setPhase('inway')}
+            data-answer="sites-go-on"
+          >
             Go on
           </button>
         </div>
@@ -219,24 +288,42 @@ export function SitesTask(props: TaskProps): JSX.Element {
       <p class="fl-sites-deck">Come back here when you’re done.</p>
       <ol class="fl-sites-list" aria-label="The websites">
         {specs.map((s, i) => {
-          const state = i < done ? 'is-done' : i === at ? 'is-current' : 'is-next';
+          const state =
+            i < done ? 'is-done' : i === at ? 'is-current' : 'is-next';
           return (
-            <li class={`fl-sites-item ${state}`} aria-current={state === 'is-current' ? 'step' : undefined}>
+            <li
+              class={`fl-sites-item ${state}`}
+              aria-current={state === 'is-current' ? 'step' : undefined}
+            >
               <span class="fl-sites-mark" aria-hidden="true">
-                {state === 'is-done' ? <CheckIcon size={16} /> : <span class="fl-sites-dot" />}
+                {state === 'is-done' ? (
+                  <CheckIcon size={16} />
+                ) : (
+                  <span class="fl-sites-dot" />
+                )}
               </span>
               {s.name}
-              {state === 'is-done' ? <span class="visually-hidden">, done</span> : null}
+              {state === 'is-done' ? (
+                <span class="visually-hidden">, done</span>
+              ) : null}
             </li>
           );
         })}
       </ol>
       <div class="fl-sites-actions">
-        <button type="button" class="btn-text" onClick={() => finishSites(null, true)} data-answer="skip-sites">
+        <button
+          type="button"
+          class="btn-text"
+          onClick={() => finishSites(null, true)}
+          data-answer="skip-sites"
+        >
           Skip the websites
         </button>
       </div>
-      <span class="visually-hidden" aria-live="polite">{`${Math.min(done + 1, total)} of ${total}: ${current}`}</span>
+      <span
+        class="visually-hidden"
+        aria-live="polite"
+      >{`${Math.min(done + 1, total)} of ${total}: ${current}`}</span>
     </section>
   );
 }

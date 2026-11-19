@@ -29,8 +29,21 @@ export function useEngineState(api: EngineApi): EngineState {
 }
 
 const WATCHED_ATTRS = [
-  'disabled', 'checked', 'selected', 'aria-checked', 'aria-pressed', 'aria-expanded', 'aria-selected', 'aria-current',
-  'aria-disabled', 'aria-hidden', 'hidden', 'open', 'class', 'style', 'src',
+  'disabled',
+  'checked',
+  'selected',
+  'aria-checked',
+  'aria-pressed',
+  'aria-expanded',
+  'aria-selected',
+  'aria-current',
+  'aria-disabled',
+  'aria-hidden',
+  'hidden',
+  'open',
+  'class',
+  'style',
+  'src',
 ];
 
 /** A counter that goes up (throttled) whenever the page's DOM changes, so the view re-reads the live text. */
@@ -47,14 +60,22 @@ export function useDomVersion(): number {
     const mo = new MutationObserver((recs) => {
       if (timer) return;
       const relevant = recs.some((r) => {
-        const t = r.target instanceof Element ? r.target : r.target.parentElement;
+        const t =
+          r.target instanceof Element ? r.target : r.target.parentElement;
         return !t || !t.closest('webable-ui');
       });
       if (!relevant) return;
-      timer = window.setTimeout(bump, Math.max(120, 450 - (performance.now() - last)));
+      timer = window.setTimeout(
+        bump,
+        Math.max(120, 450 - (performance.now() - last)),
+      );
     });
     mo.observe(document.body ?? document.documentElement, {
-      subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: WATCHED_ATTRS,
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: WATCHED_ATTRS,
     });
     return () => {
       mo.disconnect();
@@ -71,7 +92,8 @@ let tickTimer = 0;
 
 export function onTick(cb: () => void): () => void {
   tickers.add(cb);
-  if (!tickTimer) tickTimer = window.setInterval(() => tickers.forEach((f) => f()), 700);
+  if (!tickTimer)
+    tickTimer = window.setInterval(() => tickers.forEach((f) => f()), 700);
   return () => {
     tickers.delete(cb);
     if (!tickers.size && tickTimer) {
@@ -191,7 +213,8 @@ export function useCalmStyles(ref: RefObject<HTMLElement>): boolean {
     const s = sheet();
     if (s && 'adoptedStyleSheets' in root) {
       try {
-        if (!root.adoptedStyleSheets.includes(s)) root.adoptedStyleSheets = [...root.adoptedStyleSheets, s];
+        if (!root.adoptedStyleSheets.includes(s))
+          root.adoptedStyleSheets = [...root.adoptedStyleSheets, s];
         return;
       } catch {
         /* fall through */
@@ -204,7 +227,11 @@ export function useCalmStyles(ref: RefObject<HTMLElement>): boolean {
 
 /** prefers-reduced-motion, live. */
 export function useReducedMotion(): boolean {
-  const [r, setR] = useState(() => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const [r, setR] = useState(
+    () =>
+      typeof matchMedia === 'function' &&
+      matchMedia('(prefers-reduced-motion: reduce)').matches,
+  );
   useEffect(() => {
     if (typeof matchMedia !== 'function') return;
     const mq = matchMedia('(prefers-reduced-motion: reduce)');

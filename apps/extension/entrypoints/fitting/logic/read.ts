@@ -15,7 +15,12 @@ export function normalizedMs(chars: number, rtMs: number): number {
  * The largest sentence size (CSS px) that fits the card: at least `minCh` characters per line, and the longest sentence
  * (58 characters) inside the card's height at line height 1.25.
  */
-export function maxSentenceCss(cardW: number, cardH: number, charRatio: number, minCh = 13): number {
+export function maxSentenceCss(
+  cardW: number,
+  cardH: number,
+  charRatio: number,
+  minCh = 13,
+): number {
   let best = 16;
   for (let s = 16; s <= 200; s += 1) {
     const cpl = cardW / (charRatio * s);
@@ -38,9 +43,15 @@ export const LADDER = {
 } as const;
 
 /** The first sentence's size (px at 100%): just above the comfortable size, or above 20 px when none is known. */
-export function ladderStartPx(seedPx: number | null, priorPx: number | null): number {
+export function ladderStartPx(
+  seedPx: number | null,
+  priorPx: number | null,
+): number {
   const base = seedPx ?? priorPx ?? 20;
-  return Math.round(Math.min(120, Math.max(12, base * 10 ** LADDER.stepLog)) * 10) / 10;
+  return (
+    Math.round(Math.min(120, Math.max(12, base * 10 ** LADDER.stepLog)) * 10) /
+    10
+  );
 }
 
 /** Size of sentence n (0-based) on the ladder. */
@@ -56,7 +67,11 @@ export function ladderStop(
 ): 'max_trials' | 'time' | 'reversal' | 'ladder_end' | null {
   const n = trials.length;
   if (n >= LADDER.maxSentences) return 'max_trials';
-  if (n >= LADDER.missesInRow && trials.slice(-LADDER.missesInRow).every((t) => !t.correct)) return 'reversal';
+  if (
+    n >= LADDER.missesInRow &&
+    trials.slice(-LADDER.missesInRow).every((t) => !t.correct)
+  )
+    return 'reversal';
   if (activeMs >= LADDER.maxActiveMs) return 'time';
   if (nextPx < LADDER.floorPx) return 'ladder_end';
   return null;

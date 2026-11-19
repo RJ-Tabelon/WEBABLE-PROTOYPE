@@ -3,13 +3,18 @@
 // Alt+Shift+[ and ] page width; Alt+J is an older alias. They never fire while focus is in a text field. Keys are matched by `code` (the physical key), so the
 // brackets work whatever character Option+Shift types on a Mac.
 
-export type ShortcutAction = 'lens' | 'calm' | 'original' | 'panel' | 'narrower' | 'wider';
+export type ShortcutAction =
+  'lens' | 'calm' | 'original' | 'panel' | 'narrower' | 'wider';
 
-type KeyLike = Pick<KeyboardEvent, 'altKey' | 'shiftKey' | 'ctrlKey' | 'metaKey' | 'code'>;
+type KeyLike = Pick<
+  KeyboardEvent,
+  'altKey' | 'shiftKey' | 'ctrlKey' | 'metaKey' | 'code'
+>;
 
 export function shortcutFor(e: KeyLike): ShortcutAction | null {
   if (!e.altKey || e.ctrlKey || e.metaKey) return null;
-  if (!e.shiftKey) return e.code === 'KeyW' ? 'panel' : e.code === 'KeyJ' ? 'lens' : null;
+  if (!e.shiftKey)
+    return e.code === 'KeyW' ? 'panel' : e.code === 'KeyJ' ? 'lens' : null;
   switch (e.code) {
     case 'KeyL':
       return 'lens';
@@ -28,14 +33,27 @@ export function shortcutFor(e: KeyLike): ShortcutAction | null {
   }
 }
 
-const NON_TEXT_INPUTS = new Set(['button', 'checkbox', 'radio', 'submit', 'reset', 'range', 'color', 'file', 'image']);
+const NON_TEXT_INPUTS = new Set([
+  'button',
+  'checkbox',
+  'radio',
+  'submit',
+  'reset',
+  'range',
+  'color',
+  'file',
+  'image',
+]);
 
 /** True when the key event comes from a place where letters are typed (never take those keys). */
 export function inEditable(e: Event): boolean {
   const t = (e.composedPath?.()[0] ?? e.target) as Element | null;
   if (!t || typeof (t as Element).getAttribute !== 'function') return false;
   const tag = t.tagName?.toLowerCase();
-  if (tag === 'input') return !NON_TEXT_INPUTS.has(((t as HTMLInputElement).type || 'text').toLowerCase());
+  if (tag === 'input')
+    return !NON_TEXT_INPUTS.has(
+      ((t as HTMLInputElement).type || 'text').toLowerCase(),
+    );
   if (tag === 'textarea' || tag === 'select') return true;
   if ((t as HTMLElement).isContentEditable) return true;
   const role = t.getAttribute('role');

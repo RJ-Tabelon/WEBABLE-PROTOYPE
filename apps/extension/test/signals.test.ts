@@ -1,9 +1,32 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_FITS, cusumWeights, gate, initialCusum, toSignals } from '@webable/core';
 import {
-  ActiveClock, Backtracker, PinchWatch, PointerTrail, SIG, ToggleHistory, ZoomWatch, gateCounts, isJudgment, isLostClick,
-  longPauseThresholdMs, overlapRatio, parseZoom, progressBand, rectDistance, summarize, wordCount,
-  type LiveFacts, type PressFacts, type SigEvent,
+  DEMO_FITS,
+  cusumWeights,
+  gate,
+  initialCusum,
+  toSignals,
+} from '@webable/engine';
+import {
+  ActiveClock,
+  Backtracker,
+  PinchWatch,
+  PointerTrail,
+  SIG,
+  ToggleHistory,
+  ZoomWatch,
+  gateCounts,
+  isJudgment,
+  isLostClick,
+  longPauseThresholdMs,
+  overlapRatio,
+  parseZoom,
+  progressBand,
+  rectDistance,
+  summarize,
+  wordCount,
+  type LiveFacts,
+  type PressFacts,
+  type SigEvent,
 } from '../src/engine/signals';
 import { isExcludedHost } from '../src/engine/hosts';
 
@@ -16,8 +39,11 @@ const live = (over: Partial<LiveFacts> = {}): LiveFacts => ({
   ...over,
 });
 
-const act = (at: number, hit: 'near' | 'lost' | 'pinch' | null = null, reentries = 1): SigEvent =>
-  ({ k: 'act', at, t: at, hit, reentries, sizePx: 28 });
+const act = (
+  at: number,
+  hit: 'near' | 'lost' | 'pinch' | null = null,
+  reentries = 1,
+): SigEvent => ({ k: 'act', at, t: at, hit, reentries, sizePx: 28 });
 
 describe('geometry', () => {
   it('measures point-to-rect distance, 0 inside', () => {
@@ -39,7 +65,14 @@ describe('geometry', () => {
 });
 
 describe('P2 lost click', () => {
-  const base: PressFacts = { distPx: 9, durMs: 180, releasedInside: false, selecting: false, dragCapable: false, pointerType: 'mouse' };
+  const base: PressFacts = {
+    distPx: 9,
+    durMs: 180,
+    releasedInside: false,
+    selecting: false,
+    dragCapable: false,
+    pointerType: 'mouse',
+  };
   it('fires for a 3-40 px slip off the control within 800 ms', () => {
     expect(isLostClick(base)).toBe(true);
     expect(isLostClick({ ...base, distPx: 3 })).toBe(true);
@@ -61,7 +94,15 @@ describe('P5 re-entries over the movement segment', () => {
   const target = { left: 100, top: 100, right: 140, bottom: 120 };
   it('counts outside-to-inside transitions', () => {
     const tr = new PointerTrail();
-    const path: Array<[number, number]> = [[50, 110], [90, 110], [110, 110], [145, 110], [120, 110], [150, 110], [125, 110]];
+    const path: Array<[number, number]> = [
+      [50, 110],
+      [90, 110],
+      [110, 110],
+      [145, 110],
+      [120, 110],
+      [150, 110],
+      [125, 110],
+    ];
     path.forEach(([x, y], i) => tr.push(x, y, 1000 + i * 16));
     expect(tr.reentries(target, 0, 1200)).toBe(3);
   });
@@ -101,7 +142,9 @@ describe('P4 toggles', () => {
   it('notices a flip set back by a separate click within 2 s', () => {
     const h = new ToggleHistory();
     h.settle(h.click(0, 'aria-expanded=false'), 'aria-expanded=true');
-    expect(h.settle(h.click(900, 'aria-expanded=true'), 'aria-expanded=false')).toBe('undone');
+    expect(
+      h.settle(h.click(900, 'aria-expanded=true'), 'aria-expanded=false'),
+    ).toBe('undone');
   });
   it('ignores ordinary use', () => {
     const h = new ToggleHistory();
@@ -182,7 +225,12 @@ describe('R1 browser zoom', () => {
 });
 
 describe('R3 full re-read', () => {
-  const scroll = (b: Backtracker, ys: number[], at0: number, step = 50): number => {
+  const scroll = (
+    b: Backtracker,
+    ys: number[],
+    at0: number,
+    step = 50,
+  ): number => {
     let at = at0;
     for (const y of ys) {
       b.feed(y, at);
@@ -218,7 +266,14 @@ describe('R3 full re-read', () => {
 
 describe('summarize (window counts)', () => {
   it('counts trials, near-misses, lost clicks and wobble', () => {
-    const log: SigEvent[] = [act(1000), act(2000, 'near', 3), act(3000, 'near'), { k: 'lost', at: 3500, t: 3500 }, act(4000, 'lost'), act(5000, 'pinch')];
+    const log: SigEvent[] = [
+      act(1000),
+      act(2000, 'near', 3),
+      act(3000, 'near'),
+      { k: 'lost', at: 3500, t: 3500 },
+      act(4000, 'lost'),
+      act(5000, 'pinch'),
+    ];
     const c = summarize(log, 0, 60_000, live());
     expect(c.clicks).toBe(5);
     expect(c.nearMissClicks).toBe(3);
@@ -227,49 +282,102 @@ describe('summarize (window counts)', () => {
     expect(c.windowMs).toBe(60_000);
   });
   it('drops trials within 10 s after a dead click (the CUSUM pause)', () => {
-    const log: SigEvent[] = [act(1000, 'near'), { k: 'dead', at: 2000, t: 2000 }, act(2000), act(5000, 'near'), act(13_000, 'near')];
+    const log: SigEvent[] = [
+      act(1000, 'near'),
+      { k: 'dead', at: 2000, t: 2000 },
+      act(2000),
+      act(5000, 'near'),
+      act(13_000, 'near'),
+    ];
     const c = summarize(log, 0, 60_000, live());
     expect(c.deadClicks).toBe(1);
     expect(c.clicks).toBe(2);
     expect(c.nearMissClicks).toBe(2);
   });
   it('only counts events inside (fromAt, toAt]', () => {
-    const log: SigEvent[] = [act(1000, 'near'), act(40_000, 'near'), act(70_000, 'near')];
+    const log: SigEvent[] = [
+      act(1000, 'near'),
+      act(40_000, 'near'),
+      act(70_000, 'near'),
+    ];
     expect(summarize(log, 30_000, 60_000, live()).nearMissClicks).toBe(1);
     expect(summarize(log, 0, 1000, live()).nearMissClicks).toBe(1);
   });
   it('reports re-reads only when the same passage was re-read twice within 3 min', () => {
-    const one: SigEvent[] = [{ k: 'reread', at: 10_000, t: 10_000, range: [800, 1000] }];
+    const one: SigEvent[] = [
+      { k: 'reread', at: 10_000, t: 10_000, range: [800, 1000] },
+    ];
     expect(summarize(one, 0, 60_000, live()).scrollBacks).toBe(0);
-    const twoDifferent: SigEvent[] = [...one, { k: 'reread', at: 40_000, t: 40_000, range: [3000, 3300] }];
+    const twoDifferent: SigEvent[] = [
+      ...one,
+      { k: 'reread', at: 40_000, t: 40_000, range: [3000, 3300] },
+    ];
     expect(summarize(twoDifferent, 0, 60_000, live()).scrollBacks).toBe(0);
-    const samePassage: SigEvent[] = [{ k: 'reread', at: 10_000, t: 10_000, range: [800, 1000] }, { k: 'reread', at: 100_000, t: 100_000, range: [850, 1100] }];
+    const samePassage: SigEvent[] = [
+      { k: 'reread', at: 10_000, t: 10_000, range: [800, 1000] },
+      { k: 'reread', at: 100_000, t: 100_000, range: [850, 1100] },
+    ];
     // the first re-read is outside this 60 s window but within 3 min of the second
     expect(summarize(samePassage, 70_000, 130_000, live()).scrollBacks).toBe(2);
-    const tooFar: SigEvent[] = [{ k: 'reread', at: 10_000, t: 10_000, range: [800, 1000] }, { k: 'reread', at: 200_000, t: 200_000, range: [800, 1000] }];
+    const tooFar: SigEvent[] = [
+      { k: 'reread', at: 10_000, t: 10_000, range: [800, 1000] },
+      { k: 'reread', at: 200_000, t: 200_000, range: [800, 1000] },
+    ];
     expect(summarize(tooFar, 150_000, 210_000, live()).scrollBacks).toBe(0);
   });
   it('counts hunting episodes (F1) in the window', () => {
-    const log: SigEvent[] = [{ k: 'hunt', at: 25_000, t: 25_000 }, { k: 'hunt', at: 80_000, t: 80_000 }];
+    const log: SigEvent[] = [
+      { k: 'hunt', at: 25_000, t: 25_000 },
+      { k: 'hunt', at: 80_000, t: 80_000 },
+    ];
     expect(summarize(log, 0, 60_000, live()).hoverHunts).toBe(1);
     expect(summarize(log, 20_000, 80_000, live()).hoverHunts).toBe(2);
   });
   it('zeroes pointing counts on canvas, game and map pages', () => {
-    const log: SigEvent[] = [act(1000, 'near', 3), { k: 'lost', at: 1500, t: 1500 }, { k: 'double', at: 2000, t: 2000 }];
+    const log: SigEvent[] = [
+      act(1000, 'near', 3),
+      { k: 'lost', at: 1500, t: 1500 },
+      { k: 'double', at: 2000, t: 2000 },
+    ];
     const c = summarize(log, 0, 60_000, live({ pointingOff: true }));
-    expect([c.nearMissClicks, c.lostClicks, c.repeatClicks, c.pathWobble]).toEqual([0, 0, 0, 0]);
+    expect([
+      c.nearMissClicks,
+      c.lostClicks,
+      c.repeatClicks,
+      c.pathWobble,
+    ]).toEqual([0, 0, 0, 0]);
     expect(c.clicks).toBe(1);
   });
   it('fills every StruggleCounts field', () => {
     const log: SigEvent[] = [
-      { k: 'zoom', at: 1, t: 1, from: 1, to: 1.25 }, { k: 'sideways', at: 2, t: 2 }, { k: 'pause', at: 3, t: 3, words: 40, ms: 30_000 },
-      { k: 'select', at: 4, t: 4 }, { k: 'popup', at: 5, t: 5 }, { k: 'stuck', at: 6, t: 6, why: 'pause' },
-      { k: 'correction', at: 7, t: 7 }, { k: 'undone', at: 8, t: 8 }, { k: 'double', at: 9, t: 9 },
+      { k: 'zoom', at: 1, t: 1, from: 1, to: 1.25 },
+      { k: 'sideways', at: 2, t: 2 },
+      { k: 'pause', at: 3, t: 3, words: 40, ms: 30_000 },
+      { k: 'select', at: 4, t: 4 },
+      { k: 'popup', at: 5, t: 5 },
+      { k: 'stuck', at: 6, t: 6, why: 'pause' },
+      { k: 'correction', at: 7, t: 7 },
+      { k: 'undone', at: 8, t: 8 },
+      { k: 'double', at: 9, t: 9 },
     ];
-    const c = summarize(log, 0, 60_000, live({ zoomLevel: 1.254, timeOnPageSec: 75.4 }));
+    const c = summarize(
+      log,
+      0,
+      60_000,
+      live({ zoomLevel: 1.254, timeOnPageSec: 75.4 }),
+    );
     expect(c).toMatchObject({
-      zoomInEvents: 1, sidewaysScrolls: 1, longPausesOnShortText: 1, textSelections: 1, popupsDismissed: 1,
-      longFieldDwells: 1, typingCorrections: 1, wrongThenUndone: 1, repeatClicks: 1, zoomLevel: 1.25, timeOnPageSec: 75,
+      zoomInEvents: 1,
+      sidewaysScrolls: 1,
+      longPausesOnShortText: 1,
+      textSelections: 1,
+      popupsDismissed: 1,
+      longFieldDwells: 1,
+      typingCorrections: 1,
+      wrongThenUndone: 1,
+      repeatClicks: 1,
+      zoomLevel: 1.25,
+      timeOnPageSec: 75,
     });
   });
 });
@@ -295,7 +403,9 @@ describe('small helpers', () => {
   });
   it('parses zoom answers and judgments', () => {
     expect(parseZoom(1.25)).toBe(1.25);
-    expect(parseZoom({ factor: 1.5, ours: null, personChanged: false })).toBe(1.5);
+    expect(parseZoom({ factor: 1.5, ours: null, personChanged: false })).toBe(
+      1.5,
+    );
     expect(parseZoom({ nope: 1 })).toBeNull();
     expect(parseZoom(99)).toBeNull();
     expect(isJudgment({ level: 1.2, kinds: {}, metrics: {} })).toBe(true);
@@ -319,7 +429,11 @@ describe('with the real core gate and policy', () => {
     let last = 0;
     let out = { check: false, state, reason: '' };
     for (const at of times) {
-      out = gate(state, gateCounts(log, last, at, live({ timeOnPageSec: at / 1000 })), fit);
+      out = gate(
+        state,
+        gateCounts(log, last, at, live({ timeOnPageSec: at / 1000 })),
+        fit,
+      );
       state = out.state;
       last = at;
     }
@@ -327,7 +441,13 @@ describe('with the real core gate and policy', () => {
   };
 
   it('two near-misses never make a pointing check; a third does (CUSUM >= 3.0)', () => {
-    const log: SigEvent[] = [act(1000), act(3000, 'near'), act(5000), act(7000, 'near'), act(9000)];
+    const log: SigEvent[] = [
+      act(1000),
+      act(3000, 'near'),
+      act(5000),
+      act(7000, 'near'),
+      act(9000),
+    ];
     const g1 = runGate(log, [8000, 12_000, 20_000, 30_000, 45_000]);
     expect(g1.reason).not.toMatch(/pointing/);
     expect(g1.state.s).toBeLessThan(3);
@@ -338,16 +458,31 @@ describe('with the real core gate and policy', () => {
   });
 
   it('frequent gate runs over overlapping windows count each trial once', () => {
-    const log: SigEvent[] = [act(1000, 'near'), act(2000), act(3000, 'near'), act(4000)];
-    const g = runGate(log, [5000, 6000, 7000, 8000, 9000, 10_000, 20_000, 40_000, 59_000]);
+    const log: SigEvent[] = [
+      act(1000, 'near'),
+      act(2000),
+      act(3000, 'near'),
+      act(4000),
+    ];
+    const g = runGate(
+      log,
+      [5000, 6000, 7000, 8000, 9000, 10_000, 20_000, 40_000, 59_000],
+    );
     const w = cusumWeights(fit);
     expect(g.state.s).toBeCloseTo(2 * w.hit + 2 * w.clean, 5);
     expect(g.state.s).toBeLessThan(3);
   });
 
   it('a held zoom-in reaches Jev as a reading signal', () => {
-    const log: SigEvent[] = [{ k: 'zoom', at: 30_000, t: 30_000, from: 1, to: 1.25 }];
-    const c = summarize(log, 0, 40_000, live({ timeOnPageSec: 40, zoomLevel: 1.25 }));
+    const log: SigEvent[] = [
+      { k: 'zoom', at: 30_000, t: 30_000, from: 1, to: 1.25 },
+    ];
+    const c = summarize(
+      log,
+      0,
+      40_000,
+      live({ timeOnPageSec: 40, zoomLevel: 1.25 }),
+    );
     const g = gate(initialCusum(), c, fit);
     expect(g.check).toBe(true);
     const s = toSignals(c, fit, 'online store product page');

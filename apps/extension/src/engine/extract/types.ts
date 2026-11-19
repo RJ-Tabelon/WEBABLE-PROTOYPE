@@ -5,7 +5,7 @@
 // Element rides along as `el` in the browser only. Nothing in this folder reads form input values, and nothing it
 // produces is sent to any model: `OutlineNode.data` stays on the device (the background strips it).
 
-import type { ExtractedData } from '@webable/core';
+import type { ExtractedData } from '@webable/engine';
 
 /** One visible element, as the reader's walk saw it. */
 export interface SNode {

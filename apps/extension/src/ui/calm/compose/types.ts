@@ -1,7 +1,7 @@
 // Round 10: the contract between the WebAble page (which groups its blocks and asks for components) and the component
 // renderer (which draws a group's ComposeBlocks). The renderer is pure: data in, Preact out, no engine calls except
 // through the links it is given.
-import type { ComposeBlock } from '@webable/core';
+import type { ComposeBlock } from '@webable/engine';
 import type { LinkPart } from '../model';
 
 export interface ComposedProps {

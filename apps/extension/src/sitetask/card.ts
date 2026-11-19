@@ -61,7 +61,12 @@ function shadowMode(): ShadowRootMode {
   }
 }
 
-export function mountCard(opts: { index: number; total: number; prompt: string; onSkip(): void }): TaskCard {
+export function mountCard(opts: {
+  index: number;
+  total: number;
+  prompt: string;
+  onSkip(): void;
+}): TaskCard {
   const host = document.createElement(HOST_TAG);
   host.style.cssText =
     'all: initial; display: block; position: fixed; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647;';
@@ -126,9 +131,11 @@ export function mountCard(opts: { index: number; total: number; prompt: string; 
 
   // Keys typed in the card must not reach page shortcuts.
   const stopKeys = (e: Event) => e.stopPropagation();
-  for (const type of ['keydown', 'keyup', 'keypress'] as const) host.addEventListener(type, stopKeys);
+  for (const type of ['keydown', 'keyup', 'keypress'] as const)
+    host.addEventListener(type, stopKeys);
 
-  const supportsPopover = typeof (card as { showPopover?: unknown }).showPopover === 'function';
+  const supportsPopover =
+    typeof (card as { showPopover?: unknown }).showPopover === 'function';
   const raise = () => {
     if (!supportsPopover) return;
     try {
@@ -169,7 +176,8 @@ export function mountCard(opts: { index: number; total: number; prompt: string; 
     },
     destroy() {
       try {
-        if (supportsPopover && card.matches(':popover-open')) card.hidePopover();
+        if (supportsPopover && card.matches(':popover-open'))
+          card.hidePopover();
       } catch {
         /* already gone */
       }

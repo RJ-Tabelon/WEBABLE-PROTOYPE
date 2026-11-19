@@ -1,6 +1,6 @@
 // What every step gets, and the one layout they share: the question, the white stage, the answers under it.
 
-import type { BrowserSettings, FitProfile, InputClass } from '@webable/core';
+import type { BrowserSettings, FitProfile, InputClass } from '@webable/engine';
 import type { ComponentChildren, JSX, Ref } from 'preact';
 import { useEffect, useRef } from 'preact/hooks';
 import type { Env } from '../logic/env';
@@ -52,7 +52,12 @@ export function TaskLayout(props: {
           {props.sub ?? ''}
         </p>
       ) : null}
-      <div class={`fl-stage card ${props.stageClass}`} ref={props.stageRef} style={props.stageStyle} {...(props.data ?? {})}>
+      <div
+        class={`fl-stage card ${props.stageClass}`}
+        ref={props.stageRef}
+        style={props.stageStyle}
+        {...(props.data ?? {})}
+      >
         {props.children}
       </div>
       {props.actions ? <div class="fl-actions">{props.actions}</div> : null}

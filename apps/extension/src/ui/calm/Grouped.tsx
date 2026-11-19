@@ -12,24 +12,39 @@ import { type Box, maySwitch, waitsForEarlier } from './settle';
 type Render = (blocks: Block[]) => ComponentChildren;
 
 /** A part's body: groups and the blocks between them, in page order. */
-export function Segments({ segs, render }: { segs: Seg[]; render: Render }): JSX.Element {
+export function Segments({
+  segs,
+  render,
+}: {
+  segs: Seg[];
+  render: Render;
+}): JSX.Element {
   return (
     <>
       {segs.map((s, i) =>
         s.k === 'group' ? (
           <GroupView key={s.group.id} seg={s} render={render} />
         ) : (
-          <Fragment key={s.blocks[0]?.key ?? `b${i}`}>{render(s.blocks)}</Fragment>
+          <Fragment key={s.blocks[0]?.key ?? `b${i}`}>
+            {render(s.blocks)}
+          </Fragment>
         ),
       )}
     </>
   );
 }
 
-const SAY_NEW = 'Laid out for you by WebAble. Click to see the page’s own words.';
+const SAY_NEW =
+  'Laid out for you by WebAble. Click to see the page’s own words.';
 const SAY_OWN = 'The page’s own words. Click to see them laid out for you.';
 
-function GroupMark({ showing, onToggle }: { showing: 'new' | 'original'; onToggle: () => void }): JSX.Element {
+function GroupMark({
+  showing,
+  onToggle,
+}: {
+  showing: 'new' | 'original';
+  onToggle: () => void;
+}): JSX.Element {
   const fresh = showing === 'new';
   return (
     <button
@@ -37,40 +52,66 @@ function GroupMark({ showing, onToggle }: { showing: 'new' | 'original'; onToggl
       class="wa-rw-mark wa-cg__mark"
       data-showing={showing}
       title={fresh ? SAY_NEW : SAY_OWN}
-      aria-label={fresh ? 'Laid out for you by WebAble. Show the page’s own words.' : 'The page’s own words. Show them laid out for you.'}
+      aria-label={
+        fresh
+          ? 'Laid out for you by WebAble. Show the page’s own words.'
+          : 'The page’s own words. Show them laid out for you.'
+      }
       onClick={onToggle}
     />
   );
 }
 
-function boxIn(el: Element | null, sc: HTMLElement | null): { box: Box | null; view: Box } {
-  const view: Box = sc ? (({ top, bottom }) => ({ top, bottom }))(sc.getBoundingClientRect()) : { top: 0, bottom: window.innerHeight };
+function boxIn(
+  el: Element | null,
+  sc: HTMLElement | null,
+): { box: Box | null; view: Box } {
+  const view: Box = sc
+    ? (({ top, bottom }) => ({ top, bottom }))(sc.getBoundingClientRect())
+    : { top: 0, bottom: window.innerHeight };
   if (!el) return { box: null, view };
   const r = el.getBoundingClientRect();
   return { box: r.height > 0 ? { top: r.top, bottom: r.bottom } : null, view };
 }
 
-export function GroupView({ seg, render }: { seg: GroupSeg; render: Render }): JSX.Element {
+export function GroupView({
+  seg,
+  render,
+}: {
+  seg: GroupSeg;
+  render: Render;
+}): JSX.Element {
   const ctx = useCalm();
   const id = seg.group.id;
   const ctl = ctx.settle;
   const gs = ctx.compose?.groups[id];
   const ready = gs?.state === 'ready' && !!gs.blocks?.length;
-  const [mode, setMode] = useState<'composed' | 'own'>(() => ctl?.shown.get(id) ?? 'own');
+  const [mode, setMode] = useState<'composed' | 'own'>(
+    () => ctl?.shown.get(id) ?? 'own',
+  );
   const [first, setFirst] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   // The group's bottom edge just before it changed, when it was above the reading position (kept where it was).
   const anchor = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!ready || mode === 'composed' || !ctl || ctl.user.has(id)) return undefined;
+    if (!ready || mode === 'composed' || !ctl || ctl.user.has(id))
+      return undefined;
     let timer = 0;
     const attempt = (): boolean => {
       if (ctl.shown.get(id) === 'composed' || ctl.user.has(id)) return true;
       const sc = ctl.scroller();
       const { box, view } = boxIn(ref.current, sc);
       const now = performance.now();
-      if (!maySwitch({ sinceOpenMs: now - ctl.openedAt, interacted: ctl.interacted, box, view })) return false;
+      if (
+        !maySwitch({
+          sinceOpenMs: now - ctl.openedAt,
+          interacted: ctl.interacted,
+          box,
+          view,
+        })
+      )
+        return false;
       // Top to bottom: in the first moments, wait a little for a group above that is still being laid out.
       const order = ctx.groupOrder ?? [];
       const earlier = order.slice(0, Math.max(0, order.indexOf(id)));
@@ -79,7 +120,13 @@ export function GroupView({ seg, render }: { seg: GroupSeg; render: Render }): J
         return (!s || s.state === 'waiting') && ctl.shown.get(g) !== 'composed';
       });
       const readyFor = gs?.readyAt != null ? now - gs.readyAt : Infinity;
-      if (waitsForEarlier({ inGrace: ctl.inGrace(now), earlierWaiting, readyForMs: readyFor })) {
+      if (
+        waitsForEarlier({
+          inGrace: ctl.inGrace(now),
+          earlierWaiting,
+          readyForMs: readyFor,
+        })
+      ) {
         window.clearTimeout(timer);
         timer = window.setTimeout(() => {
           if (attempt()) stop();
@@ -125,10 +172,25 @@ export function GroupView({ seg, render }: { seg: GroupSeg; render: Render }): J
   };
 
   return (
-    <div ref={ref} class="wa-cg" data-wa-group={id} data-showing={showComposed ? 'new' : ready ? 'original' : 'waiting'}>
-      {ready && <GroupMark showing={showComposed ? 'new' : 'original'} onToggle={toggle} />}
+    <div
+      ref={ref}
+      class="wa-cg"
+      data-wa-group={id}
+      data-showing={showComposed ? 'new' : ready ? 'original' : 'waiting'}
+    >
+      {ready && (
+        <GroupMark
+          showing={showComposed ? 'new' : 'original'}
+          onToggle={toggle}
+        />
+      )}
       {showComposed && gs?.blocks ? (
-        <Composed blocks={gs.blocks} links={seg.links} settle={first && !ctx.reduceMotion} id={id} />
+        <Composed
+          blocks={gs.blocks}
+          links={seg.links}
+          settle={first && !ctx.reduceMotion}
+          id={id}
+        />
       ) : (
         render(seg.blocks)
       )}
