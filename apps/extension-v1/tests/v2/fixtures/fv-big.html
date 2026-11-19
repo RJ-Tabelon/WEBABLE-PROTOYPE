@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Results</title>
+    <style>
+      body {
+        margin: 0;
+        font:
+          13px/1.4 Arial,
+          sans-serif;
+      }
+      main {
+        padding: 16px;
+      }
+      .r {
+        padding: 6px 0;
+        border-bottom: 1px solid #eee;
+      }
+      .r a {
+        font-size: 14px;
+      }
+      .r .u {
+        color: #060;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Results</h1>
+      <div id="results"></div>
+      <button type="button" id="more">More results</button>
+    </main>
+    <script>
+      // 320 search results, built here so the fixture stays small.
+      const box = document.getElementById('results');
+      const words = [
+        'harbor',
+        'river',
+        'garden',
+        'market',
+        'station',
+        'library',
+        'bridge',
+        'museum',
+      ];
+      for (let i = 1; i <= 320; i++) {
+        const r = document.createElement('div');
+        r.className = 'r';
+        r.id = 'r' + i;
+        const a = document.createElement('a');
+        a.href = '/v2/fv-big.html#result-' + i;
+        a.textContent =
+          'Result ' +
+          i +
+          ': the ' +
+          words[i % 8] +
+          ' and the ' +
+          words[(i * 3) % 8];
+        const u = document.createElement('div');
+        u.className = 'u';
+        u.textContent = 'example.org/' + words[i % 8] + '/' + i;
+        const p = document.createElement('p');
+        p.textContent =
+          'A short description of result number ' +
+          i +
+          ' that talks about the ' +
+          words[(i * 5) % 8] +
+          ' for a while.';
+        r.append(a, u, p);
+        box.append(r);
+      }
+    </script>
+  </body>
+</html>

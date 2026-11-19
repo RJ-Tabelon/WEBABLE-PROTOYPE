@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Live: firewall</title>
+    <!-- engine.js stand-in: the firewall is installed before any page script. -->
+    <script src="/__v2/live.js"></script>
+    <script>
+      // Page listeners on window and document, capture and bubble, counting
+      // every real event and anything aimed at WebAble's host.
+      window.hits = [];
+      window.shortcuts = [];
+      const TYPES = [
+        'keydown',
+        'keypress',
+        'keyup',
+        'beforeinput',
+        'input',
+        'wheel',
+        'pointerdown',
+        'pointerup',
+        'mousedown',
+        'mouseup',
+        'click',
+        'focusin',
+        'focusout',
+        'focus',
+        'blur',
+        'paste',
+        'compositionstart',
+      ];
+      const count = (where) => (e) => {
+        const t = e.target;
+        const host = t && t.localName === 'webable-ui';
+        if (e.isTrusted || host) window.hits.push(`${where}:${e.type}`);
+      };
+      for (const type of TYPES) {
+        window.addEventListener(type, count('window-capture'), true);
+        window.addEventListener(type, count('window-bubble'), false);
+        document.addEventListener(type, count('document-capture'), true);
+        document.addEventListener(type, count('document-bubble'), false);
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        for (const type of TYPES)
+          document.body.addEventListener(type, count('body'), false);
+      });
+      // Site shortcuts, Gmail and YouTube style: plain keys on non-editable targets.
+      document.addEventListener('keydown', (e) => {
+        const t = e.target;
+        const editable =
+          t &&
+          (t.isContentEditable ||
+            /^(input|textarea|select)$/i.test(t.localName));
+        if (!editable && ['/', 'j', 'k', 'e', '#', '?'].includes(e.key))
+          window.shortcuts.push(e.key);
+      });
+      // A wheel hijacker (smooth-scroll libraries): cancels native scrolling.
+      window.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          window.hits.push('hijack');
+        },
+        { passive: false },
+      );
+      window.pressed = 0;
+    </script>
+  </head>
+  <body>
+    <main data-scope data-id="e1">
+      <h1>Inbox</h1>
+      <label
+        >Search mail
+        <input data-id="e2" data-proxy="input" aria-label="Search mail"
+      /></label>
+      <button
+        type="button"
+        data-id="e3"
+        data-proxy="button"
+        onclick="window.pressed++"
+      >
+        Compose
+      </button>
+      <label>Page field <input id="pagefield" /></label>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Cards, rows and an article</title>
+    <!--
+      The v1 screenshot failures (docs/10 §1), in one page:
+        - a Meta-like header whose nav labels are wrapped six levels deep in
+          fixed-width items (v1 grew them into each other);
+        - a Gmail-like mail rail with unread badges over icons, and rows whose
+          sender and subject cells are ellipsized (v1 made rows alternate
+          between sizes and timestamps bigger than subjects);
+        - a YouTube-like grid with line-clamped titles, metadata and duration
+          badges over thumbnails (v1 made metadata bigger than titles);
+        - an article, which should simply get the person's text size.
+    -->
+    <style>
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        color: #222;
+        background: #fff;
+      }
+      header.masthead {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        height: 56px;
+        padding: 0 24px;
+        border-bottom: 1px solid #ddd;
+      }
+      .brand {
+        font-size: 16px;
+        font-weight: 700;
+        color: #111;
+        text-decoration: none;
+      }
+      .navwrap {
+        display: flex;
+      }
+      /* Fixed-width items: a label that grows spills into its neighbour. */
+      .navitem {
+        flex: 0 0 112px;
+        min-width: 0;
+      }
+      .navitem a {
+        display: block;
+        color: #1c1e21;
+        text-decoration: none;
+      }
+      .navlabel {
+        font-size: 12px;
+        white-space: nowrap;
+      }
+      header input[type='search'] {
+        margin-left: auto;
+        width: 220px;
+        font-size: 13px;
+      }
+      .app {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 16px;
+        padding: 16px 24px;
+      }
+      nav.rail a {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        height: 32px;
+        padding: 0 8px;
+        font-size: 13px;
+        color: #222;
+        text-decoration: none;
+      }
+      nav.rail .icon {
+        position: relative;
+        width: 20px;
+        height: 20px;
+      }
+      nav.rail .icon svg {
+        width: 20px;
+        height: 20px;
+        display: block;
+      }
+      nav.rail .badge {
+        position: absolute;
+        top: -6px;
+        left: 12px;
+        min-width: 14px;
+        padding: 0 3px;
+        border-radius: 7px;
+        background: #c5221f;
+        color: #fff;
+        font-size: 10px;
+        line-height: 14px;
+        text-align: center;
+      }
+      main {
+        min-width: 0;
+      }
+      section {
+        margin-bottom: 28px;
+      }
+      section > h2 {
+        font-size: 18px;
+        margin: 0 0 8px;
+      }
+      table.rows {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+      }
+      table.rows td {
+        height: 36px;
+        padding: 0 8px;
+        border-bottom: 1px solid #eee;
+        font-size: 14px;
+      }
+      td.check {
+        width: 28px;
+      }
+      td.sender {
+        width: 168px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      tr.unread td.sender,
+      tr.unread .subj {
+        font-weight: 700;
+      }
+      td.subject {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .snip {
+        color: #5f6368;
+      }
+      .tag-chip {
+        display: inline-block;
+        margin-right: 6px;
+        padding: 0 6px;
+        border-radius: 4px;
+        background: #e8eaed;
+        font-size: 11px;
+      }
+      td.date {
+        width: 72px;
+        text-align: right;
+      }
+      td.date span {
+        font-size: 12px;
+        color: #5f6368;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 16px;
+      }
+      a.thumb {
+        position: relative;
+        display: block;
+        aspect-ratio: 16 / 9;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #ddd;
+      }
+      a.thumb img {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+      .duration {
+        position: absolute;
+        right: 4px;
+        bottom: 4px;
+        padding: 1px 4px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        font-size: 12px;
+      }
+      h3.vtitle {
+        margin: 8px 0 4px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+      a.vlink {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        line-height: 20px;
+        color: #0f0f0f;
+        text-decoration: none;
+      }
+      .meta {
+        font-size: 12px;
+        color: #606060;
+      }
+      .channel {
+        display: block;
+      }
+      article.story {
+        max-width: 720px;
+      }
+      article.story h1 {
+        font-size: 28px;
+        margin: 0 0 8px;
+      }
+      article.story h2 {
+        font-size: 20px;
+        margin: 20px 0 8px;
+      }
+      article.story p,
+      article.story li {
+        font-size: 14px;
+        line-height: 20px;
+        margin: 0 0 12px;
+      }
+      article.story p.byline {
+        font-size: 12px;
+        color: #555;
+      }
+      figure {
+        margin: 16px 0;
+      }
+      figure img {
+        display: block;
+        width: 320px;
+        height: 120px;
+        background: #ccc;
+      }
+      figcaption {
+        font-size: 12px;
+        color: #555;
+        margin-top: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <a class="brand" href="/">Home</a>
+      <nav aria-label="Primary">
+        <div class="navwrap">
+          <div class="navitem">
+            <div>
+              <a href="/glasses"
+                ><div>
+                  <div><span class="navlabel">AI glasses</span></div>
+                </div></a
+              >
+            </div>
+          </div>
+          <div class="navitem">
+            <div>
+              <a href="/quest"
+                ><div>
+                  <div><span class="navlabel">Meta Quest</span></div>
+                </div></a
+              >
+            </div>
+          </div>
+          <div class="navitem">
+            <div>
+              <a href="/vr"
+                ><div>
+                  <div><span class="navlabel">Meta VR Glasses</span></div>
+                </div></a
+              >
+            </div>
+          </div>
+          <div class="navitem">
+            <div>
+              <a href="/explore"
+                ><div>
+                  <div><span class="navlabel">Explore Meta</span></div>
+                </div></a
+              >
+            </div>
+          </div>
+          <div class="navitem">
+            <div>
+              <a href="/support"
+                ><div>
+                  <div><span class="navlabel">Support</span></div>
+                </div></a
+              >
+            </div>
+          </div>
+        </div>
+      </nav>
+      <input type="search" name="q" aria-label="Search" />
+    </header>
+    <div class="app">
+      <nav class="rail" aria-label="Mail">
+        <a href="/inbox"
+          ><span class="icon"
+            ><svg viewBox="0 0 20 20" aria-hidden="true">
+              <rect x="2" y="4" width="16" height="12" fill="#5f6368" /></svg
+            ><span class="badge">12</span></span
+          ><span class="label">Inbox</span></a
+        >
+        <a href="/starred"
+          ><span class="icon"
+            ><svg viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="7" fill="#5f6368" /></svg></span
+          ><span class="label">Starred</span></a
+        >
+        <a href="/updates"
+          ><span class="icon"
+            ><svg viewBox="0 0 20 20" aria-hidden="true">
+              <rect x="3" y="3" width="14" height="14" fill="#5f6368" /></svg
+            ><span class="badge">3</span></span
+          ><span class="label">Updates</span></a
+        >
+      </nav>
+      <main id="main">
+        <section class="inbox" aria-label="Inbox">
+          <h2>Inbox</h2>
+          <table class="rows">
+            <tbody>
+              <tr class="row unread">
+                <td class="check">
+                  <input type="checkbox" aria-label="Select" />
+                </td>
+                <td class="sender">Google</td>
+                <td class="subject">
+                  <span class="subj">Security alert</span
+                  ><span class="snip">
+                    - A new sign-in on a device you have not used before was
+                    noticed on your account this morning</span
+                  >
+                </td>
+                <td class="date"><span>3:42 PM</span></td>
+              </tr>
+              <tr class="row unread">
+                <td class="check">
+                  <input type="checkbox" aria-label="Select" />
+                </td>
+                <td class="sender">Nextdoor neighbourhood digest team</td>
+                <td class="subject">
+                  <span class="tag-chip">Updates</span
+                  ><span class="subj">This week near you</span
+                  ><span class="snip">
+                    - Lost cat, a new bakery, and the road works on the river
+                    road</span
+                  >
+                </td>
+                <td class="date"><span>2:10 PM</span></td>
+              </tr>
+              <tr class="row unread">
+                <td class="check">
+                  <input type="checkbox" aria-label="Select" />
+                </td>
+                <td class="sender">Vercel</td>
+                <td class="subject">
+                  <span class="subj">Deployment ready</span
+                  ><span class="snip"> - Your preview build finished</span>
+                </td>
+                <td class="date"><span>11:05 AM</span></td>
+              </tr>
+              <tr class="row">
+                <td class="check">
+                  <input type="checkbox" aria-label="Select" />
+                </td>
+                <td class="sender">edocuments-noreply@statements.example</td>
+                <td class="subject">
+                  <span class="subj">Your statement is available</span
+                  ><span class="snip">
+                    - View the statement for the period ending last month in
+                    your account</span
+                  >
+                </td>
+                <td class="date"><span>Oct 12</span></td>
+              </tr>
+              <tr class="row">
+                <td class="check">
+                  <input type="checkbox" aria-label="Select" />
+                </td>
+                <td class="sender">Team</td>
+                <td class="subject">
+                  <span class="subj">Notes from the retro</span
+                  ><span class="snip"> - Three things went well</span>
+                </td>
+                <td class="date"><span>Oct 11</span></td>
+              </tr>
+              <tr class="row">
+                <td class="check">
+                  <input type="checkbox" aria-label="Select" />
+                </td>
+                <td class="sender">Calendar reminders and invitations</td>
+                <td class="subject">
+                  <span class="subj">Tomorrow: planning</span
+                  ><span class="snip">
+                    - 10:00 to 11:00 in the large room on the third floor</span
+                  >
+                </td>
+                <td class="date"><span>Oct 10</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+        <section class="videos" aria-label="Videos">
+          <h2>Recommended</h2>
+          <div class="grid">
+            <div class="vcard">
+              <a class="thumb" href="/v/1"
+                ><img alt="" /><span class="duration">3:16</span></a
+              >
+              <div class="details">
+                <h3 class="vtitle">
+                  <a class="vlink" href="/v/1"
+                    >How the river towns rebuilt the levee in one long summer of
+                    work</a
+                  >
+                </h3>
+                <div class="meta">
+                  <span class="channel">River Works</span>
+                  <span class="stats">1.2M views · 3 days ago</span>
+                </div>
+              </div>
+            </div>
+            <div class="vcard">
+              <a class="thumb" href="/v/2"
+                ><img alt="" /><span class="duration">12:04</span></a
+              >
+              <div class="details">
+                <h3 class="vtitle">
+                  <a class="vlink" href="/v/2">Willows on the bank</a>
+                </h3>
+                <div class="meta">
+                  <span class="channel">Green Banks</span>
+                  <span class="stats">48K views · 1 week ago</span>
+                </div>
+              </div>
+            </div>
+            <div class="vcard">
+              <a class="thumb" href="/v/3"
+                ><img alt="" /><span class="duration">58:31</span></a
+              >
+              <div class="details">
+                <h3 class="vtitle">
+                  <a class="vlink" href="/v/3"
+                    >A full council meeting about flood maps, the culverts and
+                    the buyouts, with every question from residents</a
+                  >
+                </h3>
+                <div class="meta">
+                  <span class="channel">County Channel</span>
+                  <span class="stats">2.1K views · 2 months ago</span>
+                </div>
+              </div>
+            </div>
+            <div class="vcard">
+              <a class="thumb" href="/v/4"
+                ><img alt="" /><span class="duration">0:45</span></a
+              >
+              <div class="details">
+                <h3 class="vtitle">
+                  <a class="vlink" href="/v/4">Spring fair moves uphill</a>
+                </h3>
+                <div class="meta">
+                  <span class="channel">Town Notes</span>
+                  <span class="stats">310 views · 5 hours ago</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <article class="story">
+          <h1>River towns plan for a wetter decade</h1>
+          <p class="byline">By a staff reporter, updated this morning</p>
+          <p>
+            The river has crested above the old marker four times in the last
+            ten years, and each time the town has spent the following summer
+            repairing roads, pumping basements and arguing about who should pay
+            for the next round of improvements to the levee system.
+          </p>
+          <p>
+            This year the council asked engineers for a plan that assumes the
+            wetter seasons will continue. Their draft proposes raising the
+            lowest stretch of road, widening two culverts and buying back a
+            handful of properties that have flooded more than three times.
+          </p>
+          <figure>
+            <img alt="" />
+            <figcaption>
+              The north bank after the spring flood, seen from the bridge.
+            </figcaption>
+          </figure>
+          <h2>What the plan changes</h2>
+          <ul>
+            <li>
+              Two culverts under the main road are widened, which the engineers
+              say will lower the water on the main street.
+            </li>
+            <li>
+              The lowest stretch of the river road is raised by about a metre
+              over two summers of work.
+            </li>
+          </ul>
+          <p>
+            Residents who spoke at the first meeting were divided. Some want the
+            buyouts to move faster; others worry that the town will lose the
+            families who have lived beside the river for generations.
+          </p>
+        </article>
+      </main>
+    </div>
+  </body>
+</html>

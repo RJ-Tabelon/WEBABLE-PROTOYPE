@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Delayed application rendering</title>
+    <style>
+      body {
+        margin: 32px;
+        font-family: sans-serif;
+      }
+      main {
+        max-width: 700px;
+      }
+      p {
+        font-size: 12px;
+        line-height: 1.6;
+      }
+      .large {
+        font-size: 24px;
+      }
+      button {
+        margin: 32px;
+        width: 24px;
+        height: 24px;
+        padding: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app" aria-label="Article"></main>
+    <script>
+      setTimeout(() => {
+        document.querySelector('main').innerHTML =
+          '<h1>New article</h1>' +
+          '<p>A dynamically rendered article contains enough running text to identify the main reading region. The saved fit should be applied when this content appears after the initial page load, without opening the popup or reloading the page.</p>'.repeat(
+            3,
+          ) +
+          '<button aria-label="Save article">+</button>';
+        document.querySelector('p').id = 'story';
+      }, 1500);
+    </script>
+  </body>
+</html>

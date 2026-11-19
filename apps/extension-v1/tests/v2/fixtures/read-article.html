@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Read: article blocks</title>
+    <!--
+      A BBC-shaped story (eval B1): the <article>'s own children are blocks
+      that share one hashed class (headline, byline, image and many text
+      blocks), two text blocks hold an ad slot, and a "More on this story"
+      list of links sits at the end of the article. The blocks are the story,
+      never a list of records; the links list is a collection.
+    -->
+    <meta property="og:type" content="article" />
+    <style>
+      body {
+        margin: 0;
+        font-family: Georgia, serif;
+        font-size: 18px;
+        line-height: 1.5;
+        color: #141414;
+      }
+      header {
+        display: flex;
+        gap: 16px;
+        padding: 16px 32px;
+        border-bottom: 1px solid #ccc;
+        font-family: Arial, sans-serif;
+      }
+      main {
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .sc-3f1b {
+        margin: 0 0 18px;
+      }
+      .ad {
+        height: 90px;
+        margin: 12px 0;
+        background: #eee;
+      }
+      .ad iframe {
+        width: 100%;
+        height: 90px;
+        border: 0;
+      }
+      figure img {
+        width: 100%;
+        height: 360px;
+        background: #8aa;
+        display: block;
+      }
+      .related a {
+        display: block;
+        padding: 6px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <a href="/">News home</a>
+      <nav aria-label="Sections">
+        <a href="/world">World</a> <a href="/business">Business</a>
+        <a href="/science">Science</a>
+      </nav>
+    </header>
+    <main>
+      <article data-qa="story">
+        <div class="sc-3f1b" data-component="headline-block">
+          <h1>Volunteers reopen the quarry road after a summer of repairs</h1>
+        </div>
+        <div class="sc-3f1b" data-component="byline-block">
+          <time datetime="2026-10-15">6 hours ago</time>
+          <button type="button">Share</button>
+          <span>By Ione Wells</span>
+        </div>
+        <div class="sc-3f1b" data-component="image-block">
+          <figure>
+            <img
+              alt="The quarry road at dawn"
+              src="data:image/gif;base64,R0lGODlhAQABAAAAACw="
+            />
+            <figcaption>The road reopened on Saturday.</figcaption>
+          </figure>
+        </div>
+        <div class="sc-3f1b" data-component="text-block" data-qa="text-1">
+          <p>
+            The quarry road, closed since a landslip in May, reopened on
+            Saturday after a summer of weekend work by volunteers from three
+            villages along the valley.
+          </p>
+          <p>
+            Council engineers inspected the new retaining wall on Friday and
+            said it met the standard for the light traffic the road carries.
+          </p>
+        </div>
+        <div class="sc-3f1b" data-component="text-block">
+          <p>
+            Residents had faced a twelve-mile detour to reach the market town,
+            and the bus service was cut to two journeys a day while the road was
+            shut.
+          </p>
+          <div class="ad dotcom-ad-inner">
+            <iframe title="3rd party ad content" src="about:blank"></iframe>
+          </div>
+          <p>
+            "We did it a weekend at a time," said one of the organisers, who
+            asked that the work be credited to everyone who turned up.
+          </p>
+        </div>
+        <div class="sc-3f1b" data-component="text-block">
+          <p>
+            The repairs used stone from the old quarry itself, cut and laid by
+            hand, with the council supplying the drainage pipes and the
+            machinery for the heaviest lifts.
+          </p>
+        </div>
+        <div class="sc-3f1b" data-component="text-block">
+          <p>
+            A small celebration is planned for next month, when the bus company
+            expects to restore its full timetable along the valley route.
+          </p>
+          <div class="ad dotcom-ad-inner">
+            <iframe title="3rd party ad content" src="about:blank"></iframe>
+          </div>
+        </div>
+        <div class="sc-3f1b" data-component="text-block">
+          <p>
+            The council said it would review how other closed roads in the
+            district could be repaired with help from local groups next year.
+          </p>
+        </div>
+        <div class="sc-3f1b" data-component="links-block">
+          <h2>More on this story</h2>
+          <div class="related" data-qa="related">
+            <a href="/story/1"
+              >How the landslip closed the valley road in May</a
+            >
+            <a href="/story/2">Bus services cut while repairs go on</a>
+            <a href="/story/3">The volunteers rebuilding rural roads</a>
+            <a href="/story/4">Council budget for road repairs explained</a>
+          </div>
+        </div>
+      </article>
+    </main>
+    <footer>
+      <a href="/terms">Terms of use</a> <a href="/privacy">Privacy policy</a>
+    </footer>
+  </body>
+</html>
