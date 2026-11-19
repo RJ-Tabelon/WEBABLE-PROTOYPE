@@ -34,10 +34,18 @@ export interface ProviderFailure {
   message?: string | null;
 }
 
-const QUOTA_CODES = new Set(['insufficient_quota', 'credit_balance_exhausted', 'billing_hard_limit_reached', 'billing_not_active', 'quota_exceeded']);
+const QUOTA_CODES = new Set([
+  'insufficient_quota',
+  'credit_balance_exhausted',
+  'billing_hard_limit_reached',
+  'billing_not_active',
+  'quota_exceeded',
+]);
 
 /** Which failures mean "the account cannot be used for a while" (null: transient or a request problem). */
-export function classifyOpenAiFailure(e: ProviderFailure): AiBlockReason | null {
+export function classifyOpenAiFailure(
+  e: ProviderFailure,
+): AiBlockReason | null {
   const status = e.status ?? null;
   const code = (e.code ?? '').toLowerCase();
   const type = (e.type ?? '').toLowerCase();
@@ -45,7 +53,8 @@ export function classifyOpenAiFailure(e: ProviderFailure): AiBlockReason | null 
   if (status === 401) return 'key_rejected';
   if (QUOTA_CODES.has(code) || QUOTA_CODES.has(type)) return 'no_credits';
   if (status === 402) return 'no_credits';
-  if (status === 429 && /\b(quota|credits?|billing)\b/.test(msg)) return 'no_credits';
+  if (status === 429 && /\b(quota|credits?|billing)\b/.test(msg))
+    return 'no_credits';
   return null;
 }
 
@@ -56,11 +65,24 @@ export function aiStatus(now = Date.now()): AiStatus {
 
 export function aiState(now = Date.now()): AiState {
   const lastCheck = lastCheckAt ? new Date(lastCheckAt).toISOString() : null;
-  if (!openAiKey()) return { status: 'off', reason: 'no_key', since: null, retryAt: null, lastCheck };
+  if (!openAiKey())
+    return {
+      status: 'off',
+      reason: 'no_key',
+      since: null,
+      retryAt: null,
+      lastCheck,
+    };
   if (openAiSpentTodayUsd(now) >= OPENAI_BUDGET_USD) {
     const midnight = new Date(now);
     midnight.setHours(24, 0, 0, 0);
-    return { status: 'no_credits', reason: 'budget', since: null, retryAt: midnight.toISOString(), lastCheck };
+    return {
+      status: 'no_credits',
+      reason: 'budget',
+      since: null,
+      retryAt: midnight.toISOString(),
+      lastCheck,
+    };
   }
   if (blockReason && now < blockedUntil) {
     return {
@@ -78,7 +100,10 @@ export function aiState(now = Date.now()): AiState {
  * Mark the account unusable for AI_BLOCK_MS. Returns true when AI was working before (for one log line); a retry
  * that finds the account still without credits extends the block quietly. Only a success clears it.
  */
-export function markAiBlocked(reason: AiBlockReason, now = Date.now()): boolean {
+export function markAiBlocked(
+  reason: AiBlockReason,
+  now = Date.now(),
+): boolean {
   const was = blockReason !== null;
   if (!was) blockedSince = now;
   blockReason = reason;
@@ -113,8 +138,11 @@ export function resetAiState(): void {
 /** The sentence the UI can show next to "AI layouts off". */
 export function aiSentence(s: AiState = aiState()): string {
   if (s.status === 'on') return 'AI layouts on.';
-  if (s.reason === 'no_key') return 'AI layouts off: no OpenAI key on this server. Jev and the local layouts still work.';
-  if (s.reason === 'budget') return "AI layouts off: today's spending cap on this server is reached. Jev and the local layouts still work; AI comes back tomorrow.";
-  if (s.reason === 'key_rejected') return 'AI layouts off: OpenAI did not accept the key. Trying again in a few minutes.';
+  if (s.reason === 'no_key')
+    return 'AI layouts off: no OpenAI key on this server. Jev and the local layouts still work.';
+  if (s.reason === 'budget')
+    return "AI layouts off: today's spending cap on this server is reached. Jev and the local layouts still work; AI comes back tomorrow.";
+  if (s.reason === 'key_rejected')
+    return 'AI layouts off: OpenAI did not accept the key. Trying again in a few minutes.';
   return 'AI layouts off: no credits. Jev and the local layouts still work; trying again in a few minutes.';
 }

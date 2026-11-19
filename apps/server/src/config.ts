@@ -11,11 +11,11 @@ export const HOST = '127.0.0.1';
 export const PORT = num('PORT', 41741);
 
 /*
- * Public deployment (a hosted server, e.g. on Vercel). All of this is off unless WEBABLE_PUBLIC=1, so a local
+ * Public deployment (the study's hosted server on Vercel). All of this is off unless WEBABLE_PUBLIC=1, so a local
  * run behaves exactly as before. Read at call time so tests can switch it.
  *   WEBABLE_PUBLIC=1      answer on the deployment's own host names, refuse POSTs with no Origin, limit each IP.
  *   WEBABLE_HOSTS         extra host names to answer on (comma-separated, e.g. the production alias).
- *   ALLOWED_ORIGINS       extra browser origins allowed to call (comma-separated exact origins); honoured locally too.
+ *   STUDY_ORIGINS         extra browser origins allowed to call (comma-separated exact origins); honoured locally too.
  *   RATE_LIMIT_PER_MIN    POSTs per IP per minute when public (default 120; 0 turns it off).
  *   RATE_LIMIT_PER_HOUR   POSTs per IP per hour when public (default 1500; 0 turns it off).
  */
@@ -31,11 +31,16 @@ export function envList(name: string): string[] {
 }
 
 export function rateLimits(): { perMin: number; perHour: number } {
-  return { perMin: num('RATE_LIMIT_PER_MIN', 120), perHour: num('RATE_LIMIT_PER_HOUR', 1500) };
+  return {
+    perMin: num('RATE_LIMIT_PER_MIN', 120),
+    perHour: num('RATE_LIMIT_PER_HOUR', 1500),
+  };
 }
 
-export const JEV_URL = process.env.JEV_URL ?? 'https://api.typesafe.ai/v1/systemone';
-export const JEV_MODELS_URL = process.env.JEV_MODELS_URL ?? 'https://api.typesafe.ai/v1/models';
+export const JEV_URL =
+  process.env.JEV_URL ?? 'https://api.typesafe.ai/v1/systemone';
+export const JEV_MODELS_URL =
+  process.env.JEV_MODELS_URL ?? 'https://api.typesafe.ai/v1/models';
 /** Per-attempt timeout for one Jev request. */
 export const JEV_TIMEOUT_MS = num('JEV_TIMEOUT_MS', 5_000);
 /** Retries on 429/529 (with jitter). */
@@ -64,7 +69,8 @@ export const REDESIGN_CACHE_TTL_MS = num('REDESIGN_CACHE_TTL_MS', 30 * 60_000);
  */
 export const OPENAI_BUDGET_USD = num('OPENAI_BUDGET_USD', 5);
 /** 'priority' is OpenAI's Fast tier (measured 3.4 s vs 5.0 s p50 for gpt-6-sol). */
-export const OPENAI_SERVICE_TIER: 'priority' | 'default' = process.env.OPENAI_SERVICE_TIER === 'default' ? 'default' : 'priority';
+export const OPENAI_SERVICE_TIER: 'priority' | 'default' =
+  process.env.OPENAI_SERVICE_TIER === 'default' ? 'default' : 'priority';
 
 /** Body limit for every request (screenshots for the visual check are the largest). */
 export const BODY_LIMIT_BYTES = 8 * 1024 * 1024;

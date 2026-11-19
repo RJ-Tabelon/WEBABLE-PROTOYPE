@@ -1,6 +1,6 @@
 // WebAble local server: holds the keys, talks to Jev and OpenAI, serves the demo pages. 127.0.0.1:41741 only.
 import { serve } from '@hono/node-server';
-import { JEV_MODEL } from '@webable/core';
+import { JEV_MODEL } from '@webable/engine';
 import { createApp } from './app';
 import { HOST, PORT, jevKey, openAiKey } from './config';
 import { startKeepWarm, warmJev } from './jev';
@@ -15,17 +15,28 @@ registerAttribute(app);
 // Round 7: the meaning check before Calm view (structure only: fine roles and the page purpose).
 registerMeaning(app);
 
-const server = serve({ fetch: app.fetch, port: PORT, hostname: HOST }, (info) => {
-  log('listening', { url: `http://${HOST}:${info.port}`, jevKey: jevKey() !== null, openaiKey: openAiKey() !== null, model: JEV_MODEL });
-  void warmJev().then((r) => log('jev warm-up', { ok: r.ok, ms: r.ms, server: r.serverMs }));
-});
+const server = serve(
+  { fetch: app.fetch, port: PORT, hostname: HOST },
+  (info) => {
+    log('listening', {
+      url: `http://${HOST}:${info.port}`,
+      jevKey: jevKey() !== null,
+      openaiKey: openAiKey() !== null,
+      model: JEV_MODEL,
+    });
+    void warmJev().then((r) =>
+      log('jev warm-up', { ok: r.ok, ms: r.ms, server: r.serverMs }),
+    );
+  },
+);
 
 const stopKeepWarm = startKeepWarm();
 // Checks once whether OpenAI answers (no credits -> AI off for 10 min, then checked again on its own).
 const stopAiWatch = startAiWatch();
 
 server.on('error', (e: NodeJS.ErrnoException) => {
-  if (e.code === 'EADDRINUSE') log('port in use; is another WebAble server running?', { port: PORT });
+  if (e.code === 'EADDRINUSE')
+    log('port in use; is another WebAble server running?', { port: PORT });
   else log('server error', { code: e.code ?? 'unknown' });
   process.exit(1);
 });

@@ -1,6 +1,7 @@
 // Small text and image helpers for the routes.
 
-const ABBREVIATIONS = /\b(?:e\.g|i\.e|etc|vs|approx|incl|no|nos|dept|est|min|max|mr|mrs|ms|dr|prof|st|ave|inc|ltd|co|corp|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|u\.s|a\.m|p\.m)\.$/i;
+const ABBREVIATIONS =
+  /\b(?:e\.g|i\.e|etc|vs|approx|incl|no|nos|dept|est|min|max|mr|mrs|ms|dr|prof|st|ave|inc|ltd|co|corp|jan|feb|mar|apr|jun|jul|aug|sep|sept|oct|nov|dec|u\.s|a\.m|p\.m)\.$/i;
 
 /**
  * Split a passage into sentences for the coverage check: on . ! ? followed by space and an upper-case letter,
@@ -33,7 +34,8 @@ export function splitSentences(passage: string, max = 24): string[] {
 function push(out: string[], s: string): void {
   if (!s) return;
   const words = s.split(/\s+/).length;
-  if (words < 3 && out.length > 0) out[out.length - 1] = `${out[out.length - 1]} ${s}`;
+  if (words < 3 && out.length > 0)
+    out[out.length - 1] = `${out[out.length - 1]} ${s}`;
   else out.push(s);
 }
 
@@ -50,7 +52,8 @@ export function imageFormatOf(b64: string): ImageFormat | null {
 export function pngSize(b64: string): { width: number; height: number } | null {
   if (imageFormatOf(b64) !== 'png') return null;
   const head = Buffer.from(b64.slice(0, 44), 'base64'); // 33 bytes: signature + IHDR
-  if (head.length < 24 || head.toString('latin1', 12, 16) !== 'IHDR') return null;
+  if (head.length < 24 || head.toString('latin1', 12, 16) !== 'IHDR')
+    return null;
   return { width: head.readUInt32BE(16), height: head.readUInt32BE(20) };
 }
 
@@ -66,6 +69,7 @@ export function jevImageProblem(b64: string, name: string): string | null {
     return `${name} is ${width}x${height}; each side must be 280-1568 px (downscale the long side to 1568)`;
   }
   const px = width * height;
-  if (px < 78_400 || px > 2_458_624) return `${name} has ${px} pixels; allowed 78,400-2,458,624`;
+  if (px < 78_400 || px > 2_458_624)
+    return `${name} has ${px} pixels; allowed 78,400-2,458,624`;
   return null;
 }
