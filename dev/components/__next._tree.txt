@@ -1,0 +1,5 @@
+:HL["/WEBABLE-PROTOYPE/_next/static/chunks/18v5i9jcwjc8i.css","style"]
+:HL["/WEBABLE-PROTOYPE/_next/static/chunks/19_02127lyteb.css","style"]
+:HC["/",""]
+:HL["/WEBABLE-PROTOYPE/fonts/webable-sans-latin.woff2","font",{"crossOrigin":"anonymous","type":"font/woff2"}]
+0:{"tree":{"name":"","param":null,"prefetchHints":4112,"slots":{"children":{"name":"dev","param":null,"prefetchHints":4160,"slots":{"children":{"name":"components","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}}}},"staleTime":300,"buildId":"deuQxmJMfRWiL9XP-lsWa"}
