@@ -1,0 +1,161 @@
+{
+  "api": "blocked",
+  "evidence": [
+    {
+      "width": 1440,
+      "size": {
+        "body": 21.98,
+        "heading": 33.33,
+        "overflow": 0
+      },
+      "zoom": 1,
+      "calm": {
+        "lead": "http://127.0.0.1:54914/story-0",
+        "links": [
+          "http://127.0.0.1:54914/story-0",
+          "http://127.0.0.1:54914/story-1",
+          "http://127.0.0.1:54914/story-2",
+          "http://127.0.0.1:54914/story-3",
+          "http://127.0.0.1:54914/story-4",
+          "http://127.0.0.1:54914/story-5",
+          "http://127.0.0.1:54914/story-6",
+          "http://127.0.0.1:54914/games/daily",
+          "http://127.0.0.1:54914/story-7",
+          "http://127.0.0.1:54914/story-8",
+          "http://127.0.0.1:54914/story-9"
+        ],
+        "images": [
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          }
+        ],
+        "width": 1152
+      }
+    },
+    {
+      "width": 390,
+      "size": {
+        "body": 21.98,
+        "heading": 33.33,
+        "overflow": 0
+      },
+      "zoom": 1,
+      "calm": {
+        "lead": "http://127.0.0.1:54914/story-0",
+        "links": [
+          "http://127.0.0.1:54914/story-0",
+          "http://127.0.0.1:54914/story-1",
+          "http://127.0.0.1:54914/story-2",
+          "http://127.0.0.1:54914/story-3",
+          "http://127.0.0.1:54914/story-4",
+          "http://127.0.0.1:54914/story-5",
+          "http://127.0.0.1:54914/story-6",
+          "http://127.0.0.1:54914/games/daily",
+          "http://127.0.0.1:54914/story-7",
+          "http://127.0.0.1:54914/story-8",
+          "http://127.0.0.1:54914/story-9"
+        ],
+        "images": [
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          },
+          {
+            "loaded": true,
+            "state": "ok",
+            "opacity": "1"
+          }
+        ],
+        "width": 359
+      }
+    }
+  ]
+}

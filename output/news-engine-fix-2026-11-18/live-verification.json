@@ -1,0 +1,35 @@
+{
+  "apiServer": "blocked",
+  "pages": [
+    {
+      "name": "fox",
+      "state": {
+        "phase": "tailored",
+        "zoom": 1,
+        "textScale": 1,
+        "ledger": [
+          "Reversed the heavier text: it made text overlap in the header",
+          "Kept 3 click areas at the original size where a larger one would not reach",
+          "Kept 2 headings at the site's own size where a larger one did not fit",
+          "Reversed the larger headings: it made text overlap in the header",
+          "Couldn't read this page right now. Text size and buttons still work."
+        ]
+      }
+    },
+    {
+      "name": "cnn",
+      "state": {
+        "phase": "tailored",
+        "zoom": 1,
+        "textScale": 1,
+        "ledger": [
+          "Thin text is a little heavier (at least 500)",
+          "Darkened 49 faint text items to at least 7:1 contrast",
+          "Kept 19 click areas at the original size where a larger one would not reach",
+          "Made 8 headings larger so they stand out from the text",
+          "Couldn't read this page right now. Text size and buttons still work."
+        ]
+      }
+    }
+  ]
+}

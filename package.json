@@ -1,27 +1,54 @@
 {
   "name": "webable",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@10.31.0",
   "scripts": {
-    "brand:generate": "pnpm --filter @webable/server exec tsx ../../scripts/brand/generate.ts",
+    "build": "pnpm -r --filter './packages/*' --filter @webable/web run --if-present build",
+    "build:functions": "node scripts/build-functions.mjs",
+    "deploy:functions": "node scripts/deploy-functions.mjs",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:functions && pnpm build:functions --check && pnpm --filter @webable/tokens contrast && pnpm extension-v1:validate",
+    "dev": "pnpm --filter @webable/web dev",
+    "dev:web": "pnpm --filter @webable/web dev",
+    "dev:extension": "pnpm --filter @webable/extension dev",
     "dev:server": "pnpm --filter @webable/server dev",
-    "dev:ext": "pnpm --filter @webable/extension dev",
-    "build": "pnpm -r build",
-    "pages": "pnpm --filter @webable/extension build && node scripts/pages/build.mjs",
-    "typecheck": "pnpm -r typecheck",
-    "test": "pnpm -r test",
-    "eval": "node scripts/eval/run.mjs"
+    "engine:brand": "pnpm --filter @webable/server exec tsx ../../scripts/engine/brand/generate.ts",
+    "engine:eval": "node scripts/engine/eval/run.mjs",
+    "engine:check-source": "node scripts/engine/check-gatorhack-source.mjs",
+    "engine:verify": "node scripts/engine/verify-gatorhack.mjs",
+    "engine:verify-news": "node scripts/engine/verify-news.mjs",
+    "dev:compose": "DENO_NO_PACKAGE_JSON=1 deno run --no-config --allow-net=127.0.0.1,api.openai.com --allow-read --allow-env scripts/dev-compose.ts",
+    "env:sync": "node scripts/sync-env.mjs",
+    "extension:build": "pnpm --filter @webable/extension build",
+    "extension:enable": "pnpm --filter @webable/extension build && node scripts/enable-extension.mjs --open",
+    "extension:path": "node scripts/enable-extension.mjs",
+    "extension-v1:check": "node scripts/check-extension-package.mjs",
+    "extension-v1:enable": "pnpm --filter @webable/extension-v1 exec wxt build --mode development && node scripts/enable-extension.mjs --v1 --open",
+    "extension-v1:release": "pnpm --filter @webable/extension-v1 build && pnpm extension-v1:check",
+    "extension-v1:validate": "WXT_WEB_ORIGINS=https://webable.invalid/* WXT_WEB_ORIGIN=https://webable.invalid pnpm --filter @webable/extension-v1 exec wxt build --mode package-check && node scripts/check-extension-package.mjs apps/extension-v1/.output/chrome-mv3-package-check",
+    "extension-v1:path": "node scripts/enable-extension.mjs --v1",
+    "db:push": "node scripts/db-push.mjs",
+    "db:test": "node supabase/tests/run.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "test": "pnpm -r --if-present run test",
+    "test:e2e": "pnpm --filter @webable/extension-v1 test:e2e && pnpm --filter @webable/web test:e2e",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "verify": "pnpm check && pnpm test:e2e",
+    "test:functions": "node supabase/tests/deno-test.mjs",
+    "engine:verify-presentation": "node scripts/engine/verify-presentation.mjs"
   },
   "devDependencies": {
-    "typescript": "5.9.3",
-    "vitest": "5.0.5",
-    "@types/node": "26.6.5"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild",
-      "spawn-sync"
-    ]
+    "@eslint/js": "^9.35.0",
+    "eslint": "^9.35.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.44.0",
+    "esbuild": "0.28.2",
+    "pg": "^8.16.3",
+    "dotenv": "^17.2.3"
   }
 }
