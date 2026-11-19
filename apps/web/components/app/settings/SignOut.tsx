@@ -3,38 +3,42 @@
 import { Actions, Button } from '@webable/ui';
 import { type FormEvent, useState } from 'react';
 
-import { SIGN_OUT_PATH } from '../../../lib/auth/routes';
+import { signOut } from '../../../lib/auth/actions';
+import { withBase } from '../../../lib/base-path';
 import { clearFitUi } from '../../shell/fit-ui';
 
 type Scope = 'local' | 'global';
 
 /**
  * Sign out of this browser, or everywhere (every session, including WebAble in
- * other browsers). One plain form post to the sign-out route, so it works
- * before hydration: the pressed button sends its own `scope`. The UI fit this
- * browser wore is forgotten on the way out.
+ * other browsers). The pressed button says which. The UI fit this browser wore
+ * is forgotten on the way out, and the page reloads on sign-in so nothing of
+ * the account stays in memory.
  */
 export function SignOut() {
   const [pending, setPending] = useState<Scope | null>(null);
 
-  function onSubmit(event: FormEvent<HTMLFormElement>) {
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
-    const scope =
+    const scope: Scope =
       submitter instanceof HTMLButtonElement && submitter.value === 'global'
         ? 'global'
         : 'local';
     setPending(scope);
     clearFitUi();
+    // supabase-js clears this browser's session even when the call fails.
+    await signOut({ scope }).catch(() => undefined);
+    window.location.assign(withBase('/sign-in/?signed_out=1'));
   }
 
   return (
     <ul role="list" className="wa-rows">
       <li>
         <form
-          method="post"
-          action={SIGN_OUT_PATH}
           className="wa-row wa-row--split wa-row--compact"
-          onSubmit={onSubmit}
+          onSubmit={(event) => void onSubmit(event)}
         >
           <div>
             <p className="wa-row__label">Sign out</p>

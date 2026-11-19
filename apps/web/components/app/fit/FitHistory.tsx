@@ -1,7 +1,6 @@
 'use client';
 
 import { Actions, Button, FitValue, useToast } from '@webable/ui';
-import { useRouter } from 'next/navigation';
 import { useId, useRef, useState } from 'react';
 
 import { restoreVersionAction } from '../../../app/app/actions';
@@ -47,7 +46,6 @@ async function saveVersion(fromVersion: number) {
  * Undo.
  */
 export function FitHistory({ items }: { items: HistoryItem[] }) {
-  const router = useRouter();
   const toast = useToast();
   const [open, setOpen] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -64,7 +62,6 @@ export function FitHistory({ items }: { items: HistoryItem[] }) {
   function applied(profile: Parameters<typeof fitUiFor>[0]) {
     writeFitUi(toFitUiInput(fitUiFor(profile)));
     void nudgeExtension();
-    router.refresh();
   }
 
   async function use(item: HistoryItem) {

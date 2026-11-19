@@ -1,5 +1,3 @@
-'use server';
-
 import { createClient as createPlainClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 
@@ -13,7 +11,7 @@ import {
 import { authCallbackUrl } from '../../../lib/auth/routes';
 import { updatePasswordSchema } from '../../../lib/auth/schemas';
 import type { AuthActionResult } from '../../../lib/auth/types';
-import { createClient } from '../../../lib/supabase/server';
+import { createClient } from '../../../lib/supabase/client';
 import {
   type PasswordClaims,
   hasPasswordFromClaims,
@@ -44,7 +42,7 @@ export async function changeEmailAction(input: {
   const { email } = parsed.data;
 
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const { data: claims } = await supabase.auth.getClaims();
     const current = claims?.claims;
     if (!current?.sub) return { ok: false, error: authError('not_signed_in') };
@@ -146,7 +144,7 @@ export async function changePasswordAction(input: {
   const { current } = parsed.data;
 
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
     const { data } = await supabase.auth.getClaims();
     const claims = (data?.claims ?? null) as PasswordClaims | null;
     if (!claims || typeof claims.sub !== 'string')

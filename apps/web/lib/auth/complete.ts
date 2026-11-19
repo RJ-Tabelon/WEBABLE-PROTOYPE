@@ -1,13 +1,12 @@
 import type { EmailOtpType } from '@supabase/supabase-js';
-import { type NextRequest, NextResponse } from 'next/server';
-
-import { createClient } from '../supabase/server';
+import { createClient } from '../supabase/client';
 import { type AuthErrorCode, mapSupabaseAuthError } from './errors';
 import { safeNextPath, signInPath, UPDATE_PASSWORD_PATH } from './routes';
 
 /**
- * Finish an email link and redirect. Shared by /auth/callback and /auth/confirm so
- * either works with either email template:
+ * Finish an email link in the browser and say where to go next. Shared by the
+ * /auth/callback and /auth/confirm pages so either works with either email
+ * template:
  *   - PKCE:        ?code=...                      -> exchangeCodeForSession
  *   - token hash:  ?token_hash=...&type=...        -> verifyOtp (works across browsers)
  *   - errors:      ?error=...&error_code=...       -> back to sign-in with a stable code
@@ -43,32 +42,18 @@ export function linkErrorCode(
   return 'link_invalid';
 }
 
-function redirectTo(request: NextRequest, path: string): NextResponse {
-  // Same origin as the request, so the session cookies set here apply to the destination.
-  const url = new URL(path, request.nextUrl.origin);
-  const response = NextResponse.redirect(url, { status: 303 });
-  response.headers.set('Cache-Control', 'no-store');
-  response.headers.set('Referrer-Policy', 'no-referrer');
-  return response;
+function toSignIn(code: AuthErrorCode, next: string): string {
+  return signInPath(next, { error: code });
 }
 
-function toSignIn(
-  request: NextRequest,
-  code: AuthErrorCode,
-  next: string,
-): NextResponse {
-  return redirectTo(request, signInPath(next, { error: code }));
-}
-
-export async function completeAuthRedirect(
-  request: NextRequest,
-): Promise<NextResponse> {
-  const params = request.nextUrl.searchParams;
+/** The path to go to once the link in `params` is finished (a sign-in path with an error code if it failed). */
+export async function completeAuthLink(
+  params: URLSearchParams,
+): Promise<string> {
   const next = safeNextPath(params.get('next'));
 
   if (params.has('error') || params.has('error_code')) {
     return toSignIn(
-      request,
       linkErrorCode(params.get('error_code'), params.get('error')),
       next,
     );
@@ -79,21 +64,20 @@ export async function completeAuthRedirect(
   const type = params.get('type');
 
   try {
-    const supabase = await createClient();
+    const supabase = createClient();
 
     if (code) {
       const { error } = await supabase.auth.exchangeCodeForSession(code);
       if (error) {
         const mapped = mapSupabaseAuthError(error);
         return toSignIn(
-          request,
           mapped === 'unavailable' ? 'unavailable' : 'link_expired',
           next,
         );
       }
-      // Validated again right before the redirect: nothing between here and the
+      // Validated again right before returning: nothing between here and the
       // top of the function may widen `next`.
-      return redirectTo(request, safeNextPath(next));
+      return safeNextPath(next);
     }
 
     if (tokenHash && isOtpType(type)) {
@@ -104,19 +88,15 @@ export async function completeAuthRedirect(
       if (error) {
         const mapped = mapSupabaseAuthError(error);
         return toSignIn(
-          request,
           mapped === 'unavailable' ? 'unavailable' : 'link_expired',
           next,
         );
       }
-      return redirectTo(
-        request,
-        type === 'recovery' ? UPDATE_PASSWORD_PATH : safeNextPath(next),
-      );
+      return type === 'recovery' ? UPDATE_PASSWORD_PATH : safeNextPath(next);
     }
   } catch {
-    return toSignIn(request, 'unavailable', next);
+    return toSignIn('unavailable', next);
   }
 
-  return toSignIn(request, 'link_invalid', next);
+  return toSignIn('link_invalid', next);
 }

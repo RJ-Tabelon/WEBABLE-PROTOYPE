@@ -1,7 +1,5 @@
-'use server';
-
 import { getPublicEnv } from '../env';
-import { createClient } from '../supabase/server';
+import { createClient } from '../supabase/client';
 import {
   type AuthActionError,
   type AuthErrorCode,
@@ -39,10 +37,11 @@ import type {
 } from './types';
 
 /*
- * Auth server actions. Each accepts a plain object or the FormData a form posts,
- * validates it, and returns { ok: true, ... } or { ok: false, error: { code, message } }.
+ * Auth actions. They run in the browser against Supabase Auth, and the session
+ * is kept in this site's cookies. Each accepts a plain object or the FormData a
+ * form posts, validates it, and returns { ok: true, ... } or
+ * { ok: false, error: { code, message } }.
  * Messages are plain language; raw Supabase errors never leave this module.
- * Next.js checks the Origin of every Server Action request.
  *
  * With useActionState:
  *   const [state, act] = useActionState((_prev: SignInResult | null, form: FormData) => signInWithPassword(form), null);
@@ -52,7 +51,7 @@ async function guard<T>(run: () => Promise<T>, onThrow: () => T): Promise<T> {
   try {
     return await run();
   } catch (error) {
-    // Never surface internals; keep a server-side trace without personal data.
+    // Never surface internals; keep a trace without personal data.
     console.error(
       '[auth] action failed',
       error instanceof Error ? error.name : typeof error,
@@ -75,7 +74,7 @@ export async function signInWithPassword(
 
   return guard<SignInResult>(
     async () => {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -97,7 +96,7 @@ export async function signUpWithPassword(
 
   return guard<SignUpResult>(
     async () => {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -128,7 +127,7 @@ export async function sendMagicLink(
 
   return guard<EmailSentResult>(
     async () => {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: {
@@ -155,7 +154,7 @@ export async function requestPasswordReset(
 
   return guard<EmailSentResult>(
     async () => {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: authCallbackUrl(
           getPublicEnv().webOrigin,
@@ -189,7 +188,7 @@ export async function updatePassword(
 
   return guard<UpdatePasswordResult>(
     async () => {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { data: claims } = await supabase.auth.getClaims();
       if (!claims?.claims.sub) return failed('not_signed_in');
       const { error } = await supabase.auth.updateUser({ password });
@@ -212,7 +211,7 @@ export async function signOut(
 
   return guard<SignOutResult>(
     async () => {
-      const supabase = await createClient();
+      const supabase = createClient();
       const { error } = await supabase.auth.signOut({
         scope: parsed.data.scope,
       });

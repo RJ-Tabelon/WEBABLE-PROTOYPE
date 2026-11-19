@@ -15,6 +15,7 @@ import {
   readFitUi,
 } from '../components/shell/fit-ui';
 import { applyTheme, readTheme } from '../components/shell/theme';
+import { stripBase } from '../lib/base-path';
 
 /** Last-resort boundary: replaces the root layout, so it renders its own document. */
 export default function GlobalError({
@@ -27,7 +28,7 @@ export default function GlobalError({
   // This document replaces the root layout, so re-apply the person's theme and fit here.
   useEffect(() => {
     applyTheme(readTheme());
-    applyFitUi(fitUiForPath(readFitUi(), window.location.pathname));
+    applyFitUi(fitUiForPath(readFitUi(), stripBase(window.location.pathname)));
   }, []);
 
   return (

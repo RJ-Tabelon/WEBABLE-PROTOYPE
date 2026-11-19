@@ -1,7 +1,4 @@
-'use server';
-
 import type { FitProfile } from '@webable/core';
-import { revalidatePath } from 'next/cache';
 
 import {
   type AdjustInput,
@@ -11,6 +8,7 @@ import {
 } from '../../components/app/fit/adjust';
 import { getCurrentFit, listFitHistory, saveFit } from '../../lib/data/fit';
 import { forgetLearning, resetLearned } from '../../lib/data/learning';
+import { refreshData } from '../../lib/data/refresh';
 import { type DataResult, fail, issuePaths, ok } from '../../lib/data/result';
 import { z } from 'zod';
 
@@ -24,7 +22,7 @@ export interface AdjustedFit {
 
 /**
  * Adjust one row of the current fit and save it as a new version (source
- * 'adjustment'). The change is applied on the server to the latest saved fit,
+ * 'adjustment'). The change is applied to the latest saved fit,
  * so two tabs can't overwrite each other's other rows. Undo is a `restore` of
  * that row from the previous version, saved as another version: history keeps
  * both. Input is validated here; the profile is validated again by saveFit.
@@ -58,7 +56,7 @@ export async function adjustFitAction(
     const saved = await saveFit({ profile: next, source: 'adjustment' });
     if (!saved.ok) return saved;
 
-    revalidatePath('/app');
+    refreshData();
     return ok({
       version: saved.data.version,
       previousVersion: current.data.version,
@@ -107,7 +105,7 @@ export async function restoreVersionAction(input: {
     const saved = await saveFit({ profile: source.profile, source: 'restore' });
     if (!saved.ok) return saved;
 
-    revalidatePath('/app');
+    refreshData();
     return ok({
       version: saved.data.version,
       previousVersion: current.data.version,
@@ -147,8 +145,7 @@ export async function resetLearnedAction(input: {
       const result = await resetLearned(key);
       if (!result.ok) return result;
     }
-    revalidatePath('/app');
-    revalidatePath('/app/changes');
+    refreshData();
     return ok(null);
   } catch (error) {
     console.error(
@@ -164,8 +161,7 @@ export async function forgetLearningAction(): Promise<DataResult<null>> {
   try {
     const result = await forgetLearning();
     if (!result.ok) return result;
-    revalidatePath('/app');
-    revalidatePath('/app/changes');
+    refreshData();
     return ok(null);
   } catch (error) {
     console.error(

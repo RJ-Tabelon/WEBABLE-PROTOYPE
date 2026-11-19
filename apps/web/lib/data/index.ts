@@ -1,10 +1,8 @@
 /**
- * Server-side data access for the web app. Import from Server Components,
- * Route Handlers and Server Actions only (it reads request cookies). Client
- * Components use the Server Actions in ./actions.
- *
- * Every function verifies the session, validates its input, and resolves to a
- * DataResult: { ok: true, data } | { ok: false, error: { code, message } }.
+ * Data access for the web app. It runs in the browser: each function reads the
+ * session from this site's cookies, talks to Supabase directly (row level
+ * security limits it to the person's own rows), validates its input, and
+ * resolves to a DataResult: { ok: true, data } | { ok: false, error: { code, message } }.
  */
 
 export * from './result';

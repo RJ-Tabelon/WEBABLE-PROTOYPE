@@ -1,8 +1,10 @@
 /**
  * Auth-related paths and the only way a user-supplied `next` value becomes a
- * redirect target. Pure functions: safe to import from the proxy, route
- * handlers, server actions and client components.
+ * redirect target. Pure functions. Paths here leave out the base path (Next's
+ * router adds it); only full URLs such as email links include it.
  */
+
+import { BASE_PATH } from '../base-path';
 
 export const SIGN_IN_PATH = '/sign-in';
 /** Where people land after signing in when no `next` was given. */
@@ -11,9 +13,8 @@ export const AFTER_SIGN_IN_PATH = '/app';
 export const UPDATE_PASSWORD_PATH = '/reset-password';
 export const AUTH_CALLBACK_PATH = '/auth/callback';
 export const AUTH_CONFIRM_PATH = '/auth/confirm';
-export const SIGN_OUT_PATH = '/auth/sign-out';
 
-/** Paths that need a signed-in person. The proxy redirects everyone else to sign in. */
+/** Paths that need a signed-in person; their pages send everyone else to sign in. */
 export const PROTECTED_PREFIXES = ['/app', '/connect'] as const;
 
 /** `next` values that would bounce back into auth plumbing fall back instead. */
@@ -87,9 +88,13 @@ export function signInPath(
   return query ? `${SIGN_IN_PATH}?${query}` : SIGN_IN_PATH;
 }
 
-/** Absolute URL for an email link that finishes on the callback route, then goes to `next`. */
+/**
+ * Absolute URL for an email link that finishes on the callback page, then goes
+ * to `next`. It includes the base path and the trailing slash the static host
+ * serves the page at.
+ */
 export function authCallbackUrl(webOrigin: string, next: string): string {
-  const url = new URL(AUTH_CALLBACK_PATH, webOrigin);
+  const url = new URL(`${BASE_PATH}${AUTH_CALLBACK_PATH}/`, webOrigin);
   url.searchParams.set('next', safeNextPath(next));
   return url.toString();
 }

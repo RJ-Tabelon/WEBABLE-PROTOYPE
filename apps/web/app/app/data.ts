@@ -1,15 +1,13 @@
-import { cache } from 'react';
-
 import { getAccount } from '../../lib/data/account';
 import { getCurrentFit } from '../../lib/data/fit';
+import { sharedRead } from '../../lib/data/refresh';
 import { getUser } from '../../lib/data/session';
 
 /*
- * Request-scoped reads shared by the /app layout and its pages. React's cache()
- * dedupes them within one server render, so the layout and the page ask the
- * database once. Server only.
+ * Reads shared by the /app frame and its pages, so opening a page asks the
+ * database once for each (see sharedRead).
  */
 
-export const loadUser = cache(getUser);
-export const loadAccount = cache(getAccount);
-export const loadCurrentFit = cache(getCurrentFit);
+export const loadUser = sharedRead(getUser);
+export const loadAccount = sharedRead(getAccount);
+export const loadCurrentFit = sharedRead(getCurrentFit);

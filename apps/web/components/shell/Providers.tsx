@@ -8,6 +8,7 @@ import {
 import NextLink from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useLayoutEffect, type ReactNode } from 'react';
+import { withBase } from '../../lib/base-path';
 import { applyFitUi, fitUiForPath, readFitUi, subscribeFitUi } from './fit-ui';
 
 /** "/" and "" both mean the site root; a trailing slash never matters. */
@@ -27,7 +28,7 @@ function RouterLink({ href, ref, ...rest }: LinkComponentProps) {
   const hash = href.indexOf('#');
   if (hash >= 0 && !href.slice(0, hash).includes('?')) {
     if (samePath(href.slice(0, hash), pathname))
-      return <a href={href} ref={ref} {...rest} />;
+      return <a href={withBase(href)} ref={ref} {...rest} />;
   }
   return <NextLink href={href} ref={ref} {...rest} />;
 }

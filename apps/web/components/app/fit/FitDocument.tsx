@@ -7,7 +7,6 @@ import {
   fitRows,
 } from '@webable/core/profile/describe';
 import { Button, FitRow, useToast } from '@webable/ui';
-import { useRouter } from 'next/navigation';
 import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AdjustedFit } from '../../../app/app/actions';
@@ -99,7 +98,6 @@ export function FitDocument({
   head,
   learned: initialLearned,
 }: FitDocumentProps) {
-  const router = useRouter();
   const toast = useToast();
   const [fit, setFit] = useState({
     profile: initialProfile,
@@ -159,7 +157,6 @@ export function FitDocument({
     // WebAble's own UI and the extension pick up the new fit now.
     writeFitUi(toFitUiInput(fitUiFor(result.profile)));
     void nudgeExtension();
-    router.refresh();
   }
 
   async function run(input: AdjustInput): Promise<AdjustedFit | string> {

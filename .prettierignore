@@ -17,3 +17,4 @@ packages/core/src/db/types.ts
 pnpm-lock.yaml
 eval-output
 output
+apps/web/out

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createClient } from '../supabase/server';
+import { createClient } from '../supabase/client';
 import { createFakeSupabase, type FakeSupabase } from '../supabase/testing';
 import {
   requestPasswordReset,
@@ -12,7 +12,7 @@ import {
 } from './actions';
 import { AUTH_ERROR_MESSAGES } from './errors';
 
-vi.mock('../supabase/server', () => ({ createClient: vi.fn() }));
+vi.mock('../supabase/client', () => ({ createClient: vi.fn() }));
 vi.mock('../env', () => ({
   getPublicEnv: () => ({
     supabaseUrl: 'https://ref.supabase.co',
@@ -26,8 +26,8 @@ let fake: FakeSupabase;
 
 function use(f: FakeSupabase) {
   fake = f;
-  vi.mocked(createClient).mockResolvedValue(
-    f.client as unknown as Awaited<ReturnType<typeof createClient>>,
+  vi.mocked(createClient).mockReturnValue(
+    f.client as unknown as ReturnType<typeof createClient>,
   );
 }
 
@@ -111,7 +111,9 @@ describe('signInWithPassword', () => {
   });
 
   it('reports an outage when the client throws', async () => {
-    vi.mocked(createClient).mockRejectedValueOnce(new Error('boom'));
+    vi.mocked(createClient).mockImplementationOnce(() => {
+      throw new Error('boom');
+    });
     const result = await signInWithPassword({
       email: 'a@b.co',
       password: 'pw',
@@ -141,7 +143,7 @@ describe('signUpWithPassword', () => {
       [{ options: { emailRedirectTo: string } }],
     ];
     expect(args.options.emailRedirectTo).toBe(
-      'http://localhost:3000/auth/callback?next=%2Ftune',
+      'http://localhost:3000/auth/callback/?next=%2Ftune',
     );
   });
 
@@ -197,7 +199,7 @@ describe('sendMagicLink', () => {
           options: {
             shouldCreateUser: true,
             emailRedirectTo:
-              'http://localhost:3000/auth/callback?next=%2Fconnect',
+              'http://localhost:3000/auth/callback/?next=%2Fconnect',
           },
         },
       ],
@@ -227,7 +229,7 @@ describe('requestPasswordReset', () => {
         'a@b.co',
         {
           redirectTo:
-            'http://localhost:3000/auth/callback?next=%2Freset-password',
+            'http://localhost:3000/auth/callback/?next=%2Freset-password',
         },
       ],
     ]);

@@ -19,6 +19,7 @@ import { extension, getBridge } from '../../../lib/extension/bridge';
 import { useExtension } from '../../../lib/extension/useExtension';
 import { clearFitUi } from '../../shell/fit-ui';
 import { LOCAL_CLEARED_EVENT } from './Receipts';
+import { withBase } from '../../../lib/base-path';
 
 /** Save a JSON document as a file, without a server round trip. */
 export function downloadJson(document_: unknown, filename: string): void {
@@ -110,7 +111,7 @@ export function DataControls() {
       await extension.disconnect({ timeoutMs: 3000 }).catch(() => undefined);
     }
     clearFitUi();
-    window.location.assign('/sign-in?deleted=1');
+    window.location.assign(withBase('/sign-in/?deleted=1'));
   }
 
   const installed = state.phase === 'ready';
