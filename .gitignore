@@ -15,6 +15,7 @@ test-results/
 
 # Next.js
 .next*/
+apps/web/out/
 next-env.d.ts
 *.tsbuildinfo
 

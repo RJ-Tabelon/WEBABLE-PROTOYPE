@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
-import { Gallery } from './Gallery';
+import { Suspense } from 'react';
+
+import { GalleryView } from './GalleryView';
 
 export const metadata: Metadata = {
   title: 'Components',
@@ -8,11 +10,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function ComponentsPage({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-}) {
-  const { section } = await searchParams;
-  return <Gallery only={typeof section === 'string' ? section : null} />;
+export default function ComponentsPage() {
+  return (
+    <Suspense fallback={null}>
+      <GalleryView />
+    </Suspense>
+  );
 }

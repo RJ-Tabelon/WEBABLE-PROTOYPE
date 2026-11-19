@@ -12,6 +12,8 @@
  * variables; pass it straight to `writeFitUi`.
  */
 
+import { BASE_PATH, stripBase } from '../../lib/base-path';
+
 export const FIT_UI_STORAGE_KEY = 'wa-fit-ui';
 const CHANGE_EVENT = 'wa-fit-ui-change';
 
@@ -62,7 +64,7 @@ export function fitUiForPath(
 
 /** `fitUiForPath` for the page open in this window. */
 function forThisPage(state: FitUiState | null): FitUiState | null {
-  return fitUiForPath(state, window.location.pathname);
+  return fitUiForPath(state, stripBase(window.location.pathname));
 }
 
 export interface FitUiState {
@@ -201,6 +203,6 @@ export function subscribeFitUi(
  */
 export const FIT_UI_BOOT_SCRIPT = `(function(){try{var raw=localStorage.getItem('${FIT_UI_STORAGE_KEY}');if(!raw)return;var s=JSON.parse(raw);if(!s||typeof s!=='object')return;var v=s.vars&&typeof s.vars==='object'?s.vars:s;var b=${JSON.stringify(
   FIT_UI_BOUNDS,
-)};var r=document.documentElement;var p=location.pathname.replace(/\\/+$/,'')||'/';var u=${JSON.stringify(
+)};var r=document.documentElement;var p=location.pathname;var bp=${JSON.stringify(BASE_PATH)};if(bp&&(p===bp||p.indexOf(bp+'/')===0))p=p.slice(bp.length);p=p.replace(/\\/+$/,'')||'/';var u=${JSON.stringify(
   FIT_UI_PUBLIC_PATHS,
 )};for(var i=0;i<u.length;i++){if(p===u[i]||(u[i]!=='/'&&p.indexOf(u[i]+'/')===0))b={}}for(var k in b){var x=v[k];var m=typeof x==='number'?[0,String(x),'']:typeof x==='string'?/^\\s*(\\d+(?:\\.\\d+)?)\\s*(px)?\\s*$/.exec(x):null;if(!m)continue;if(m[2]&&b[k].unit!=='px')continue;var n=Number(m[1]);if(!isFinite(n)||n<b[k].min||n>b[k].max)continue;r.style.setProperty(k,(Math.round(n*1000)/1000)+b[k].unit)}if(s.motion==='reduce')r.setAttribute('data-wa-motion','reduce');if(s.contrast==='more'||s.contrast==='standard')r.setAttribute('data-wa-contrast',s.contrast)}catch(e){}})();`;

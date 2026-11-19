@@ -101,10 +101,10 @@ describe('signInPath', () => {
 describe('authCallbackUrl', () => {
   it('builds an absolute callback URL with a sanitized next', () => {
     expect(authCallbackUrl('http://localhost:3000', '/tune')).toBe(
-      'http://localhost:3000/auth/callback?next=%2Ftune',
+      'http://localhost:3000/auth/callback/?next=%2Ftune',
     );
     expect(authCallbackUrl('https://webable.example', '//evil.example')).toBe(
-      'https://webable.example/auth/callback?next=%2Fapp',
+      'https://webable.example/auth/callback/?next=%2Fapp',
     );
   });
 });

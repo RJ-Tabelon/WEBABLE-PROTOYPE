@@ -1,0 +1,50 @@
+# Builds the website (apps/web) as a static site and publishes it to the gh-pages branch, which GitHub Pages serves at
+# https://rj-tabelon.github.io/WEBABLE-PROTOYPE/. There is no server: the pages talk to Supabase from the browser.
+
+name: Website on GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm env:sync
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ vars.SUPABASE_PUBLISHABLE_KEY }}
+          CONTACT_EMAIL: ${{ vars.CONTACT_EMAIL }}
+          WEB_ORIGIN: https://rj-tabelon.github.io
+      - run: pnpm --filter @webable/web build
+        env:
+          NEXT_PUBLIC_BASE_PATH: /WEBABLE-PROTOYPE
+      - name: Publish to gh-pages
+        working-directory: apps/web/out
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          touch .nojekyll
+          git init -q -b gh-pages
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Website from ${GITHUB_SHA::7}"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages

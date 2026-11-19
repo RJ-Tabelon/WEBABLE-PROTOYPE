@@ -13,6 +13,7 @@ import {
   type SiteId,
   isSizeChange,
 } from './captures';
+import { withBase } from '../../../lib/base-path';
 
 type View = 'original' | 'fitted';
 
@@ -147,7 +148,7 @@ export function HeroShowcase() {
                 <Image
                   key={`${s.id}-${kind}`}
                   className="wm-show__shot"
-                  src={shot.src}
+                  src={withBase(shot.src)}
                   alt={on ? shot.alt : ''}
                   aria-hidden={on ? undefined : true}
                   width={CAPTURE_SIZE.width}

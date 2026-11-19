@@ -6,7 +6,7 @@ import {
 import { FunctionsFetchError, FunctionsHttpError } from '@supabase/supabase-js';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { createClient } from '../supabase/server';
+import { createClient } from '../supabase/client';
 import { createFakeSupabase, type FakeSupabase } from '../supabase/testing';
 import { advanceOnboarding, getAccount, updateAccount } from './account';
 import { getWeeklyActivity, mondayOf, recentMondays } from './activity';
@@ -21,7 +21,7 @@ import { listInstalls, removeInstall } from './installs';
 import { deleteMyAccount, exportMyData } from './privacy';
 import { getSession, getUser } from './session';
 
-vi.mock('../supabase/server', () => ({ createClient: vi.fn() }));
+vi.mock('../supabase/client', () => ({ createClient: vi.fn() }));
 
 const USER = '11111111-1111-4111-8111-111111111111';
 const SESSION = '22222222-2222-4222-8222-222222222222';
@@ -29,8 +29,8 @@ let fake: FakeSupabase;
 
 function use(f: FakeSupabase) {
   fake = f;
-  vi.mocked(createClient).mockResolvedValue(
-    f.client as unknown as Awaited<ReturnType<typeof createClient>>,
+  vi.mocked(createClient).mockReturnValue(
+    f.client as unknown as ReturnType<typeof createClient>,
   );
 }
 

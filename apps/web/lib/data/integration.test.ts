@@ -20,7 +20,7 @@ import {
 import { parse } from 'dotenv';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { createClient } from '../supabase/server';
+import { createClient } from '../supabase/client';
 import { advanceOnboarding, getAccount, updateAccount } from './account';
 import { getWeeklyActivity, mondayOf } from './activity';
 import {
@@ -33,7 +33,7 @@ import { listInstalls, removeInstall } from './installs';
 import { exportMyData } from './privacy';
 import { getUser } from './session';
 
-vi.mock('../supabase/server', () => ({ createClient: vi.fn() }));
+vi.mock('../supabase/client', () => ({ createClient: vi.fn() }));
 
 const ROOT = resolve(__dirname, '../../../..');
 const readEnv = (path: string) =>
@@ -109,8 +109,8 @@ describe.skipIf(!enabled)('data layer against the live project', () => {
     if (error || !data.user)
       throw new Error(`test user sign-in failed: ${error?.code ?? 'no user'}`);
     userId = data.user.id;
-    vi.mocked(createClient).mockResolvedValue(
-      client as unknown as Awaited<ReturnType<typeof createClient>>,
+    vi.mocked(createClient).mockReturnValue(
+      client as unknown as ReturnType<typeof createClient>,
     );
     await cleanup();
   });

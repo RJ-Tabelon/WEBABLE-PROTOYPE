@@ -14,6 +14,7 @@ export default tseslint.config(
       '**/playwright-report/**',
       '**/test-results/**',
       '**/.next*/**',
+      'apps/web/out/**',
       '**/next-env.d.ts',
       'supabase/functions/**',
       'supabase/.temp/**',

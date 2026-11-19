@@ -1,10 +1,8 @@
-'use server';
-
 /*
- * Server Actions for Client Components (the Tune flow, settings toggles, Connect).
+ * The writes Client Components use (the Tune flow, settings toggles, Connect).
  * Each is a thin wrapper: the lib/data function it calls validates input,
- * verifies the session, and returns a DataResult. Server Components should call
- * the lib/data functions directly instead.
+ * verifies the session, and returns a DataResult. They run in the browser and
+ * talk to Supabase directly.
  */
 
 import {

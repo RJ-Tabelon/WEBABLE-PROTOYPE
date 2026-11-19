@@ -7,6 +7,7 @@ import {
   FITS_SHOT_SIZE,
   isDoneChange,
 } from './fits';
+import { withBase } from '../../../lib/base-path';
 
 /**
  * "Different people, different fits": real screenshots of the same passage of
@@ -30,7 +31,7 @@ export function FitsDemo() {
               >
                 <Image
                   className="wm-fit__shot"
-                  src={person.shot.src}
+                  src={withBase(person.shot.src)}
                   alt={person.shot.alt}
                   width={FITS_SHOT_SIZE.width}
                   height={FITS_SHOT_SIZE.height}

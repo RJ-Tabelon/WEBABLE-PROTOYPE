@@ -2,6 +2,7 @@ import { FitMark, Icon, StatusShape } from '@webable/ui';
 import Image from 'next/image';
 import { BrowserWindow } from '../kit/BrowserWindow';
 import { LENS_SHOT } from './lens';
+import { withBase } from '../../../lib/base-path';
 
 /** WebAble's window on one page: each change in words, each with its own Undo. */
 function PopupVisual() {
@@ -132,7 +133,7 @@ export function Features() {
           <BrowserWindow domain="cbsnews.com">
             <Image
               className="wm-lens__shot"
-              src={LENS_SHOT.src}
+              src={withBase(LENS_SHOT.src)}
               alt={LENS_SHOT.alt}
               width={LENS_SHOT.width}
               height={LENS_SHOT.height}
